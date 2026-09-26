@@ -1,0 +1,18 @@
+{
+  "name": "Library first: an added line found on another recipe brings its figures and its steps",
+  "instruction": "Add broccoli florets to the chicken plate, twenty pounds a batch.",
+  "sourceRecipeCode": "AMK-E-003",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-003",
+    "variantName": "",
+    "lineChanges": [{ "kind": "add", "name": "broccoli florets", "apQtyPerBatch": 20, "unit": "lb" }],
+    "laborChanges": [],
+    "facts": ["Broccoli florets are added at 20 lb per batch."]
+  },
+  "expect": {
+    "questions": [{ "id": "line:broccoli florets, raw:use:AMK-E-011", "kind": "confirm", "waivable": false }],
+    "readyWhen": { "confirmed": ["line:broccoli florets, raw:use:AMK-E-011"] },
+    "lines": { "has": ["Broccoli florets, raw"] },
+    "steps": [{ "taskHas": "Sesame broccoli" }]
+  }
+}

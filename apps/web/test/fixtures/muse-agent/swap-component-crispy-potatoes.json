@@ -1,0 +1,19 @@
+{
+  "name": "A served part swapped for another recipe's part",
+  "instruction": "Take the smoked chicken plate and put the crispy potatoes from the fish plate where the sweet potato hash is. Call it smoked chicken and crispy potatoes.",
+  "sourceRecipeCode": "AMK-E-003",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-003",
+    "variantName": "Smoked chicken and crispy potatoes",
+    "lineChanges": [{ "kind": "swapComponent", "component": "sweet potato hash", "withComponent": "crispy potatoes", "fromRecipe": "fish plate" }],
+    "laborChanges": [],
+    "facts": ["The sweet potato hash on AMK-E-003 is replaced by the crispy potatoes from the fish plate.", "The variant is called Smoked chicken and crispy potatoes."]
+  },
+  "expect": {
+    "questions": [{ "id": "component:sweet potato hash:use:AMK-E-004:crispy potatoes", "kind": "confirm", "waivable": false }],
+    "readyWhen": { "confirmed": ["component:sweet potato hash:use:AMK-E-004:crispy potatoes"] },
+    "lines": { "has": ["Potato wedges, raw"], "lacks": ["Sweet potatoes", "Smoked paprika"] },
+    "steps": [{ "taskHas": "Crispy potatoes" }, { "taskHas": "Sweet potato hash", "absent": true }],
+    "variantName": "Smoked chicken and crispy potatoes"
+  }
+}

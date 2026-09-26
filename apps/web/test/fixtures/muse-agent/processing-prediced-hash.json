@@ -1,0 +1,24 @@
+{
+  "name": "The same item in a different form, with its step's minutes stated",
+  "instruction": "Same recipe, but the sweet potatoes come in already diced from the supplier. Prep on the hash drops to ten labor minutes with one person. Cooking is unchanged. Call it the pre-diced hash.",
+  "sourceRecipeCode": "AMK-E-003",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-003",
+    "variantName": "Pre-diced hash",
+    "lineChanges": [{ "kind": "changeProcessing", "line": "sweet potatoes", "withItem": "Sweet potatoes, diced", "step": "prep", "removeStep": false, "laborMinutes": 10, "staff": 1 }],
+    "laborChanges": [],
+    "facts": ["The sweet potatoes are bought already diced.", "The hash prep step is 10 labor minutes with 1 person.", "The cook step is unchanged.", "The variant is called Pre-diced hash."]
+  },
+  "expect": {
+    "questions": [
+      { "id": "line:sweet potatoes, diced:apQtyPerBatch", "kind": "ask", "waivable": true },
+      { "id": "line:sweet potatoes, diced:yieldToCooked", "kind": "ask", "waivable": true },
+      { "id": "line:sweet potatoes, diced:apUnitCost", "kind": "ask", "waivable": true },
+      { "id": "line:sweet potatoes, diced:ftl", "kind": "ask", "waivable": true }
+    ],
+    "readyWhen": { "waived": ["line:sweet potatoes, diced:apQtyPerBatch", "line:sweet potatoes, diced:yieldToCooked", "line:sweet potatoes, diced:apUnitCost", "line:sweet potatoes, diced:ftl"] },
+    "lines": { "has": ["Sweet potatoes, diced"], "lacks": ["Sweet potatoes"] },
+    "steps": [{ "taskHas": "Prep — Sweet potato hash", "laborMinutes": 10, "staff": 1 }],
+    "variantName": "Pre-diced hash"
+  }
+}

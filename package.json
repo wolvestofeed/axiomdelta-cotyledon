@@ -1,0 +1,33 @@
+{
+  "name": "microfarm",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ct/web dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:migrate": "pnpm --filter @ct/db db:migrate",
+    "muse:suppliers": "packages/db/node_modules/.bin/tsx apps/web/scripts/generate-muse-suppliers.ts",
+    "muse:supplier-geo": "packages/db/node_modules/.bin/tsx apps/web/scripts/enrich-muse-supplier-geo.ts",
+    "muse:schools": "python3 apps/web/scripts/generate-muse-schools.py",
+    "muse:food-factors": "python3 apps/web/scripts/generate-muse-food-factors.py",
+    "muse:sources": "packages/db/node_modules/.bin/tsx apps/web/scripts/seed-muse-sources.ts",
+    "muse:reseed": "packages/db/node_modules/.bin/tsx apps/web/scripts/reseed-muse-placeholders.ts",
+    "muse:sync-recipes": "packages/db/node_modules/.bin/tsx apps/web/scripts/sync-muse-seed-recipes.ts",
+    "muse:training": "packages/db/node_modules/.bin/tsx apps/web/scripts/import-muse-training.ts",
+    "muse:school-geo": "python3 apps/web/scripts/enrich-muse-school-geo.py",
+    "muse:facility-scenario": "packages/db/node_modules/.bin/tsx apps/web/scripts/facility-muse-scenario.ts",
+    "muse:agent-eval": "packages/db/node_modules/.bin/tsx apps/web/scripts/muse-agent-eval.ts",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.0"
+  }
+}

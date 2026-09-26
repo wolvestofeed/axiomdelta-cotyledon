@@ -1,0 +1,26 @@
+{
+  "name": "Unsaid step: a form that arrives cooked takes the cook step with it",
+  "instruction": "Buy the chicken already smoked and diced so there's no smoking on our side; scaling it is a five-minute job for one person.",
+  "sourceRecipeCode": "AMK-E-003",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-003",
+    "variantName": "",
+    "lineChanges": [
+      { "kind": "changeProcessing", "line": "chicken", "withItem": "Chicken, smoked and diced", "step": "prep", "removeStep": false, "laborMinutes": 5, "staff": 1 },
+      { "kind": "changeProcessing", "line": "chicken", "step": "cook", "removeStep": true }
+    ],
+    "laborChanges": [],
+    "facts": ["The chicken is bought already smoked and diced.", "The chicken prep step is 5 labor minutes with 1 person.", "The chicken cook step goes away; no smoking in this kitchen."]
+  },
+  "expect": {
+    "questions": [
+      { "id": "line:chicken, smoked and diced:apQtyPerBatch", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:yieldToCooked", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:apUnitCost", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:ftl", "kind": "ask", "waivable": true }
+    ],
+    "readyWhen": { "waived": ["line:chicken, smoked and diced:apQtyPerBatch", "line:chicken, smoked and diced:yieldToCooked", "line:chicken, smoked and diced:apUnitCost", "line:chicken, smoked and diced:ftl"] },
+    "lines": { "has": ["Chicken, smoked and diced"], "lacks": ["Chicken thighs, boneless skinless"] },
+    "steps": [{ "taskHas": "Prep — Smoked chicken", "laborMinutes": 5, "staff": 1 }, { "taskHas": "Cook — Smoked chicken", "absent": true }]
+  }
+}

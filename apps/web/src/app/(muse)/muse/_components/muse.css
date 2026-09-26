@@ -1,0 +1,1512 @@
+/*
+ * ════════════════════════════════════════════════════════════════════════════
+ * IMPACT OS — MASTER THEME  (`_components/muse.css`)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ONE MATERIAL, ONE THEME.
+ *   Polished copper on a cold-room ground. Plan of record, forecast and
+ *   actuals are named in the scenario bar, not signalled by colour.
+ *
+ * DARK, BUT NOT A VOID — AND NOT A GLARE.
+ *   The ground is charcoal with a green whisper. Text is off-white, never
+ *   pure white: #FFF on near-black (17–18:1) blooms and ghosts over a long
+ *   day, worst for readers with astigmatism. The ink ladder is set by
+ *   lightness, not hue — strong 15:1 (figures, headings), ink 13.7:1 (body),
+ *   soft 10.3:1, faint 7.5:1 on the card surface — so hierarchy reads at arm's
+ *   length and every tier still clears WCAG AA with room.
+ *
+ * DEPTH FROM LIGHT, NOT FROM BLACK.
+ *   Elevation steps up in lightness (ground → surface → surface-2 →
+ *   surface-3); every panel carries a 1px bevel highlight on its top edge, an
+ *   underside shadow and an ambient drop tinted to the ground's green rather
+ *   than pure black. A 3% grain keeps any surface from reading dead flat.
+ *
+ * COPPER IS THE BRAND; GREEN MEANS VERIFIED.
+ *   Provenance colours are semantic and never decorative: sourced green,
+ *   stated blue, placeholder gold, derived violet, over red. Green and blue
+ *   are held ≥ 15 ΔE apart (OKLab) for normal and colour-deficient vision.
+ *
+ * TYPE: TWO VOICES, ONE SCALE.
+ *   Fraunces for headings and the brand; IBM Plex Sans for the interface;
+ *   IBM Plex Mono for every figure (tabular lining numerals). Sizes come only
+ *   from the --muse-fs-* scale below (floor 0.7rem ≈ 11px for uppercase
+ *   labels; 0.875rem = 14px table and body). Pages never set a size, colour
+ *   or hex inline — they use the classes in "UTILITIES" at the foot of this
+ *   file, or Tailwind layout/spacing utilities.
+ *
+ * THE SIDEBAR IS SOIL.
+ *   Deep copper from the logo's second soil layer (#8E5323 → #804A1F), cream
+ *   ink, mint section heads. Its luminance sits within ~10:1 of the working
+ *   surface, so the eye does not re-adapt between the menu and the page (the
+ *   former limestone sidebar ran ~50:1). Limestone tokens remain for the
+ *   portals and any inline use.
+ *
+ * HOUSE RULES (docs/muse/CLAUDE.md §3, §5)
+ *   - No icons, no illustrations, no decorative SVG. The grain is the one
+ *     exception, as a surface token.
+ *   - Every figure shows its provenance badge; the badges are loud on purpose.
+ *   - Legacy token names (--muse-forest, --muse-olive, --muse-accent-soft …)
+ *     are kept so older references resolve.
+ *
+ * ── UPDATE LOG ─────────────────────────────────────────────────────────────
+ *   2026-09-13 — Created. Dark master theme, panel bevel and ambient-shadow
+ *                system, Fraunces / IBM Plex pairing, semantic palette.
+ *   2026-09-13 — Sandbox (patina) theme removed.
+ *   2026-09-17 — Page tabs (Phase T0).
+ *   2026-09-17 — Visual-quality pass: off-white ink ladder by lightness; the
+ *                --muse-fs-* type scale (29 sizes → 8, 11px floor); elevation
+ *                ladder and tinted shadows; control borders ≥ 3:1; solid
+ *                copper focus ring; visible row hover; page titles in copper
+ *                (was 3.9:1, now 6.3:1); stated re-hued blue; soil sidebar;
+ *                utility classes that replace every static inline style.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+
+/* ══ TOKENS — LIVE ("Commissary") ═══════════════════════════════════════ */
+.muse-root {
+  /* Elevation ladder — each step lighter than the one beneath it. */
+  --muse-ground:        #131916;
+  --muse-bg:            #131916;
+  --muse-surface:       #1a221f;
+  --muse-surface-2:     #212b27;
+  --muse-surface-3:     #29342f;
+  --muse-sunk:          #0d1210;
+  --muse-chrome:        #161d1a;
+
+  /* Lines: hairlines stay soft; anything that marks a control clears 3:1. */
+  --muse-line:          #34413c;
+  --muse-line-strong:   #4a5a53;
+  --muse-line-control:  #66786f;   /* 3.5:1 on surface, 4.0:1 on sunk */
+  --muse-bevel:         rgba(255, 255, 255, 0.08);
+  --muse-bevel-hi:      rgba(255, 255, 255, 0.14);
+  --muse-underside:     rgba(3, 9, 7, 0.42);
+  --muse-shade:         4, 10, 8;   /* rgb triplet: shadows tinted to the ground, not pure black */
+  --muse-row-hover:     rgba(255, 255, 255, 0.045);
+
+  /* Ink ladder — solid tones stepped by LIGHTNESS so hierarchy reads without
+     leaning in. On the card surface: strong 15.0 : ink 13.7 : soft 10.3 :
+     faint 7.5. Off-white, never #FFF (halation over long sessions). */
+  --muse-ink-base:      201, 239, 212;   /* rgb triplet, for the few alpha uses */
+  --muse-ink-strong:    #f3f7f4;   /* figures, KPI values, headings */
+  --muse-ink:           #e6ede8;   /* body and table text */
+  --muse-ink-soft:      #b4d6c0;   /* secondary: labels, ledes */
+  --muse-ink-faint:     #93b9a0;   /* muted: notes, captions, column heads */
+
+  /* Type scale — the only font sizes in the OS. 1rem = 16px. */
+  --muse-fs-2xs:  0.7rem;    /* 11.2px — uppercase micro labels, badges, column heads */
+  --muse-fs-xs:   0.78rem;   /* 12.5px — notes, captions, sub-lines */
+  --muse-fs-sm:   0.84rem;   /* 13.4px — secondary text, controls */
+  --muse-fs-base: 0.875rem;  /* 14px   — body and table text */
+  --muse-fs-md:   1rem;      /* 16px   — emphasised lines, small headings */
+  --muse-fs-lg:   1.25rem;   /* 20px   — section headings */
+  --muse-fs-xl:   1.75rem;   /* 28px   — page titles, KPI values */
+  --muse-fs-2xl:  2rem;      /* 32px   — the hero figure */
+
+  --muse-accent:        #d08a4e;   /* polished copper */
+  --muse-accent-hi:     #e8a86f;
+  --muse-accent-deep:   #a3652f;
+  --muse-accent-soft:   rgba(208, 138, 78, 0.14);  /* legacy name */
+  --muse-accent-wash:   rgba(208, 138, 78, 0.14);
+  --muse-accent-ring:   rgba(208, 138, 78, 0.32);
+
+}
+
+/* ══ TOKENS — INVARIANT ACROSS BOTH THEMES ══════════════════════════════ */
+.muse-root {
+  /* Provenance. These never move between themes. */
+  --muse-sourced:       #6fc27f;   /* cilantro-lime  — cited third party   */
+  --muse-stated:        #78a2d8;   /* Hill Country sky — operator-supplied (ΔE 18 from sourced) */
+  --muse-placeholder:   #e3b455;   /* masa gold      — no source yet       */
+  --muse-derived:       #a996e8;   /* epazote        — calculated          */
+  --muse-over:          #e2685f;   /* chile de árbol — limit breached      */
+
+  --muse-heading-on-dark:  var(--muse-ink);
+  --muse-heading-on-light: var(--muse-ink); /* legacy name; surfaces are dark now */
+
+  /* Legacy brand names kept alive for inline styles already in the pages. */
+  /* Hill Country limestone — the sidebar ground (Robert, 2026-09-13). */
+  --muse-stone:         #d9d0bc;
+  --muse-stone-deep:    #c8bda5;
+  --muse-stone-line:    rgba(60, 48, 30, 0.18);
+  --muse-stone-ink:     #1f2622;
+  --muse-stone-ink-soft:#3a4640;
+  --muse-forest:        #2f6b45;
+  --muse-forest-soft:   #3d8757;
+  --muse-olive:         #93a862;
+
+  /* The sidebar — soil from the logo's second layer, cream ink, mint heads. */
+  --muse-side-top:      #8e5323;
+  --muse-side-bottom:   #804a1f;
+  --muse-side-foot:     #7a461d;
+  --muse-side-ink:      #f4eee3;   /* 5.3:1 at the top of the gradient */
+  --muse-side-ink-soft: #eadcc6;   /* 4.6:1 */
+  --muse-side-head:     #c6ead7;   /* mint section heads, 4.7:1 */
+  --muse-side-mark:     #f1cfa6;   /* light copper: tagline, active edge */
+  --muse-side-line:     rgba(244, 238, 227, 0.18);
+  /* The chrome bars (Robert, 2026-09-18): the top bar on a darker step of the sidebar's
+     soil, so sidebar and bars read as one frame; the toolbar on the sunk ground below it. */
+  --muse-bar-top:       #5c341a;   /* side ink 7.9:1, side ink soft 6.9:1 */
+  --muse-bar-bottom:    #4a2a15;   /* side ink 9.6:1 */
+  --muse-bar-line:      rgba(244, 238, 227, 0.22);
+  --muse-bar-field:     #2e1a0d;   /* fields on the soil bar: side ink 11.2:1 */
+  --muse-side-wash:     rgba(244, 238, 227, 0.08);
+  --muse-side-active:   rgba(244, 238, 227, 0.14);
+
+  /* Faces come from next/font/google in layout.tsx, self-hosted so they
+     satisfy the app's `font-src 'self'` CSP. Fallbacks keep the platform
+     legible if the variables are ever absent. */
+  --muse-font:   var(--muse-font-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --muse-serif:  var(--muse-font-display), Georgia, 'Times New Roman', serif;
+  --muse-mono:   var(--muse-font-mono), Menlo, Monaco, Consolas, monospace;
+
+  --muse-r-sm: 5px;
+  --muse-r:    9px;
+  --muse-r-lg: 13px;
+  --muse-sidebar-w: 12.75rem;
+
+  /* The panel recipe. Bevel on top, shadow under, ambient beneath. */
+  --muse-panel-shadow:
+    inset 0 1px 0 var(--muse-bevel),
+    inset 0 -1px 0 var(--muse-underside),
+    0 1px 2px rgba(var(--muse-shade), 0.45),
+    0 10px 26px -14px rgba(var(--muse-shade), 0.75);
+  --muse-panel-shadow-hi:
+    inset 0 1px 0 var(--muse-bevel-hi),
+    inset 0 -1px 0 var(--muse-underside),
+    0 2px 4px rgba(var(--muse-shade), 0.45),
+    0 18px 38px -16px rgba(var(--muse-shade), 0.85);
+
+  --muse-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--muse-ground);
+  color: var(--muse-ink);
+  font-family: var(--muse-font);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+.muse-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: var(--muse-grain);
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+}
+
+.muse-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--muse-sidebar-w) 1fr;
+  min-height: 100vh;
+}
+@media (max-width: 768px) {
+  .muse-shell { grid-template-columns: 1fr; }
+}
+
+/* ══ SIDEBAR ════════════════════════════════════════════════════════════ */
+.muse-sidebar {
+  background: linear-gradient(180deg, var(--muse-side-top) 0%, var(--muse-side-bottom) 100%);
+  color: var(--muse-side-ink);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(var(--muse-shade), 0.6);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12), 4px 0 18px -10px rgba(var(--muse-shade), 0.8);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+@media (max-width: 768px) {
+  .muse-sidebar { position: static; height: auto; }
+}
+.muse-brand {
+  position: relative;
+  /* 5% a side, so the icon spans 90% of the column. */
+  padding: 1.15rem 5% 0.95rem;
+  border-bottom: 1px solid var(--muse-side-line);
+}
+/* A copper rule that fades out — the light catching the edge of the bench. */
+.muse-brand::after {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--muse-side-mark), transparent 72%);
+  opacity: 0.6;
+}
+.muse-brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.4rem;
+}
+/* The sidebar stack: icon, the MUSE KITCHEN name in the H1 face, then the tagline. */
+.muse-brand-icon {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.muse-brand-wordmark {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--muse-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--muse-side-ink);
+}
+/* The tagline under the logo: copper, all caps, IBM Plex Sans. */
+.muse-brand-tagline {
+  display: block;
+  margin-top: 0.55rem;
+  font-family: var(--muse-font-sans), system-ui, sans-serif;
+  /* Sized so the line is as wide as MUSE KITCHEN above it; the indent offsets the trailing letter space so it centres. */
+  font-size: 1.38rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--muse-side-mark);
+}
+.muse-brand-name {
+  font-family: var(--muse-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--muse-side-ink);
+}
+.muse-brand-sub {
+  font-size: var(--muse-fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muse-side-mark);
+  margin-top: 0.4rem;
+}
+.muse-nav {
+  padding: 0.65rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.muse-nav-group { margin-top: 0.1rem; }
+.muse-nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-radius: var(--muse-r-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--muse-fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muse-side-head);
+  padding: 0.7rem 0.75rem 0.45rem 0.55rem;
+  text-align: left;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+/* Section titles that run long are set as stacked lines rather than shrunk. */
+.muse-nav-section-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.18;
+}
+.muse-nav-section:hover { color: var(--muse-side-ink); background: var(--muse-side-wash); }
+.muse-nav-section[data-active='true'] { color: var(--muse-side-head); }
+.muse-nav-mark {
+  font-size: var(--muse-fs-base);
+  font-weight: 500;
+  color: var(--muse-side-head);
+  width: 0.75rem;
+  text-align: right;
+}
+.muse-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 0 0.35rem 0.3rem;
+}
+.muse-nav-link {
+  display: block;
+  padding: 0.45rem 0.75rem 0.45rem 0.55rem;
+  border-radius: var(--muse-r-sm);
+  font-size: var(--muse-fs-sm);
+  color: var(--muse-side-ink-soft);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.muse-nav-link.top { font-size: var(--muse-fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; }
+/* Menu rules (Robert, 2026-09-16): a thin one between the top links and the sections; a heavier one closing
+   the OS sections, with the external users' portals below it. */
+.muse-nav-rule { border: 0; border-top: 1px solid var(--muse-side-line); margin: 0.45rem 0.35rem; }
+.muse-nav-rule.os { border-top: 2px solid rgba(var(--muse-shade), 0.45); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1); margin: 0.7rem 0.35rem; }
+/* Below the sections, set apart by a rule rather than by position alone. */
+.muse-nav-link.bottom {
+  margin-top: 0.55rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--muse-side-line);
+}
+.muse-nav-link:hover { background: var(--muse-side-wash); color: var(--muse-side-ink); }
+.muse-nav-link[data-active='true'] {
+  color: var(--muse-side-ink);
+  font-weight: 600;
+  border-left-color: var(--muse-side-mark);
+  background: linear-gradient(90deg, var(--muse-side-active), transparent 82%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.muse-sidebar-foot {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding: 0.7rem 0.75rem;
+  border-top: 1px solid var(--muse-side-line);
+  background: var(--muse-side-foot);
+  box-shadow: 0 -8px 16px -12px rgba(var(--muse-shade), 0.7);
+}
+/* The signed-in person's name. */
+.muse-user-pill {
+  display: block;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--muse-side-line);
+  border-radius: 999px;
+  background: rgba(var(--muse-shade), 0.25);
+  font-size: var(--muse-fs-xs);
+  font-weight: 600;
+  color: var(--muse-side-ink);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══ MAIN COLUMN ════════════════════════════════════════════════════════ */
+.muse-main { min-width: 0; display: flex; flex-direction: column; }
+
+.muse-topbar {
+  /* The page toolbar (Robert, 2026-09-18): the sunk ground, one notch below the page, flat —
+     the tray the page's controls sit in. The 2px copper rule under it is the boundary between
+     chrome and page; nothing below it uses a full-width copper stroke. */
+  background: var(--muse-sunk);
+  border-top: 1px solid var(--muse-side-line);
+  border-bottom: 2px solid var(--muse-accent-deep);
+  padding: 0.55rem 1.5rem;
+  font-size: var(--muse-fs-xs);
+  color: var(--muse-ink-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+/* The second bar's slot for the page's own controls (`PageControls`): the recipe
+   selector, the month or period picker, a download. Empty on a page with none. */
+.muse-page-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0; min-width: 0; flex: 1 1 auto; }
+/* The three groups — scope, view, action — in that order; a group with nothing in it takes no room,
+   and a hairline separates the groups that are filled. */
+.muse-page-controls-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.muse-page-controls-group:empty { display: none; }
+.muse-page-controls-group:not(:empty) ~ .muse-page-controls-group:not(:empty) { margin-left: 0.9rem; padding-left: 0.9rem; border-left: 1px solid var(--muse-line-strong); }
+.muse-page-controls .muse-select { max-width: 15rem; text-overflow: ellipsis; }
+.muse-page-controls .muse-input { min-width: 0; }
+.muse-page-controls .muse-input[type='date'] { width: 9.2rem; }
+.muse-page-controls .muse-kpi-sub { margin-top: 0; }
+.muse-page-controls .muse-btn { padding-top: 0.22rem; padding-bottom: 0.22rem; }
+.muse-page-controls form { display: contents; }
+
+.muse-content {
+  padding: 1.6rem 1.5rem 2rem;
+  max-width: 82rem;
+  width: 100%;
+}
+
+/* ══ PAGE HEADER ════════════════════════════════════════════════════════ */
+.muse-page-title {
+  font-family: var(--muse-serif);
+  font-size: var(--muse-fs-xl);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--muse-accent);
+  text-wrap: balance;
+}
+.muse-page-lede {
+  color: var(--muse-ink-soft);
+  font-size: var(--muse-fs-base);
+  line-height: 1.55;
+  margin-top: 0.5rem;
+  /* Full width (Robert, 2026-09-18): the lede runs the content's width so the header stays short. */
+  max-width: none;
+}
+
+/* The header slots (page-headers build plan §2): purpose, on this page, connects, how it works. */
+.muse-page-purpose {
+  color: var(--muse-ink-soft);
+  font-size: var(--muse-fs-md);
+  line-height: 1.45;
+  margin-top: 0.4rem;
+  text-wrap: pretty;
+}
+.muse-page-on {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.muse-page-on .muse-chip { padding: 0.18rem 0.65rem; }
+.muse-page-connects {
+  margin-top: 0.55rem;
+  font-size: var(--muse-fs-xs);
+  color: var(--muse-ink-faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+.muse-page-connects .muse-connect-dir { color: var(--muse-ink-soft); font-weight: 600; margin-right: 0.35rem; }
+.muse-page-connects a { color: var(--muse-ink); text-decoration: underline; text-decoration-color: var(--muse-line-strong); text-underline-offset: 2px; }
+.muse-page-connects a:hover { color: var(--muse-accent-hi); }
+.muse-hiw { margin-top: 0.7rem; }
+.muse-hiw-toggle {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--muse-fs-sm);
+  color: var(--muse-ink-soft);
+}
+.muse-hiw-toggle:hover .muse-hiw-label { color: var(--muse-accent-hi); }
+.muse-hiw-toggle:focus-visible { outline: 2px solid var(--muse-accent-hi); outline-offset: 3px; border-radius: 2px; }
+.muse-hiw-label { font-weight: 600; }
+.muse-hiw-affordance { font-size: var(--muse-fs-xs); text-decoration: underline; text-underline-offset: 2px; }
+.muse-hiw-body {
+  margin-top: 0.5rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--muse-accent);
+  max-width: 68ch;
+  color: var(--muse-ink-soft);
+  font-size: var(--muse-fs-sm);
+  line-height: 1.5;
+}
+.muse-hiw-body ul { margin: 0; padding-left: 1.1rem; }
+.muse-hiw-body li + li { margin-top: 0.3rem; }
+@media print {
+  .muse-page-on, .muse-page-connects, .muse-hiw-toggle { display: none; }
+  .muse-hiw-body[hidden] { display: block; }
+  .muse-hiw-body { border-left-color: #000; color: #000; max-width: none; }
+  .muse-hiw-body::before { content: 'How this page works'; display: block; font-weight: 600; margin-bottom: 0.3rem; }
+}
+
+/* The brand line on statement, report and document headers, and the footer. */
+.muse-brandline {
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muse-ink-faint);
+  margin-bottom: 0.35rem;
+}
+.muse-footer {
+  margin-top: auto;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--muse-line);
+  font-size: var(--muse-fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--muse-ink-faint);
+}
+
+/* ══ CARDS / PANELS ═════════════════════════════════════════════════════ */
+.muse-card {
+  background: linear-gradient(180deg, var(--muse-surface-2) 0%, var(--muse-surface) 66%);
+  border: 1px solid var(--muse-line);
+  border-radius: var(--muse-r);
+  box-shadow: var(--muse-panel-shadow);
+  padding: 1rem 1.1rem;
+}
+.muse-card-title {
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muse-ink-faint);
+  margin-bottom: 0.7rem;
+}
+/* Hover elevation — brighter bevel, deeper ambient, border warms to copper. */
+.muse-lift {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.muse-lift:hover {
+  box-shadow: var(--muse-panel-shadow-hi);
+  border-color: var(--muse-line-strong);
+  transform: translateY(-2px);
+}
+
+/* ══ KPI TILE ═══════════════════════════════════════════════════════════ */
+.muse-kpi-value {
+  font-family: var(--muse-mono);
+  font-size: var(--muse-fs-xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--muse-ink-strong);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.muse-kpi-label { font-size: var(--muse-fs-xs); color: var(--muse-ink-soft); margin-top: 0.45rem; }
+.muse-kpi-sub   { font-size: var(--muse-fs-2xs);  color: var(--muse-ink-faint); margin-top: 0.2rem; }
+
+/* ══ TABLES ═════════════════════════════════════════════════════════════ */
+.muse-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--muse-fs-base);
+  background: var(--muse-surface);
+}
+.muse-table th {
+  text-align: left;
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muse-ink-faint);
+  padding: 0.55rem 0.7rem;
+  background: linear-gradient(180deg, var(--muse-surface-2), var(--muse-surface));
+  border-bottom: 1px solid var(--muse-line-strong);
+  box-shadow: inset 0 1px 0 var(--muse-bevel);
+  white-space: normal;
+  vertical-align: bottom;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+.muse-table th.num { text-align: right; }
+.muse-table td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--muse-line);
+  color: var(--muse-ink);
+  vertical-align: top;
+}
+.muse-table tbody tr { transition: background 0.14s ease; }
+.muse-table tbody tr:hover { background: var(--muse-row-hover); }
+.muse-table tr:last-child td { border-bottom: none; }
+.muse-table .num {
+  text-align: right;
+  font-family: var(--muse-mono);
+  font-size: var(--muse-fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.muse-table tr.total td {
+  font-weight: 700;
+  color: var(--muse-ink-strong);
+  border-top: 1px solid var(--muse-line-strong);
+  background: rgba(255, 255, 255, 0.026);
+}
+/* Compact: tighter cells for tables with in-row controls; columns take their content's width. */
+.muse-table.compact th,
+.muse-table.compact td { padding: 0.45rem 0.45rem; }
+.muse-table.compact td { vertical-align: middle; }
+
+/* Group header row: marks where a category begins in a collapsing library, so the
+   start of each group reads at a glance among its item rows. Copper wash fading
+   right, a copper edge on the left, copper rules above and below. */
+.muse-table tr.muse-group-row td {
+  background: linear-gradient(90deg, rgba(208, 138, 78, 0.16), rgba(208, 138, 78, 0.05) 60%, rgba(208, 138, 78, 0.02));
+  border-top: 1px solid rgba(208, 138, 78, 0.34);
+  border-bottom: 1px solid rgba(208, 138, 78, 0.22);
+  box-shadow: inset 3px 0 0 var(--muse-accent-deep);
+}
+.muse-table tbody tr.muse-group-row:hover td {
+  background: linear-gradient(90deg, rgba(208, 138, 78, 0.24), rgba(208, 138, 78, 0.08) 60%, rgba(208, 138, 78, 0.03));
+}
+.muse-table tr.muse-group-row.is-open td {
+  background: linear-gradient(90deg, rgba(232, 168, 111, 0.28), rgba(208, 138, 78, 0.1) 65%, rgba(208, 138, 78, 0.04));
+  border-bottom-color: var(--muse-accent);
+  box-shadow: inset 3px 0 0 var(--muse-accent-hi);
+}
+.muse-scroll-x { overflow-x: auto; }
+
+/* ══ PROVENANCE BADGES ══════════════════════════════════════════════════ */
+.muse-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--muse-r-sm);
+  border: 1px solid;
+  padding: 0.1rem 0.42rem;
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+.muse-badge.sourced     { color: #b9e6c2; border-color: rgba(111, 194, 127, 0.42); background: rgba(111, 194, 127, 0.14); }
+.muse-badge.stated      { color: #cfe0f5; border-color: rgba(120, 162, 216, 0.40); background: rgba(120, 162, 216, 0.13); }
+.muse-badge.placeholder { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.muse-badge.derived     { color: #d9cff6; border-color: rgba(169, 150, 232, 0.42); background: rgba(169, 150, 232, 0.14); }
+.muse-badge.unconfirmed { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.muse-badge.dated       { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.muse-badge.yourinput   { color: var(--muse-accent-hi); border-color: var(--muse-accent-ring); background: var(--muse-accent-wash); }
+
+/* ══ CHECK PILLS ════════════════════════════════════════════════════════ */
+.muse-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: var(--muse-fs-xs);
+  font-weight: 600;
+  border: 1px solid;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.muse-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.muse-pill.ok   { color: #b9e6c2; border-color: rgba(111, 194, 127, 0.42); background: rgba(111, 194, 127, 0.13); }
+.muse-pill.over { color: #f5bdb7; border-color: rgba(226, 104, 95, 0.45);  background: rgba(226, 104, 95, 0.15); }
+
+/* ══ CERTIFICATION MARK RATINGS ═════════════════════════════════════════ */
+.muse-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--muse-r-sm);
+  border: 1px solid;
+  padding: 0.14rem 0.5rem;
+  font-size: var(--muse-fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: lining-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 1px 2px rgba(var(--muse-shade), 0.4);
+}
+.muse-rating.r3     { background: linear-gradient(180deg, #3d8757, #2f6b45); border-color: #4b9a67; color: #eafaef; }
+.muse-rating.r2     { background: linear-gradient(180deg, #a3ba6e, #7d9150); border-color: #b0c87c; color: #12180d; }
+.muse-rating.r1     { background: linear-gradient(180deg, #c08a58, #95653a); border-color: #cf9d6d; color: #1b1109; }
+.muse-rating.review { background: rgba(227, 180, 85, 0.14); border-color: rgba(227, 180, 85, 0.44); color: #f3dda7; }
+.muse-rating.none   { background: rgba(120, 162, 216, 0.10); border-color: rgba(120, 162, 216, 0.32); color: var(--muse-ink-faint); }
+.muse-rating-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.75rem;
+  font-size: var(--muse-fs-xs);
+  color: var(--muse-ink-soft);
+}
+.muse-rating-legend-title { font-weight: 700; color: var(--muse-ink); letter-spacing: 0.02em; }
+.muse-rating-legend-note  { flex-basis: 100%; color: var(--muse-ink-faint); }
+
+/* ══ CITATIONS & LINKS ══════════════════════════════════════════════════ */
+.muse-cite {
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muse-accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--muse-accent);
+  white-space: nowrap;
+}
+.muse-cite:hover { border-bottom-style: solid; color: var(--muse-accent-hi); }
+.muse-link {
+  color: var(--muse-accent);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.muse-link:hover { color: var(--muse-accent-hi); border-bottom-color: var(--muse-accent); }
+
+/* ══ NOTICES ════════════════════════════════════════════════════════════ */
+.muse-notice {
+  border: 1px solid var(--muse-line);
+  border-left: 3px solid var(--muse-accent);
+  border-radius: var(--muse-r);
+  padding: 0.8rem 0.95rem;
+  font-size: var(--muse-fs-sm);
+  line-height: 1.55;
+  color: var(--muse-ink-soft);
+  background: linear-gradient(90deg, var(--muse-accent-wash), var(--muse-surface) 34%);
+  box-shadow: var(--muse-panel-shadow);
+}
+.muse-notice-title { font-weight: 600; color: var(--muse-ink); margin-bottom: 0.2rem; }
+
+.muse-preview-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--muse-line);
+  border-left: 3px solid var(--muse-placeholder);
+  border-radius: var(--muse-r);
+  font-size: var(--muse-fs-sm);
+  line-height: 1.5;
+  color: var(--muse-ink-soft);
+  background: linear-gradient(90deg, rgba(227, 180, 85, 0.07), var(--muse-surface) 38%);
+  box-shadow: var(--muse-panel-shadow);
+}
+.muse-preview-tag {
+  flex: none;
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muse-placeholder);
+}
+
+/* ══ MODULE STATUS STRIP ════════════════════════════════════════════════ */
+.muse-modstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--muse-fs-2xs);
+  border-radius: 999px;
+  padding: 0.12rem 0.6rem;
+  border: 1px solid var(--muse-line);
+  color: var(--muse-ink-soft);
+  background: var(--muse-surface-2);
+  box-shadow: inset 0 1px 0 var(--muse-bevel);
+}
+.muse-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; display: inline-block; }
+.muse-dot.live     { background: var(--muse-sourced); box-shadow: 0 0 6px -1px var(--muse-sourced); }
+.muse-dot.partial  { background: var(--muse-placeholder); }
+.muse-dot.designed { background: rgba(var(--muse-ink-base), 0.55); }
+
+/* ══ SCENARIO BAR ═══════════════════════════════════════════════════════ */
+.muse-scenariobar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1rem;
+  padding: 0.55rem 1.5rem;
+  /* The top bar of the OS (Robert, 2026-09-18): chrome, not a card. Deep soil continuous
+     with the sidebar, flat — no bevel, no lift — so the frame reads as one piece and the
+     cards sit inside it. */
+  background: linear-gradient(180deg, var(--muse-bar-top), var(--muse-bar-bottom));
+  border-bottom: 1px solid var(--muse-bar-line);
+  color: var(--muse-side-ink-soft);
+  font-size: var(--muse-fs-sm);
+}
+.muse-scenariobar-status { display: flex; align-items: center; gap: 0.6rem; font-size: var(--muse-fs-sm); color: var(--muse-side-ink-soft); }
+/* The one thing that changes as you work — the plan of record or the open forecast — in the light copper of the sidebar's active edge. */
+.muse-scenariobar-live strong { color: var(--muse-side-mark); font-weight: 600; }
+.muse-scenariobar-clean { color: var(--muse-side-ink-soft); opacity: 0.75; font-size: var(--muse-fs-xs); }
+/* Controls on soil: ghost buttons in side ink; the copper primary stays and pops two stops off the ground. */
+.muse-scenariobar .muse-btn:not(.primary) {
+  color: var(--muse-side-ink);
+  background: transparent;
+  border-color: var(--muse-bar-line);
+  box-shadow: none;
+}
+.muse-scenariobar .muse-btn:not(.primary):hover:not(:disabled) { background: var(--muse-side-wash); border-color: var(--muse-side-ink-soft); }
+.muse-scenariobar .muse-btn.primary { border-color: var(--muse-accent-hi); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25); }
+.muse-scenariobar .muse-btn:focus-visible { box-shadow: 0 0 0 2px var(--muse-bar-bottom), 0 0 0 4px var(--muse-accent-hi); }
+.muse-scenariobar .muse-input,
+.muse-scenariobar .muse-select {
+  color: var(--muse-side-ink);
+  background: var(--muse-bar-field);
+  border-color: var(--muse-bar-line);
+}
+.muse-scenariobar .muse-input::placeholder { color: var(--muse-side-ink-soft); opacity: 0.7; }
+.muse-scenariobar .muse-input:focus,
+.muse-scenariobar .muse-select:focus { border-color: var(--muse-accent-hi); box-shadow: 0 0 0 2px var(--muse-bar-bottom), 0 0 0 4px var(--muse-accent-hi); }
+.muse-scenariobar .muse-dirty { color: var(--muse-side-mark); background: var(--muse-side-active); border-color: var(--muse-side-mark); }
+.muse-scenariobar .muse-scenariobar-msg.ok  { color: var(--muse-side-head); }
+.muse-scenariobar .muse-scenariobar-msg.err { color: #ffb4ad; }
+.muse-scenariobar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+.muse-scenariobar-msg { flex-basis: 100%; font-size: var(--muse-fs-xs); padding: 0.3rem 0; }
+.muse-scenariobar-msg.ok  { color: var(--muse-sourced); }
+.muse-scenariobar-msg.err { color: var(--muse-over); }
+.muse-dirty {
+  font-size: var(--muse-fs-xs);
+  font-weight: 600;
+  color: var(--muse-accent-hi);
+  background: var(--muse-accent-wash);
+  border: 1px solid var(--muse-accent-ring);
+  border-radius: var(--muse-r-sm);
+  padding: 0.12rem 0.45rem;
+}
+
+/* ══ CONTROLS ═══════════════════════════════════════════════════════════ */
+.muse-input,
+.muse-select {
+  font: inherit;
+  font-size: var(--muse-fs-sm);
+  color: var(--muse-ink);
+  background: var(--muse-sunk);
+  border: 1px solid var(--muse-line-control);
+  border-radius: var(--muse-r-sm);
+  padding: 0.32rem 0.55rem;
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45);
+}
+.muse-input { min-width: 12rem; }
+.muse-input::placeholder { color: var(--muse-ink-faint); }
+.muse-input:focus,
+.muse-select:focus {
+  outline: none;
+  border-color: var(--muse-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45), 0 0 0 2px var(--muse-accent);
+}
+.muse-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: var(--muse-fs-sm); color: var(--muse-ink-soft); }
+.muse-field .muse-input { min-width: 0; width: 100%; }
+.muse-field textarea.muse-input { resize: vertical; }
+
+.muse-btn {
+  font: inherit;
+  font-size: var(--muse-fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muse-ink);
+  background: linear-gradient(180deg, var(--muse-surface-3), var(--muse-surface));
+  border: 1px solid var(--muse-line-control);
+  border-radius: var(--muse-r-sm);
+  padding: 0.35rem 0.75rem;
+  box-shadow: inset 0 1px 0 var(--muse-bevel), 0 1px 2px rgba(var(--muse-shade), 0.4);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+.muse-btn:hover:not(:disabled) {
+  border-color: var(--muse-accent-ring);
+  box-shadow: inset 0 1px 0 var(--muse-bevel-hi), 0 2px 8px -2px rgba(var(--muse-shade), 0.6);
+}
+.muse-btn:active:not(:disabled) { transform: translateY(1px); }
+.muse-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--muse-ground), 0 0 0 4px var(--muse-accent); }
+.muse-btn:disabled { opacity: 0.45; cursor: default; }
+.muse-btn.primary {
+  color: #14100b;
+  border-color: var(--muse-accent-deep);
+  background: linear-gradient(180deg, var(--muse-accent-hi), var(--muse-accent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 10px -3px var(--muse-accent-ring);
+}
+.muse-btn.primary:hover:not(:disabled) { filter: brightness(1.07); }
+/* A light button: the unselected half of a two-state toggle (Plan / Actual). */
+.muse-btn.muse-btn-light { color: #14100b; background: var(--muse-ink-strong); border-color: var(--muse-ink-strong); }
+.muse-btn.ghost {
+  background: transparent;
+  border-color: var(--muse-line-control);
+  color: var(--muse-ink-soft);
+  box-shadow: none;
+}
+.muse-btn.ghost:hover:not(:disabled) { color: var(--muse-ink); border-color: var(--muse-line-strong); }
+
+/* ── Page tabs: a top-bar tab menu over one full-width panel card ────────
+ * Markup: <div class="muse-tabs" role="tablist"> <button class="muse-tab" role="tab" aria-selected> …
+ *         </div><div class="muse-tab-panel" role="tabpanel"> … </div>
+ * The tabs sit on the panel's top edge like folder tabs: every tab carries a
+ * stroke, a bevel highlight and a shaded fill; the selected tab takes the
+ * panel's own surface, drops its bottom stroke and opens into the panel, with
+ * a copper highlight on its top edge. The panel is one card, full width, that
+ * grows lengthwise with whatever the open tab holds. */
+.muse-tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.5rem 0.6rem 0;
+}
+/* The panel's top stroke runs under the unselected tabs. */
+.muse-tabs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--muse-line-strong);
+  z-index: -1;
+}
+.muse-tab {
+  position: relative;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: var(--muse-fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--muse-ink-soft);
+  background: linear-gradient(180deg, var(--muse-surface-3) 0%, var(--muse-surface) 100%);
+  border: 1px solid var(--muse-line);
+  border-bottom-color: var(--muse-line-strong);
+  border-radius: var(--muse-r) var(--muse-r) 0 0;
+  padding: 0.5rem 1rem 0.45rem;
+  margin-top: 0.3rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--muse-bevel),
+    inset 0 -6px 10px -8px rgba(var(--muse-shade), 0.55);
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.muse-tab:hover {
+  color: var(--muse-ink);
+  border-color: var(--muse-line-strong);
+  background: linear-gradient(180deg, #2c3833 0%, var(--muse-surface-2) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--muse-bevel-hi),
+    inset 0 -6px 10px -8px rgba(var(--muse-shade), 0.45);
+}
+.muse-tab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 1px 0 var(--muse-bevel-hi), 0 0 0 2px var(--muse-accent);
+}
+.muse-tab[aria-selected='true'] {
+  z-index: 2;
+  color: var(--muse-accent-hi);
+  margin-top: 0;
+  padding-top: 0.6rem;
+  padding-bottom: calc(0.45rem + 1px);
+  margin-bottom: -1px;
+  border-color: var(--muse-line-strong);
+  border-bottom-color: transparent;
+  background: linear-gradient(180deg, var(--muse-surface-3) 0%, var(--muse-surface-2) 100%);
+  box-shadow:
+    inset 0 2px 0 var(--muse-accent),
+    inset 0 3px 0 rgba(232, 168, 111, 0.28),
+    0 -4px 14px -8px rgba(208, 138, 78, 0.45);
+}
+.muse-tab[aria-selected='true']::after {
+  /* Seals the selected tab into the panel below it. */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--muse-surface-2);
+}
+.muse-tab-count {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  color: var(--muse-ink-faint);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--muse-line);
+}
+.muse-tab[aria-selected='true'] .muse-tab-count { color: var(--muse-accent-hi); border-color: var(--muse-accent-ring); background: var(--muse-accent-wash); }
+
+/* A bar with more tabs than the panel is wide wraps onto further rows instead of
+   running off the edge (the Reports library, twelve sections). The panel's top
+   stroke runs under the last row; the selected tab still seals into the panel. */
+.muse-tabs.muse-tabs-wrap { flex-wrap: wrap; row-gap: 0.15rem; }
+
+/* The one full-width panel card. Height follows the open tab's content. */
+.muse-tab-panel {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 1.25rem;
+  padding: 1.15rem 1.2rem 1.3rem;
+  background: linear-gradient(180deg, var(--muse-surface-2) 0%, var(--muse-surface) 320px);
+  border: 1px solid var(--muse-line-strong);
+  border-top: none;
+  border-radius: 0 0 var(--muse-r-lg) var(--muse-r-lg);
+  box-shadow:
+    inset 0 -1px 0 var(--muse-underside),
+    0 1px 2px rgba(var(--muse-shade), 0.4),
+    0 14px 32px -16px rgba(var(--muse-shade), 0.75);
+}
+/* Cards inside the panel sit a step down: stroke and bevel, no second drop shadow. */
+.muse-tab-panel .muse-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(var(--muse-shade), 0.08) 100%);
+  box-shadow: inset 0 1px 0 var(--muse-bevel), inset 0 -1px 0 var(--muse-underside);
+}
+.muse-tab-panel > * + * { margin-top: 1rem; }
+@media (max-width: 768px) {
+  /* Narrow screens: the bar scrolls sideways; the selected tab's seal is traded for the scroll. */
+  .muse-tabs { padding: 0.4rem 0.3rem 0; overflow-x: auto; scrollbar-width: thin; }
+  .muse-tab { padding: 0.45rem 0.75rem 0.4rem; }
+  .muse-tab-panel { padding: 0.9rem 0.8rem 1rem; }
+}
+@media print {
+  .muse-tabs { display: none; }
+  .muse-tab-panel { border: none; box-shadow: none; padding: 0; background: none; }
+}
+
+/* ── The floor layout (Facility · Layout) ────────────────────────────── */
+.muse-plan { display: block; width: 100%; height: auto; touch-action: none; user-select: none; border: 1px solid var(--muse-line); border-radius: var(--muse-r-sm); background: var(--muse-sunk); }
+.muse-plan text { font-family: var(--muse-mono); fill: var(--muse-ink); pointer-events: none; }
+.muse-plan .grid { stroke: rgba(255, 255, 255, 0.05); }
+.muse-plan .shell { fill: none; stroke: var(--muse-ink-soft); stroke-width: 2; }
+.muse-plan .room { fill: rgba(120, 162, 216, 0.12); stroke: var(--muse-stated); stroke-width: 1; }
+.muse-plan .room.spine { fill: rgba(208, 138, 78, 0.10); stroke: var(--muse-accent); stroke-dasharray: 4 3; }
+.muse-plan .room.hood { fill: rgba(227, 180, 85, 0.10); stroke: var(--muse-placeholder); stroke-dasharray: 2 3; }
+.muse-plan .room.exit, .muse-plan .room.drain { fill: rgba(111, 194, 127, 0.16); stroke: var(--muse-sourced); }
+.muse-plan .room.hand_sink { fill: rgba(111, 194, 127, 0.16); stroke: var(--muse-sourced); }
+.muse-plan .room.boundary { fill: none; stroke: var(--muse-accent-hi); stroke-width: 1.5; stroke-dasharray: 6 4; pointer-events: stroke; }
+.muse-plan .halo { fill: rgba(169, 150, 232, 0.10); stroke: var(--muse-derived); stroke-width: 0.75; stroke-dasharray: 3 3; }
+.muse-plan .unit { fill: rgba(237, 242, 239, 0.14); stroke: var(--muse-ink); stroke-width: 1; cursor: grab; }
+.muse-plan .unit.selected { stroke: var(--muse-accent-hi); stroke-width: 2; }
+.muse-plan .unit.flagged { stroke: var(--muse-over); }
+.muse-plan .unit.phase-later { stroke-dasharray: 4 2; opacity: 0.7; }
+.muse-plan .handle { fill: var(--muse-accent); cursor: nwse-resize; }
+@media print {
+  .muse-plan-print-only { display: block !important; }
+  body * { visibility: hidden; }
+  .muse-plan-sheet, .muse-plan-sheet * { visibility: visible; }
+  .muse-plan-sheet { position: absolute; left: 0; top: 0; background: #fff; color: #000; }
+  .muse-plan-sheet .muse-plan { border: none; background: #fff; width: var(--plan-w); height: auto; }
+  .muse-plan-sheet .muse-plan text { fill: #000; }
+  .muse-plan-sheet .muse-plan foreignObject div { color: #000 !important; }
+  .muse-plan-sheet .muse-plan .shell { stroke: #000; }
+  .muse-plan-sheet .muse-plan .unit { fill: none; stroke: #000; }
+  .muse-plan-sheet .muse-plan .room { fill: none; stroke: #333; }
+  .muse-plan-sheet .muse-plan .room.boundary { stroke: #000; stroke-dasharray: 6 4; }
+}
+
+/* ── Editable numeric fields ─────────────────────────────────────────── */
+.muse-editnum { display: inline-flex; align-items: center; gap: 0.3rem; }
+.muse-editnum-affix { color: var(--muse-ink-faint); font-size: var(--muse-fs-sm); }
+.muse-num-input {
+  font: inherit;
+  font-family: var(--muse-mono);
+  font-size: var(--muse-fs-sm);
+  text-align: right;
+  width: 5.5rem;
+  color: var(--muse-ink);
+  background: var(--muse-sunk);
+  border: 1px solid var(--muse-line-control);
+  border-radius: var(--muse-r-sm);
+  padding: 0.18rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45);
+}
+.muse-num-input:focus {
+  outline: none;
+  border-color: var(--muse-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45), 0 0 0 2px var(--muse-accent);
+}
+.muse-num-input.edited { border-color: var(--muse-accent); color: var(--muse-accent-hi); }
+
+/* ── Entity picker / linked chips ────────────────────────────────────── */
+.muse-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--muse-fs-xs);
+  color: var(--muse-ink-soft);
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px dashed var(--muse-line-strong);
+  background: transparent;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.muse-picker:hover {
+  color: var(--muse-accent-hi);
+  border-color: var(--muse-accent);
+  border-style: solid;
+  background: var(--muse-accent-wash);
+}
+.muse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--muse-fs-xs);
+  padding: 0.22rem 0.35rem 0.22rem 0.65rem;
+  border-radius: 999px;
+  color: var(--muse-ink);
+  background: linear-gradient(180deg, var(--muse-surface-3), var(--muse-surface-2));
+  border: 1px solid var(--muse-line-strong);
+  box-shadow: inset 0 1px 0 var(--muse-bevel);
+}
+.muse-chip-remove {
+  color: var(--muse-ink-faint);
+  cursor: pointer;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: none;
+  border: 0;
+  font: inherit;
+}
+.muse-chip-remove:hover { color: var(--muse-over); background: rgba(226, 104, 95, 0.14); }
+
+/* ── Sliders ─────────────────────────────────────────────────────────── */
+.muse-root input[type='range'],
+.muse-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--muse-accent);
+}
+.muse-root input[type='range']::-webkit-slider-runnable-track,
+.muse-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muse-sunk);
+  border: 1px solid var(--muse-line-control);
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.6);
+}
+.muse-root input[type='range']::-moz-range-track,
+.muse-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--muse-sunk);
+  border: 1px solid var(--muse-line-control);
+}
+.muse-root input[type='range']::-webkit-slider-thumb,
+.muse-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 17px;
+  height: 17px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--muse-accent-hi), var(--muse-accent-deep));
+  border: 1px solid var(--muse-accent-deep);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 7px -1px rgba(var(--muse-shade), 0.75);
+}
+.muse-root input[type='range']::-moz-range-thumb,
+.muse-slider::-moz-range-thumb {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--muse-accent);
+  border: 1px solid var(--muse-accent-deep);
+}
+.muse-root input[type='range']:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--muse-ground), 0 0 0 4px var(--muse-accent); }
+
+/* ══ SECTION SAVE ═══════════════════════════════════════════════════════ */
+.muse-section-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--muse-accent-ring);
+  background: linear-gradient(90deg, var(--muse-accent-wash), var(--muse-surface) 40%);
+  border-radius: var(--muse-r);
+  box-shadow: var(--muse-panel-shadow);
+}
+.muse-section-save .label { font-size: var(--muse-fs-sm); color: var(--muse-accent-hi); font-weight: 600; }
+.muse-section-save .spacer { margin-left: auto; }
+.muse-section-save-msg { flex-basis: 100%; font-size: var(--muse-fs-xs); }
+.muse-section-save-msg.ok  { color: var(--muse-sourced); }
+.muse-section-save-msg.err { color: var(--muse-over); }
+
+/* ══ OMNI SEARCH ════════════════════════════════════════════════════════ */
+/* Condensed to the width of its word (Robert, 2026-09-18); it grows while it has focus. */
+.muse-omni { position: relative; margin-left: auto; flex: 0 0 6.5rem; min-width: 6.5rem; transition: flex-basis 0.16s ease; }
+.muse-omni:focus-within { flex-basis: 20rem; }
+.muse-omni-input {
+  font: inherit;
+  font-size: var(--muse-fs-xs);
+  width: 100%;
+  color: var(--muse-ink);
+  background: var(--muse-surface);
+  border: 1px solid var(--muse-line-control);
+  border-radius: var(--muse-r-sm);
+  padding: 0.3rem 0.6rem;
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45);
+}
+.muse-omni-input::placeholder { color: var(--muse-ink-faint); }
+.muse-omni-input:focus {
+  outline: none;
+  border-color: var(--muse-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--muse-shade), 0.45), 0 0 0 2px var(--muse-accent);
+}
+.muse-omni-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  width: min(30rem, 92vw);
+  max-height: 26rem;
+  overflow-y: auto;
+  background: var(--muse-surface);
+  border: 1px solid var(--muse-line-strong);
+  border-radius: var(--muse-r);
+  box-shadow: 0 20px 48px -16px rgba(var(--muse-shade), 0.85), inset 0 1px 0 var(--muse-bevel);
+}
+.muse-omni-group {
+  padding: 0.35rem 0.7rem;
+  background: linear-gradient(180deg, var(--muse-surface-2), var(--muse-surface));
+  border-bottom: 1px solid var(--muse-line);
+  font-size: var(--muse-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muse-ink-faint);
+  position: sticky;
+  top: 0;
+}
+.muse-omni-row { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--muse-line); transition: background 0.14s ease; }
+.muse-omni-row:hover { background: var(--muse-row-hover); }
+.muse-omni-main { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; }
+.muse-omni-name { font-size: var(--muse-fs-sm); font-weight: 600; color: var(--muse-ink); text-decoration: none; }
+.muse-omni-name:hover { color: var(--muse-accent-hi); }
+.muse-omni-sub { font-size: var(--muse-fs-xs); color: var(--muse-ink-faint); margin-top: 0.1rem; }
+.muse-omni-surfaces {
+  list-style: none;
+  margin: 0.4rem 0 0.1rem;
+  padding: 0.4rem 0 0 0.7rem;
+  border-top: 1px dashed var(--muse-line);
+  font-size: var(--muse-fs-xs);
+  line-height: 1.75;
+}
+.muse-omni-empty,
+.muse-omni-foot { padding: 0.55rem 0.7rem; font-size: var(--muse-fs-xs); color: var(--muse-ink-faint); }
+.muse-omni-foot { border-top: 1px solid var(--muse-line); background: var(--muse-surface-2); }
+
+/* ══ HERO BAND (Dashboard) ══════════════════════════════════════════════ */
+/* Replaces the forest→olive inline gradient on the dashboard hero. On a dark
+   ground the hero should be the brightest object, not a coloured block. */
+.muse-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--muse-r-lg);
+  padding: 1.3rem 1.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1.1rem 1.6rem;
+  background:
+    radial-gradient(120% 160% at 8% 0%, var(--muse-accent-wash) 0%, transparent 58%),
+    linear-gradient(180deg, var(--muse-surface-3) 0%, var(--muse-surface) 88%);
+  border: 1px solid var(--muse-line-strong);
+  box-shadow: var(--muse-panel-shadow-hi);
+}
+.muse-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--muse-accent) 0%, var(--muse-bevel-hi) 42%, transparent 88%);
+}
+.muse-hero-value {
+  font-family: var(--muse-mono);
+  font-size: var(--muse-fs-2xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--muse-ink-strong);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+/* The Admin Dashboard's Mean Averages card (Robert, 2026-09-16): the corner glow and the top edge in the logo's
+   greens instead of copper, darker, so the headline stays legible. */
+.muse-hero.muse-hero-green {
+  background:
+    radial-gradient(120% 160% at 8% 0%, rgba(14, 107, 78, 0.28) 0%, transparent 58%),
+    linear-gradient(180deg, var(--muse-surface-3) 0%, var(--muse-surface) 88%);
+}
+.muse-hero.muse-hero-green::after {
+  background: linear-gradient(90deg, #0e6b4e 0%, rgba(95, 174, 138, 0.35) 42%, transparent 88%);
+}
+/* The arrow between two figures in a hero value, set small so the figures lead (Robert, 2026-09-16). */
+.muse-hero-arrow { font-size: 0.45em; vertical-align: middle; opacity: 0.8; }
+.muse-hero-label { font-size: var(--muse-fs-xs); color: var(--muse-ink-soft); margin-top: 0.5rem; }
+.muse-hero-sub   { font-size: var(--muse-fs-2xs); color: var(--muse-ink-faint); margin-top: 0.15rem; font-family: var(--muse-mono); }
+
+/* ══ ACCESSIBILITY ══════════════════════════════════════════════════════ */
+.muse-root :focus-visible { outline: 2px solid var(--muse-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .muse-root *,
+  .muse-root *::before,
+  .muse-root *::after { transition: none !important; animation: none !important; }
+  .muse-lift:hover { transform: none; }
+}
+
+/* ══ FLOOR — the operator's surface, tablet-first (Roadmap I5) ═══════════ */
+.muse-floor-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.muse-floor-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem 1.2rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--muse-line);
+  background: linear-gradient(180deg, var(--muse-surface-2), var(--muse-surface));
+}
+.muse-floor-top .muse-brand-name { color: var(--muse-ink); }
+.muse-floor-top { align-items: center; }
+.muse-floor-top .muse-brand-sub { margin-top: 0; }
+.muse-floor-brand { display: inline-flex; align-items: center; gap: 0.7rem; }
+.muse-floor-top .muse-brand-icon { width: 3.25rem; }
+.muse-floor-top .muse-brand-wordmark { margin-top: 0; font-size: 1.1rem; text-align: left; }
+/* The same width as MUSE KITCHEN above it, as in the sidebar. */
+.muse-floor-top .muse-brand-tagline { margin-top: 0.15rem; font-size: 1.17rem; text-indent: 0; text-align: left; }
+.muse-floor-content { padding: 1.1rem 1.25rem 3rem; max-width: 72rem; width: 100%; }
+/* Larger targets for gloved hands: every control on the floor is at least 44px tall. */
+.muse-floor .muse-input,
+.muse-floor .muse-select,
+.muse-floor .muse-num-input {
+  font-size: var(--muse-fs-md);
+  min-height: 44px;
+  padding: 0.45rem 0.7rem;
+}
+.muse-floor .muse-num-input { width: 6.5rem; }
+.muse-floor .muse-btn {
+  font-size: var(--muse-fs-md);
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+}
+.muse-floor .muse-table th,
+.muse-floor .muse-table td { padding-top: 0.55rem; padding-bottom: 0.55rem; font-size: var(--muse-fs-md); }
+.muse-floor .muse-kpi-sub { font-size: var(--muse-fs-sm); }
+.muse-floor-queue { display: grid; gap: 0.6rem; }
+.muse-floor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--muse-line);
+  border-radius: var(--muse-r-sm);
+  background: var(--muse-surface-2);
+}
+.muse-floor-row.done { opacity: 0.6; }
+.muse-floor-row-title { font-weight: 600; font-size: var(--muse-fs-md); }
+.muse-floor-row-sub { color: var(--muse-ink-soft); font-size: var(--muse-fs-sm); }
+
+/* ══ FRONT DOOR (Roadmap P7) ════════════════════════════════════════════
+   `/muse`, its sign-in and the router: the logo mark's landscape across the
+   whole page — its sky (#0E6B4E) behind, the three soil bands drawn by
+   FrontDoorLandscape. Content sits in the sky (the top 57.5%). */
+.muse-root.muse-front { --muse-ground: #0e6b4e; background: var(--muse-ground); }
+.muse-front-landscape { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.muse-front-band { position: absolute; left: 0; right: 0; bottom: 0; }
+/* The wave sits on the band's top edge; its flat foot overlaps the band by a pixel so no seam shows. */
+.muse-front-band svg { position: absolute; left: 0; bottom: calc(100% - 1px); width: 100%; height: 3rem; display: block; }
+.muse-front-main {
+  position: relative;
+  z-index: 1;
+  min-height: 57.5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem 2.5rem;
+}
+.muse-front-welcome { display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center; width: 100%; }
+/* The OS header stack, scaled up: the mark as wide as MUSE KITCHEN, IMPACT OS as wide again. The name is the
+   logo's dark green (#0B2A22), the tagline copper (Robert, 2026-09-16).
+   Everything is in em off one size, so the stack scales as a unit with the viewport. */
+.muse-front-brand { font-size: min(1.3rem, 4.6vw, 1.6vh); width: 11.5em; }
+.muse-front-brand .muse-brand-icon { width: 100%; filter: drop-shadow(0 0.35em 0.8em rgba(var(--muse-shade), 0.28)); }
+.muse-front-brand .muse-brand-wordmark { font-size: 1.3em; margin-top: 0.5em; color: #0b2a22; }
+.muse-front-brand .muse-brand-tagline { font-size: 1.38em; margin-top: 0.4em; color: var(--muse-accent); }
+.muse-front-title { font-size: clamp(1rem, 2.4vw, 1.35rem); font-weight: 600; letter-spacing: 0.06em; color: #f4eee3; }
+.muse-front-enter { font-size: var(--muse-fs-md); padding: 0.7rem 1.4rem; text-decoration: none; letter-spacing: 0.04em; }
+/* The links under a Clerk form: clear of the card, on the logo's dark green so they read over the soil. */
+.muse-front-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.4rem;
+  margin-top: 1.75rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(11, 42, 34, 0.88);
+  font-size: var(--muse-fs-base);
+}
+.muse-front-links .muse-link { color: #f4eee3; }
+.muse-front-card { max-width: 36rem; width: 100%; }
+.muse-front-text { font-size: var(--muse-fs-base); color: var(--muse-ink-soft); line-height: 1.55; }
+.muse-front-choices { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+
+/* ══ UTILITIES ═══════════════════════════════════════════════════════════
+ * The design-system classes pages use instead of inline styles. Type sizes
+ * and ink colours come ONLY from here; layout and spacing use Tailwind
+ * utilities. These replace what were inline styles, so they carry
+ * !important to keep the precedence an inline style had (a class inside a
+ * .muse-table cell must still beat `.muse-table td`).
+ */
+.muse-fs-2xs  { font-size: var(--muse-fs-2xs) !important; }
+.muse-fs-xs   { font-size: var(--muse-fs-xs) !important; }
+.muse-fs-sm   { font-size: var(--muse-fs-sm) !important; }
+.muse-fs-base { font-size: var(--muse-fs-base) !important; }
+.muse-fs-md   { font-size: var(--muse-fs-md) !important; }
+.muse-fs-lg   { font-size: var(--muse-fs-lg) !important; }
+.muse-fs-xl   { font-size: var(--muse-fs-xl) !important; }
+.muse-fs-2xl  { font-size: var(--muse-fs-2xl) !important; }
+
+.muse-c-strong      { color: var(--muse-ink-strong) !important; }
+.muse-c-ink         { color: var(--muse-ink) !important; }
+.muse-c-soft        { color: var(--muse-ink-soft) !important; }
+.muse-c-faint       { color: var(--muse-ink-faint) !important; }
+.muse-c-accent      { color: var(--muse-accent) !important; }
+.muse-c-accent-hi   { color: var(--muse-accent-hi) !important; }
+.muse-c-accent-deep { color: var(--muse-accent-deep) !important; }
+.muse-c-sourced     { color: var(--muse-sourced) !important; }
+.muse-c-stated      { color: var(--muse-stated) !important; }
+.muse-c-placeholder { color: var(--muse-placeholder) !important; }
+.muse-c-derived     { color: var(--muse-derived) !important; }
+.muse-c-over        { color: var(--muse-over) !important; }
+.muse-c-forest      { color: var(--muse-forest) !important; }
+.muse-c-stone-ink   { color: var(--muse-stone-ink) !important; }
+.muse-c-stone-ink-soft { color: var(--muse-stone-ink-soft) !important; }
+
+.muse-mono  { font-family: var(--muse-mono) !important; font-variant-numeric: lining-nums tabular-nums; }
+.muse-serif { font-family: var(--muse-serif) !important; }
+.muse-sans  { font-family: var(--muse-font) !important; }
+
+/* Auto-fit card grids: as many columns of at least N rem as fit. */
+.muse-autofit-8 { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)) !important; }
+.muse-autofit-9 { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)) !important; }
+.muse-autofit-10 { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)) !important; }
+.muse-autofit-11 { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)) !important; }
+.muse-autofit-12 { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)) !important; }
+.muse-autofit-13 { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)) !important; }
+.muse-autofit-14 { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)) !important; }
+.muse-autofit-16 { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)) !important; }
+.muse-autofit-18 { grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)) !important; }
+.muse-autofit-20 { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)) !important; }
+.muse-autofit-21 { grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr)) !important; }
+.muse-autofit-22 { grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)) !important; }
+.muse-autofit-24 { grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr)) !important; }
+.muse-autofit-26 { grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)) !important; }
+.muse-autofit-28 { grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr)) !important; }
+.muse-autofit-30 { grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr)) !important; }
+
+/* In-table editing controls (`_components/InlineCells.tsx`). */
+.muse-cell-control { font-size: var(--muse-fs-xs) !important; min-width: 0 !important; padding: 0.3rem 0.5rem !important; }
+/* The button filling a collapsing library's group header row (`tr.muse-group-row`). */
+.muse-group-row-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--muse-ink);
+  text-align: left;
+  cursor: pointer;
+}

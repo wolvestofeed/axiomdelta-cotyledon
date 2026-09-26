@@ -1,0 +1,500 @@
+# Impact OS — inventory & cost accounting policy
+
+The authority behind every number the platform posts. Co-versioned with
+`_engine/production-ledger.ts`, `_engine/index.ts` and `_data/coa-muse.ts`: if a rule
+here changes, the engine changes with it, and the reverse.
+
+Written for a reader who has to sign off on the books — a CPA, a lender, or a
+district's finance office. It states what the platform does and the authority for
+doing it. It does not counsel; the operator decides.
+
+---
+
+## 1. Framework and posture
+
+- **US GAAP**, ASC 330 *Inventory*, on a **perpetual** inventory system at
+  **standard cost**, with variances isolated at the point they arise.
+- **IAS 2** is satisfied by the same engine. The two converged on the points that
+  matter here (normal-capacity absorption, abnormal waste, standard cost as an
+  approximation), so no second calculation exists. LIFO is not used, which keeps
+  the IFRS path open.
+- Cost flow assumption: **weighted average at standard**, with FIFO lot
+  consumption for physical and traceability purposes. Standard cost is the
+  carrying basis; the lot register is the physical record.
+
+## 2. What is a product cost and what is not
+
+ASC 330-10-30-1 — inventory carries the expenditures and charges incurred to bring
+an article to its existing condition and location.
+
+**Inventoriable**
+
+| Element | Treatment |
+|---|---|
+| Purchased ingredients | At standard purchase price; freight-in and duties capitalise |
+| Packaging (bowl, lid, label) | Each recipe's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every recipe; received into its own inventory at standard and charged at the pack stage |
+| Direct labor | Standard hours × standard loaded rate, absorbed into WIP-Cook |
+| Variable manufacturing overhead | Absorbed on the same base as fixed |
+| Fixed manufacturing overhead | Absorbed at a predetermined rate set on **normal capacity** (§4) |
+| Normal spoilage | Inside the 3% shrink allowance; already in standard cost |
+
+**Not inventoriable**
+
+| Element | Authority |
+|---|---|
+| Delivery and distribution to sites | ASC 330-10-30-8 — selling costs are period costs |
+| Abnormal spoilage | ASC 330-10-30-7 — a current-period charge |
+| Unabsorbed fixed overhead | ASC 330-10-30-3 — expensed as incurred |
+| General and administrative expense | ASC 330-10-30-8 |
+
+Delivery is a selling cost: it is deducted after the
+**cost of a meal** (food, labor, packaging) to reach contribution, and it is excluded
+from the **inventory** figure. Fixed cost is in neither; it is a period expense, with
+fixed cost per meal reported as a period metric (§4). The **cost to serve** shown on
+Recipes (Robert, 2026-09-15) is the management figure that adds distribution back to the
+cost of a meal; storage stays out of it. The cost of a meal is built by batch: the
+planned cost of one full-line batch from bulk inputs, the batch's yield, and the batch
+cost divided into its portions (`batchCosting`).
+
+## 3. The chart of accounts
+
+CompTable's `DEFAULT_HOSPITALITY_COA` is a restaurant chart with one inventory
+account and no work in process. A commissary running cook-chill is a manufacturer:
+components sit in WIP for days carrying absorbed labor and overhead. Muse
+**extends** that chart rather than editing it (`_data/coa-muse.ts`); every other
+CompTable surface keeps the accounts it has.
+
+| Code | Account | Why it exists |
+|---|---|---|
+| 1410 | Inventory — Food | Raw materials |
+| 1415 | Inventory — Packaging & Disposables | Packaging is a product cost charged at pack |
+| 1430 | Work in Process — Cook | Kettle and combi; carries material, labor, overhead |
+| 1435 | Work in Process — Chill | The blast chiller. A costing boundary **and** CCP-2 |
+| 1440 | Work in Process — Pack | Assembly. Cold components enter the chain here |
+| 1450 | Inventory — Finished Goods | Packed meals awaiting delivery |
+| 2015 | Goods Received Not Invoiced | Clearing between receipt and vendor invoice |
+| 2160 | Accrued Manufacturing Overhead | Budgeted lease and utilities accrued at month end until the bill settles it (§4) |
+| 5110 | Purchase Price Variance | Invoice against standard, at receipt |
+| 5120 | Material Usage Variance | Actual issue against standard, at standard price |
+| 5130 | Direct Labor Rate Variance | Actual rate against standard, on actual hours |
+| 5140 | Direct Labor Efficiency Variance | Actual hours against standard, at standard rate |
+| 5150 | MOH Spending Variance | Actual fixed overhead against budget |
+| 5160 | MOH Volume Variance | Budget not absorbed because volume < normal capacity |
+| 5170 | Production Labor Not Charged to a Batch | Loaded labor on the time clock beyond what batch records charged; a period production cost (§16) |
+| 5180 | Manufacturing Overhead Control | Fixed manufacturing overhead actually incurred in the period |
+| 5190 | Manufacturing Overhead Applied | Contra; cleared against control at period end |
+| 5910 | Abnormal Spoilage | Its own P&L line, never buried in cost of goods sold |
+| 7910 | Marketplace Commissions | Retained by a marketplace on ghost-kitchen orders; a selling cost (§16) |
+
+**Three WIP stages, not one.** The chill stage is where product sits longest, where
+the binding capacity constraint is, and where CCP-2 is monitored. Making it a
+costing boundary means cost and the cooling record share a stage, and a batch held
+across a period end can be valued at the stage it is actually in.
+
+## 4. Fixed overhead absorption — the material policy
+
+**Rule.** Fixed manufacturing overhead is absorbed at a predetermined rate:
+
+```
+rate per meal = budgeted annual fixed manufacturing overhead
+              ÷ NORMAL CAPACITY in meals
+```
+
+**What is in the budget.** Only MANUFACTURING overhead: the commissary lease, its
+utilities, and straight-line depreciation of the equipment and leasehold
+(ASC 330-10-30-1 — costs of bringing product to its condition and location).
+Admin, insurance, software and licenses are general and administrative expense and
+debt service is financing; ASC 330-10-30-8 keeps both in the period. The engine
+(`manufacturingOverheadBudget`) reports the excluded amounts beside the budget so
+the base is auditable. The cost of a meal carries none of it: a meal is food, labor and
+packaging (Robert, 2026-09-14). Fixed cost per meal is a **period metric** on the expense
+basis — the period's lease, utilities, depreciation, admin and interest over that period's
+meals delivered, computed on each ledger's statement periods (`StatementPeriod.fixedExpense`),
+with principal repaid reported beside it as financing — and is never a unit cost.
+
+**Normal capacity** (ASC 330-10-20) is "the production expected to be achieved over
+a number of periods or seasons under normal circumstances, taking into account the
+loss of capacity resulting from planned maintenance." For this commissary that is the
+production the plan itself expects — the forecast's own batches, made on the lines in
+service on each date, so never more than the plant can make — net of planned maintenance
+and sanitation downtime. It is **not** the theoretical daily ceiling. An engine call given no
+rate absorbs on the production in the documents it posts, annualised and net of downtime
+(`bundleAbsorption`) — for a plan's documents, the plan's own production (Roadmap N9, Robert
+2026-09-16).
+
+**The Plan ledger (Roadmap N5, Robert 2026-09-16).** A forecast posted as a Plan ledger absorbs on
+its **own** production: normal capacity is the meals the forecast produces a year over its horizon,
+net of planned downtime, and the rate is the horizon's budgeted manufacturing overhead a year over
+it. Each forecast therefore absorbs its overhead in full apart from the downtime allowance; forecasts
+are not measured against the plan of record's volume. The budget each month is the manufacturing-
+overhead fixed-cost lines in force that month, and depreciation runs straight-line on each capital
+purchase from the month it is bought (§17).
+
+**Consequences:**
+
+- The rate does not move with volume. What moves is how much of the budget is
+  absorbed.
+- When actual volume is **below** normal capacity, the unabsorbed remainder is a
+  **period charge**, not inventory. In the period it sits as Overhead Control
+  (5180, incurred) against Overhead Applied (5190) and closes to the volume
+  variance (5160) at period end. The ANNUAL volume variance is a period-end
+  computation and is never posted on a batch.
+- When actual volume is **above** normal capacity, the per-unit rate falls so
+  inventory is not carried above cost.
+- **Monthly accrual (Robert, 2026-09-14).** One twelfth of the budgeted lease
+  and utilities is accrued into Overhead Control at month end against Accrued
+  Manufacturing Overhead (2160); depreciation posts its own twelfth. A lease or
+  utilities bill recorded for the period settles the accrual, and the difference
+  between the bill and the budget is the **spending variance** (5150), a period
+  charge or credit. A category with no bill on file stays accrued as a liability
+  until its bill is recorded. Overhead incurred is therefore the budget every
+  month; what the bills did is in 5150, what the volume did is in 5160.
+
+On the Plan ledger the downtime allowance shows as a small favourable volume variance. Fixed
+cost per meal as a period metric is a different figure: it adds admin and interest to the
+period's overhead and divides by the period's own meals.
+
+## 5. Standard cost and variance disposition
+
+ASC 330-10-30-12/13 permits standard cost **only** where it approximates cost on a
+recognised basis and is **revised at reasonably regular intervals** to reflect
+current conditions.
+
+- Standards are effective-dated and versioned (`muse.standard_versions`). A version is
+  the recipe as resolved on the plan of record plus the cost assumptions, frozen when a
+  super admin approves it with an effective date (Robert, 2026-09-14). The ledger costs
+  a batch at the version in force on its production date and the batch record names it,
+  so a reviewer can reproduce the cost; a batch dated before any approved version is
+  costed at the live library and the period says so. An effective date inside a locked
+  period is refused. Editing the library or the plan changes what the next approval
+  freezes; it never moves a standard already in force.
+- Revision interval: `assumptions.standardCost.revisionIntervalMonths`.
+- **Disposition.** Net variance above
+  `assumptions.standardCost.varianceProrationThreshold` (5% of standard cost of
+  goods sold) **prorates** across ending raw materials, WIP, finished goods and
+  COGS. At or below it, the whole net variance goes to COGS. Writing every
+  variance to COGS regardless of size would carry inventory at a standard that no
+  longer approximates cost.
+- **Abnormal spoilage never prorates.** It is a period charge by rule and is
+  excluded from the proration base.
+
+**Batch and period.** Purchase price, material usage and labor variances arise on
+a batch and are dispositioned on the batch's net. Overhead under- or
+over-absorption is a period figure — incurred against applied — and is reported
+beside the batch net, not inside it.
+
+**The run buys for the allowance.** The purchase order for a run is built on
+`portions × (1 + shrink allowance)`: the allowance is trim, over-portioning and
+spoilage — pounds that are bought and never plated — so the quantity received
+carries it and raw materials are relieved by no more than they were received.
+
+**Case-rounding is not a variance.** A purchase order rounded up to whole cases
+costs more than the recipe standard for the run. That difference is *quantity*, not
+price: it is inventory on hand and it nets against the next run's requirement.
+Treating it as a purchase price variance would book a phantom unfavourable variance
+every production day. Purchase price variance is measured at receipt, on the **price received**
+against standard; a supplier bill that differs from what was received adds its difference to the
+variance while it is flagged (§16).
+
+## 6. Spoilage — normal against abnormal
+
+The distinction decides inventory against expense, so it is a captured field, not a
+judgement made at close.
+
+Every scrap transaction carries a **disposition reason code** (`_engine/batch.ts`).
+ISO 9001:2015 clause 8.7 (control of nonconforming outputs) is the record format;
+ISO 22400 draws the same line between planned and actual scrap.
+
+| Normal — inventoriable | Abnormal — period charge (ASC 330-10-30-7) |
+|---|---|
+| Trim | Chill failure (CCP-2 limit not met) |
+| Cook loss | Temperature excursion |
+| Portion overage | Equipment failure |
+| | Contamination |
+| | Dropped or damaged |
+| | Recall or withdrawal |
+| | Hold life exceeded |
+
+Normal spoilage is already inside the 3% shrink allowance and rides into WIP with
+the standard. Abnormal spoilage is relieved from the stage it occurred in and
+charged to 5910, **at the stage's fully absorbed cost per pound**: the component's
+material per pound at that stage plus the conversion cost the stage carries —
+direct labor and absorbed overhead over the standard mass in the stage, and
+packaging once packed. A pound lost in the chiller therefore leaves with the
+labor and overhead already spent on it; a pound lost before the kettle is raw
+material at purchase cost and carries none.
+
+**The allowance is on the record.** The standard issue for a batch is the quantity
+the run bought for, `portions × (1 + shrink allowance)`, and each component carries
+its allowance in pounds. The standard record shows the allowance as normal `TRIM`
+scrap at stage `PREP` — before the kettle — so a record that ran exactly to standard
+balances and has no usage variance. A scrap event with a normal reason is normal
+only up to the component's allowance, consumed in the order recorded; the pounds
+beyond it are abnormal spoilage and leave inventory. An abnormal reason is abnormal
+in full. Scrap at `PREP` is raw material: it is valued at purchase cost and relieved
+from the stage the component was issued to.
+
+## 7. The mass balance invariant
+
+A batch does not close unless its weights reconcile:
+
+```
+AP issued + cook delta − chill loss − scrap = packed
+```
+
+The cook delta is **signed**. This recipe gains mass through cooking — dry rice and
+dry beans take on water — so a model that assumes cooking only removes weight is
+wrong about this product. Scrap at stage `PREP` leaves before the kettle, so the
+cook delta is measured on what was actually cooked (`AP issued − prep scrap`), and
+scrap at the other four stages is subtracted after it. Every pound issued must
+resolve to packed product, a named stage loss, or scrap with a reason code.
+Tolerance is 0.5 lb; a residual that drifts is a control failure, not scale noise.
+
+**The cooked-to-chilled gap is not a loss.** Only hot components enter the blast
+chiller. The difference between cooked mass and chilled mass for this recipe is the
+cold-packed cheese and tortilla, which never enter the cabinet.
+
+## 8. Revenue
+
+ASC 606. The performance obligation is a delivered meal; control transfers on
+delivery to the site, which is when revenue and cost of goods sold are recognised
+together. Where a contract carries a right of return on undelivered or unserved
+meals, that is a refund liability and a right-to-recover asset, not a reduction of
+inventory.
+
+## 9. Traceability and the consumption journal
+
+FSMA 204 (21 CFR Part 1 subpart S) treats cook-chill as a **transformation**
+critical tracking event: the traceability lot codes and quantities of every input,
+and the lot code, quantity and unit of the output.
+
+That is the same data as the material consumption entry. **One capture, two
+postings** — the ledger and the traceability record come off the same transaction,
+so they cannot drift. An input with no recorded lot code is reported as a gap
+rather than filled with a placeholder that would read as a record.
+
+Compliance date carried: **2028-07-20**, FDA's proposed 30-month extension (published
+2025-08-07) of the 2026-01-20 date in the rule. Carried as a field, not as logic, so it can be
+corrected without a code change.
+
+## 10. Meal-pattern crediting as a costing constraint
+
+A school entree's plated weight is not a preference. It is the weight that delivers
+its crediting contribution under 7 CFR 210.10(c) for its grade group. The chain
+therefore runs:
+
+```
+plated spec (meal pattern) → EP required → ÷ cooking yield → ÷ trim yield
+→ + planned waste → AP requirement → ÷ pack size, round up to case → PO
+```
+
+Costing runs the inverse over the same factors. Dollars are conserved through
+cooking; mass is not, so there is a distinct cost per pound at each stage:
+
+```
+EP cost/lb     = AP cost/lb ÷ trim yield
+cooked cost/lb = AP cost/lb ÷ yield to cooked
+```
+
+Crediting runs on the **as-served component**, not the ingredient line: a salsa is
+served as a salsa, and scored ingredient by ingredient every line falls under the
+1/8-cup minimum and the salsa credits as nothing. Component totals are rounded once,
+**down**, per USDA — to the nearest 1/4 oz eq for meats/meat alternates and grains,
+and the nearest 1/8 cup for vegetables.
+
+## 11. Internal controls the platform enforces
+
+Not SOX — this is a private company — but these are what an auditor's completeness
+and cutoff testing goes at.
+
+- **The ledger posts from the batch execution record only.** Planning surfaces never
+  write journals. A plan change cannot restate the books. (ISA-95 / IEC 62264: the
+  Level 3 production performance object is the source, not the Level 4 schedule.)
+- **Every posting carries a source document reference** — the batch id.
+- **A batch that does not mass-balance does not close.**
+- **Scrap cannot be recorded without a disposition reason code.**
+- **Standard cost changes are effective-dated**, so the standard in force on any
+  production date is reproducible.
+- **Work in process clears to zero** when a batch is packed. Asserted by test, in
+  cents: rounding a combined figure once leaves a cent in a stage account that
+  reads as inventory which does not exist and never clears.
+
+## 12. Open items
+
+These are named rather than resolved. Nothing here is settled by the engine.
+
+- Ten of twelve ingredient prices are placeholders.
+- The serving vessel capacity is a placeholder. It is the cheapest physical check
+  on any portion change and is a packaging quote, not a model output.
+- The portioning utensil is not specified. A standardized recipe states it by size.
+- Budgeted fixed manufacturing overhead is the manufacturing-overhead fixed-cost
+  lines (lease, utilities) plus straight-line depreciation, not a cost budget with
+  maintenance and production supplies.
+- The plant capacity a forecast's production is bound by rides on a presumed
+  operating day (07:00–19:00, PLACEHOLDER) that has not been decided.
+- Planned maintenance downtime is a 3% placeholder (Robert, 2026-09-15).
+- No trim yield is observed separately from cooking yield. USDA Food Buying Guide
+  factors are AP → cooked-and-drained and already include trim, so the composite is
+  used and the split is left undefined rather than invented.
+- No chill-stage weight loss has been observed. The stage exists in the cost chain
+  so an observation can be recorded against it; it is not assumed.
+- A batch record with no actual labor hours posts labor at standard, so both labor
+  variances are zero on it. Plan ledger batches carry none; a recorded batch carries
+  them only when its crew hours or a total are entered.
+
+## 14. Actuals
+
+A recorded period posts from its records through the same posting functions as the
+Plan ledger (§17); nothing is typed as a dollar total.
+
+| Record | Posts |
+|---|---|
+| Batch record | Issue → labor → overhead → cook → chill → pack → finished goods, at standard, with usage and labor variances from the actual weights and hours. No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
+| Receipt | Accepted lines: raw materials at standard — the ingredient's standard from any recipe in the library that uses it, at the version in force on the receipt date (Roadmap N5); the price received against standard to purchase price variance; goods received not invoiced (2015) at the price received. A rejected line posts nothing. An ingredient on no recipe is received at the price received with no variance and named in the notes. |
+| Supplier bill | Clears goods received not invoiced at what its receipts received; payable at the bill; any difference to purchase price variance while the bill is flagged (§16). |
+| Absorption | A batch with no approved standard absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); an approved standard absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
+| Delivery | A recorded delivery names its recipe through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for School lunches and Corporate catering and to processor clearing (1200) for Ghost kitchen; cost of goods sold at the standard per meal of the recipe delivered when the delivery names it (that recipe's batches in the period, else the last period that made it), otherwise the period's standard per meal (the period's own batches, else the last period that had any; zero before any batch has posted); delivery expense; retail commission deducted from the remittance. |
+| Customer / supplier payment | Cash against receivables / payables, applied to invoices / bills. |
+| Opening balance | Cash, the fit-out at cost, long-term debt and owners' equity as of its date. |
+| Payroll | At month end, loaded labor earned on the time clock less what the month's batch records charged, to 5170 against the four payroll liabilities; on each pay date through today, the pay period's loaded labor paid in cash (§16). |
+| Period bill | Lease and utilities to Overhead Control; admin to G&A; other to the named account; payable until a paid-on date posts the payment. |
+| Month end | One twelfth of annual depreciation to Overhead Control; applied closed against incurred, the difference to the volume variance. |
+| Equity contribution | Cash against owners' equity (3100) (Roadmap N5). |
+| Capital purchase | Fixed assets (1700) at cost against cash (Roadmap N5). |
+| Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash (Roadmap N5). |
+| Marketplace deposit | Cash against processor clearing (1200) (Roadmap N5). |
+
+The standard per meal is carried unrounded and only a delivery's extended cost
+rounds, so a period whose deliveries equal its production relieves finished goods
+to within a cent. Receivables and payables are not settled unless a payment record
+applies to them: the actuals position carries real working capital, and it opens
+from the opening balance record once one is recorded (§16). The forecast-month column
+on Actuals is the Plan ledger's own month for the same period (Roadmap N6). A shipment given no
+price posts no revenue and says so; there is no default price (Roadmap N9).
+
+## 15. Periods, the lock and the posting trail
+
+Fiscal periods are calendar months and the fiscal year is the calendar year
+(Robert, 2026-09-14). A period is open until a super admin locks it. **A locked
+period refuses every posting dated inside it** — batch close, receipt, delivery,
+period bill, and the removal of any record — at the server, whatever the page
+shows. A super admin may reopen a locked period, and must state why; the lock
+and the reopen are both entries on the posting trail.
+
+The posting trail (`muse.posting_log`) is append-only: the database refuses
+updates and deletions outright. Each entry carries who acted, when, the action,
+the record it concerns, the period, a detail block, the previous entry's hash and
+its own SHA-256 hash over the previous hash plus its canonical fields, from a
+genesis hash. An edit or a removal anywhere breaks verification from that entry
+on; Actuals recomputes the whole chain on every read and shows the result. The
+entry is written in the same database transaction as the record it describes, so
+a record and its trail entry commit together or not at all.
+
+The production calendar is the service weekdays less dated closures (major
+holidays; the kitchen runs year-round). A closure takes its dates out of production and out of the
+derived forecast; orders already on file are unchanged.
+
+## 16. Working capital, invoicing and payroll (Roadmap Phase K)
+
+Decisions of record: Robert, 2026-09-14.
+
+### Payment terms — the reference
+
+| Terms | Due | Suppliers | Customers |
+|---|---|---|---|
+| Due on Receipt | the document date | yes | yes |
+| Net 15 | document date + 15 calendar days | yes | yes |
+| Net 30 | document date + 30 calendar days | yes | yes |
+| Net 60 | document date + 60 calendar days | yes | — |
+| Net 90 | document date + 90 calendar days | yes | — |
+
+There is no default. A customer with no terms on file cannot be issued an invoice; a supplier with
+no terms on file cannot have a bill recorded; a period bill is recorded with its terms. The
+document date is the invoice's issue date and the bill's date.
+
+### Receivables
+
+School lunches and Corporate catering are invoiced once a month per customer. Revenue and the
+receivable are recognised at delivery (§8); the invoice is the billing document, not the
+recognition event. Each completed delivery route adds its deliveries to the customer's open invoice
+for the month, and an invoice is issued on or after its last delivery with the customer's terms at
+that moment. Invoice numbers are `AMK-INV-YYYYMMDD-NN`, dated the day the invoice was opened.
+Customer payments are applied to invoices; an unapplied remainder stays a credit in receivables.
+Ghost kitchen orders are paid at the time of ordering: the delivery debits processor clearing
+(1200), the marketplace commission is deducted from it (7910), and no receivable arises.
+
+### Payables and the three-way match
+
+A receipt posts raw materials at standard and credits goods received not invoiced (2015) at the
+price received; the price received against standard is the purchase price variance (§5). Receiving
+has no tolerance: each line keeps its purchase-order quantity and price, and a line received short,
+over or at a changed price states the override reason. The supplier's bill is recorded against the
+receipts it covers and clears 2015 at what they received; the bill is credited to accounts payable.
+The match is exact: order against receipt needs the override reason for any difference, and the bill
+must equal what was received, ingredient by ingredient, in quantity and value. A bill that does not
+match is posted — the liability exists — with the difference in the purchase price variance, is
+flagged on Payables and the Dashboard, and is not paid until rectified.
+
+### Aging and days outstanding
+
+Aging counts calendar days past the due date: not yet due, 0–30, 31–60, 61–90, 90+. Days to collect
+is the period-end receivable over the period's billings to receivables × the period's calendar days;
+days to pay is period-end trade payables (2010 + 2015) over the period's trade purchases × its
+calendar days.
+
+### The forecast window
+
+A forecast runs from its start date — 2027-01-01, the year the loans start, unless the forecast
+carries another — for one year, or two or three (§17). It opens with owners' equity in cash (3100)
+at the start ($200,000 on file) and draws each loan on its start date (2027-01-01 on file).
+Invoiced customers are invoiced at each month end and collected on the due date; supplier bills
+are dated on receipt and paid on their due dates. Amounts with no terms on file settle as §17
+states and the timeline names them.
+
+### Long-term debt
+
+Each loan amortises at a level monthly payment, paid at month end from the month it starts. Interest
+is expensed and principal reduces the debt. The current portion — principal due in the twelve months
+after the statement date (ASC 470-10-45) — is presented among current liabilities and is never
+posted.
+
+### Payroll and the cut-off
+
+Loaded labor is owed as wages (2110), employer FICA, FUTA and SUTA (2120), workers' comp (2130) and
+benefits (2140). No pay is held in Muse (Roadmap O1): CompTable holds wages, burden and benefits,
+closes each pay period and sends its totals by account; the clock times go to CompTable. Time is
+kept on the internal time clock: clock in, start and end a break, clock out. A shift is clock-in to
+clock-out less breaks; a shift with no clock-out counts no hours; hours past 40 in a Monday–Sunday
+workweek are overtime (29 U.S.C. 207(a)(1)). Pay periods are biweekly, Monday through the second
+Sunday, paid the Friday five days later; the date the sequence counts from is a placeholder. At each
+month end the part of each closed pay period earned in the month — by the hours on the clock, else by
+calendar days — is accrued against what the month's batch records charged to work in process, and
+the difference is production labor not charged to a batch (5170), a period production cost. Hours on
+the clock on dates no closed pay period covers accrue nothing and are noted. Each closed pay period
+is paid in cash on its pay date; no payroll run is recorded yet, so the pay date is taken as the
+payment through today. Batch records charge standard labor at the plan's placeholder rate until
+CompTable's loaded rates arrive. Pay periods paid after the forecast window ends stay accrued.
+
+### Opening balance
+
+The actuals carry one opening balance record: owners' equity, the fit-out at cost and the long-term
+debt, as of a date. Opening cash is equity plus debt less the fit-out.
+
+## 17. The Plan ledger (Roadmap N5)
+
+A forecast's timeline (`simulateForecast`) posts through `postActuals` — the same functions as the
+actuals (§14) — so actual against plan is the same report run twice. Nothing is stored.
+
+| Element | Plan treatment |
+|---|---|
+| Documents | Batch records at standard, receipts, supplier bills and payments, deliveries, monthly invoices and collections, closed pay periods, fixed-cost bills, capital purchases, loan draws and payments, equity at the start, marketplace deposits — all generated by the timeline |
+| Standard | Every batch at the live library: the plan is where standards come from, so no per-batch approval note is written |
+| Absorption | The forecast's own production as normal capacity (§4) |
+| Overhead budget | Each month, the manufacturing-overhead fixed-cost lines in force that month, lease or utilities by the category their bill settles |
+| Depreciation | Straight-line on each capital purchase from the month it is bought over its class life (equipment and leasehold years) |
+| No terms on file (Robert, 2026-09-16) | Invoices collected on the issue date; supplier bills — including ingredients with no supplier linked — paid on the bill date; own-fleet delivery cost paid on the delivery date; fixed-cost bills paid on the first of the month; marketplace remittances, net of commission, deposited on the delivery date. Each is named in the timeline's gaps |
+| Statements | By month, calendar quarter and fiscal year (§15), clipped to the forecast window: classified income statement (revenue by channel, cost of goods sold at standard, manufacturing variances, gross margin, selling and distribution, general and administrative, operating income, interest, net income), classified balance sheet with inventory by stage, cash flow by the direct and the indirect method asserted equal, every period balanced. Each recipe is costed on its own standard |
+
+The indirect cash flow classifies capital and debt by whether cash moved in the entry: capital bought
+for cash is investing, a loan drawn or repaid in cash is financing, and a fit-out capitalised and
+financed in one entry stays a non-cash disclosure.

@@ -1,0 +1,18 @@
+{
+  "name": "Unsaid step: dropping a component's last line takes its steps with it",
+  "instruction": "Drop the green beans altogether.",
+  "sourceRecipeCode": "AMK-E-003",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-003",
+    "variantName": "",
+    "lineChanges": [{ "kind": "remove", "line": "green beans" }],
+    "laborChanges": [],
+    "facts": ["The green beans line is dropped."]
+  },
+  "expect": {
+    "questions": [],
+    "readyWhen": {},
+    "lines": { "lacks": ["Green beans, fresh"] },
+    "steps": [{ "taskHas": "Green beans", "absent": true }]
+  }
+}

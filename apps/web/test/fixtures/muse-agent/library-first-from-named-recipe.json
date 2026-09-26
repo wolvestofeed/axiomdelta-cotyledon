@@ -1,0 +1,17 @@
+{
+  "name": "Library first: an item from a named recipe is found there before anywhere else",
+  "instruction": "Use the marinara from the meatball plate on the enchiladas instead of the enchilada sauce.",
+  "sourceRecipeCode": "AMK-E-010",
+  "toolInput": {
+    "sourceRecipe": "AMK-E-010",
+    "variantName": "",
+    "lineChanges": [{ "kind": "replace", "line": "enchilada sauce", "withItem": "marinara", "fromRecipe": "meatball plate" }],
+    "laborChanges": [],
+    "facts": ["The enchilada sauce on AMK-E-010 is replaced by the marinara from the meatball plate."]
+  },
+  "expect": {
+    "questions": [{ "id": "line:tomato purée marinara with roasted carrots and spinach:use:AMK-E-008", "kind": "confirm", "waivable": false }],
+    "readyWhen": { "confirmed": ["line:tomato purée marinara with roasted carrots and spinach:use:AMK-E-008"] },
+    "lines": { "has": ["Tomato purée marinara with roasted carrots and spinach"], "lacks": ["Enchilada sauce, mild"] }
+  }
+}
