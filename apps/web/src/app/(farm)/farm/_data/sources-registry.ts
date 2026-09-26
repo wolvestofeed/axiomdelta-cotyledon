@@ -14,6 +14,7 @@
  */
 
 import type { SourceKind } from '../_engine/sources';
+import { SCIENCE_REFERENCE_SOURCES } from './science-library';
 
 export interface ReferenceSource {
   /** Stable key; the seed matches on it so a title change does not duplicate the row. */
@@ -30,7 +31,7 @@ export interface ReferenceSource {
   alsoUrls?: string[];
 }
 
-export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
+const BASE_REFERENCE_SOURCES: readonly ReferenceSource[] = [
   // ── City of Austin ────────────────────────────────────────────────────
   { key: 'austin:code-25-12-153', kind: 'regulation', title: 'Austin City Code §25-12-153 — Uniform Plumbing Code as amended', publisher: 'City of Austin', year: null, citation: 'Austin City Code Title 25, Ch. 25-12, §25-12-153 (UPC §616.0, §704.3, §1007.0, §1014.1, §1014.1.1, §1014.1.3)', sourceUrl: 'https://library.municode.com/tx/austin/codes/code_of_ordinances?nodeId=TIT25LADE_CH25-12TECO', usedFor: 'Facility conformance register: indirect waste, no disposer, grease interceptor sizing, trapping and venting.' },
   { key: 'austin:code-15-10', kind: 'regulation', title: 'Austin City Code Chapter 15-10 — Wastewater Regulations', publisher: 'City of Austin', year: null, citation: 'Austin City Code Title 15, Ch. 15-10', sourceUrl: 'https://library.municode.com/tx/austin/codes/code_of_ordinances?nodeId=TIT15UTSE_CH15-10WARE', usedFor: 'Effluent limits and the grease interceptor requirement.' },
@@ -82,6 +83,9 @@ export const REFERENCE_SOURCES: readonly ReferenceSource[] = [
   { key: 'ucb:dining-design-guidelines', kind: 'other', title: 'UC Berkeley University Health Services Dining Design Guidelines — Space Requirements', publisher: 'University of California, Berkeley', year: null, citation: 'Dining Design Guidelines, space requirements appendix', sourceUrl: null, usedFor: 'The aisle in every zone circulation factor of the space engine.' },
   { key: 'fer:cart-clearance', kind: 'other', title: 'Foodservice Equipment Reports — cart clearance', publisher: 'Foodservice Equipment Reports', year: null, citation: 'Carts need roughly 40 in', sourceUrl: 'https://www.fermag.com/', usedFor: 'Harvest marshalling lane width.' },
 ];
+
+/** The register: the platform's reference sources plus every row of the science library. */
+export const REFERENCE_SOURCES: readonly ReferenceSource[] = [...BASE_REFERENCE_SOURCES, ...SCIENCE_REFERENCE_SOURCES];
 
 /**
  * Sources held as stored documents (`scripts/seed-farm-sources.ts` STORED): registered by the

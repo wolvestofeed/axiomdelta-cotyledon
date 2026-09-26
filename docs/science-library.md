@@ -2,7 +2,12 @@
 
 Every benefit MicroFarm states about a variety traces to a row here. This file is the register the Sources module is seeded from in Phase 2; the glossary ([`glossary.md`](glossary.md)) cites rows by number. Nothing is stated to a subscriber without a citation, and a citation that is a company page or a blog is marked as such and never carries a clinical claim.
 
-Source document: *The Clinical and Scientific Efficacy of Microgreens and Sprouts: A Comprehensive Review of Nutritional Profiles, Phytochemical Mechanisms, and Health Benefits* (`docs/Microgreens Nutritional Research Data.docx`, Rob's compilation, Sept 2026). The numbering below is that document's works-cited order, so its inline superscripts map onto these rows one for one.
+Two source documents, both Rob's compilations, Sept 2026:
+
+- **A** — *The Clinical and Scientific Efficacy of Microgreens and Sprouts* (`docs/Microgreens Nutritional Research Data.docx`): what the compounds do in the body. Rows 1–56 are its works cited in its own order, so its inline superscripts map one for one.
+- **B** — *Optimal Agronomic Practices for Microgreens: Growth Media and Lighting Optimization* (`docs/Optimal Agronomic Practices for Microgreens_ Growth Media and Lighting Optimization.docx`): how growing conditions change what is in the crop. It shares 44 works with A; its 15 new works are rows 61–75, and §1b maps its own numbering onto the register.
+
+The register in code is `apps/web/src/app/(farm)/farm/_data/science-library.ts`; `rowFor('B', n)` resolves a document B superscript.
 
 ## 1. Works cited
 
@@ -66,6 +71,29 @@ Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial 
 | 54 | Microbial Quality of Leafy Greens Grown Under Soilless Production | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC12472353/ |
 | 55 | Harnessing beneficial microbes to boost sprout and microgreen production | R | https://pubmed.ncbi.nlm.nih.gov/40552945/ |
 | 56 | Microgreens and the Future of Food: The Food as Medicine Movement | C | https://microgreensworld.com/microgreens-and-the-future-of-food/ |
+| 57 | Iron concentration in fenugreek microgreens (Journal of Food Science & Nutrition) | P | https://doi.org/10.1002/fsn3.1209 |
+| 58 | Protein and folate content in sprouted lentils (Food Chemistry) | P | https://doi.org/10.1016/j.foodchem.2018.06.123 |
+| 59 | True Leaf Market — variety pages and seed packaging | S | https://www.trueleafmarket.com/ |
+| 60 | Tray Specific Microgreen Seeding Guide (On The Grow, 2023) | S | https://onthegrow.net/ |
+| 61 | Microgreens: Functional Food for Nutrition and Dietary Diversification | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC11859409/ |
+| 62 | Improving food security through indoor vertical farming of microgreens | R | https://www.frontiersin.org/journals/sustainable-food-systems/articles/10.3389/fsufs.2026.1809881/full |
+| 63 | The Nutritional Quality Potential of Microgreens, Baby Leaves, and Adult Plants | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC8834567/ |
+| 64 | Microgreens Production: Exploiting Environmental and Cultural Factors | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC11435253/ |
+| 65 | Emergence of microgreens as a valuable food, current status and future prospects | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC11225695/ |
+| 66 | Assessment of bioactive compounds, antioxidant properties and morphology of Brassica microgreens in soilless media | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC11464729/ |
+| 67 | Trial Protocol for Evaluating Platforms for Growing Microgreens in Controlled Environments | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC9103178/ |
+| 68 | Red:Blue LED Ratio Modulates Growth and Nutritional Quality of Microgreens | P | https://www.mdpi.com/2311-7524/12/10/1210 |
+| 69 | Effects of Green Light Deprivation and Red-to-Blue Ratio on Growth and Mineral Accumulation | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC13075160/ |
+| 70 | Effects of LED light treatments on the bioactive composition of microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC13253669/ |
+| 71 | Light manipulation as a route to enhancement of antioxidant properties in microgreens | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC11186462/ |
+| 72 | Optimization of light spectrum and intensity to enhance growth and phytochemicals in microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC12967691/ |
+| 73 | Effect of Low Light Intensity With Supplemental Far-Red Light on Broccoli Microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC12208883/ |
+| 74 | Effects of LED lighting on the nutritional properties and microbial quality of microgreens | P | https://www.frontiersin.org/journals/nutrition/articles/10.3389/fnut.2026.1869208/full |
+| 75 | Continuous LED Lighting Enhances Yield and Nutritional Value of Brassica Microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC8781578/ |
+
+### 1b. Document B's numbering
+
+Document B's inline superscript *n* cites the register row in position *n* of this list: 1, 61, 5, 6, 25, 62, 8, 63, 2, 64, 3, 11, 9, 50, 4, 10, 13, 65, 66, 67, 51, 52, 53, 21, 22, 55, 68, 69, 70, 71, 72, 73, 74, 75, 14, 20, 23, 24, 26, 27, 30, 28, 29, 38, 19, 41, 42, 43, 44, 45, 36, 33, 31, 32, 34, 16, 17, 18, 49.
 
 ## 2. Headline studies
 
@@ -156,6 +184,34 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 | Microgreens under light with airflow and lower humidity carry lower risk, but root uptake and foliar contamination still require Good Agricultural Practices. | all micros | review | 54 |
 | Seed or substrate inoculation with PGPR and protective endophytes (Bacillus, Pseudomonas and others) excludes pathogens and raises yield. | all | review | 55 |
 
+### Media (document B)
+
+| Claim | Varieties | Evidence | Rows |
+|---|---|---|---|
+| Cocopeat: high cation exchange capacity, pH 5.5 to 7.0, porosity 90 to 95%, low bulk density, naturally antifungal; more fresh and dry weight than field soil mixes. | all | review | 65 |
+| Peat and vermiculite blends aerate the root zone and prevent the hypoxia behind damping-off. | all | review | 2 |
+| Green and red basil on vermiculite and jute fiber carried more antioxidants; a resistive substrate is a mild stressor. | basil | review | 8 |
+| Sugarcane filter cake, white sphagnum and vermicompost work as media but need microbial and nitrate monitoring. | all | review | 8 |
+| Hydroponic mats with monitored water drastically reduce the pathogen vectors of soil and organic media. | all | review | 65, 50, 53 |
+| Sulfur supplementation in a hydroponic reservoir raises glucosinolate biosynthesis in brassicas. | brassicas | review | 21 |
+
+### Light (document B)
+
+| Claim | Varieties | Evidence | Rows |
+|---|---|---|---|
+| Red light drives photosynthesis and biomass through phytochrome; monochromatic red gives the lowest antioxidant and secondary-metabolite concentrations. | all | primary | 68 |
+| 100% blue gave radish and broccoli a 16.3% average rise in total antioxidant activity, with shorter, thicker growth. | radish, broccoli | primary | 68 |
+| Blue light maximizes total phenolics in pea. | pea | primary | 70 |
+| Broccoli: 5:1 red-to-blue balances height, weight, glucosinolates and antioxidants; 75:25 gave the most nitrogen; 25:75 raised bioavailable iron 15 to 20%; red-dominant 5 to 9 ratios maximize weight and dilute phytochemicals. | broccoli | primary | 68 |
+| Far-red at 20% of flux with 50 to 75 µmol PPFD lengthens hypocotyls, raises fresh weight, and sharply raises ascorbic acid and glucosinolates in broccoli. | broccoli | primary | 73 |
+| A brief UV-C exposure of about 10 minutes doubled chlorophyll and raised carotenoids under red and blue LEDs. | all | primary | 74 |
+| Withholding green light under a high red-to-blue ratio raised mineral and nitrogen accumulation in *Salvia officinalis* and *Cannabis sativa*. | other species | primary | 69 |
+| Broccoli grows and accumulates phytochemicals best at 50 to 70 µmol/m²/s; above 100, growth slows and reactive oxygen species damage tissue. | broccoli | primary | 73, 11 |
+| Red pak choi carotenoids peak at 330 to 440 µmol/m²/s, lower at 110 and 545. | pak choi | primary | 73 |
+| Continuous 24-hour light (DLI 15.6 and 23.3) raised fresh and dry weight and antioxidant enzyme activity in arugula, broccoli, mizuna and radish versus 16 hours, with no visible damage inside the harvest window. | brassicas | primary | 75 |
+| Brassica microgreens in soilless media: ascorbic acid 177.58 to 256.46 mg/100 g, glucosinolates 4.09 to 47.38 µmol/g; Sango radish to 76.82% DPPH and 88.49% ABTS inhibition. | brassicas | primary | 66 |
+| Controlled environment agriculture decouples yield from nutritional quality: deliberate abiotic stress before harvest raises secondary metabolites. | all | review | 62, 64 |
+
 ## 4. Variety benefit profiles
 
 From the report's Table 2, each row citing the claims above. This is the seed for each variety's nutrient profile in Phase 2.
@@ -172,6 +228,19 @@ From the report's Table 2, each row citing the claims above. This is the seed fo
 | Pea (*Pisum sativum*) | flavonoids, organic acids | phosphorus, copper, vitamin C | phosphorus and copper accumulation, vitamin C, gentle flavor | 14 |
 
 Varieties Rob grows that the report does not profile and that need their own rows before a benefit is stated: fenugreek, borage, red garnet amaranth, purple Rambo radish, chia, hard red winter wheat. The Vallecito research database (`_inventory/raw-extracts/Microgreens_Research_Database__*.txt`) has starting citations for fenugreek iron (Journal of Food Science & Nutrition, doi:10.1002/fsn3.1209) and lentil protein (Food Chemistry, doi:10.1016/j.foodchem.2018.06.123).
+
+### 4b. Light and media responses by variety
+
+What the grow plan editor shows beside the light and medium lines. Each response cites its row; where a variety has no studied response the row is empty and the default regime applies.
+
+| Variety | Light response | Media response | Rows |
+|---|---|---|---|
+| Broccoli | PPFD 50 to 70, damage above 100; 5:1 red-to-blue for balance; 25:75 for iron; 20% far-red at 50 to 75 µmol for vitamin C and glucosinolates; continuous light for weight and antioxidant enzymes | cocopeat default; sulfur in hydroponic water raises glucosinolates | 68, 73, 75, 21 |
+| Red cabbage | brassica: blue-rich for anthocyanins and phenolics; continuous light | cocopeat default; sulfur as broccoli | 68, 75, 21 |
+| Radish | 100% blue for a 16.3% antioxidant rise; continuous light | cocopeat; soilless media give superior shoot height and width in Sango | 68, 75, 66 |
+| Pea | blue maximizes phenolics | cocopeat, soil preferred by the supplier | 70, 59 |
+| Basil | — | more antioxidants on vermiculite and jute | 8 |
+| Sunflower, fenugreek, borage, amaranth, chia, lentil, mung bean, wheat | no studied response on file; the default regime applies | cocopeat default; sprouts take no medium | — |
 
 ## 5. Rules for stating a benefit
 

@@ -16,10 +16,12 @@ Phase status only, one line per step. The phases are defined in [`outline.md`](o
 - [x] Parent portal, ERRA copy and the CompTable pieces removed; HR is Staffing, Floor is Grow Room, Customers are Subscribers, Sites are Pickup Points
 - [x] One consolidated migration, `packages/db/drizzle/0001_farm_init.sql`
 - [x] `test/farm-vocabulary.test.ts` fails on any surviving kitchen word outside the Phase 2 allowlist (the seeded crop plan, nutrient profile, grow stages, produce-safety plan, fixtures)
-- [x] Typecheck clean; 918 tests pass
+- [x] Typecheck clean; the suite passes
 - [x] Workspaces: `farm.workspaces`, `workspace_id` on all 51 tables with row-level security (migration 0002), one Clerk organization per workspace, roles from the organization, every entry point in `withWorkspace()`, scripts via `FARM_WORKSPACE` (`docs/outline.md` §7)
 - [ ] Lint: three react-hooks errors carried over from the source (`OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`)
-## Phase 2 — Growing domain  status: NOT STARTED
+## Phase 2 — Growing domain  status: IN PROGRESS
+- [x] Data foundations: `varieties.ts` (12 Vallecito varieties, tagged, benefits citing the library), `tray-formats.ts`, `stage-schedule.ts`, `inputs-catalog.ts` (media, nutrients, fixtures, light regimes), `science-library.ts` (75 rows, both documents mapped, 60 claims), `glossary.ts` (generated from `docs/glossary.md`); `test/farm-varieties.test.ts`
+- [ ] Grow plan replaces crop plan; costing on the four line kinds; capacity in trays and cycle days; the daily labor stream; stages replace thermal; nutrition targets replace crediting; produce-safety control points; Vallecito seeds; the Grow Plan editor, Varieties page, Glossary page and Grow Calendar; the rename — in the order `docs/next-session.md` gives
 ## Phase 3 — Subscriptions and distribution  status: NOT STARTED
 ## Phase 4 — Staffing  status: NOT STARTED
 ## Phase 5 — Facility and sustainability  status: NOT STARTED

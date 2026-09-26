@@ -72,6 +72,24 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Light stage.** The days after blackout when trays are under the grow lights until harvest.
 
+**Daily light integral (DLI).** The total light a tray receives in a day: PPFD times hours, in moles per square meter. The figure the energy cost and the biofortification claims hang off. [75]
+
+**Red-to-blue ratio.** The mix of red and blue in a grow light. Red grows mass; blue grows compounds. 5:1 is the studied balance for broccoli; blue-heavy mixes trade some weight for more antioxidants. [68]
+
+**Far-red.** Light just past visible red, 700 to 800 nm. Read by the plant as shade, it stretches stems and, at low intensity, sharply raises vitamin C and glucosinolates in broccoli. [73]
+
+**Continuous light.** Lights on 24 hours. Raised weight and antioxidant enzymes in brassica microgreens without visible damage inside the short harvest window. [75]
+
+**UV-C pulse.** A brief ultraviolet exposure, about 10 minutes, that doubles chlorophyll and raises carotenoids as the plant defends its photosystems. [74]
+
+**Light regime.** A named light recipe on a grow plan: ratio, far-red share, intensity, hours, and any UV-C pulse. Yield, balanced, nutrition-forward, biofortify, and continuous are the catalog.
+
+**Cocopeat.** Coconut coir fiber, the default medium. pH 5.5 to 7.0, 90 to 95% porosity, naturally antifungal, more fresh weight than soil. [65]
+
+**Electrical conductivity (EC).** The strength of a nutrient solution, measured by how well it conducts. Set on the nutrient line for hydroponic plans.
+
+**Damping-off.** Seedlings collapsing at the soil line from fungus in a wet, airless medium. Aeration and cocopeat's antifungal action prevent it. [2]
+
 **Organic seed.** Seed certified grown without synthetic pesticides or fertilizers. Recorded on the variety.
 
 **Heirloom.** An open-pollinated variety passed down for generations, not a hybrid. Recorded on the variety.
@@ -209,6 +227,22 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 **Phase 1 trial.** A first human safety study, not an efficacy study. [28]
 
 **Biofortification.** Raising a crop's nutrient content deliberately through growing conditions: light spectrum, mild stress, substrate, microbial inoculation. [2, 8]
+
+**Elicitor.** A stress the plant answers by making defense compounds: blue light, far-red, UV, continuous light, a resistive medium, a nutrient shortfall. The compounds it makes to survive are the ones that act in the body. [62, 64]
+
+**Phytochrome.** The plant's red and far-red sensor. Activated by red, it drives stem and leaf growth; a low red-to-far-red ratio triggers shade avoidance. [68]
+
+**Cryptochrome.** The plant's blue and ultraviolet sensor. Blue light through cryptochrome keeps growth compact and switches on the phenylpropanoid pathway. [68]
+
+**Phenylpropanoid pathway.** The metabolic route that builds phenolics, flavonoids and anthocyanins. Blue light turns it up. [68]
+
+**Shade avoidance.** The stretch response to far-red: the plant reads a dense neighbor and grows taller. Useful at low intensity, leggy past it. [73]
+
+**Dilution effect.** In field crops, breeding and fertilizing for weight lowers the concentration of minerals and phytochemicals. Controlled-environment microgreens escape it by harvesting before the compounds are spent. [62, 64]
+
+**Cation exchange capacity (CEC).** A medium's ability to hold and release nutrient ions. High in cocopeat. [65]
+
+**Porosity.** The share of a medium that is air and water space. Cocopeat runs 90 to 95%, which is why roots breathe in it. [65]
 
 ### Safety
 

@@ -38,6 +38,8 @@ const ALLOWED = new Set([
   'docs/outline.md',
   'docs/grow-operations.md',
   'docs/glossary.md', // names the kitchen origin of terms and uses cook in its plain sense
+  'apps/web/src/app/(farm)/farm/_data/glossary.ts', // generated from it
+  'apps/web/src/app/(farm)/farm/_data/science-library.ts', // cites studies as they are titled
   'docs/science-library.md', // cites studies as they are titled
   'apps/web/test/farm-vocabulary.test.ts',
   'CLAUDE.md', // names the origin and the words themselves
