@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { Card, CheckPill, num } from '@/components/ui';
 import { ReceiveForm, type ReceiveInput, type ReceivePo } from '@/components/ReceiveForm';
 import { SowingCloseForm } from '@/components/SowingCloseForm';
+import { GrowSowingCloseForm } from '@/components/GrowSowingCloseForm';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { isGrowSowing } from '@/engine/sowing-record';
+import { defaultGrowUnits } from '@/engine';
 import { ShipForm, type ShipOrder } from '@/components/ShipForm';
 import { clock } from '@/data/crews';
 import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
@@ -228,8 +232,8 @@ export function GrowRoomClient({
               return (
                 <div key={b.seq} className={`farm-floor-row${closed ? ' done' : ''}`}>
                   <div>
-                    <div className="farm-floor-row-title">{b.seq} · {b.cropPlanCode} {b.cropPlanName} · {num(b.units)} units</div>
-                    <div className="farm-floor-row-sub">blackoutRack {clock(b.loadMin)} – {clock(b.unloadMin)} · <CheckPill ok={b.fits} okLabel="in the window" overLabel="past the window" /></div>
+                    <div className="farm-floor-row-title">{b.seq} · {b.cropPlanCode} {b.cropPlanName} · {num(b.units)} {isGrowPlanCarrier(inputs.cropPlans.find((r) => r.code === b.cropPlanCode)) ? 'trays' : 'units'}</div>
+                    <div className="farm-floor-row-sub">{isGrowPlanCarrier(inputs.cropPlans.find((r) => r.code === b.cropPlanCode)) ? <>sow today, on the grow unit for the cycle · <CheckPill ok={b.fits} okLabel="room on a unit" overLabel="no room on any unit" /></> : <>blackoutRack {clock(b.loadMin)} – {clock(b.unloadMin)} · <CheckPill ok={b.fits} okLabel="in the window" overLabel="past the window" /></>}</div>
                   </div>
                   {b.fits && !closed && <button type="button" className={`farm-btn${closing?.seq === b.seq ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === b.seq ? null : { seq: b.seq, cropPlanCode: b.cropPlanCode, units: b.units }))}>Close sowing record</button>}
                   {closed && <span className="farm-kpi-sub">closed</span>}
@@ -240,11 +244,15 @@ export function GrowRoomClient({
         )}
         {closing && closingPrefill && (
           <div className="mt-3">
-            <SowingCloseForm prefill={closingPrefill} sowingCountByDate={sowingCountByDate} standardSowingSize={closing.units} cropPlanName={closingCropPlan?.name} rawLots={rawStock.lots} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+            {closingCropPlan && isGrowPlanCarrier(closingCropPlan) && isGrowSowing(closingPrefill) ? (
+              <GrowSowingCloseForm prefill={closingPrefill} plan={closingCropPlan.plan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingCropPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+            ) : (
+              <SowingCloseForm prefill={closingPrefill} sowingCountByDate={sowingCountByDate} standardSowingSize={closing.units} cropPlanName={closingCropPlan?.name} rawLots={rawStock.lots} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+            )}
           </div>
         )}
         {closedToday.length > 0 && (
-          <p className="farm-kpi-sub mt-2">Closed today: {closedToday.map((b) => `${b.sowingId} (${num(Math.round(b.goodUnits))} units)`).join(', ')}.</p>
+          <p className="farm-kpi-sub mt-2">Closed today: {closedToday.map((b) => `${b.sowingId} (${num(Math.round(b.goodUnits))} ${isGrowSowing(b) ? 'trays' : 'units'})`).join(', ')}.</p>
         )}
       </Card>
 

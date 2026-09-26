@@ -1,4 +1,6 @@
 import 'server-only';
+import { EMPTY_STAGE_RECORDS, type StageRecords } from '@/engine/sowing-record';
+import type { TrayFormatKey } from '@/data/tray-formats';
 import { desc, isNotNull } from 'drizzle-orm';
 import { farmSowingRecords, farmReceipts, farmDistributions, farmPeriodBills, farmOrders } from '@/db';
 import { db } from '@/lib/db';
@@ -55,6 +57,12 @@ const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   closedBy: r.closedBy,
   closedAt: r.closedAt ? r.closedAt.toISOString() : null,
   notes: r.notes,
+  format: (r.format as TrayFormatKey | null) ?? null,
+  traysSown: r.traysSown ?? null,
+  traysPacked: r.traysPacked ?? null,
+  growUnitKey: r.growUnitKey ?? null,
+  packedOn: iso(r.packedOn),
+  stageRecords: r.stageRecords ? { ...EMPTY_STAGE_RECORDS, ...(r.stageRecords as Partial<StageRecords>) } : null,
 });
 
 /** A distribution names its crop plan through the order it was recorded against (Roadmap N9). */

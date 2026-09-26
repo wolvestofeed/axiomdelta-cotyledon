@@ -77,6 +77,13 @@ const ComponentSchema = z.object({
     .optional(),
 });
 
+const StageRecordsSchema = z.object({
+  seedTreatment: z.object({ method: z.string().max(200), concentration: z.string().max(120), contactMinutes: z.number().min(0).max(10_000).nullable(), seedLot: z.string().max(120), by: z.string().max(120) }).nullable().default(null),
+  spentWaterTest: z.object({ sampledAtHours: z.number().min(0).max(1_000), listeria: z.boolean().nullable(), salmonella: z.boolean().nullable(), ecoliO157: z.boolean().nullable(), sampledOn: isoDate.nullable(), resultOn: isoDate.nullable(), lab: z.string().max(120) }).nullable().default(null),
+  readings: z.array(z.object({ at: z.string().max(40), tempF: z.number().nullable(), rhPct: z.number().min(0).max(100).nullable(), by: z.string().max(120) })).max(500).default([]),
+  harvestCheck: z.object({ traysPassed: z.number().min(0), traysRemoved: z.number().min(0), note: z.string().max(400) }).nullable().default(null),
+});
+
 const SowingInput = z.object({
   sowingId: z.string().trim().min(3).max(40),
   cropPlanCode: z.string().min(1),
@@ -94,6 +101,13 @@ const SowingInput = z.object({
   actualLaborRate: z.number().min(0).nullable().default(null),
   closedBy: z.string().trim().min(1, 'A sowing record is signed by the person closing it').max(120),
   notes: z.string().max(2000).nullable().default(null),
+  /** The grow-model fields; absent on a Phase 1-era record. */
+  format: z.enum(['flat-1020', 'tray-7x11', 'insert-5x5', 'pint-jar']).nullable().default(null),
+  traysSown: z.number().min(0).nullable().default(null),
+  traysPacked: z.number().min(0).nullable().default(null),
+  growUnitKey: z.string().max(200).nullable().default(null),
+  packedOn: isoDate.nullable().default(null),
+  stageRecords: StageRecordsSchema.nullable().default(null),
 });
 
 export async function recordSowing(...args: Parameters<typeof recordSowingInner>): ReturnType<typeof recordSowingInner> {
@@ -157,6 +171,12 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
       closedBy: d.closedBy,
       closedAt: new Date(),
       notes: d.notes,
+      format: d.format,
+      traysSown: d.traysSown,
+      traysPacked: d.traysPacked,
+      growUnitKey: d.growUnitKey,
+      packedOn: d.packedOn,
+      stageRecords: d.stageRecords,
       createdBy: access.userId,
     })
     .returning({ id: farmSowingRecords.id });

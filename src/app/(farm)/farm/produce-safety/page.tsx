@@ -5,6 +5,8 @@ import { clock } from '@/data/crews';
 import { getResolvedActiveInputs } from '@/server/scenarios';
 import { CCP2_LIMITS, evaluateCcp2, controlPointsForPlan, STAGE_CONTROL_POINTS } from '@/engine/produce-safety';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
+import { CheckPill, num } from '@/components/ui';
 import { StatusBadge } from '@/components/ui';
 import { stageLoadsOf } from '@/engine/sowing';
 import { loadActuals } from '@/server/actuals';
@@ -54,6 +56,15 @@ async function ProduceSafetyPageInner() {
       .map((c) => ({ code: c.outputLotCode, product: `${c.component} — ${cropPlanName(b.cropPlanCode)}`, recorded: stageLoadsOf(c).length, expected: b.sowingsRun }));
   });
   const missingRecord = blackoutLots.filter((l) => l.recorded < l.expected);
+  // The grow-model sowings: each against the control points on its plan's stages.
+  const growSowings = actuals.sowings
+    .filter(isGrowSowing)
+    .map((b) => {
+      const plan = inputs.cropPlans.find((r) => r.code === b.cropPlanCode);
+      return plan && isGrowPlanCarrier(plan) ? { b, checks: sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan.plan) } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, b) => b.b.productionDate.localeCompare(a.b.productionDate));
   const completeLots = blackoutLots.filter((l) => l.recorded >= l.expected).length;
   const failed = coolingLog.filter((r) => !r.pass);
   const pf = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
@@ -131,6 +142,35 @@ async function ProduceSafetyPageInner() {
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">The sprout limits rest on 21 CFR Part 112 Subpart M, registered on Sources. The grow-room temperature and humidity band is the operator&rsquo;s to state in the produce safety plan; until then readings are recorded and none is judged.</p>
+      </Card>
+
+      <Card title="Stage records on the closed sowings" className="mt-4">
+        <div className="farm-scroll-x">
+          <table className="farm-table compact">
+            <thead><tr><th>Sowing</th><th>Plan</th><th className="num">Sown</th><th className="num">Packed</th><th>Seed treatment</th><th>Spent-water test</th><th className="num">Readings</th><th>Harvest check</th><th>Record</th></tr></thead>
+            <tbody>
+              {growSowings.length === 0 && <tr><td colSpan={9} className="farm-c-soft">No sowing on the grow model has been closed yet. A sowing is closed on the <Link className="farm-link" href="/farm/grow-room">Grow Room</Link> with its stage records.</td></tr>}
+              {growSowings.map(({ b, checks }) => {
+                const by = (id: string) => checks.points.find((c) => c.point.id === id);
+                const cell = (id: string) => { const c = by(id); return c ? <><CheckPill ok={c.status === 'recorded'} okLabel="RECORDED" overLabel={c.status === 'failed' ? 'FAILED' : 'GAP'} /> <span className="farm-kpi-sub">{c.detail}</span></> : <span className="farm-c-faint">—</span>; };
+                return (
+                  <tr key={b.id}>
+                    <td className="farm-mono farm-fs-xs">{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.productionDate}{b.packedOn ? ` → ${b.packedOn}` : ''}</div></td>
+                    <td>{b.cropPlanCode}</td>
+                    <td className="num">{num(b.traysSown ?? 0)}</td>
+                    <td className="num">{num(b.traysPacked ?? 0)}</td>
+                    <td>{cell('seed-sanitation')}</td>
+                    <td>{cell('spent-water-test')}</td>
+                    <td className="num">{num(b.stageRecords?.readings.length ?? 0)}</td>
+                    <td>{cell('harvest-check')}</td>
+                    <td><CheckPill ok={checks.complete} okLabel="COMPLETE" overLabel={`${checks.gaps.length} GAP${checks.gaps.length === 1 ? '' : 'S'}`} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="farm-kpi-sub mt-2">Each control point on the plan&rsquo;s stages is recorded, a gap or failed on the sowing; a gap is never a pass. The spent-water verdict is computed from the results.</p>
       </Card>
 
       <Card title="Phase 1-era critical control points" className="mt-4">

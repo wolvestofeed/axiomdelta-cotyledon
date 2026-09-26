@@ -18,6 +18,9 @@ import { libraryLabel, type StandardVersionDoc } from '@/engine/standards';
 import type { PaymentTerms } from '@/data/working-capital';
 import type { InvoiceDoc, SubscriberPaymentDoc, SupplierBillDoc, SupplierPaymentDoc } from '@/engine/working-capital';
 import type { StaffDoc, PunchDoc, ClosedPayrollPeriodDoc } from '@/engine/payroll';
+import type { TrayFormatKey } from '@/data/tray-formats';
+import { growSowingPrefill, type StageRecords } from '@/engine/sowing-record';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 type CropPlan = typeof defaultCropPlan;
 
@@ -72,6 +75,13 @@ export interface SowingRecordDoc {
   closedBy: string | null;
   closedAt: string | null;
   notes: string | null;
+  /** The grow-model fields (`sowing-record.ts`): absent on a Phase 1-era record. */
+  format?: TrayFormatKey | null;
+  traysSown?: number | null;
+  traysPacked?: number | null;
+  growUnitKey?: string | null;
+  packedOn?: string | null;
+  stageRecords?: StageRecords | null;
 }
 
 /** What the receiver found at the dock. A rejected line is on the record and out of stock. */
@@ -426,6 +436,7 @@ export function standardSowingRecordPrefill(
   standardVersion: string = libraryLabel(cropPlan.code),
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> {
   const sowingId = sowingIdFor(productionDate, sequence);
+  if (isGrowPlanCarrier(cropPlan)) return growSowingPrefill(cropPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
   const components = componentCosting(cropPlan, shrinkAllowance);
   const b = standardSowing(
     sowingId,

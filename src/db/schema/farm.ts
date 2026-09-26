@@ -851,6 +851,20 @@ export const farmSowingRecords = farmSchema.table(
     /** CrewHoursLine[] — who worked the sowing and for how long (0053). */
     // @classification: Confidential
     crew: jsonb('crew').notNull().default([]),
+    /** The grow-model record (0008): the tray format, trays sown and packed, the grow unit, the packed day and the stage records. Null on a Phase 1-era record. */
+    // @classification: Internal
+    format: text('format'),
+    // @classification: Internal
+    traysSown: doublePrecision('trays_sown'),
+    // @classification: Internal
+    traysPacked: doublePrecision('trays_packed'),
+    // @classification: Internal
+    growUnitKey: text('grow_unit_key'),
+    // @classification: Internal
+    packedOn: date('packed_on'),
+    /** StageRecords: seed treatment, spent-water test, grow-room readings, harvest check. */
+    // @classification: Internal
+    stageRecords: jsonb('stage_records'),
     // @classification: Confidential
     actualLaborHours: doublePrecision('actual_labor_hours'),
     // @classification: Confidential
