@@ -94,7 +94,7 @@ Words that must not survive the swap anywhere but this table: recipe, portion, m
 **Grow plan.** How a variety, or a mixed tray, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
 - **Seed line**: a variety, its grams per tray, and its share of a mixed tray. Costed at the variety's rolling cost per pound. The only line that carries provenance and nutrition.
 - **Medium line**: coconut coir, jute fiber, hemp mat, vermiculite, or a hydroponic pad, with quantity per tray. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
-- **Nutrient line**: a nutrient solution, its concentration, and the stage it starts. Costed at concentration times water volume times price.
+- **Nutrient line**: a nutrient solution or supplement from the workspace's Nutrients & Supplements library, its concentration in ml per gallon, and the stage it starts. Costed at concentration times water volume times price.
 - **Light line**: the light spec for the light stage: spectrum (fixture or wavelength mix), photoperiod in hours per day, intensity as PPFD at canopy or fixture height, and the stage it starts. Costed as fixture watts times hours times the energy rate, per tray per day, plus the fixture's amortized cost. Varieties are grown under different spectra and configurations, and light changes nutrient content (science library rows 2, 8), so light belongs to the plan.
 
 A single-variety flat is a grow plan with one seed line. A mixed tray is a grow plan with two or more, composed to a nutrition target. A plan's code is its lead variety's code and a serial (`BROC-01`, `BROC-02`); a mixed tray is `MIX-01`. The unit a subscriber buys is a customer SKU: the plan code and the packaged format (`BROC-01-1020`, `BROC-01-7X11`), so one plan packed in two formats is two SKUs. Tray sets, labels, inserts and sanitizer are consumables costed per tray by format, not lines. Watering is never a line; it is a stage. A light line is a requirement the scheduler matches against grow units: a sowing is placed only on a shelf whose fixture meets the plan's spectrum and intensity.
@@ -138,6 +138,7 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 |---|---|---|
 | Overview | Dashboard, Reports, Sources | port |
 | Production | Crop Plans | swap (from Recipes) |
+| | Nutrients & Supplements | new: the solutions and supplements a nutrient line names, with strength, price and what each is meant to elicit; seeded, editable |
 | | Time Studies | port |
 | | Production Planning, Sow Schedule, Compare, Calendar, Process | port (stages replace thermal in Process) |
 | | Grow Calendar | new: stages per sowing across days, back-planned from distribution days |

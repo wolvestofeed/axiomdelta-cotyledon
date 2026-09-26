@@ -23,7 +23,7 @@
 import type { Tagged } from '@/data/tagged';
 import { tagged } from '@/data/tagged';
 import type { CropPlanStatus } from '@/data/plan-data';
-import type { MediumKey, NutrientKey, LightRegimeKey } from '@/data/inputs-catalog';
+import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
 import { STAGES, SPROUT_STAGES, type StageDays, type StageKey, type StageDef } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY, densityFactorOf, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
@@ -79,6 +79,12 @@ export interface GrowPlanDef {
   /** Days per stage when the plan departs from its varieties'; null = the varieties' own. */
   stageDays: Tagged<StageDays> | null;
   note: string;
+  /**
+   * The workspace's Nutrients & Supplements records its nutrient lines name, attached when the
+   * library is read so the plan is costed against them; absent, the costing reads the seed list.
+   * Never stored with the plan.
+   */
+  nutrients?: Readonly<Record<string, NutrientSolutionDef>>;
 }
 
 export const GROW_PLAN_CODE_RX = /^[A-Z]{2,5}-\d{2,3}$/;

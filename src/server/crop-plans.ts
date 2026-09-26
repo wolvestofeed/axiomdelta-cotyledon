@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { rowsToCropPlan, type LibraryCropPlan } from '@/engine/crop-plan-library';
 import { withSeedLock, seedMissingCropPlans } from '@/server/seed-writes';
 import { listCropPlansWith } from '@/server/crop-plan-rows';
+import { listNutrientsWith } from '@/server/nutrient-rows';
 
 /**
  * MicroFarm — grow plan library read layer (server-only).
@@ -36,5 +37,6 @@ export async function getCropPlanByCode(code: string): Promise<LibraryCropPlan |
     .from(farmCropPlanLines)
     .where(eq(farmCropPlanLines.cropPlanId, h[0].id))
     .orderBy(asc(farmCropPlanLines.position));
-  return rowsToCropPlan(h[0], lines);
+  const nutrients = Object.fromEntries((await listNutrientsWith(db)).map((n) => [n.key, n]));
+  return rowsToCropPlan(h[0], lines, nutrients);
 }

@@ -108,9 +108,17 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
   },
 ];
 
-// ── Nutrient solutions ────────────────────────────────────────────────────
+// ── Nutrient solutions and supplements ──────────────────────────────────────
 
-export type NutrientKey = 'floragrow-npk' | 'kelp' | 'sulfur-supplement' | 'none';
+/**
+ * A nutrient line names a row of the workspace's Nutrients & Supplements library by its key. The
+ * list below is the library's seed; from the first read the workspace's rows are the source
+ * (`src/server/nutrients.ts`), and a row can be added or edited on the Nutrients & Supplements page.
+ */
+export type NutrientKey = string;
+
+/** The row a nutrient line with no solution names: plain water, nothing added. Never deleted. */
+export const WATER_ONLY_KEY = 'none';
 
 export interface NutrientSolutionDef {
   key: NutrientKey;
@@ -340,6 +348,6 @@ export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegim
 }
 
 export const MEDIUM_BY_KEY = Object.fromEntries(GROWING_MEDIA.map((m) => [m.key, m])) as Readonly<Record<MediumKey, GrowingMediumDef>>;
-export const NUTRIENT_BY_KEY = Object.fromEntries(NUTRIENT_SOLUTIONS.map((n) => [n.key, n])) as Readonly<Record<NutrientKey, NutrientSolutionDef>>;
+export const NUTRIENT_BY_KEY = Object.fromEntries(NUTRIENT_SOLUTIONS.map((n) => [n.key, n])) as Readonly<Record<string, NutrientSolutionDef>>;
 export const FIXTURE_BY_KEY = Object.fromEntries(LIGHT_FIXTURES.map((l) => [l.key, l])) as Readonly<Record<string, LightFixtureDef>>;
 export const REGIME_BY_KEY = Object.fromEntries(LIGHT_REGIMES.map((r) => [r.key, r])) as Readonly<Record<LightRegimeKey, LightRegimeDef>>;

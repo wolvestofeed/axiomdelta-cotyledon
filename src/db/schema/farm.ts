@@ -2282,3 +2282,46 @@ export const farmRefrigerantService = farmSchema.table(
 
 export type FarmSustainabilityReadingRow = typeof farmSustainabilityReadings.$inferSelect;
 export type FarmRefrigerantServiceRow = typeof farmRefrigerantService.$inferSelect;
+
+/** The Nutrients & Supplements library (0012): what a grow plan's nutrient line names, each figure a tagged document. */
+export const farmNutrients = farmSchema.table(
+  'nutrients',
+  {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
+    // @classification: Internal
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The key a nutrient line names; unique in the workspace. */
+    // @classification: Internal
+    key: text('key').notNull(),
+    // @classification: Internal
+    position: integer('position').notNull().default(0),
+    // @classification: Internal
+    name: text('name').notNull(),
+    /** Tagged: ml of concentrate per gallon of water at the default strength. */
+    // @classification: Internal
+    mlPerGal: jsonb('ml_per_gal').notNull(),
+    /** Tagged: dollars per ml. */
+    // @classification: Confidential
+    costPerMl: jsonb('cost_per_ml').notNull(),
+    /** Tagged, or null where the solution is not managed to a target. */
+    // @classification: Internal
+    ecTarget: jsonb('ec_target'),
+    // @classification: Internal
+    phTarget: jsonb('ph_target'),
+    /** { effect, rows } or null. */
+    // @classification: Internal
+    elicits: jsonb('elicits'),
+    // @classification: Internal
+    note: text('note').notNull().default(''),
+    /** 'seed' | 'user_built' */
+    // @classification: Internal
+    source: text('source').notNull().default('user_built'),
+    // @classification: Internal
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // @classification: Internal
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('farm_nutrients_unique_key').on(t.workspaceId, t.key)],
+);
+
+export type FarmNutrientRow = typeof farmNutrients.$inferSelect;

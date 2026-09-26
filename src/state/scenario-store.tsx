@@ -57,6 +57,7 @@ import { seedPackagingLibrary, type PackagingLibrary } from '@/data/packaging';
 import type { CatalogLine } from '@/engine/catalog';
 import { codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { TimeStudyDoc } from '@/data/time-studies';
+import { NUTRIENT_SOLUTIONS, type NutrientSolutionDef } from '@/data/inputs-catalog';
 
 const clone = <T,>(v: T): T => structuredClone(v);
 
@@ -100,6 +101,8 @@ export interface ScenarioStore {
   ) => void;
   /** The crop plan library as loaded (no scenario edits) — the standard the edits are measured against. */
   library: CropPlanDef[];
+  /** The Nutrients & Supplements library as loaded; the seed list when the server passed none. */
+  nutrients: NutrientSolutionDef[];
   setPhase: (phase: number, key: keyof PhaseOverlay, value: number | undefined) => void;
   setPhaseProfile: (
     phase: number,
@@ -160,6 +163,7 @@ export function ScenarioProvider({
   fixedCostLines,
   leasehold,
   timeStudies,
+  nutrients,
   isSuperAdmin = false,
   children,
 }: {
@@ -185,6 +189,8 @@ export function ScenarioProvider({
   leasehold?: LeaseholdLine[];
   /** The time-study library the server loaded; omit and each crop plan's labor is its code estimate (Roadmap N3). */
   timeStudies?: TimeStudyDoc[];
+  /** The Nutrients & Supplements library the server loaded; omit for the seed list. */
+  nutrients?: NutrientSolutionDef[];
   isSuperAdmin?: boolean;
   children: ReactNode;
 }) {
@@ -199,6 +205,7 @@ export function ScenarioProvider({
   const fixedLib = useMemo(() => fixedCostLines ?? seedFixedCostLines(), [fixedCostLines]);
   const leaseLib = useMemo(() => leasehold ?? leaseholdSeed, [leasehold]);
   const studyLib = useMemo(() => timeStudies ?? null, [timeStudies]);
+  const nutrientLib = useMemo(() => nutrients ?? [...NUTRIENT_SOLUTIONS], [nutrients]);
   const [baseline, setBaseline] = useState<FarmScenarioConfig>(() => clone(seed));
   const [config, setConfig] = useState<FarmScenarioConfig>(() => clone(seed));
 
@@ -564,6 +571,7 @@ export function ScenarioProvider({
       setResource,
       setSchedulePolicy,
       library: lib,
+      nutrients: nutrientLib,
       isSuperAdmin,
       resetSection,
       resetAll,
@@ -577,6 +585,7 @@ export function ScenarioProvider({
       baseline,
       dirtySections,
       lib,
+      nutrientLib,
       custs,
       setForecast,
       setAssumption,

@@ -10,6 +10,7 @@ import { cropPlanToRows, CROP_PLAN_STATUSES } from '@/engine/crop-plan-library';
 import { growPlanProblems, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import { tagged } from '@/data/tagged';
 import { withWorkspace } from '@/server/workspace';
+import { listNutrients } from '@/server/nutrients';
 
 /**
  * MicroFarm — grow plan library writes. SUPER ADMIN ONLY.
@@ -33,7 +34,7 @@ const TYPED = 'Typed in the grow plan editor';
 
 const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1) });
 const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.enum(['coco-coir', 'jute-mat', 'hemp-mat', 'vermiculite', 'peat-vermiculite', 'hydro-pad', 'none']), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
-const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.enum(['floragrow-npk', 'kelp', 'sulfur-supplement', 'none']), mlPerGal: z.number().min(0).max(4_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
+const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.string().trim().min(1).max(60), mlPerGal: z.number().min(0).max(4_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LightLineIn = z.object({ kind: z.literal('light'), regimeKey: z.enum(['yield', 'balanced', 'nutrition-forward', 'biofortify-far-red', 'continuous']), ppfd: z.number().min(0).max(2_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LineIn = z.discriminatedUnion('kind', [SeedLineIn, MediumLineIn, NutrientLineIn, LightLineIn]);
 
@@ -76,6 +77,12 @@ function toGrowPlan(d: z.infer<typeof GrowPlanInput>): GrowPlanDef {
   };
 }
 
+/** A nutrient line must name a row of the workspace's Nutrients & Supplements library. */
+async function nutrientProblems(plan: GrowPlanDef): Promise<string[]> {
+  const known = new Set((await listNutrients()).map((n) => n.key));
+  return plan.lines.filter((l) => l.kind === 'nutrient' && !known.has(l.nutrientKey)).map((l) => `Nutrient line: "${l.kind === 'nutrient' ? l.nutrientKey : ''}" is not in the Nutrients & Supplements library.`);
+}
+
 const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join('.') || 'plan'}: ${i.message}`).join('; ');
 
 /** Add a grow plan to the library. */
@@ -93,7 +100,7 @@ async function createCropPlanInner(input: unknown): Promise<Result<{ id: string;
     return refuse(e);
   }
   const plan = toGrowPlan(parsed.data);
-  const problems = growPlanProblems(plan);
+  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
   const existing = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, plan.code)).limit(1);
   if (existing[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
@@ -126,7 +133,7 @@ async function updateCropPlanInner(input: unknown): Promise<Result<{ id: string 
     return refuse(e);
   }
   const plan = toGrowPlan(parsed.data);
-  const problems = growPlanProblems(plan);
+  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
   const current = await db.select({ id: farmCropPlans.id, version: farmCropPlans.version, code: farmCropPlans.code }).from(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Grow plan not found.' };

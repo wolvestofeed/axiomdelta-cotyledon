@@ -8,7 +8,8 @@ import { costGrowPlan, defaultGrowCostContext, fixtureFor } from '@/engine/grow-
 import { CROP_PLAN_STATUS_LABELS, type CropPlanStatus } from '@/data/plan-data';
 import { codePrefixFor, growPlanProblems, seedLineFor, type GrowPlanDef, type GrowPlanLine, type SeedLine } from '@/data/grow-plan';
 import { VARIETIES, VARIETY_BY_KEY } from '@/data/varieties';
-import { GROWING_MEDIA, LIGHT_REGIMES, NUTRIENT_SOLUTIONS, type LightRegimeKey, type MediumKey, type NutrientKey } from '@/data/inputs-catalog';
+import { GROWING_MEDIA, LIGHT_REGIMES, type LightRegimeKey, type MediumKey, type NutrientKey } from '@/data/inputs-catalog';
+import { useScenario } from '@/state/scenario-store';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { STAGES, SPROUT_STAGES, type StageKey } from '@/data/stage-schedule';
 import { tagged } from '@/data/tagged';
@@ -101,6 +102,8 @@ export function CropPlanEditor({
   onDone: () => void;
 }) {
   const router = useRouter();
+  const { nutrients } = useScenario();
+  const nutrientByKey = useMemo(() => Object.fromEntries(nutrients.map((n) => [n.key, n])), [nutrients]);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const codes = useMemo(() => library.map((r) => r.code), [library]);
@@ -122,7 +125,7 @@ export function CropPlanEditor({
 
   const livePlan = useMemo(() => toPlan(d), [d]);
   const problems = useMemo(() => growPlanProblems(livePlan), [livePlan]);
-  const costing = useMemo(() => (problems.length === 0 ? costGrowPlan(livePlan, defaultGrowCostContext({ fixture: fixtureFor(livePlan) })) : null), [livePlan, problems]);
+  const costing = useMemo(() => (problems.length === 0 ? costGrowPlan(livePlan, defaultGrowCostContext({ fixture: fixtureFor(livePlan), nutrients: nutrientByKey })) : null), [livePlan, problems, nutrientByKey]);
   const stages = TRAY_FORMAT_BY_KEY[d.format].kind === 'sprout' ? SPROUT_STAGES : STAGES;
   const lead = d.lines.find((l): l is DraftSeed => l.kind === 'seed');
   const leadVariety = lead ? VARIETY_BY_KEY[lead.varietyKey] : undefined;
@@ -232,7 +235,7 @@ export function CropPlanEditor({
                     )}
                     {l.kind === 'nutrient' && (
                       <select className="farm-select" value={l.nutrientKey} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftNutrient), nutrientKey: e.target.value as NutrientKey }))}>
-                        {NUTRIENT_SOLUTIONS.map((n) => <option key={n.key} value={n.key}>{n.name}</option>)}
+                        {nutrients.map((n) => <option key={n.key} value={n.key}>{n.name}</option>)}
                       </select>
                     )}
                     {l.kind === 'light' && (

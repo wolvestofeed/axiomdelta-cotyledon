@@ -7,6 +7,8 @@
  * (`_lib/crop-plans.ts`) and the actions call these so the shape is defined once.
  */
 
+import type { NutrientSolutionDef } from '@/data/inputs-catalog';
+import { nutrientsForPlan } from '@/engine/nutrients';
 import type { CropPlanDef, CropPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
 import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
@@ -60,28 +62,30 @@ export function lineFromStored(raw: unknown): GrowPlanLine | null {
 }
 
 /** The stored grow plan, before projection. */
-export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[]): GrowPlanDef {
+export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): GrowPlanDef {
   const status = CROP_PLAN_STATUSES.includes(header.status as CropPlanStatus) ? (header.status as CropPlanStatus) : 'developing';
   const format = (header.format in TRAY_FORMAT_BY_KEY ? header.format : 'flat-1020') as TrayFormatKey;
   const sd = header.stageDays;
   const stageDays = sd && typeof sd === 'object' && 'value' in (sd as object) ? (sd as Tagged<StageDays>) : null;
+  const planLines = [...lines]
+    .sort((a, b) => a.position - b.position)
+    .map((l) => lineFromStored(l.line))
+    .filter((l): l is GrowPlanLine => l !== null);
   return {
     code: header.code,
     name: header.name,
     status,
     channels: Array.isArray(header.channels) ? (header.channels as number[]).filter((n) => Number.isInteger(n)) : [],
     format,
-    lines: [...lines]
-      .sort((a, b) => a.position - b.position)
-      .map((l) => lineFromStored(l.line))
-      .filter((l): l is GrowPlanLine => l !== null),
+    lines: planLines,
     stageDays,
     note: header.note ?? '',
+    ...(nutrients ? { nutrients: nutrientsForPlan({ lines: planLines }, nutrients) } : {}),
   };
 }
 
-export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[]): LibraryCropPlan {
-  const plan = rowsToGrowPlan(header, lines);
+export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): LibraryCropPlan {
+  const plan = rowsToGrowPlan(header, lines, nutrients);
   return {
     ...projectCropPlan(plan),
     id: header.id,

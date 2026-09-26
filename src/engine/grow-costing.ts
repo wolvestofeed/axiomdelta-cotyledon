@@ -167,7 +167,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
         break;
       }
       case 'nutrient': {
-        const n = ctx.nutrients[line.nutrientKey];
+        const n = plan.nutrients?.[line.nutrientKey] ?? ctx.nutrients[line.nutrientKey];
         if (!n || n.key === 'none') {
           lines.push({ line, label: n?.name ?? line.nutrientKey, quantity: 0, quantityUnit: 'ml', unitCost: 0, costPerTray: 0, status: 'STATED', source: 'Water only', basis: 'None' });
           break;
