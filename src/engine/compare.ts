@@ -48,14 +48,22 @@ const pick = (a: number, b: number, moreIsBetter: boolean): 'a' | 'b' | 'same' =
 
 const utilisationOf = (r: ScheduleResult, key: string | null): number | null => (key ? r.metrics.utilizationByResource[key] ?? 0 : null);
 
+/** A side's daily stream on the day: the trays on the shelves and the minutes their daily lines take, off the clock. */
+export interface DailyStreamOnDay {
+  traysOnShelf: number;
+  minutes: number;
+}
+
 /**
  * Compare two placed days. `blackoutRackKey` names the unit the blackout rack row reads —
  * the caller passes the blackout rack's equipment key, since the scheduler
- * knows units by key and not by kind.
+ * knows units by key and not by kind. A side's `daily` adds the trays on the
+ * shelves and the daily stream beside the clock; the rows appear when either
+ * side carries one.
  */
 export function compareDays(
-  a: { label: string; result: ScheduleResult },
-  b: { label: string; result: ScheduleResult },
+  a: { label: string; result: ScheduleResult; daily?: DailyStreamOnDay },
+  b: { label: string; result: ScheduleResult; daily?: DailyStreamOnDay },
   blackoutRackKey: string | null = null,
 ): DayComparison {
   const A = a.result.metrics;
@@ -75,10 +83,10 @@ export function compareDays(
   const blackoutB = utilisationOf(b.result, blackoutRackKey);
 
   const rows: CompareRow[] = [
-    num('units', 'Units placed', 'units', A.unitsPlaced, B.unitsPlaced, true, 'Whole sowings only; a sowing that does not fit is unplaced, never part-made.'),
+    num('units', 'Trays sown', 'units', A.unitsPlaced, B.unitsPlaced, true, 'Whole sowings only; a sowing that does not fit is unplaced, never part-made.'),
     num('sowings', 'Sowings placed', 'count', A.sowingsPlaced, B.sowingsPlaced, true),
     num('unplaced', 'Sowings unplaced', 'count', A.sowingsUnplaced, B.sowingsUnplaced, false),
-    num('shipped', 'Units shipped', 'units', A.unitsShipped, B.unitsShipped, true),
+    num('shipped', 'Trays harvested', 'units', A.unitsShipped, B.unitsShipped, true),
     {
       key: 'binding',
       label: 'Binding resource',
@@ -92,8 +100,14 @@ export function compareDays(
     num('makespan', 'Makespan', 'minutes', A.makespanMin, B.makespanMin, false, 'First start to last end, closedown excluded.'),
     num('crewHours', 'Crew hours', 'hours', A.crewHours, B.crewHours, null, 'What the proposed crews are on the floor for. Fewer is not better on its own: it may place less work.'),
     num('idle', 'Idle crew hours', 'hours', A.idleCrewHours, B.idleCrewHours, false, 'Crew time with no placed work to do.'),
-    num('labor', 'Labor minutes', 'minutes', A.laborHours * 60, B.laborHours * 60, null, 'The time studies’ labor on every placed step; closedown is counted apart.'),
-    num('laborPerUnit', 'Labor minutes per unit placed', 'minutes', laborPerUnit(A), laborPerUnit(B), false, 'No rate: the scheduler carries no wage and pay is held in Staffing.'),
+    num('labor', 'Labor minutes', 'minutes', A.laborHours * 60, B.laborHours * 60, null, 'The time studies’ labor on every placed step; the daily stream and closedown are counted apart.'),
+    num('laborPerUnit', 'Labor minutes per tray sown', 'minutes', laborPerUnit(A), laborPerUnit(B), false, 'No rate: the scheduler carries no wage and pay is held in Staffing.'),
+    ...(a.daily || b.daily
+      ? [
+          num('onShelf', 'Trays on the shelves', 'units', a.daily?.traysOnShelf ?? 0, b.daily?.traysOnShelf ?? 0, null, 'The sowings inside their cycle on the day.'),
+          num('daily', 'Daily stream minutes', 'minutes', a.daily?.minutes ?? 0, b.daily?.minutes ?? 0, null, 'The watering and inspection the trays on the shelves take that day, beside the clock.'),
+        ]
+      : []),
     num('closedown', 'Closedown hours', 'hours', A.closedownHours, B.closedownHours, null),
     ...(blackoutRackKey
       ? [num('blackout_rack', 'Blackout rack utilisation', 'percent', blackoutA ?? 0, blackoutB ?? 0, null, 'Busy minutes inside the operating day over the day × its slots.')]

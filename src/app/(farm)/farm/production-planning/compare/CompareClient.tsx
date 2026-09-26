@@ -17,13 +17,13 @@ import type { LeaseholdLine } from '@/data/capex';
 import type { CropPlanDef } from '@/data/plan-data';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PaymentTerms } from '@/data/working-capital';
-import { compareDays, violationDelta } from '@/engine/compare';
-import { isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
+import { compareDays, violationDelta, type DailyStreamOnDay } from '@/engine/compare';
+import { datesBetween, isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
 import { finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
-import { isBlackoutRack } from '@/engine/equipment';
 import { resolveScenarioInputs, type FarmScenarioConfig } from '@/engine/scenario';
 import { schedule, scheduleInputsForDay, type ScheduleResult } from '@/engine/scheduler';
+import { cycleDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
 
 const HORIZON_DAYS = 21;
 const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
@@ -120,11 +120,9 @@ export function CompareClient({
   const A = useMemo(() => side(aId), [side, aId]);
   const B = useMemo(() => side(bId), [side, bId]);
 
-  const dates = useMemo(() => {
-    const all = [...A.horizon.byDate, ...B.horizon.byDate].map((r) => r.date);
-    return [...new Set(all)].sort();
-  }, [A.horizon.byDate, B.horizon.byDate]);
-  const day = date && dates.includes(date) ? date : dates[0] ?? today;
+  // Every day of the window: trays on the shelves are watered on days nothing is sown or harvested.
+  const dates = useMemo(() => datesBetween(today, isoAddDays(today, HORIZON_DAYS - 1)), [today]);
+  const day = date && dates.includes(date) ? date : today;
 
   const place = useCallback(
     (s: ReturnType<typeof side>): ScheduleResult => {
@@ -153,8 +151,20 @@ export function CompareClient({
   const resultA = useMemo(() => place(A), [place, A]);
   const resultB = useMemo(() => place(B), [place, B]);
 
-  const blackoutRackKey = useMemo(() => A.resolved.resources.find((r) => isBlackoutRack(r.item))?.key ?? null, [A.resolved.resources]);
-  const comparison = useMemo(() => compareDays({ label: A.label, result: resultA }, { label: B.label, result: resultB }, blackoutRackKey), [A.label, B.label, resultA, resultB, blackoutRackKey]);
+  /** A side's daily stream on the day: the trays on the shelves on each plan's daily lines, as the Day Schedule reads it. */
+  const dailyOn = useCallback(
+    (s: ReturnType<typeof side>): DailyStreamOnDay => {
+      const shelf = traysOnShelf(s.horizon.productionDays, cycleDaysByCode(s.resolved.cropPlans), day, day)[0];
+      if (!shelf) return { traysOnShelf: 0, minutes: 0 };
+      const d = staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0];
+      return { traysOnShelf: shelf.trays.reduce((t, x) => t + x.trays, 0), minutes: (d?.dailyStaffHours ?? 0) * 60 };
+    },
+    [day, studies],
+  );
+  const dailyA = useMemo(() => dailyOn(A), [dailyOn, A]);
+  const dailyB = useMemo(() => dailyOn(B), [dailyOn, B]);
+
+  const comparison = useMemo(() => compareDays({ label: A.label, result: resultA, daily: dailyA }, { label: B.label, result: resultB, daily: dailyB }), [A.label, B.label, resultA, resultB, dailyA, dailyB]);
   const findingDelta = useMemo(() => violationDelta(resultA, resultB), [resultA, resultB]);
   const sameScenario = aId === bId;
 
@@ -180,7 +190,6 @@ export function CompareClient({
         <label className="farm-kpi-sub inline-flex items-center gap-2">
           Day
           <select className="farm-select" value={day} aria-label="Day to place" onChange={(e) => setDate(e.target.value)}>
-            {dates.length === 0 && <option value={today}>{today} — no orders</option>}
             {dates.map((d) => (
               <option key={d} value={d}>{WEEKDAY_LABELS[weekdayOf(d)]} {d}</option>
             ))}
@@ -191,8 +200,8 @@ export function CompareClient({
       {sameScenario && <p className="farm-kpi-sub mb-3!">Both sides are the same forecast, so every row reads the same. Pick a different one on either side.</p>}
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={num(resultA.metrics.unitsPlaced)} label={`${A.label} — units`} sub={`${num(resultA.metrics.sowingsPlaced)} sowings · ${num(resultA.violations.length)} findings`} />
-        <Kpi value={num(resultB.metrics.unitsPlaced)} label={`${B.label} — units`} sub={`${num(resultB.metrics.sowingsPlaced)} sowings · ${num(resultB.violations.length)} findings`} />
+        <Kpi value={num(resultA.metrics.unitsPlaced)} label={`${A.label} — trays sown`} sub={`${num(resultA.metrics.sowingsPlaced)} sowings · ${num(dailyA.traysOnShelf)} trays on the shelves · ${num(resultA.violations.length)} findings`} />
+        <Kpi value={num(resultB.metrics.unitsPlaced)} label={`${B.label} — trays sown`} sub={`${num(resultB.metrics.sowingsPlaced)} sowings · ${num(dailyB.traysOnShelf)} trays on the shelves · ${num(resultB.violations.length)} findings`} />
         <Kpi value={`${clock(resultA.openMin)}–${clock(resultA.closeMin)}`} label="Operating day, A" sub={`Makespan ${num(resultA.metrics.makespanMin)} min`} />
         <Kpi value={`${clock(resultB.openMin)}–${clock(resultB.closeMin)}`} label="Operating day, B" sub={`Makespan ${num(resultB.metrics.makespanMin)} min`} />
       </div>
@@ -202,8 +211,9 @@ export function CompareClient({
         <p className="farm-kpi-sub mt-2">
           {comparison.identical
             ? 'The two forecasts place this day identically.'
-            : 'Each side resolves its own forecast and places the same date with the same scheduler. A bold Δ is a row where more or less is plainly better for units placed and crew time used; the rest are facts, not scores.'}{' '}
-          Labor is minutes, not dollars: the scheduler carries no wage, and pay is held in Staffing.
+            : 'Each side resolves its own forecast and places the same date with the same scheduler. A bold Δ is a row where more or less is plainly better for trays sown and crew time used; the rest are facts, not scores.'}{' '}
+          The daily stream is each side&rsquo;s trays on the shelves on their plans&rsquo; daily lines, beside the clock as on the Day Schedule. Labor is minutes, not dollars: the scheduler
+          carries no wage, and pay is held in Staffing.
         </p>
       </Card>
 
@@ -227,7 +237,7 @@ export function CompareClient({
           </div>
         )}
         <p className="farm-kpi-sub mt-2">
-          A finding is what a placement breaks — a unit over capacity, a crew short, the cooling clock, a blackout completing unattended, a distribution time missed. Each day is placed on the{' '}
+          A finding is what a placement breaks: a unit over capacity, a crew short, a distribution time missed, a step outside the operating day. Each day is placed on the{' '}
           <Link className="farm-link" href="/farm/production-planning/schedule">Day Schedule</Link>, and the month either forecast makes is on{' '}
           <Link className="farm-link" href="/farm/production-planning/calendar">Calendar</Link>. Forecasts are saved from any page&rsquo;s section save, and the plan of record is set in the forecast bar.
         </p>

@@ -67,6 +67,15 @@ describe('farm compare — the same day under two scenarios', () => {
     expect(none.rows.find((r) => r.key === 'binding')!.a).toBeNull();
   });
 
+  it('the daily stream rows appear when a side carries one, beside the placed labor', () => {
+    const c = compareDays({ label: 'A', result: result(), daily: { traysOnShelf: 20, minutes: 15.7 } }, { label: 'B', result: result(), daily: { traysOnShelf: 40, minutes: 31.4 } });
+    expect(c.rows.find((r) => r.key === 'onShelf')).toMatchObject({ a: 20, b: 40, delta: 20, better: null });
+    expect(c.rows.find((r) => r.key === 'daily')).toMatchObject({ a: 15.7, b: 31.4, better: null });
+    expect(c.rows.find((r) => r.key === 'labor')!.a).toBe(c.rows.find((r) => r.key === 'labor')!.b);
+    expect(c.identical).toBe(false);
+    expect(compareDays({ label: 'A', result: result() }, { label: 'B', result: result() }).rows.some((r) => r.key === 'daily')).toBe(false);
+  });
+
   it('the blackout rack row appears only when the blackout rack is named, and reads its utilisation', () => {
     const withKey = compareDays({ label: 'A', result: result() }, { label: 'B', result: result({ utilizationByResource: { 'Blackout rack, 200 lb capacity': 0.75 } }) }, 'Blackout rack, 200 lb capacity');
     expect(withKey.rows.find((r) => r.key === 'blackout_rack')).toMatchObject({ a: 0.6, b: 0.75 });
