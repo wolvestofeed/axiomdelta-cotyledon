@@ -10,7 +10,7 @@ import { channelCropPlanEconomics, phaseEconomics } from '@/engine/phase';
 import { assumptionsFor } from '@/engine/scenario';
 import { useLedgerBook, useStatementPeriod } from '@/state/ledger';
 import { LedgerStatus, PeriodPicker, dollars, signed } from '@/components/ledger/LedgerParts';
-import { nslpReimbursementBenchmark } from '@/data/plan-data';
+import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
 /** The defaults an edit is measured against: the resolver with no overlay (Roadmap N10, C2). */
@@ -65,18 +65,19 @@ export default function UnitEconomicsPage() {
     };
   });
 
-  const benchmarkContrib = nslpReimbursementBenchmark.value - econ[0].variablePerUnit - econ[0].channelCost;
-
   // The weight basis every per-unit figure is stated against. Without it a
   // unit-size change moves input cost with nothing on the page to read it
   // against.
   const chain = useMemo(() => costCropPlan(resolved.cropPlan), [resolved.cropPlan]);
+  const grow = useMemo(() => (isGrowPlanCarrier(resolved.cropPlan) ? costCarrier(resolved.cropPlan) : null), [resolved.cropPlan]);
 
   const buildUp = [
     {
       label: 'Input cost (incl. shrink)',
       value: econ[0].inputCostPerUnit,
-      note: `${chain.packedOzPerUnit.toFixed(2)} oz packed at ${money(chain.costPerPackedOz, 4)}/oz — from ${chain.seedOzPerUnit.toFixed(2)} oz as purchased`,
+      note: grow
+        ? `One ${grow.format.name}: seed ${money(grow.perTray.seed)}, medium ${money(grow.perTray.medium)}, nutrient ${money(grow.perTray.nutrient)}, light ${money(grow.perTray.light)}, consumables ${money(grow.perTray.consumables)} — ${num(grow.harvestGramsPerTray, 0)} g harvest on the record, ${money(grow.costPerHarvestOz, 4)} an ounce`
+        : `${chain.packedOzPerUnit.toFixed(2)} oz packed at ${money(chain.costPerPackedOz, 4)}/oz — from ${chain.seedOzPerUnit.toFixed(2)} oz as purchased`,
     },
     { label: 'Direct labor', value: base.directLabor, note: `${resolved.cropPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[resolved.laborStandards[resolved.cropPlan.code]?.basis ?? 'none'].toLowerCase()} — at its ${num(econ[0].sowingSize)}-unit derived sowing: ${num(ownAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} fixed minutes over the sowing plus ${ownAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(3)} minutes a unit, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each crop plan carries its own standard; this is ${resolved.cropPlan.code}'s` },
     {
@@ -97,7 +98,7 @@ export default function UnitEconomicsPage() {
     <>
       <PageHeader
         title="Unit Economics"
-        purpose="Test price and unit per channel against a crop plan’s cost per unit."
+        purpose="Test price and unit per channel against a grow plan’s cost per tray."
         functions={['Inputs', 'Per-phase cost profile', 'Cost of a unit', 'Contribution margin', 'Fixed cost and absorption']}
         connects={[
           { href: '/farm/crop-plans', dir: 'from' },
@@ -264,21 +265,12 @@ export default function UnitEconomicsPage() {
                     <td className="num">{pct(e.contribPct)}</td>
                   </tr>
                 ))}
-                <tr className="farm-c-accent">
-                  <td>Benchmark — NSLP reimbursement <StatusBadge status={nslpReimbursementBenchmark.status} title={nslpReimbursementBenchmark.note} /></td>
-                  <td className="num">{money(nslpReimbursementBenchmark.value)}</td>
-                  <td className="num">{money(econ[0].costPerUnit)}</td>
-                  <td className="num">{money(econ[0].distributionPerUnit + econ[0].channelCost)}</td>
-                  <td className="num">{money(benchmarkContrib)}</td>
-                  <td className="num">{pct(benchmarkContrib / nslpReimbursementBenchmark.value)}</td>
-                </tr>
               </tbody>
             </table>
           </div>
           <p className="farm-kpi-sub mt-2">
-            Contribution is price less the cost of a unit, distribution and any commission — before fixed cost.
-            The benchmark compares the Subscriptions unit against federal reimbursement. Change the
-            Subscriptions price above to see where it crosses the {money(nslpReimbursementBenchmark.value)} line.
+            Contribution is price less the cost of a unit, distribution and any commission — before fixed cost. Vallecito
+            priced a 1020 flat at $25 retail and $20 on subscription (DATED); the channel prices above are the plan&rsquo;s.
           </p>
         </Card>
       </div>

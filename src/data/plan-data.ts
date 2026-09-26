@@ -940,11 +940,3 @@ export const phaseProfiles: PhaseProfile[] = [
     premiumFactor: t(1.0, 'STATED', '×', 'Same crop plan for now; premium menu is a future build'),
   },
 ];
-
-export const nslpReimbursementBenchmark = t(
-  4.4,
-  'SOURCED',
-  '$/unit',
-  'USDA SY2026-27: $4.31 free unit + $0.09 performance-based',
-);
-
