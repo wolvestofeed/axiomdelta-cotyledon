@@ -44,6 +44,8 @@ const ALLOWED = new Set([
   'apps/web/test/farm-vocabulary.test.ts',
   'CLAUDE.md', // names the origin and the words themselves
   'docs/roadmap.md', // names the origin
+  'docs/roadmaps/phase-', // the phase roadmaps name what each phase replaced
+  'docs/todo.md', // names the origin
 ]);
 
 /** Words that are also ordinary English in the codebase and are allowed in these exact phrases. */
