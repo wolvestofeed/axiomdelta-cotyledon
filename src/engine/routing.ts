@@ -1,34 +1,24 @@
 /**
- * MicroFarm — the process route per crop plan (scheduler build plan §0, W0 step 3). Pure.
+ * MicroFarm — the process route per grow plan (scheduler build plan §0, W0 step 3). Pure.
  *
- * A route is derived, never authored beside the study. Its steps are the lines
- * of the crop plan's labor standard — the adopted study, or the estimate that
- * stands in — in study order, each on its line's stream. A step takes:
- *   - its KIND off the time-study scaffold (or the plan's task names for the
- *     plan's own study), which is what precedence reads;
- *   - its RESOURCE off the stage map and the Phase 1 equipment list: a sow's
- *     grow unit from its grow stage, the blackout rack for the blackout, the
- *     cutter mixer for a prep at the VCM, the tray sealer for the seal;
- *   - its MINUTES off the line: a fixed line's elapsed minutes are setup, a
- *     per-unit line's are run minutes per unit at the sowing studied, so
- *     duration = setup + units × run, and labor the same on labor minutes.
- *     Units are the sowing's on the sowing stream and the day's shipped on the
- *     harvest stream.
+ * A route is derived, never authored beside the study. Its steps are the sowing and harvest lines
+ * of the plan's labor standard — the adopted study, or the estimate that stands in — in study
+ * order, each on its line's stream; the daily lines are the grow calendar's, not the day's clock.
+ * A step takes:
+ *   - its KIND off the time-study scaffold (prep, sow, harvest), which is what precedence reads;
+ *   - no RESOURCE: the sow and the harvest run at their stations, and the grow unit is the
+ *     calendar's resource for the cycle. A scenario may name one step by step;
+ *   - its MINUTES off the line: a fixed line's elapsed minutes are setup, a per-unit line's are
+ *     run minutes per unit at the sowing studied, so duration = setup + units × run, and labor the
+ *     same on labor minutes. Units are the trays sown on the sowing stream and the trays shipped
+ *     on the harvest stream.
  *
- * Precedence is finish-to-start, derived from the kinds, and an assumption a
- * scenario overrides step by step (`routing` overlay):
- *   sowing    — receiving → scaling → prep → sow (the sows run alongside each
- *              other; a sow waits for its own component's prep) → blackout, which
- *              waits for every sow → line turnaround;
- *   harvest — the cold assemblies run alongside each other from staged
- *              components → unit and assemble, which waits for every one →
- *              seal → temperature check at pack → load.
- * No edge crosses the streams: harvest starts from components a sowing already
- * blackout and staged.
+ * Precedence is finish-to-start and an assumption a scenario overrides step by step (`routing`
+ * overlay): a sow waits for its preps; every other step follows the line before it on its stream.
+ * No edge crosses the streams.
  *
- * Report, never repair: a line no kind names, a sow with no grow unit on the
- * Phase 1 list, an overnight process, an unknown predecessor or a cycle comes
- * back as a finding. Nothing is dropped or re-ordered to make the route fit.
+ * Report, never repair: a line no kind names, an unknown predecessor, an unknown resource or a
+ * cycle comes back as a finding. Nothing is dropped or re-ordered to make the route fit.
  */
 
 import type { EquipmentLine } from '@/data/capex';
@@ -64,15 +54,13 @@ export interface RouteStep {
   /** The crew works the whole duration (labor = staff × elapsed on the line); otherwise the step is tended. */
   attended: boolean;
   controlPoint: string | null;
-  /** The grow stage runs across the night before the production day. */
-  priorDay: boolean;
   /** Finish-to-start predecessors, by step id. */
   after: string[];
   /** Some field on the step is the scenario's edit. */
   edited: boolean;
 }
 
-export type RouteFindingKind = 'no-study' | 'not-a-grow-plan' | 'unclassified-line' | 'no-resource' | 'unknown-resource' | 'overnight-process' | 'unknown-predecessor' | 'cycle';
+export type RouteFindingKind = 'no-study' | 'not-a-grow-plan' | 'unclassified-line' | 'unknown-resource' | 'unknown-predecessor' | 'cycle';
 
 export interface RouteFinding {
   kind: RouteFindingKind;
@@ -114,45 +102,17 @@ export function routeOverlayFor(routing: Readonly<Record<string, RouteStepOverla
 export const stepDuration = (s: Pick<RouteStep, 'setupMinutes' | 'runMinutesPerUnit'>, units: number): number => s.setupMinutes + units * s.runMinutesPerUnit;
 export const stepLaborMinutes = (s: Pick<RouteStep, 'laborMinutesFixed' | 'laborMinutesPerUnit'>, units: number): number => s.laborMinutesFixed + units * s.laborMinutesPerUnit;
 
-/** Kinds that occur once in a route; the others repeat per component. */
-const SINGLE: ReadonlySet<RouteStepKind> = new Set(['receiving', 'scaling', 'blackout', 'turnaround', 'assemble', 'seal', 'pack-check', 'load']);
-
-/** Predecessor kinds by kind, the first group present in the stream wins. Sow and other are handled apart. */
-const CHAIN: Partial<Record<ScaffoldKind, ScaffoldKind[][]>> = {
-  receiving: [],
-  scaling: [['receiving']],
-  prep: [['scaling'], ['receiving']],
-  blackout: [['sow'], ['prep'], ['scaling'], ['receiving']],
-  turnaround: [['blackout'], ['sow'], ['prep'], ['scaling'], ['receiving']],
-  cold: [],
-  assemble: [['cold']],
-  seal: [['assemble'], ['cold']],
-  'pack-check': [['seal'], ['assemble'], ['cold']],
-  load: [['pack-check'], ['seal'], ['assemble'], ['cold']],
-};
-
+/** A sow waits for its preps (its own component's where the line names one); every other step follows the line before it. */
 function derivedAfter(step: RouteStep, steps: readonly RouteStep[]): string[] {
   const mine = steps.filter((s) => s.stream === step.stream && s.id !== step.id);
-  const ofKind = (k: RouteStepKind) => mine.filter((s) => s.kind === k).map((s) => s.id);
-  const firstPresent = (groups: ScaffoldKind[][]) => {
-    for (const g of groups) {
-      const ids = g.flatMap(ofKind);
-      if (ids.length) return ids;
-    }
-    return [];
-  };
-  if (step.kind === 'other' || step.kind === 'harvest' || step.kind === 'daily') {
-    const prev = mine.filter((s) => s.seq < step.seq).pop();
-    return prev ? [prev.id] : [];
-  }
   if (step.kind === 'sow') {
     const ownPrep = mine.filter((s) => s.kind === 'prep' && step.component !== null && s.component === step.component).map((s) => s.id);
     if (ownPrep.length) return ownPrep;
-    const sharedPrep = mine.filter((s) => s.kind === 'prep' && s.component === null).map((s) => s.id);
-    if (sharedPrep.length) return sharedPrep;
-    return firstPresent([['scaling'], ['receiving']]);
+    return mine.filter((s) => s.kind === 'prep' && s.component === null).map((s) => s.id);
   }
-  return firstPresent(CHAIN[step.kind] ?? []);
+  if (step.kind === 'prep') return [];
+  const prev = mine.filter((s) => s.seq < step.seq).pop();
+  return prev ? [prev.id] : [];
 }
 
 /** Step ids in an order every edge respects, lowest study position first among the ready; null on a cycle. */
@@ -226,12 +186,11 @@ export function deriveRoute(input: {
     const component = s?.component ?? null;
     const controlPoint = s?.controlPoint ?? null;
     const base = component ? `${kind}:${component}` : kind;
-    const id = (component || SINGLE.has(kind)) && !taken.has(base) ? base : `${kind}#${seq}`;
+    const id = component && !taken.has(base) ? base : `${kind}#${seq}`;
     taken.add(id);
 
     // Labor at a station; the grow unit is the calendar's resource for the cycle, not the day's.
     const resourceKey: string | null = null;
-    const priorDay = false;
     if (kind === 'other') {
       findings.push({ kind: 'unclassified-line', stepId: id, detail: `"${line.task}" is not a task the scaffold names; it follows the line before it on the ${line.stream} stream.` });
     }
@@ -254,7 +213,6 @@ export function deriveRoute(input: {
       laborMinutesPerUnit: fixed || sowing <= 0 ? 0 : line.laborMinutes / sowing,
       attended: line.elapsedMinutes > 0 && line.laborMinutes + 1e-9 >= line.staff * line.elapsedMinutes,
       controlPoint,
-      priorDay,
       after: [],
       edited: false,
     };

@@ -32,7 +32,6 @@ describe('farm routing — a route for every plan', () => {
       expect(rt.order).not.toBeNull();
       expect(new Set(rt.steps.map((s) => s.id)).size).toBe(rt.steps.length);
       expect(rt.findings.filter((f) => f.kind === 'unclassified-line' || f.kind === 'cycle' || f.kind === 'unknown-predecessor')).toEqual([]);
-      expect(rt.steps.some((s) => s.kind === 'blackout')).toBe(false);
       expect(rt.steps.every((s) => s.resourceKey === null)).toBe(true);
       // No edge crosses the streams.
       for (const s of rt.steps) for (const a of s.after) expect(step(rt, a).stream).toBe(s.stream);

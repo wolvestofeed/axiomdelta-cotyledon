@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveCapacity, runPlanningLoop, laborForDay, fixedLaborShareOfFullSowing } from '@/engine';
+import { runPlanningLoop, laborForDay, fixedLaborShareOfFullSowing } from '@/engine';
 import { laborRequirement, checkStaffing, staffedSpans, scheduledHeadcountAt, newCrewDefaultsFor } from '@/engine/staffing';
 import { assumptions } from '@/data/plan-data';
 import { crews as seedCrews, newCrew } from '@/data/crews';
@@ -27,14 +27,13 @@ describe('farm — plan yields carry their own provenance', () => {
 
 describe('farm — proposed crews are checked against the requirement, never the other way round', () => {
   const R = resolveScenarioInputs({});
-  const cap = deriveCapacity(R.cropPlan, R.capacityInputs);
   // A grow day places nothing on the clock: its sowing stream is its plan's lines, unplaced.
-  const none = laborRequirement([], R.capacityInputs);
+  const none = laborRequirement(R.capacityInputs);
 
   it('no crew is seeded; with none proposed nothing is checked', () => {
     expect(seedCrews).toEqual([]);
     expect(R.crews).toEqual([]);
-    const s = checkStaffing(none, [], cap, R.capacityInputs);
+    const s = checkStaffing(none, []);
     expect(s.checked).toBe(false);
     expect(s.findings).toEqual([]);
   });

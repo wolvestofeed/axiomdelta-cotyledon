@@ -14,15 +14,9 @@
  * duration plus changeover — and, in constrained crew mode, where the crew has
  * the people free for its labor. Deterministic for a given input.
  *
- *   SOWING stream, per whole sowing. Steps before the sows are placed forward
- *   from opening. The sows are placed to FINISH TOGETHER at the rack load
- *   (`stage.ts`): the load is the earliest minute every sow can have finished
- *   and the blackout rack is free, and each sow ends at it, or as late before it as
- *   its grow unit allows. The route's blackout step is the rack on the clock
- *   (decisions 15, 23): load, the unattended blackout stage and unload, their
- *   minutes and people from Capacity; the labor is the study's blackout line
- *   (decision 16), placed at the load and the unload in proportion to their
- *   staff-minutes. Steps after it are placed forward.
+ *   SOWING stream, per whole sowing: the study's sowing lines — receiving, prep and the sow —
+ *   placed forward from opening in route order, each after its predecessors. The trays then
+ *   go on their grow unit for the plan's cycle, which is the grow calendar's, not the day's.
  *
  *   HARVEST stream, per crop plan shipped that day, from staged components (no
  *   edge to the sowing stream). Placed backward from the distribution time by
@@ -38,9 +32,7 @@
  * allowance for a tended one. Labor hours are the time studies' (decision 16)
  * and reconcile to `staffDemand` for the same day; closedown is reported apart.
  *
- * Report, never repair (§7 rule 2). The cooling clock (decision 17) runs from
- * the last sow's end to the start of the blackout stage, plus the blackout stage,
- * against 2 hours and 6 hours. In requirement crew mode (the default) crews never
+ * Report, never repair (§7 rule 2). In requirement crew mode (the default) crews never
  * limit placement and every gap is a violation; in constrained mode a sowing or
  * harvest order that does not fit inside the day is unplaced, whole.
  */
@@ -50,7 +42,7 @@ import { clock, type CrewShift } from '@/data/crews';
 import type { CropPlanDef } from '@/data/plan-data';
 import type { SchedulePolicy } from '@/data/schedule-policy';
 import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
-import { FOOD_CODE_COOLING_STAGE_ONE_MIN, FOOD_CODE_COOLING_TOTAL_MIN, type CapacityInputs } from '@/engine';
+import type { CapacityInputs } from '@/engine';
 import { deriveRoute, routeOverlayFor, stepDuration, stepLaborMinutes, type CropPlanRoute, type RouteFinding, type RouteResource, type RouteStep, type RouteStepOverlay } from '@/engine/routing';
 import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
 
@@ -80,11 +72,11 @@ export interface ScheduleInput {
   dispatches: readonly ScheduleHarvest[];
   resources: readonly RouteResource[];
   crews: readonly CrewShift[];
-  capacityInputs: Pick<CapacityInputs, 'operatingOpenMin' | 'operatingCloseMin' | 'loadMinutes' | 'blackoutMinutes' | 'unloadMinutes' | 'loadStaff' | 'unloadStaff'>;
+  capacityInputs: Pick<CapacityInputs, 'operatingOpenMin' | 'operatingCloseMin'>;
   policy: SchedulePolicy;
 }
 
-export type BlockKind = 'step' | 'rack-load' | 'blackout-stage' | 'rack-unload' | 'closedown';
+export type BlockKind = 'step' | 'closedown';
 
 export interface ScheduledBlock {
   id: string;
@@ -98,7 +90,7 @@ export interface ScheduledBlock {
   resourceKey: string | null;
   startMin: number;
   endMin: number;
-  /** People on the block at once: the study line's, or Capacity's at the rack. */
+  /** People on the block at once: the study line's. */
   staff: number;
   /** Labor minutes, placed as `staff` people from `startMin`. */
   laborMinutes: number;
@@ -113,10 +105,7 @@ export type ScheduleViolation =
   | V<'outside-operating-day', { blockId: string; startMin: number; endMin: number }>
   | V<'crew-shortfall', { startMin: number; endMin: number; required: number; scheduled: number }>
   | V<'unstaffed-attended-step', { blockId: string; atMin: number }>
-  | V<'control-point-cooling-stage', { orderId: string; stage: 1 | 2; minutes: number; limit: number }>
-  | V<'unattended-blackout', { orderId: string; completesAtMin: number; allowed: boolean }>
   | V<'due-date-missed', { orderId: string; dueMin: number; byMin: number }>
-  | V<'prior-day-step', { orderId: string; stepId: string }>
   | V<'route', { orderId: string; finding: RouteFinding }>
   | V<'unplaced', { orderId: string; stream: TimeStudyStream }>;
 
@@ -188,7 +177,7 @@ const stepReq = (s: RouteStep, units: number): Req => ({
 });
 
 const sharedKey = (s: Pick<RouteStep, 'task' | 'station'>) => `${s.task}|${s.station ?? ''}`;
-const isSharedHarvest = (s: RouteStep) => s.stream === 'harvest' && s.scalesWith === 'fixed' && !s.priorDay;
+const isSharedHarvest = (s: RouteStep) => s.stream === 'harvest' && s.scalesWith === 'fixed';
 const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
 const mins = (n: number) => `${Math.round(n * 10) / 10} min`;
 
@@ -310,26 +299,25 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     return start + req.duration;
   };
 
-  // Route findings once per crop plan; overnight processes are reported as prior-day steps.
+  // Route findings once per crop plan.
   const reported = new Set<string>();
   const reportRoute = (orderId: string, route: CropPlanRoute) => {
     if (reported.has(route.cropPlanCode)) return;
     reported.add(route.cropPlanCode);
     for (const f of route.findings) {
-      if (f.kind === 'overnight-process') continue;
       violations.push({ kind: 'route', orderId, finding: f, detail: f.detail });
     }
   };
 
   // Priority order (§4.1): a policy input, not a constant.
   const processing = (route: CropPlanRoute, stream: TimeStudyStream, units: number) =>
-    route.steps.filter((s) => s.stream === stream && !s.priorDay).reduce((t, s) => t + stepDuration(s, units), 0);
+    route.steps.filter((s) => s.stream === stream).reduce((t, s) => t + stepDuration(s, units), 0);
   const longestPath = (route: CropPlanRoute, stream: TimeStudyStream, units: number) => {
     if (!route.order) return processing(route, stream, units);
     const finish = new Map<string, number>();
     for (const id of route.order) {
       const s = route.steps.find((x) => x.id === id)!;
-      if (s.stream !== stream || s.priorDay) continue;
+      if (s.stream !== stream) continue;
       finish.set(id, Math.max(0, ...s.after.map((a) => finish.get(a) ?? 0)) + stepDuration(s, units));
     }
     return Math.max(0, ...finish.values());
@@ -379,7 +367,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
   const completion = new Map<string, number>();
   for (const d of orders) {
     reportRoute(d.id, d.route);
-    const own = d.route.steps.filter((s) => s.stream === 'harvest' && !s.priorDay && !isSharedHarvest(s));
+    const own = d.route.steps.filter((s) => s.stream === 'harvest' && !isSharedHarvest(s));
     const order = d.route.order?.map((id) => own.find((s) => s.id === id)).filter((s): s is RouteStep => Boolean(s)) ?? null;
     if (!order) {
       unplace(d.id, 'harvest', `${d.cropPlanCode}'s route has a precedence cycle; its harvest is not placed.`);
@@ -446,14 +434,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
   }
 
   // ── Sowings: the sow stream ────────────────────────────────────────────────
-  const loadMin = cap.loadMinutes.value;
-  const blackoutMin = cap.blackoutMinutes.value;
-  const unloadMin = cap.unloadMinutes.value;
-  const loadStaff = cap.loadStaff.value;
-  const unloadStaff = cap.unloadStaff.value;
-  const rackMinutes = loadMin + blackoutMin + unloadMin;
   const placedSowings: ScheduleSowing[] = [];
-  const priorReported = new Set<string>();
 
   for (const sowing of ranked(input.sowings.filter((b) => b.units > 0), 'sowing')) {
     const { route, units } = sowing;
@@ -465,104 +446,13 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     }
     const byId = new Map(steps.map((s) => [s.id, s]));
     const ends = new Map<string, number>();
-    for (const s of steps.filter((x) => x.priorDay)) {
-      ends.set(s.id, open);
-      if (!priorReported.has(`${route.cropPlanCode}|${s.id}`)) {
-        priorReported.add(`${route.cropPlanCode}|${s.id}`);
-        violations.push({ kind: 'prior-day-step', orderId: sowing.id, stepId: s.id, detail: `${s.task} runs the day before; no activity other than soaking runs overnight. It is not placed on this day.` });
-      }
-    }
-    const chills = steps.filter((s) => s.kind === 'blackout');
-    const withBlackout = new Set(chills.flatMap((c) => c.after.filter((a) => byId.get(a)?.kind === 'sow' && !byId.get(a)?.priorDay)));
     const sowingSnap = snapshot();
     let ok = true;
-
-    const placeBlackout = (c: RouteStep): boolean => {
-      const sows = c.after.map((a) => byId.get(a)).filter((s): s is RouteStep => Boolean(s) && s!.kind === 'sow' && !s!.priorDay);
-      const predEnd = (s: RouteStep) => Math.max(open, ...s.after.map((a) => ends.get(a) ?? open));
-      const otherPreds = c.after.filter((a) => !sows.some((k) => k.id === a)).map((a) => ends.get(a) ?? open);
-      const studyLabor = stepLaborMinutes(c, units);
-      const loadShare = loadStaff * loadMin + unloadStaff * unloadMin;
-      const loadLabor = loadShare > 0 ? (studyLabor * loadStaff * loadMin) / loadShare : studyLabor;
-      const unloadLabor = studyLabor - loadLabor;
-      const rack: Req = {
-        duration: rackMinutes,
-        resourceKey: c.resourceKey,
-        labor: [
-          { offset: 0, staff: loadStaff, minutes: loadLabor },
-          { offset: loadMin + blackoutMin, staff: unloadStaff, minutes: unloadLabor },
-        ],
-      };
-      let l0 = Math.max(open, ...otherPreds);
-      for (const k of sows) {
-        const t = earliest(stepReq(k, units), predEnd(k));
-        if (t === null) return false;
-        l0 = Math.max(l0, t + stepDuration(k, units));
-      }
-      for (let attempt = 0; attempt < 200; attempt++) {
-        const snap = snapshot();
-        const L = earliest(rack, l0);
-        if (L === null) return false;
-        let moved = false;
-        const sowEnds: number[] = [];
-        for (const k of [...sows].sort((a, b) => stepDuration(b, units) - stepDuration(a, units) || a.seq - b.seq)) {
-          const req = stepReq(k, units);
-          const t = latest(req, L, predEnd(k));
-          if (t === null) {
-            const e = earliest(req, predEnd(k));
-            if (e === null) {
-              restore(snap);
-              return false;
-            }
-            restore(snap);
-            l0 = Math.max(l0, e + req.duration, L + EPS);
-            moved = true;
-            break;
-          }
-          const end = placeStep(k, sowing.id, sowing.cropPlanCode, units, t);
-          ends.set(k.id, end);
-          sowEnds.push(end);
-        }
-        if (moved) continue;
-        reserve(rack, L);
-        const blackoutStart = L + loadMin;
-        const blackoutEnd = blackoutStart + blackoutMin;
-        const unloadEnd = blackoutEnd + unloadMin;
-        const base = { orderId: sowing.id, cropPlanCode: sowing.cropPlanCode, stream: 'sowing' as const, stepId: c.id, resourceKey: c.resourceKey };
-        addBlock({ ...base, kind: 'rack-load', task: 'Rack load', startMin: L, endMin: blackoutStart, staff: loadStaff, laborMinutes: loadLabor, attended: true, controlPoint: 'control-point-2' });
-        addBlock({ ...base, kind: 'blackout-stage', task: 'Blackout stage', startMin: blackoutStart, endMin: blackoutEnd, staff: 0, laborMinutes: 0, attended: false, controlPoint: 'control-point-2' });
-        addBlock({ ...base, kind: 'rack-unload', task: 'Rack unload to storage', startMin: blackoutEnd, endMin: unloadEnd, staff: unloadStaff, laborMinutes: unloadLabor, attended: true, controlPoint: 'control-point-2' });
-        ends.set(c.id, unloadEnd);
-
-        // The cooling clock (decision 17): last sow's end to the blackout stage start, plus the blackout stage.
-        if (sowEnds.length) {
-          const minutes = blackoutStart - Math.max(...sowEnds) + blackoutMin;
-          for (const [stage, limit] of [[1, FOOD_CODE_COOLING_STAGE_ONE_MIN], [2, FOOD_CODE_COOLING_TOTAL_MIN]] as const) {
-            if (minutes > limit + EPS) {
-              violations.push({ kind: 'control-point-cooling-stage', orderId: sowing.id, stage, minutes, limit, detail: `${sowing.cropPlanCode}, ${sowing.id}: ${mins(minutes)} from the last sow's end at ${clock(Math.max(...sowEnds))} to the end of the blackout stage at ${clock(blackoutEnd)}; the ${stage === 1 ? '2-hour' : '6-hour'} limit is ${limit} min (FDA Food Code 3-501.14, control-point-2).` });
-            }
-          }
-        }
-        const staffed = crews.length > 0 && scheduledAt(blackoutEnd) > 0;
-        if (blackoutEnd > close + EPS || (crews.length > 0 && !staffed)) {
-          violations.push({ kind: 'unattended-blackout', orderId: sowing.id, completesAtMin: blackoutEnd, allowed: policy.allowUnattendedBlackout.value, detail: `${sowing.cropPlanCode}, ${sowing.id}: the blackout stage completes at ${clock(blackoutEnd)} with ${blackoutEnd > close + EPS ? 'the operating day closed' : 'no crew scheduled'}. control-point-2 covers that only on the continuous datalogger with alarm to a named on-call responder${policy.allowUnattendedBlackout.value ? '' : '; the schedule policy does not allow an unattended blackout'}.` });
-        }
-        return true;
-      }
-      return false;
-    };
 
     const deferred: RouteStep[] = [];
     for (const id of route.order) {
       const s = byId.get(id);
-      if (!s || s.priorDay || withBlackout.has(s.id)) continue;
-      if (s.kind === 'blackout') {
-        if (!placeBlackout(s)) {
-          ok = false;
-          break;
-        }
-        continue;
-      }
+      if (!s) continue;
       if (s.after.some((a) => byId.has(a) && !ends.has(a))) {
         deferred.push(s);
         continue;
@@ -584,7 +474,6 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     }
     if (!ok) {
       restore(sowingSnap);
-      violations.splice(0, violations.length, ...violations.filter((v) => !(('orderId' in v) && v.orderId === sowing.id && (v.kind === 'control-point-cooling-stage' || v.kind === 'unattended-blackout'))));
       unplace(sowing.id, 'sowing', `${sowing.cropPlanCode}: a sowing of ${units} units does not fit inside the operating day with the crews proposed.`);
       continue;
     }
@@ -610,12 +499,11 @@ export function schedule(input: ScheduleInput): ScheduleResult {
   }
   const jobsOn = new Map<string, ScheduledBlock[]>();
   for (const b of blocks) {
-    if (!b.resourceKey || b.kind === 'blackout-stage' || b.kind === 'rack-unload') continue;
+    if (!b.resourceKey) continue;
     jobsOn.set(b.resourceKey, [...(jobsOn.get(b.resourceKey) ?? []), b]);
   }
   for (const [key, jobs] of jobsOn) {
-    const endOf = (j: ScheduledBlock) => (j.kind === 'rack-load' ? j.startMin + rackMinutes : j.endMin);
-    const inside = jobs.filter((j) => endOf(j) <= close + EPS).length;
+    const inside = jobs.filter((j) => j.endMin <= close + EPS).length;
     if (inside < jobs.length) {
       violations.push({ kind: 'resource-over-capacity', resourceKey: key, jobs: jobs.length, jobsInsideDay: inside, detail: `${resourceOf.get(key)?.item ?? key}: ${jobs.length} jobs on the day; ${inside} finish inside the operating day at ${slotsOf(key)} ${slotsOf(key) === 1 ? 'slot' : 'slots'}.` });
     }

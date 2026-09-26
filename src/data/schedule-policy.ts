@@ -35,14 +35,12 @@ export interface SchedulePolicy {
   /** End-of-day closedown, placed once at the close of the operating day, on no study. */
   closedownStaff: Tagged;
   closedownMinutes: Tagged;
-  /** Whether a blackout may complete with no crew scheduled; a plan that relies on it says so. */
-  allowUnattendedBlackout: Tagged<boolean>;
   priorityRule: Tagged<PriorityRule>;
   crewMode: Tagged<CrewMode>;
   harvestDirection: Tagged<HarvestDirection>;
 }
 
-const CLOSEDOWN = 'End-of-day closedown: two people for 30 minutes, placed once at the close of the operating day, on no study; it covers the end-of-day blackout rack sanitize.';
+const CLOSEDOWN = 'End-of-day closedown: two people for 30 minutes, placed once at the close of the operating day, on no study.';
 
 export const schedulePolicy: SchedulePolicy = {
   distributionTimeMin: tagged(
@@ -53,7 +51,6 @@ export const schedulePolicy: SchedulePolicy = {
   ),
   closedownStaff: tagged(2, 'STATED', 'people', CLOSEDOWN),
   closedownMinutes: tagged(30, 'STATED', 'min', CLOSEDOWN),
-  allowUnattendedBlackout: tagged(false, 'STATED', undefined, 'No overnight activity other than soaking; a blackout never runs into an empty building.'),
   priorityRule: tagged<PriorityRule>('earliest-due', 'PLACEHOLDER', undefined, 'No priority rule is stated; the scheduler can run each and the days compare.'),
   crewMode: tagged<CrewMode>(
     'requirement',

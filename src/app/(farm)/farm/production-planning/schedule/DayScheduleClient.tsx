@@ -156,7 +156,6 @@ export function DayScheduleClient({
             endMin: b.endMin,
             label: blockLabel(b),
             color: COLOR[b.stream] ?? 'var(--farm-forest)',
-            muted: b.kind === 'blackout-stage',
             flagged: flagged.has(b.id),
             title: `${blockLabel(b)} — ${clock(b.startMin)}–${clock(b.endMin)}, ${b.staff} ${b.staff === 1 ? 'person' : 'people'}, ${mins(b.laborMinutes)} labor${b.controlPoint ? `, ${b.controlPoint}` : ''}`,
           }),
@@ -172,7 +171,7 @@ export function DayScheduleClient({
       const route = inputs.routes.find((r) => r.cropPlanCode === b.cropPlanCode);
       const step = route?.steps.find((s) => s.id === b.stepId);
       for (const a of step?.after ?? []) {
-        const from = result.blocks.find((x) => x.orderId === b.orderId && x.stepId === a && (x.kind === 'step' || x.kind === 'rack-unload'));
+        const from = result.blocks.find((x) => x.orderId === b.orderId && x.stepId === a && x.kind === 'step');
         if (from) pairs.push({ fromId: from.id, toId: b.id });
       }
     }

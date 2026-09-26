@@ -291,7 +291,6 @@ describe('the grow model', () => {
     const h = horizon([order(DIST, 'BROC-01', 20)]);
     const labor = h.productionDays[0]!.labor;
     expect(labor.placed).toEqual([]);
-    expect(labor.chills).toEqual([]);
     const study = estimatedTimeStudy(plan('BROC-01'), 20);
     const sowingLines = study.lines.filter((l) => l.stream === 'sowing');
     expect(labor.unplaced.map((t) => t.task).sort()).toEqual(sowingLines.map((l) => l.task).sort());

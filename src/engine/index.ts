@@ -441,13 +441,6 @@ export function packedUnitOz(
   return { hotOz, coldOz, eachOz, totalOz: hotOz + coldOz + eachOz, seedOz };
 }
 
-// ── Cooling: the regulatory clock and the equipment rating are different things
-
-/** FDA Food Code 3-501.14(A)(1): harvested TCS food from 135°F to 70°F within 2 hours. */
-export const FOOD_CODE_COOLING_STAGE_ONE_MIN = 120;
-/** FDA Food Code 3-501.14(A)(2): 135°F to 41°F within 6 hours total. */
-export const FOOD_CODE_COOLING_TOTAL_MIN = 360;
-
 // ── The day a sowing is placed in ────────────────────────────────────────────
 
 /** The operating day as a sowing reads it; on a grow plan the whole day, one sowing per grow unit. */

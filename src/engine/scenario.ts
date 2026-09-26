@@ -37,8 +37,8 @@ import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, ty
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { sowingGrowUnitsFrom } from '@/engine/equipment';
 import { growUnitsFrom } from '@/engine/grow-capacity';
-import { laborRequirement, ratedDaySlots, newCrewDefaultsFor } from '@/engine/staffing';
-import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
@@ -332,7 +332,6 @@ export interface SchedulePolicyOverlay {
   distributionTimeMin?: number;
   closedownStaff?: number;
   closedownMinutes?: number;
-  allowUnattendedBlackout?: boolean;
   priorityRule?: PriorityRule;
   crewMode?: CrewMode;
   harvestDirection?: HarvestDirection;
@@ -661,8 +660,8 @@ export function resolveScenarioInputs(
   const crewOverlay = config.crews ?? {};
   const crews: CrewShift[] = [];
   const typedCapacity = capacityInputs as unknown as ResolvedInputs['capacityInputs'];
-  // A grow plan has no rack to load: a new crew spans the operating day at one person until a placed task needs more.
-  const addDefaults = newCrewDefaultsFor(laborRequirement(isGrowPlanCarrier(cropPlan) ? [] : ratedDaySlots(deriveCapacity(cropPlan, typedCapacity)), typedCapacity));
+  // A new crew spans the operating day at one person until a placed task needs more.
+  const addDefaults = newCrewDefaultsFor(laborRequirement(typedCapacity));
   for (const seed of defaultCrews) {
     const o = crewOverlay[seed.id];
     if (o?.removed) continue;
@@ -794,7 +793,6 @@ export function resolveScenarioInputs(
   put(schedulePolicy.distributionTimeMin, sp.distributionTimeMin);
   put(schedulePolicy.closedownStaff, sp.closedownStaff);
   put(schedulePolicy.closedownMinutes, sp.closedownMinutes);
-  put(schedulePolicy.allowUnattendedBlackout, sp.allowUnattendedBlackout);
   put(schedulePolicy.priorityRule, sp.priorityRule);
   put(schedulePolicy.crewMode, sp.crewMode);
   put(schedulePolicy.harvestDirection, sp.harvestDirection);

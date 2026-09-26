@@ -29,7 +29,6 @@ const ALLOWED = new Set([
   'src/data/input-factors-compiled.json',
   'src/engine/produce-safety.ts',
   'docs/outline.md',
-  'docs/grow-operations.md',
   'docs/glossary.md', // names the kitchen origin of terms and uses cook in its plain sense
   'src/data/glossary.ts', // generated from it
   'src/data/science-library.ts', // cites studies as they are titled

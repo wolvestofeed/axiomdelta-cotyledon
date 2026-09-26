@@ -1,173 +1,105 @@
-# MicroFarm — Culinary Operations
+# MicroFarm — Grow Operations
 
-The farm's stage processing standards: how long each kind of component sows, on what
-equipment, before it is pulled for the blackout rack — and how a crop plan's time to the blackout rack is
-read from them. Source for every figure in §1–§2 is Robert (2026-09-14); each is STATED. §3 is the
-rule the engine applies, §4 maps the standards onto the crop plan library, §5 records what is not
-settled.
+How a tray is grown: the stages a sowing runs through, the days each variety spends in them, the watering and the checks at each stage, the labor a tray takes, and how the grow calendar places a sowing on a grow unit. The domain terms are defined in [`outline.md`](outline.md) §4 and [`glossary.md`](glossary.md); the engine rules they obey are `outline.md` §5. The figures here are the ones the app runs on, each with its provenance tag.
 
-The register is `apps/web/src/app/(farm)/farm/_data/grow-stages.ts`; the rule is
-`_engine/stage.ts`. Blackout rack occupancy and the cooling limit (control-point-2) are in
-[`research/validation-notes.md`](research/validation-notes.md) §4.
+The registers are `src/data/stage-schedule.ts` (the stages, watering, water volumes), `src/data/varieties.ts` (the days per stage for each variety), `src/engine/produce-safety.ts` (the control points), `src/data/time-studies.ts` (Vallecito's tray study) and `src/engine/grow-calendar.ts` (placement on the grow units).
 
 ---
 
-## 1. Operational standard — the cooling clock starts at the end of the sow
+## 1. The stages
 
-As stated: *the moment any of these components finish their respective sow times, the clock
-starts. Farm staff must immediately transfer the bulk product into 2-inch hotel pans (to ensure
-surface area) and load them into the blackout rack.*
+A microgreen tray runs soak → sow and weight → germination → blackout → light → harvest window → packed. Day 0 is the sow date; the soak runs the day before it. A tray holds its grow unit from the sow day to the end of the harvest window.
 
-- The end of the sow time is the start of the control-point-2 cooling clock (FDA Food Code 3-501.14:
-  135°F to 70°F within 2 hours, to 41°F within 6 hours total).
-- Pan depth for the blackout is **2-inch hotel pans**.
-- Pouring into 2-inch pans and loading the rack takes **25 minutes**, an
-  estimate. Unloading to cold hold is a 10-minute placeholder.
+| Stage | What happens | Watering | Waterings a day | Control point | On a grow unit | Under light |
+|---|---|---|---|---|---|---|
+| Soak | Large seed soaks in cold water for the variety's soak hours after seed sanitation; small seed skips it | — | 0 | Seed sanitation | no | no |
+| Sow and weight | Medium filled and levelled, seed spread at the format's density, a weighted tray on top so roots go down and stems come up straight | mist | 1 | — | yes | no |
+| Germination | Weighted and covered, misted from above, temperature and humidity logged | mist | 2 | Temperature and humidity | yes | no |
+| Blackout | Weight off, cover on; the seedlings stretch up in the dark | mist | 1 | — | yes | no |
+| Light | Cover off, under the plan's light line; bottom watered once roots reach through the perforated tray, and a nutrient line that starts here goes in the water | bottom | 1 | Temperature and humidity | yes | yes |
+| Harvest window | Cotyledons full, first true leaves showing; a live tray is distributed in the window, cut greens are harvested from it | bottom | 1 | Harvest check | yes | yes |
+| Packed | The unit leaves the grow unit: a live tray with its care insert, a jar, or cut greens weighed into their pack | — | 0 | — | no | no |
 
-### Blackout rack sanitation and defrost
+A sprout in a jar runs a shorter schedule: soak, then rinse and drain, then its harvest window. The jar sits inverted on its stand in the dark and is rinsed and drained three times a day; spent rinse water is tested before any batch is distributed.
 
-- The rack is **sanitized** for three reasons only: at the **end of a shift or day**;
-  **immediately after a food spill** in the rack; and **between foods when allergens were
-  uncovered**.
-- The end-of-day sanitize is part of **closedown** (two people, 30 minutes, at the close of the
-  operating day).
-- It is **not sanitized between sowings**. No crop plan and no time study carries a blackout rack
-  sanitation task, and rack occupancy per sowing is load + blackout + unload.
-- **Defrosting never happens during normal production.** It is periodic maintenance to keep the
-  unit running efficiently, and it is not a production task.
-
-## 2. Stage processing times — four categories
-
-### 2.1 High-speed processing (10 to 30 minutes)
-
-Harvested rapidly with direct heat in a tilt shelf, or high-heat convection or steam in a jar stand oven.
-
-| Process | Examples as stated | Equipment and mode | Sow time |
+| Stage | Watering | Waterings a day | Control point |
 |---|---|---|---|
-| Steamed vegetables | Green beans, broccoli, carrots | Jar stand oven, 100% steam | 10–12 min |
-| Fajita vegetables and ground beef | Sautéed bell peppers and onions; the regenerative taco meat mix | Tilt shelf | 15–20 min |
-| Fish bites and meatballs | Baked on sheet pans | Jar stand oven, high-fan convection, to crisp the exterior; internal temperature reaches 165°F | 12–20 min |
-| Diced or sliced chicken | Honey-garlic chicken; fajita chicken; the chicken salad's chicken | Tilt shelf, harvested quickly to retain moisture | 20–25 min |
+| Soak | — | 0 | Seed sanitation |
+| Rinse and drain | rinse | 3 | Spent sprout irrigation water test |
+| Harvest window | rinse | 1 | Harvest check |
 
-### 2.2 Moderate roasting and simmering (40 to 60 minutes)
+## 2. Days per stage, by variety
 
-Longer, sustained heat for starch gelatinization or flavor development.
+The days are each variety's, on its record; a grow plan may override them, and a mixed tray runs on the slowest of its varieties at each stage. Days to harvest is the sow day through the last day before the harvest window; the cycle adds the window.
 
-| Process | Examples as stated | Equipment and mode | Sow time |
+| Variety | Soak | Sow | Germination | Blackout | Light | Harvest window | Days to harvest | Cycle | Tag | Basis |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Di Cicco broccoli | 0 | 1 | 3 | 3 | 4 | 3 | 11 | 14 | DATED | Germination 2 to 3, blackout 2 to 4, harvest 8 to 12 (supplier); Vallecito ran a 4-day light cycle |
+| Rambo purple radish | 0 | 1 | 3 | 2 | 4 | 3 | 10 | 13 | DATED | Germination 2 to 3, blackout 1 to 2, harvest 6 to 10 (supplier) |
+| Black oil sunflower | 0 | 1 | 3 | 2 | 4 | 3 | 10 | 13 | DATED | Harvest 7 to 10 (supplier); Vallecito 4-day light cycle |
+| Speckled pea | 0 | 1 | 3 | 4 | 4 | 4 | 12 | 16 | DATED | Germination 2 to 3, blackout 3 to 5, harvest 8 to 14 (supplier) |
+| Fenugreek | 0 | 1 | 3 | 2 | 4 | 3 | 10 | 13 | STATED | Blackout 2 to 3, harvest 7 to 10 (Vallecito research database) |
+| Borage | 0 | 1 | 3 | 3 | 6 | 4 | 13 | 17 | DATED | Days to maturity 10 to 20 (supplier) |
+| Red garnet amaranth | 0 | 1 | 3 | 3 | 4 | 3 | 11 | 14 | DATED | Germination 2 to 3, blackout 2 to 4, harvest 8 to 12 (supplier) |
+| Red Acre cabbage | 0 | 1 | 3 | 3 | 4 | 3 | 11 | 14 | DATED | As broccoli |
+| Chia | 0 | 1 | 3 | 3 | 5 | 3 | 12 | 15 | DATED | Germination 2 to 3, blackout 2 to 4, harvest 8 to 12 (supplier); Vallecito research 10 to 14 |
+| Mung bean | 1 | 0 | 3 | 0 | 0 | 1 | 3 | 4 | DATED | 2 to 4 days to harvest, rinsed 2 to 3 times a day |
+| Red lentil | 1 | 0 | 3 | 0 | 0 | 1 | 3 | 4 | DATED | 2 to 4 days to harvest, rinsed 2 to 3 times a day |
+| Hard red winter wheat | 1 | 0 | 4 | 0 | 0 | 1 | 4 | 5 | DATED | 4 to 5 days to maturity |
+
+For the sprouts (mung bean, red lentil, wheat) the germination days are the rinse-and-drain days.
+
+## 3. Control points
+
+Each control point is recorded on the sowing it applies to; a sowing's record at each point is recorded, a gap, or failed, computed from the record, and a gap is never a pass. The limits are verified with Austin Public Health before adoption.
+
+| Control point | Stages | Applies to | Critical limit | Tag | Monitoring | Record |
+|---|---|---|---|---|---|---|
+| Seed sanitation | soak | every plan | Sprout seed is treated with a scientifically valid method immediately before sprouting (21 CFR 112.142); the treatment, its concentration and contact time are recorded per lot. Microgreen seed follows the same treatment record until the produce safety plan states otherwise | SOURCED | The treatment, concentration, contact time and seed lot on every soak, entered on the sowing record by the person who treated the seed | Seed treatment record on the sowing |
+| Spent sprout irrigation water test | rinse and drain | jar plans | Spent irrigation water from each batch is tested for Listeria species, Salmonella and E. coli O157:H7, no earlier than 48 hours after sprouting starts; no batch is distributed before a negative result (21 CFR 112.144, 112.147) | SOURCED | A sample of the spent rinse water from every jar batch is sent to the laboratory at or after 48 hours; the result is entered against the batch | Spent irrigation water test result on the sowing |
+| Temperature and humidity | germination, blackout, light, harvest window | every plan | No band is on file; until the produce safety plan states the range and the reading interval, every reading is recorded and none is judged | PLACEHOLDER | Grow-room air temperature and relative humidity read at the inspection walk-through on the daily stream, with the date and the person | Grow-room readings log |
+| Harvest check | harvest window | every plan | Every tray is inspected before it is packed; a tray with visible mold, off-odor, rot at the stem base or foreign matter is not distributed | STATED | The person packing inspects each tray; the count passed and the count removed are entered on the sowing record | Harvest inspection counts on the sowing |
+
+The Produce Safety page shows each sowing's record against these points and traces a failed lot back to its suppliers and forward to the pickup points it reached.
+
+## 4. Labor per tray
+
+Labor runs on three streams (`outline.md` §5 rule 3). Until a plan's own study is observed and adopted, it runs on Vallecito's 2023 time study of one 1020 tray through its cycle (DATED), at one person on every task.
+
+| Stream | Task | Station | Minutes per tray |
 |---|---|---|---|
-| Roasted root vegetables | Sweet potatoes, potato wedges, squash | Jar stand oven | 35–45 min |
-| Starches and grains | Brown rice, whole wheat pasta | Steamed or boiled in bulk | 45–55 min |
-| Marinara sauce | Tomatoes reduced with the hidden vegetables integrated | Steam-jacketed sprouting rack, simmer | 45–60 min |
-| Enchilada casserole | Layered pans | Baked until the cheese is browned and the center reaches safe temperature | 45–60 min |
+| Sowing, on the sow day | Supplies transfer and receiving in | Prep station | 1 |
+| | Receiving and sorting seed | Prep station | 1 |
+| | Prep station | Prep station | 1 |
+| | Prep trays | Prep station | 1 |
+| | Sow trays | Prep station | 3 |
+| Daily, over the stage it covers | Germination watering | Grow rack | 1 |
+| | Blackout watering | Grow rack | 1 |
+| | Watering under lights | Grow rack | 3 |
+| | Nutrient preparation | Prep station | 1 |
+| | Inspection and sanitization | Grow rack | 5 |
+| Harvest, on the distribution day | Prep harvest station | Harvest station | 1 |
+| | Harvest tray with knife (cut trays only) | Harvest station | 5 |
+| | Weigh harvest (cut trays only) | Harvest station | 1 |
+| | Packaging and labels | Harvest station | 1 |
+| | Clean station | Harvest station | 1 |
 
-The enchilada casserole is the one exception where components are **assembled before growing**.
+A live tray takes 7 minutes on the sow day, 11 over its cycle and 3 at harvest: 21 in all. A cut tray takes 9 at harvest, 27 in all. The estimate spreads each daily task's minutes evenly over the plan's cycle days; a jar plan skips the blackout watering, the watering under lights and the nutrient preparation. The Day Schedule places the sowing and harvest streams on the clock; the daily stream is listed beside it for the trays on the shelves that day.
 
-### 2.3 Long braising and smoking (1.5 to 3 hours)
+## 5. Water
 
-Time to break down connective tissue or hydrate dry inputs.
+Watering volumes per 1020 tray (or pint jar) per watering are PLACEHOLDER until a watering log observes them: a misting pass 0.1 L, a bottom watering 0.5 L, a jar rinse 0.5 L. A nutrient line's volume over the cycle is the waterings from the stage it starts times these volumes.
 
-| Process | Examples as stated | Equipment and mode | Sow time |
-|---|---|---|---|
-| Smoked chicken thighs | — | Jar stand oven at 250°F to 275°F. The standard names a commercial smoker or a jar stand smoker box; the farm has no smoker | 1.5–2 h |
-| Texas chili | Dry heirloom beans, after soaking | Long, slow simmer in a tilt shelf or steam sprouting rack to hydrate and tenderize | 2–3 h |
+## 6. Placing a sowing
 
-### 2.4 Overnight "low and slow" (8 to 12 hours)
+- A sowing is what one grow unit takes of the plan's format: trays per 48-inch shelf (four 1020 flats, SOURCED) scaled to the shelf width, times the shelves. A plan with a light line is placed only on a unit whose fixture delivers it.
+- The sow date for a distribution date is that date less the plan's days to harvest, moved back to a production day.
+- The grow calendar holds a sowing on its unit for every day of its cycle; a sowing no unit has room for is a shortfall, never squeezed onto a shelf.
+- A sowing's trays are stock from the first day of its harvest window, and shelf life counts from there.
 
-| Process | Examples as stated | Equipment and mode | Sow time |
-|---|---|---|---|
-| BBQ pulled pork | Heritage pork shoulder | Jar stand oven programmable low-temperature roasting cycle overnight: growing at 225°F and holding at 160°F until the morning shift pulls it for shredding and blackouting | 8–12 h |
+## 7. Not settled
 
-Pork shoulder renders fat and breaks down collagen over the long, slow sow. The jar stand method is
-the crop plan's method.
-
-## 3. A crop plan's time to the blackout rack
-
-- **Timed from the start of growing.** The crew starts growing when the operating day opens.
-- **Components finish together.** One crop plan's hot components fill one blackout rack sowing, and the
-  clock starts at the end of each sow, so the components start staggered — longest first — and
-  finish at the same minute. The crop plan's **sow to blackout rack** time is its longest same-day
-  component sow.
-- **The high end of each range** is the figure the plan reads; the ranges
-  are kept.
-- **Read from the sow times on file, never a placeholder.** A component with no sow time is a
-  gap, listed beside the time. A crop plan with no sow time on file for any component has no first
-  load and no daily ceiling.
-- **Overnight sows** are ready when the crew arrives and add no same-day minutes.
-- **The first blackout rack load** is opening + sow to blackout rack; loading (25 min) starts then. Cycles per
-  day run from that first load to the operating day's close. A production day places each crop plan's
-  sowings no earlier than its own first load, earliest-ready first.
-- **Adult units** are the same units with larger protein units and read their student unit's
-  sow times. A larger unit changes the sowing size, not the sow time.
-
-Within groups 1 and 2 no crop plan is more than 60 minutes from its first load (the longest group 1–2
-sow is 60 minutes); loading completes 25 minutes after that.
-
-## 4. The standards mapped onto the crop plan library
-
-Student crop plans AMK-E-001 … AMK-E-011; AMK-A-002 … AMK-A-011 read the student row. Times are the
-plan figure (high end).
-
-| Crop plan | Hot component | Process (§2) | Plan time | Gap |
-|---|---|---|---|---|
-| AMK-E-002 Regenerative Beef & Black Bean Bowl | Beef & bean mix | Fajita vegetables and ground beef | 20 min | The black beans in the mix |
-| | Spanish rice | Starches and grains | 55 min | — |
-| AMK-E-003 Hill Country Smoked Chicken & Sweet Potato Hash | Smoked chicken | Smoked chicken thighs (jar stand) | 120 min | — |
-| | Sweet potato hash | Roasted root vegetables | 45 min | — |
-| | Green beans | Steamed vegetables | 12 min | — |
-| AMK-E-004 Gulf Coast Fish & Crispy Potatoes | Fish bites | Fish bites and meatballs | 20 min | — |
-| | Crispy potatoes | Roasted root vegetables | 45 min | — |
-| | Carrots | Steamed vegetables | 12 min | — |
-| AMK-E-005 Texas Farmhouse Chicken Salad | Chicken salad | Diced or sliced chicken (25 min stated) | 25 min | — |
-| AMK-E-006 Three-Bean & Root Vegetable Texas Chili | Chili | Texas chili | 180 min | — |
-| | Roasted zucchini | — | — | Zucchini is not named |
-| AMK-E-007 Pasture-Raised Chicken Fajitas | Fajita chicken | Diced or sliced chicken | 25 min | — |
-| | Fajita vegetables | Fajita vegetables and ground beef | 20 min | — |
-| | Black beans | — | — | No sow time |
-| AMK-E-008 Regenerative Meatballs with Hidden-Veg Marinara | Meatballs | Fish bites and meatballs | 20 min | — |
-| | Penne | Starches and grains | 55 min | — |
-| | Marinara | Marinara sauce | 60 min | Roasting the carrots and spinach blended in |
-| AMK-E-009 BBQ Pulled Pork with Green Apple Cabbage Slaw | Pulled pork | Overnight low and slow | overnight | Shredding after the morning pull |
-| AMK-E-010 Roasted Squash & Corn Enchilada Casserole | Enchilada casserole | Enchilada casserole | 60 min | Roasting the squash and corn and assembling the pans before the bake |
-| | Pinto beans | — | — | No sow time |
-| AMK-E-011 Honey-Garlic Chicken with Sesame Broccoli | Honey-garlic chicken | Diced or sliced chicken | 25 min | — |
-| | Brown rice | Starches and grains | 55 min | — |
-| | Sesame broccoli | Steamed vegetables | 12 min | — |
-| AMK-E-001 Texas Ranch Beef & Bean Bowl (listed last) | Beef and bean base | Fajita vegetables and ground beef | 20 min | The pinto beans in the base |
-| | Cilantro-lime rice | Starches and grains (brown rice) | 55 min | — |
-| | Roasted vegetables | — | — | Not named |
-| | Salsa roja | — | — | Not named |
-
-**Sow to blackout rack, first load at a 07:00 start (the presumed operating day):**
-
-| Crop plan | Sow to blackout rack | First load | Gaps |
-|---|---|---|---|
-| AMK-E-002 | 55 min (Spanish rice) | 07:55 | 1 |
-| AMK-E-003 | 120 min (smoked chicken) | 09:00 | — |
-| AMK-E-004 | 45 min (crispy potatoes) | 07:45 | — |
-| AMK-E-005 | 25 min (chicken) | 07:25 | — |
-| AMK-E-006 | 180 min (chili) | 10:00 | 1 |
-| AMK-E-007 | 25 min (fajita chicken) | 07:25 | 1 |
-| AMK-E-008 | 60 min (marinara) | 08:00 | 1 |
-| AMK-E-009 | 0 min (pork harvested overnight) | 07:00 | 1 |
-| AMK-E-010 | 60 min (casserole bake) | 08:00 | 2 |
-| AMK-E-011 | 55 min (brown rice) | 07:55 | — |
-| AMK-E-001 | 55 min (rice) | 07:55 | 3 |
-
-## 5. What is not settled
-
-1. **Beans other than the chili's.** Black beans (AMK-E-002, E-007) and pinto beans (AMK-E-001,
-   E-010) have no sow time. The time study carries "Bean sow (soaked prior day)" at 20 minutes,
-   not reconciled with either.
-2. **Components with no process:** roasted zucchini (E-006), AMK-E-001's roasted vegetables and
-   salsa roja.
-3. **Steps before or after a sow with no time:** roasting the marinara vegetables (E-008), roasting
-   the squash and corn and assembling the enchilada pans before the bake (E-010), shredding the
-   pork after the morning pull (E-009). Where the step comes before the sow, the crop plan's time to
-   the blackout rack is longer than the figure shown by that step.
-4. **Overnight hot holding.** The pork is roasted and held at 160°F while no crew is scheduled;
-   hot holding carries the Food Code limit of 135°F or above (3-501.16).
-5. **Header ranges and item ranges differ.** §2.2 is headed 40 to 60 minutes and contains a
-   35–45 minute item; the item figures are the ones recorded.
-6. **Crop plan text.** The seed library (`_data/crop-plans-seed.ts`) carries the jar stand method text for
-   AMK-E-003 and E-009; crop plan rows still `source = 'seed'` in the database take it when
-   `pnpm farm:reseed` runs.
+- The grow-room temperature and humidity band for the temperature-and-humidity control point.
+- Watering volumes, until a watering log observes them.
+- Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas (`todo.md`).
+- Observed stage days: every row in §2 is the supplier's or Vallecito's figure until closed sowings record their own.

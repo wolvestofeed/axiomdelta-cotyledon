@@ -450,15 +450,11 @@ export function planProductionDay(input: {
   const purchase = mergePurchaseLines(runs.flatMap((r) => r.purchase.lines));
   const cyclesRequired = runs.reduce((s, r) => s + r.sowingsNeeded, 0);
   const growPlaced = runs.every((r) => !isGrowPlanCarrier(input.cropPlans.find((x) => x.code === r.cropPlanCode)) || r.sowingsScheduled >= r.sowingsNeeded);
-  // The rack's load and unload are placed only for Phase 1-era sowings. A grow sowing has no rack:
-  // its day is its own plan's sowing-stream lines, not yet placed on the clock (the Day Schedule places them).
+  // A sow day's labor is each grow plan's sowing-stream lines, not placed on the clock here (the Day Schedule places them).
   const growCodes = new Set(runs.filter((r) => isGrowPlanCarrier(input.cropPlans.find((x) => x.code === r.cropPlanCode))).map((r) => r.cropPlanCode));
-  const rackLabor = laborRequirement(
-    schedule.filter((b) => b.fits && !growCodes.has(b.cropPlanCode)).map((b) => ({ seq: b.seq, loadMin: b.loadMin, units: b.units })),
-    input.capacityInputs,
-  );
+  const dayLabor = laborRequirement(input.capacityInputs);
   const growRuns = runs.filter((r) => growCodes.has(r.cropPlanCode) && r.sowingsScheduled > 0);
-  const labor = growRuns.length === 0 ? rackLabor : withUnplacedTasks(rackLabor, growRuns.flatMap((r) => growSowingTasks(input.cropPlans.find((x) => x.code === r.cropPlanCode)!, r, input.studies ?? [])), growRuns.reduce((s, r) => s + r.sowingsScheduled, 0), growRuns.reduce((s, r) => s + r.produced, 0));
+  const labor = growRuns.length === 0 ? dayLabor : withUnplacedTasks(dayLabor, growRuns.flatMap((r) => growSowingTasks(input.cropPlans.find((x) => x.code === r.cropPlanCode)!, r, input.studies ?? [])), growRuns.reduce((s, r) => s + r.sowingsScheduled, 0), growRuns.reduce((s, r) => s + r.produced, 0));
   return {
     productionDate: input.productionDate,
     runs,
@@ -478,7 +474,7 @@ export function planProductionDay(input: {
     requirement: toRequirementLines(purchase.lines),
     blackoutWindow: window,
     labor,
-    staffing: checkStaffing(labor, input.crews ?? [], dayCapacity, input.capacityInputs),
+    staffing: checkStaffing(labor, input.crews ?? []),
   };
 }
 

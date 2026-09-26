@@ -17,7 +17,7 @@ import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 /** What a scaffold task is, which is what the routing reads its precedence from. */
-export type ScaffoldKind = 'receiving' | 'scaling' | 'prep' | 'sow' | 'blackout' | 'turnaround' | 'cold' | 'assemble' | 'seal' | 'pack-check' | 'load' | 'daily' | 'harvest';
+export type ScaffoldKind = 'prep' | 'sow' | 'daily' | 'harvest';
 
 /** One task on the scaffold: what the observer times, and its suggested station. */
 export interface ScaffoldTask {

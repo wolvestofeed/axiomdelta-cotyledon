@@ -1,37 +1,19 @@
 /**
- * MicroFarm — labor as a REQUIREMENT of the plan, and crews checked
- * against it.
+ * MicroFarm — labor as a REQUIREMENT of the plan, and crews checked against it.
  *
- * The plant's capacity is equipment, process minutes and the operating day
- * (`deriveCapacity`). This module runs the other direction from the one the
- * platform used to: a production plan — sowings placed on the blackout rack — emits
- * the labor it needs, staff-hours by clock interval and the headcount each task
- * needs at the same moment. A crew register is a proposed staffing answer, and
- * the check reports where it does not cover the requirement. Nothing here feeds
- * back into the ceiling.
- *
- * What is placed on the clock today: the rack's load and unload for every
- * sowing, off the blackout rack schedule. The rack is not sanitized between sowings
- *. The other
- * time-study tasks carry staff and minutes but no placement or precedence yet
- * (Roadmap L5), so they are reported as daily staff-hours and per-task
- * headcount, marked not placed, and are not checked against crew times.
+ * The plant's capacity is the grow units and the operating day (`deriveCapacity`). A production
+ * day emits the labor it needs: each grow plan's sowing-stream lines from its labor standard,
+ * scaled to the trays sown (`withUnplacedTasks`). They carry staff and minutes; the Day Schedule
+ * places them on the clock. A crew register is a proposed staffing answer, and the check reports
+ * where it does not cover the requirement. Nothing here feeds back into the ceiling.
  */
 
 import { capacityInputs as defaultCapacityInputs } from '@/data/plan-data';
 import { clock, type CrewShift } from '@/data/crews';
-import type { CapacityProfile } from '@/engine';
 
 type CapacityInputs = typeof defaultCapacityInputs;
 
 export const REQUIREMENT_INTERVAL_MIN = 15;
-
-/** One sowing on the blackout rack: when it loads and how many units it carries. */
-export interface SowingSlot {
-  seq: number;
-  loadMin: number;
-  units: number;
-}
 
 export interface PlacedTask {
   key: string;
@@ -64,13 +46,6 @@ export interface RequirementInterval {
   headcount: number;
 }
 
-/** The blackout stage itself runs unattended; it is carried so a check can ask who is there when it completes. */
-export interface BlackoutStage {
-  seq: number;
-  startMin: number;
-  endMin: number;
-}
-
 export interface LaborRequirement {
   intervalMinutes: number;
   openMin: number;
@@ -78,7 +53,6 @@ export interface LaborRequirement {
   sowings: number;
   units: number;
   placed: PlacedTask[];
-  chills: BlackoutStage[];
   intervals: RequirementInterval[];
   peakHeadcount: number;
   peakAtMin: number | null;
@@ -86,15 +60,6 @@ export interface LaborRequirement {
   unplaced: UnplacedTask[];
   unplacedStaffHours: number;
   totalStaffHours: number;
-}
-
-/** The rated day: every cycle the plant has, loaded one occupancy apart from the first load. */
-export function ratedDaySlots(capacity: CapacityProfile): SowingSlot[] {
-  return Array.from({ length: capacity.cyclesPerDay }, (_, k) => ({
-    seq: k + 1,
-    loadMin: capacity.blackoutWindow.startMin + k * capacity.occupancyMinutes,
-    units: capacity.sowingSize,
-  }));
 }
 
 /** Most people needed at once by `tasks` inside [startMin, endMin). */
@@ -112,39 +77,16 @@ function peakConcurrent(tasks: readonly PlacedTask[], startMin: number, endMin: 
 }
 
 /**
- * The labor a set of placed sowings requires. Staff-hours per interval and
- * the peak headcount come from the placed blackout rack tasks; the rest of the time
- * study scales with the day's sowings (fixed tasks) and units (variable
- * tasks, on the study's own basis) and is reported unplaced.
+ * The operating day's labor requirement before any task is added: the intervals of the day, no
+ * task placed. Callers add each grow plan's sowing-stream lines (`withUnplacedTasks`).
  */
 export function laborRequirement(
-  slots: readonly SowingSlot[],
   cap: CapacityInputs = defaultCapacityInputs,
   intervalMinutes: number = REQUIREMENT_INTERVAL_MIN,
 ): LaborRequirement {
-  const load = cap.loadMinutes.value;
-  const blackout = cap.blackoutMinutes.value;
-  const unload = cap.unloadMinutes.value;
-
   const placed: PlacedTask[] = [];
-  const chills: BlackoutStage[] = [];
-  for (const b of slots) {
-    const blackoutStart = b.loadMin + load;
-    const blackoutEnd = blackoutStart + blackout;
-    const unloadEnd = blackoutEnd + unload;
-    const push = (task: string, startMin: number, endMin: number, headcount: number, controlPoint: string | null) => {
-      if (endMin > startMin && headcount > 0) {
-        placed.push({ key: `${b.seq}:${task}`, seq: b.seq, task, station: 'Blackout rack', startMin, endMin, headcount, controlPoint });
-      }
-    };
-    push('Rack load', b.loadMin, blackoutStart, cap.loadStaff.value, 'control-point-2');
-    push('Rack unload to cold hold', blackoutEnd, unloadEnd, cap.unloadStaff.value, 'control-point-2');
-    chills.push({ seq: b.seq, startMin: blackoutStart, endMin: blackoutEnd });
-  }
-
-  const sowings = slots.length;
-  const units = slots.reduce((s, b) => s + b.units, 0);
-  // A grow sowing's own tasks are added by the caller (`withUnplacedTasks`); the rack places only its load and unload.
+  const sowings = 0;
+  const units = 0;
   const unplaced: UnplacedTask[] = [];
 
   const openMin = cap.operatingOpenMin.value;
@@ -170,7 +112,6 @@ export function laborRequirement(
     sowings,
     units,
     placed,
-    chills,
     intervals,
     peakHeadcount,
     peakAtMin: peakHeadcount > 0 ? intervals.find((i) => i.headcount === peakHeadcount)!.startMin : null,
@@ -247,8 +188,6 @@ function leastScheduled(crews: readonly CrewShift[], startMin: number, endMin: n
 export type StaffingFindingKind =
   | 'no-crew-at-task'
   | 'crew-short-at-task'
-  | 'blackout-completes-unstaffed'
-  | 'extra-cycle-across-close'
   | 'crew-hours-below-requirement'
   | 'crew-outside-operating-day';
 
@@ -270,12 +209,6 @@ export interface StaffingCheck {
   requiredStaffHours: number;
   /** People on the floor across the proposed crews. */
   proposedFloorHeadcount: number;
-  /** Every placed load and unload has its headcount scheduled. */
-  staffedAtLoadAndUnload: boolean;
-  /** Some blackout stage completes with no one scheduled — control-point-2's datalogger-and-alarm path. */
-  blackoutCrossesUnstaffed: boolean;
-  /** The extra cycle across close can be loaded by the crews but not unloaded by them. */
-  unattendedBlackoutExtraCycle: boolean;
   findings: StaffingFinding[];
 }
 
@@ -287,21 +220,14 @@ const hours = (h: number) => `${(Math.round(h * 10) / 10).toLocaleString()} staf
  * about the plan: which task, at what minute, how many people it needs and how
  * many are scheduled. The plant's ceiling is not touched.
  */
-export function checkStaffing(
-  req: LaborRequirement,
-  crews: readonly CrewShift[],
-  capacity: CapacityProfile,
-  cap: CapacityInputs = defaultCapacityInputs,
-): StaffingCheck {
+export function checkStaffing(req: LaborRequirement, crews: readonly CrewShift[]): StaffingCheck {
   const active = activeCrews(crews);
   const checked = active.length > 0;
   const findings: StaffingFinding[] = [];
 
-  let staffedAtLoadAndUnload = true;
   for (const t of req.placed) {
     const least = leastScheduled(active, t.startMin, t.endMin);
     if (least.count >= t.headcount) continue;
-    if (t.task === 'Rack load' || t.task === 'Rack unload to cold hold') staffedAtLoadAndUnload = false;
     findings.push({
       kind: least.count === 0 ? 'no-crew-at-task' : 'crew-short-at-task',
       atMin: least.atMin,
@@ -311,39 +237,6 @@ export function checkStaffing(
     });
   }
 
-  let blackoutCrossesUnstaffed = false;
-  for (const c of req.chills) {
-    if (scheduledHeadcountAt(active, c.endMin) > 0) continue;
-    blackoutCrossesUnstaffed = true;
-    findings.push({
-      kind: 'blackout-completes-unstaffed',
-      atMin: c.endMin,
-      required: null,
-      scheduled: 0,
-      detail: `Sowing ${c.seq}'s blackout stage completes at ${clock(c.endMin)} with no crew scheduled. control-point-2 covers a blackout completing while the building is empty only on the continuous datalogger with alarm to a named on-call responder.`,
-    });
-  }
-
-  let unattendedBlackoutExtraCycle = false;
-  const w = capacity.blackoutWindow;
-  if (w.loadBeforeCloseExtraCycle) {
-    const nextStart = w.startMin + w.cycles * w.occupancyMinutes;
-    const loadEnd = nextStart + cap.loadMinutes.value;
-    const blackoutEnd = loadEnd + cap.blackoutMinutes.value;
-    const loadable = leastScheduled(active, nextStart, loadEnd).count >= cap.loadStaff.value;
-    const unloadable = leastScheduled(active, blackoutEnd, blackoutEnd + cap.unloadMinutes.value).count >= cap.unloadStaff.value;
-    if (loadable && !unloadable) {
-      unattendedBlackoutExtraCycle = true;
-      findings.push({
-        kind: 'extra-cycle-across-close',
-        atMin: nextStart,
-        required: cap.unloadStaff.value,
-        scheduled: scheduledHeadcountAt(active, blackoutEnd),
-        detail: `One more sowing can be loaded at ${clock(nextStart)} by the crews proposed. Its blackout ends ${clock(blackoutEnd)}, after the operating day closes at ${clock(w.closeMin)}, and no crew is scheduled to unload it. That cycle is not in the daily ceiling; running it depends on control-point-2's datalogger-and-alarm path.`,
-      });
-    }
-  }
-
   const crewStaffHours = active.reduce((s, c) => s + (c.headcount.value * (c.endMin.value - c.startMin.value)) / 60, 0);
   if (checked && crewStaffHours + 1e-9 < req.totalStaffHours) {
     findings.push({
@@ -351,7 +244,7 @@ export function checkStaffing(
       atMin: null,
       required: req.totalStaffHours,
       scheduled: crewStaffHours,
-      detail: `The proposed crews are ${hours(crewStaffHours)}; the plan requires ${hours(req.totalStaffHours)}${req.placedStaffHours > 0 ? ` — ${hours(req.placedStaffHours)} placed at the rack and ${hours(req.unplacedStaffHours)} for tasks not yet placed on the clock` : ', none of it placed on the clock yet'}.`,
+      detail: `The proposed crews are ${hours(crewStaffHours)}; the plan requires ${hours(req.totalStaffHours)}.`,
     });
   }
 
@@ -378,17 +271,13 @@ export function checkStaffing(
     crewStaffHours,
     requiredStaffHours: req.totalStaffHours,
     proposedFloorHeadcount,
-    staffedAtLoadAndUnload,
-    blackoutCrossesUnstaffed,
-    unattendedBlackoutExtraCycle,
     findings: checked ? findings : [],
   };
 }
 
 /**
- * Starting values for a crew added in a scenario, taken from the plant and the
- * rated day's requirement rather than typed: the operating day, and the most
- * people the placed tasks need at once.
+ * Starting values for a crew added in a scenario, taken from the requirement rather than typed:
+ * the operating day, and the most people the placed tasks need at once, one at least.
  */
 export function newCrewDefaultsFor(req: LaborRequirement): { startMin: number; endMin: number; headcount: number } {
   return { startMin: req.openMin, endMin: req.closeMin, headcount: Math.max(1, req.peakHeadcount) };
