@@ -16,6 +16,12 @@ import {
   mergePurchaseLines,
   ceilingByCropPlan,
 } from '@/engine/production-plan';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { VARIETY_BY_KEY } from '@/data/varieties';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { sowDateFor } from '@/engine/grow-calendar';
+import type { GrowUnit } from '@/engine/grow-capacity';
+import type { BookOrder } from '@/engine/orders';
 
 const MON = '2026-09-14';
 const TUE = '2026-09-15';
@@ -302,5 +308,92 @@ describe('ceiling by crop plan', () => {
     const rows = ceilingByCropPlan(R.cropPlans, R.capacityInputs);
     const cap = deriveCapacity(seed, R.capacityInputs);
     expect(rows[0]).toMatchObject({ cropPlanCode: 'AMK-E-001', sowingSize: cap.sowingSize, cyclesPerDay: cap.cyclesPerDay, maxUnitsPerDay: cap.maxUnitsPerDay });
+  });
+});
+
+describe('the grow model', () => {
+  const lib = growPlanSeed.map((p) => projectCropPlan(p));
+  const G = resolveScenarioInputs({}, lib);
+  const plan = (code: string) => G.cropPlans.find((p) => p.code === code)!;
+  const growPlan = (code: string) => growPlanSeed.find((p) => p.code === code)!;
+  const order = (date: string, code: string, unitsOrdered: number): BookOrder => ({
+    key: `${date}|p|s|${code}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriberServiceId: 's', serviceName: null, distributionPickupPointId: null,
+    channel: 1, cropPlanCode: code, cropPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'cycle', subscriptionCycleId: null, notes: null, editable: true,
+  } as unknown as BookOrder);
+  const horizon = (book: BookOrder[], R = G, growUnits?: GrowUnit[]) =>
+    planHorizon({ from: '2027-03-01', to: '2027-03-31', book, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, growUnits });
+  // 2027-03-22 is a Monday.
+  const DIST = '2027-03-22';
+
+  it('the run sizes whole sowings in trays of one grow unit and packs what it harvests', () => {
+    const broc = plan('BROC-01');
+    const cap = deriveCapacity(broc, G.capacityInputs, 1);
+    expect(cap.sowingSize).toBe(cap.grow!.sowingTrays);
+    const run = singleCropPlanRun({ cropPlan: broc, units: cap.sowingSize + 10, unitFactor: 1, premiumFactor: 1, pricePerUnit: 20, commissionShare: 0, openingInventory: 0, capacityInputs: G.capacityInputs, assumptions: G.assumptions });
+    expect(run.sowings).toBe(2);
+    expect(run.produced).toBe(2 * cap.grow!.sowingTrays);
+    expect(run.closing).toBe(run.produced - run.baseUnits);
+    expect(run.cyclesAvailable).toBe(cap.grow!.unitCount);
+    expect(run.harvestedLb).toBeCloseTo((run.produced * VARIETY_BY_KEY['broccoli']!.harvestGramsPer1020.value) / 453.59237, 6);
+    expect(run.packedLb).toBeCloseTo(run.harvestedLb, 9);
+    expect(run.purchasedLb).toBeLessThan(run.harvestedLb);
+  });
+
+  it('an order is made on its plan\'s sow date and its sowing carries the distribution date', () => {
+    const h = horizon([order(DIST, 'BROC-01', 20)]);
+    const sowDate = sowDateFor(growPlan('BROC-01'), DIST);
+    expect(sowDate).not.toBe(productionDateFor(DIST));
+    expect(h.productionDays.map((p) => p.productionDate)).toEqual([sowDate]);
+    expect(h.productionDays[0]!.distributionDates).toEqual([DIST]);
+    expect(h.distributionDays[0]!.productionDate).toBe(sowDate);
+    const [sowing] = h.growCalendar!.sowings;
+    expect(sowing).toMatchObject({ cropPlanCode: 'BROC-01', sowDate, distributionDate: DIST, trays: 20, placed: true });
+  });
+
+  it('plans with different days to harvest sow on different days for one distribution date', () => {
+    const rack = G.capacityInputs.growUnits![0]!;
+    const h = horizon([order(DIST, 'BROC-01', 20), order(DIST, 'PEA-01', 20), order(DIST, 'MUNG-01', 60)], G, [{ ...rack, units: 3 }]);
+    const sowOf = (code: string) => sowDateFor(growPlan(code), DIST);
+    expect(new Set(['BROC-01', 'PEA-01', 'MUNG-01'].map(sowOf)).size).toBe(3);
+    expect(h.productionDays.map((p) => p.productionDate)).toEqual(['PEA-01', 'BROC-01', 'MUNG-01'].map(sowOf));
+    for (const p of h.productionDays) {
+      expect(p.runs).toHaveLength(1);
+      expect(sowOf(p.runs[0]!.cropPlanCode)).toBe(p.productionDate);
+      expect(p.distributionDates).toEqual([DIST]);
+      expect(p.fits).toBe(true);
+    }
+    // The distribution day names the earliest sow date among its orders.
+    expect(h.distributionDays[0]!.productionDate).toBe(sowOf('PEA-01'));
+    expect(h.growCalendar!.sowings.every((s) => s.placed && s.distributionDate === DIST)).toBe(true);
+  });
+
+  it('a requirement past the grow units\' room is a shortfall with an unplaced sowing', () => {
+    const h = horizon([order(DIST, 'BROC-01', 30)]);
+    const day = h.productionDays[0]!;
+    const run = day.runs[0]!;
+    expect(run.sowingsNeeded).toBe(2);
+    expect(run.sowingsScheduled).toBe(1);
+    expect(run.produced).toBe(20);
+    expect(run.shortfall).toBe(10);
+    expect(day.fits).toBe(false);
+    expect(h.totals.daysThatDoNotFit).toBe(1);
+    const sowings = h.growCalendar!.sowings;
+    expect(sowings.map((s) => s.placed)).toEqual([true, false]);
+    expect(sowings[1]!.distributionDate).toBe(DIST);
+    expect(h.growCalendar!.findings.map((f) => f.kind)).toEqual(['over-capacity']);
+  });
+
+  it('a mixed library makes a Phase 1-era plan the day before and a grow plan on its sow date', () => {
+    const M = resolveScenarioInputs({}, [seed, ...lib]);
+    const h = horizon([order(DIST, 'BROC-01', 20), order(DIST, seed.code, 100)], M);
+    const sowDate = sowDateFor(growPlan('BROC-01'), DIST);
+    expect(h.productionDays.map((p) => [p.productionDate, p.runs.map((r) => r.cropPlanCode)])).toEqual([
+      [sowDate, ['BROC-01']],
+      [productionDateFor(DIST), [seed.code]],
+    ]);
+    expect(h.productionDays.every((p) => p.fits)).toBe(true);
+    expect(h.growCalendar!.sowings).toHaveLength(1);
+    expect(h.growCalendar!.sowings[0]!.cropPlanCode).toBe('BROC-01');
+    expect(h.distributionDays[0]!.productionDate).toBe(sowDate);
   });
 });
