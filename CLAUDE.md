@@ -50,7 +50,7 @@ Never `git commit` or `git push` without explicit per-action approval from Rob. 
 
 ## 7. Stack
 
-Next.js App Router + React + TypeScript, Tailwind 4, Clerk, Stripe (subscriptions), Resend, Neon Postgres + Drizzle with hand-written SQL migrations, pnpm workspace. The `packages/ledger` package is ported from Comptable with the Muse route groups; nothing else from Comptable comes along.
+Next.js App Router + React + TypeScript, Tailwind 4, Clerk, Stripe (subscriptions), Resend, Neon Postgres + Drizzle with hand-written SQL migrations. One Next.js app at the repo root with one `package.json`, the house layout of every WTF Publishing app. `src/ledger` is ported from Comptable with the Muse route groups; nothing else from Comptable comes along.
 
 ## 8. Where things live
 
@@ -59,4 +59,4 @@ Next.js App Router + React + TypeScript, Tailwind 4, Clerk, Stripe (subscription
 - `docs/glossary.md` and `docs/science-library.md` — the vocabulary and the source register; `_data/glossary.ts` and `_data/science-library.ts` carry them into the app.
 - `docs/` — every other canonical doc, one fact in one place, each linking to the others rather than restating.
 - `_inventory/` — the temporary survey of the source material (Vallecito, Wolves To Feed, Muse) made before the outline. Reference only; delete once the port has consumed it. `_inventory/raw-extracts/` is git-ignored.
-- `apps/web/` — the application. `packages/db/` — schema and migrations. `packages/ledger/` — the ledger engine.
+- `src/app/` — routes only: the `(farm)` OS under `/farm` and the portal route groups. `src/engine/` — the pure engine. `src/data/` — reference data and seeds. `src/server/` — read layers and server actions. `src/components/`, `src/state/`, `src/assets/`, `src/lib/` — UI, client stores, images, shared helpers. `src/db/` — the Drizzle schema and client; `drizzle/` — the SQL migrations; `src/ledger/` — the ledger engine. `scripts/` — the farm scripts and `migrate.ts`; `test/` — every test. `.env.local` carries the app's keys, `.env` the migration runner's.

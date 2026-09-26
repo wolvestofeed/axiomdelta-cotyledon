@@ -4,7 +4,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The Neon connection string is not yet in `.env` and `apps/web/.env.local` (both files exist from the template; the `DATABASE_URL` line in each still holds the placeholder). Nothing has run against a live database: migrations `0001` to `0003` are unapplied and the app has not booted. Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`, already set), so the string is the only thing missing. The paste-from-clipboard command in the session notes must be run from the repo root; from any other folder it reports no such file.
+- The Neon connection string is in `.env` and `.env.local`. Migration `0001` is applied; `0002` to `0004` apply once the pre-workspace seed rows are cleared inside `0002`. Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`).
 - Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.

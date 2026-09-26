@@ -1,0 +1,316 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Card, CheckPill, num } from '@/components/ui';
+import { ReceiveForm, type ReceiveInput, type ReceivePo } from '@/components/ReceiveForm';
+import { SowingCloseForm } from '@/components/SowingCloseForm';
+import { ShipForm, type ShipOrder } from '@/components/ShipForm';
+import { clock } from '@/data/crews';
+import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import type { ResolvedInputs } from '@/engine/scenario';
+import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
+import { requirementsFor, finishedGoodsOnHand, planProductionDay, productionDateFor, unitFactorFor, type Consumption } from '@/engine/production-plan';
+import { standardSowingRecordPrefill, finishedLotsOf, type SowingRecordDoc, type ReceiptDoc } from '@/engine/actuals';
+import { rawStockOnHand, rawLotsByUseBy, openOrders } from '@/engine/net-requirements';
+import type { DateRange } from '@/engine/periods';
+import { standardInForce, standardLabel, type StandardVersionDoc } from '@/engine/standards';
+import type { PunchDoc, StaffDoc } from '@/engine/payroll';
+import { TimeClockCard } from '@/components/TimeClockCard';
+import { completeRoute } from '@/server/working-capital-actions';
+
+const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
+
+/** Today's distributed routes not yet on an invoice (Roadmap K1). Completing one adds it to the subscriber's invoice for the month. */
+function RouteCard({ today, routes }: { today: string; routes: { subscriberId: string; subscriberName: string; distributions: number; units: number }[] }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  return (
+    <Card title={`Routes — ${routes.length} distributed today, not yet on an invoice`} className="mt-4">
+      {msg && <div className={`farm-scenariobar-msg ${msg.kind} mb-[0.6rem]!`} role="status">{msg.text}</div>}
+      {routes.length === 0 ? (
+        <p className="farm-kpi-sub">No Subscriptions or Restaurants distribution today is waiting for its route to be completed.</p>
+      ) : (
+        <div className="farm-floor-queue">
+          {routes.map((r) => (
+            <div key={r.subscriberId} className="farm-floor-row">
+              <div>
+                <div className="farm-floor-row-title">{r.subscriberName}</div>
+                <div className="farm-floor-row-sub">{r.distributions} distribute{r.distributions === 1 ? 'y' : 'ies'} · {num(Math.round(r.units))} units</div>
+              </div>
+              <button type="button" className="farm-btn" disabled={pending} onClick={() => start(async () => {
+                const res = await completeRoute({ date: today, subscriberId: r.subscriberId });
+                setMsg(res.ok ? { kind: 'ok', text: `Route completed: added to ${r.subscriberName}'s invoice for ${today.slice(0, 7)}.` } : { kind: 'err', text: res.error });
+                if (res.ok) router.refresh();
+              })}>Complete route</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+const dateLabel = (d: string) => `${WEEKDAY_LABELS[weekdayOf(d)]} ${d}`;
+
+/** The distribution date whose production day is `today`, if today is one. */
+function distributionDateProducedOn(today: string, closures: readonly DateRange[]): string | null {
+  for (let i = 1; i <= 7; i++) {
+    const d = isoAddDays(today, i);
+    if (productionDateFor(d, SERVICE_WEEKDAYS, closures) === today) return d;
+  }
+  return null;
+}
+
+type FloorInputs = Pick<ResolvedInputs, 'cropPlans' | 'subscribers' | 'capacityInputs' | 'assumptions' | 'cropPlanAssumptions' | 'phases' | 'phaseProfiles'> & {
+  pickupPoints: ResolvedInputs['demand']['pickupPoints'];
+};
+
+export function GrowRoomClient({
+  today,
+  staff,
+  punches,
+  pendingRoutes,
+  isAdmin,
+  closures,
+  inputs,
+  cycles,
+  orders,
+  receipts,
+  sowings,
+  standards,
+  distributions,
+  purchaseOrders,
+}: {
+  today: string;
+  /** Active staff on the register, for the time clock (Roadmap K5). */
+  staff: StaffDoc[];
+  punches: PunchDoc[];
+  /** Today's distributed orders not yet on an invoice, by subscriber (Roadmap K1). */
+  pendingRoutes: { subscriberId: string; subscriberName: string; distributions: number; units: number }[];
+  /** The Actuals link is shown to admins only (Roadmap O5). */
+  isAdmin: boolean;
+  closures: DateRange[];
+  inputs: FloorInputs;
+  cycles: SubscriptionCycleDef[];
+  orders: OrderDef[];
+  receipts: ReceiptDoc[];
+  sowings: SowingRecordDoc[];
+  standards: StandardVersionDoc[];
+  distributions: { id: string; distributedOn: string; units: number }[];
+  purchaseOrders: ReceivePo[];
+}) {
+  const [receivingPoId, setReceivingPoId] = useState<string | null>(null);
+  const [closing, setClosing] = useState<{ seq: number; cropPlanCode: string; units: number } | null>(null);
+  const [shipping, setShipping] = useState<ShipOrder | null>(null);
+  const [withinDays, setWithinDays] = useState<number | 'all'>(7);
+
+  const A = inputs.assumptions;
+  const shrink = A.yield.shrinkAllowance.value;
+  const shelfLife = A.inventory.blackoutShelfLife.value;
+  const cropPlanNames = useMemo(() => Object.fromEntries(inputs.cropPlans.map((r) => [r.code, r.name])), [inputs.cropPlans]);
+  const channelPriceCents = useMemo(() => Object.fromEntries(inputs.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>, [inputs.phases]);
+  const pfByChannel = useMemo(() => Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [inputs.phaseProfiles]);
+  const bookFor = (from: string, to: string) => orderBook({ pickupPoints: inputs.pickupPoints, subscribers: inputs.subscribers, cycles, orders, from, to, channelPriceCents, cropPlanNames, closures });
+
+  // ── Receive: issued purchase orders with a line still outstanding ──────────
+  const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
+  const toReceive = useMemo(
+    () => purchaseOrders.filter((po) => po.status === 'issued' && onOrder.lines.some((l) => l.poNumber === po.poNumber)).sort((a, b) => a.orderedFor.localeCompare(b.orderedFor) || a.poNumber.localeCompare(b.poNumber)),
+    [purchaseOrders, onOrder.lines],
+  );
+  const receiveInputs = useMemo<ReceiveInput[]>(() => {
+    const seen = new Map<string, ReceiveInput>();
+    for (const r of inputs.cropPlans) {
+      for (const l of r.inputs) {
+        const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.seedUnitCost * 100), onFoodTraceabilityList: false };
+        if (l.foodTraceabilityList) row.onFoodTraceabilityList = true;
+        seen.set(l.name, row);
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [inputs.cropPlans]);
+
+  // ── Close: today's planned sowings, from the distribution day produced today ──
+  const distributionDate = useMemo(() => distributionDateProducedOn(today, closures), [today, closures]);
+  const distributionById = useMemo(() => new Map(distributions.map((d) => [d.id, d])), [distributions]);
+  const consumption = useMemo<Consumption[]>(
+    () =>
+      orders
+        .filter((o) => o.status === 'distributed')
+        .map((o) => {
+          const d = o.distributionId ? distributionById.get(o.distributionId) : undefined;
+          const pf = unitFactorFor(inputs.cropPlans.find((r) => r.code === o.cropPlanCode), o.channel, pfByChannel);
+          return { cropPlanCode: o.cropPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * pf };
+        }),
+    [orders, distributionById, pfByChannel, inputs.cropPlans],
+  );
+  const day = useMemo(() => {
+    if (!distributionDate) return null;
+    const book = bookFor(distributionDate, distributionDate);
+    const requirements = requirementsFor(book, inputs.cropPlans, pfByChannel);
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today });
+    return planProductionDay({ productionDate: today, requirements, onHand: stock.byCropPlan, cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: A, cropPlanAssumptions: inputs.cropPlanAssumptions });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [distributionDate, inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A]);
+  const closedToday = useMemo(() => sowings.filter((b) => b.productionDate === today), [sowings, today]);
+  const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
+  const rawStock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: today }), [receipts, sowings, today]);
+  const closingCropPlan = closing ? inputs.cropPlans.find((r) => r.code === closing.cropPlanCode) : undefined;
+  const closingPrefill = useMemo(() => {
+    if (!closing || !closingCropPlan) return null;
+    const std = standardInForce(standards, closing.cropPlanCode, today);
+    return standardSowingRecordPrefill(
+      today,
+      (sowingCountByDate[today] ?? 0) + 1,
+      closing.units,
+      std?.snapshot.cropPlan ?? closingCropPlan,
+      std ? std.snapshot.assumptions.yield.shrinkAllowance.value : shrink,
+      std ? standardLabel(std) : undefined,
+    );
+  }, [closing, closingCropPlan, today, sowingCountByDate, shrink, standards]);
+
+  // ── Ship: today's confirmed orders ────────────────────────────────────────
+  const toShip = useMemo(() => bookFor(today, today).filter((o) => o.basis === 'record' && o.status === 'confirmed' && o.id), [inputs, cycles, orders, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const finishedLots = useMemo(() => finishedLotsOf(sowings), [sowings]);
+
+  // ── Lots by use-by ────────────────────────────────────────────────────────
+  const lots = useMemo(() => rawLotsByUseBy(rawStock), [rawStock]);
+  const shownLots = withinDays === 'all' ? lots : lots.filter((l) => l.daysToUseBy !== null && l.daysToUseBy <= withinDays);
+
+  return (
+    <>
+      <header className="mb-4!">
+        <h1 className="farm-page-title">{dateLabel(today)}</h1>
+        <p className="farm-page-lede">
+          Today&apos;s queue: receive what comes off the truck against its purchase order, close each sowing as it is packed, ship each confirmed order as it leaves. What is typed here is the record the books post from.
+        </p>
+      </header>
+
+      <TimeClockCard staff={staff} punches={punches} />
+
+      <Card title={`Receive — ${toReceive.length} issued order${toReceive.length === 1 ? '' : 's'} with lines outstanding`} className="mt-4">
+        {toReceive.length === 0 ? (
+          <p className="farm-kpi-sub">Nothing on order is still to receive.</p>
+        ) : (
+          <div className="farm-floor-queue">
+            {toReceive.map((po) => {
+              const outstanding = onOrder.lines.filter((l) => l.poNumber === po.poNumber);
+              return (
+                <div key={po.id} className="farm-floor-row">
+                  <div>
+                    <div className="farm-floor-row-title">{po.poNumber} · {po.supplierName}</div>
+                    <div className="farm-floor-row-sub">for {dateLabel(po.orderedFor)} · {outstanding.length} of {po.lines.length} line{po.lines.length === 1 ? '' : 's'} still to receive</div>
+                  </div>
+                  <button type="button" className={`farm-btn${receivingPoId === po.id ? ' primary' : ''}`} onClick={() => setReceivingPoId((id) => (id === po.id ? null : po.id))}>Receive</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {receivingPoId && (
+          <div className="mt-3">
+            <ReceiveForm key={receivingPoId} purchaseOrders={toReceive} inputs={receiveInputs} today={today} initialPoId={receivingPoId} onDone={() => setReceivingPoId(null)} onCancel={() => setReceivingPoId(null)} />
+          </div>
+        )}
+      </Card>
+
+      <Card title={day ? `Close — ${day.schedule.length} sowing${day.schedule.length === 1 ? '' : 'es'} planned today, for ${dateLabel(distributionDate!)}` : 'Close — no production day'} className="mt-4">
+        {!day ? (
+          <p className="farm-kpi-sub">No distribution day is produced on {dateLabel(today)}.</p>
+        ) : day.schedule.length === 0 ? (
+          <p className="farm-kpi-sub">Nothing to make today: on hand covers {dateLabel(distributionDate!)}.</p>
+        ) : (
+          <div className="farm-floor-queue">
+            {day.schedule.map((b) => {
+              const closed = closedToday.length >= b.seq;
+              return (
+                <div key={b.seq} className={`farm-floor-row${closed ? ' done' : ''}`}>
+                  <div>
+                    <div className="farm-floor-row-title">{b.seq} · {b.cropPlanCode} {b.cropPlanName} · {num(b.units)} units</div>
+                    <div className="farm-floor-row-sub">blackoutRack {clock(b.loadMin)} – {clock(b.unloadMin)} · <CheckPill ok={b.fits} okLabel="in the window" overLabel="past the window" /></div>
+                  </div>
+                  {b.fits && !closed && <button type="button" className={`farm-btn${closing?.seq === b.seq ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === b.seq ? null : { seq: b.seq, cropPlanCode: b.cropPlanCode, units: b.units }))}>Close sowing record</button>}
+                  {closed && <span className="farm-kpi-sub">closed</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {closing && closingPrefill && (
+          <div className="mt-3">
+            <SowingCloseForm prefill={closingPrefill} sowingCountByDate={sowingCountByDate} standardSowingSize={closing.units} cropPlanName={closingCropPlan?.name} rawLots={rawStock.lots} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+          </div>
+        )}
+        {closedToday.length > 0 && (
+          <p className="farm-kpi-sub mt-2">Closed today: {closedToday.map((b) => `${b.sowingId} (${num(Math.round(b.goodUnits))} units)`).join(', ')}.</p>
+        )}
+      </Card>
+
+      <Card title={`Ship — ${toShip.length} confirmed order${toShip.length === 1 ? '' : 's'} for today`} className="mt-4">
+        {toShip.length === 0 ? (
+          <p className="farm-kpi-sub">No confirmed order is dated {dateLabel(today)}.</p>
+        ) : (
+          <div className="farm-floor-queue">
+            {toShip.map((o) => (
+              <div key={o.key} className="farm-floor-row">
+                <div>
+                  <div className="farm-floor-row-title">{o.subscriberName} · {o.pickupPointName}</div>
+                  <div className="farm-floor-row-sub">{o.cropPlanCode} {o.cropPlanName} · {num(Math.round(o.units))} units ordered</div>
+                </div>
+                <button type="button" className={`farm-btn${shipping?.id === o.id ? ' primary' : ''}`} onClick={() => setShipping((s) => (s?.id === o.id ? null : { id: o.id!, orderDate: o.orderDate, subscriberName: o.subscriberName, pickupPointName: o.pickupPointName, cropPlanCode: o.cropPlanCode, cropPlanName: o.cropPlanName, units: o.units, pricePerUnitCents: o.pricePerUnitCents }))}>Ship</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {shipping && (
+          <div className="mt-3">
+            <ShipForm key={shipping.id} order={shipping} finishedLots={finishedLots} today={today} onDone={() => setShipping(null)} onCancel={() => setShipping(null)} />
+          </div>
+        )}
+      </Card>
+
+      <RouteCard today={today} routes={pendingRoutes} />
+
+      <Card title="Raw lots on hand, by use-by" className="mt-4">
+        <div className="flex flex-wrap gap-3 items-end mb-3!">
+          <label className="farm-kpi-sub">Use-by within<br />
+            <select className="farm-select" value={withinDays} onChange={(e) => setWithinDays(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+              {[3, 7, 14, 30].map((n) => <option key={n} value={n}>{n} days</option>)}
+              <option value="all">every lot on hand</option>
+            </select>
+          </label>
+          <span className="farm-kpi-sub">{lots.length} lot{lots.length === 1 ? '' : 's'} on hand as of {today} · {lots.filter((l) => l.useBy === null).length} without a date on the case</span>
+        </div>
+        {shownLots.length === 0 ? (
+          <p className="farm-kpi-sub">No lot on hand {withinDays === 'all' ? '' : `is dated within ${withinDays} days`}.</p>
+        ) : (
+          <div className="farm-scroll-x">
+            <table className="farm-table">
+              <thead><tr><th>Input</th><th>Lot code</th><th>Received</th><th>Use by</th><th className="num">Days</th><th className="num">Remaining</th></tr></thead>
+              <tbody>
+                {shownLots.map((l) => (
+                  <tr key={`${l.receiptId}-${l.lotCode}-${l.input}`}>
+                    <td>{l.input}{l.onFoodTraceabilityList ? <div className="farm-fs-2xs farm-c-faint">Food Traceability List</div> : null}</td>
+                    <td className="farm-mono">{l.lotCode}</td>
+                    <td>{l.receivedOn}</td>
+                    <td>{l.useBy ?? '—'}</td>
+                    <td className="num">{l.daysToUseBy === null ? '—' : l.daysToUseBy}</td>
+                    <td className="num">{num(l.remaining, 2)} {l.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="farm-kpi-sub mt-2">Ordered by the date printed on the case, earliest first; a negative day count is past that date. Lots with no date follow, by receipt date.</p>
+      </Card>
+
+      <p className="farm-kpi-sub mt-4">
+        {isAdmin ? <>The full record is on <Link className="farm-link" href="/farm/actuals">Actuals</Link>; the plan these sowings come from is on </> : <>The plan these sowings come from is on </>}
+        <Link className="farm-link" href="/farm/production-planning?level=day">Production Planning</Link>.
+      </p>
+    </>
+  );
+}

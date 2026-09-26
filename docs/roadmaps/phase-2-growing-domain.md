@@ -6,7 +6,7 @@ The library stores grow plans and the engine costs and sizes them on the grow mo
 
 ## Part 1 — Data foundations  DONE (commit `026742c`)
 
-All under `apps/web/src/app/(farm)/farm/_data/`, tested by `test/farm-varieties.test.ts`.
+All under `src/data/`, tested by `test/farm-varieties.test.ts`.
 
 - [x] `varieties.ts` — the 12 Vallecito varieties as master records: supplier and provenance, seed price per lb (DATED, True Leaf 5 lb tier Jan 2024), grams per 1020 (STATED, what Vallecito sowed), soak hours, stage days, harvest grams (PLACEHOLDER), flavor and color, light response, media response, nutrient profile with benefits citing science-library rows, glossary links
 - [x] `tray-formats.ts` — 1020 flat, 7x11, 5x5 insert, pint jar, cut ounce; area, density factor, trays per 48-inch shelf

@@ -8,14 +8,13 @@ The production operating system for microgreens and sprouts farms, and the back 
 
 ```bash
 pnpm install
-cp .env.example apps/web/.env.local   # fill in Clerk, Neon and Anthropic keys
-cp .env.example .env                  # DATABASE_URL for migrations
-pnpm --filter @mf/ledger build && pnpm --filter @mf/db build
+cp .env.example .env.local            # the app: Neon, Clerk, Anthropic keys
+cp .env.example .env                  # the migration runner and scripts: DATABASE_URL
 pnpm db:migrate
 pnpm dev                              # http://localhost:3000 → /farm
 ```
 
-A farm is a Clerk organization. Create one in the Clerk dashboard, make yourself its admin, and sign in; the workspace is provisioned on first entry. For local development set `FARM_DEV_BYPASS_AUTH=1` in `apps/web/.env.local`: every request is then the admin of a local workspace, Clerk is not mounted and no Clerk keys are needed. The flag is ignored in production. Scripts run against one workspace: set `FARM_WORKSPACE` to its id or its Clerk organization id.
+A farm is a Clerk organization. Create one in the Clerk dashboard, make yourself its admin, and sign in; the workspace is provisioned on first entry. For local development set `FARM_DEV_BYPASS_AUTH=1` in `.env.local`: every request is then the admin of a local workspace, Clerk is not mounted and no Clerk keys are needed. The flag is ignored in production. Scripts run against one workspace: set `FARM_WORKSPACE` to its id or its Clerk organization id.
 
 ## Check
 

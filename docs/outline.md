@@ -26,7 +26,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 ## 2. Locked decisions
 
 - **Repo:** this folder, `WTF Publishing/Micro Farm`. Its own repo, its own Clerk app, its own Neon database. Developed on localhost until a domain is registered.
-- **Source:** everything in Muse comes over: the `(muse)` route groups, `_engine`, `_lib`, `_data`, `_components`, `_state`, the `muse` schema and its 37 migrations, the 59 tests, the `muse:*` scripts, `docs/`, and the `packages/ledger` package. Nothing else from Comptable.
+- **Source:** everything in Muse comes over: the `(muse)` route groups, `_engine`, `_lib`, `_data`, `_components`, `_state`, the `muse` schema and its 37 migrations, the 59 tests, the `muse:*` scripts, `docs/`, and the ledger package, now `src/ledger`. Nothing else from Comptable.
 - **Vocabulary:** a full swap, §3. Code, schema, copy, tests, docs, seeds.
 - **No CompTable connection.** The HR contract, signed notices and transport are dropped. Staffing is an internal module (§6, People).
 - **Scheduler ↔ Staffing.** The production scheduler reads the internal staff roster and schedule and reports coverage against the plan's labor demand on the Staffing page.
@@ -184,9 +184,16 @@ Micro Farm/
 │   ├── roadmap.md            the master roadmap: every phase, its status, links to its file
 │   ├── todo.md               open one-off items that belong to no phase step
 │   └── roadmaps/             one file per phase (phase-N-*.md), plus the topic build plans ported from Muse
-├── apps/web/                 Next.js app: (farm) OS, (grow-room), (subscriber), (supplier), (sales), (front)
-├── packages/db/              schema + hand-written SQL migrations
-├── packages/ledger/          ledger engine, ported
+├── src/
+│   ├── app/                  routes only: the (farm) OS under /farm; (grow-room), (subscriber), (supplier), (sales), (front)
+│   ├── engine/               the pure engine: costing, capacity, calendar, ledgers, scheduling
+│   ├── data/                 reference data and seeds: varieties, formats, stages, inputs, science library, glossary
+│   ├── server/               read layers and server actions (server-only)
+│   ├── components/ state/ assets/ lib/
+│   ├── db/                   Drizzle schema and client
+│   └── ledger/               the ledger engine, ported from Comptable
+├── drizzle/                  hand-written SQL migrations, applied by scripts/migrate.ts
+├── scripts/  test/  public/
 └── _inventory/               temporary survey; delete once consumed
 ```
 
