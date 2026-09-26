@@ -21,7 +21,7 @@ async function DaySchedulePageInner() {
       <PageHeader
         title="Day Schedule"
         purpose="Place one operating day on the clock and see what it breaks."
-        functions={['The day placed', 'Crew load', 'Findings', 'Every block placed']}
+        functions={['The day placed', 'Crew load', 'Daily stream', 'Findings', 'Every block placed']}
         connects={[
           { href: '/farm/production-planning/calendar', dir: 'from' },
           { href: '/farm/production-planning/process', dir: 'from' },
@@ -29,9 +29,10 @@ async function DaySchedulePageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>Harvest ships to the distribution time from components already blackout and staged.</li>
-            <li>The sowing stream sows the next sowings, its sows finishing together at the blackout rack. Closedown is placed once at the close.</li>
-            <li>Lanes are the Phase 1 units the work runs on. The strip below is crew demand against the people proposed.</li>
+            <li>A sow day places the sowing stream from opening: receiving, prep and sowing, per tray of the sowings the grow units take that day.</li>
+            <li>A distribution day places the harvest stream backward from the distribution time, per tray the day ships. Closedown is placed once at the close.</li>
+            <li>The daily stream, the watering and inspection of every tray on the shelves, is listed beside the day with its hours and has no clock time.</li>
+            <li>Lanes are the units the work runs on, with one lane for the steps that need none. The strip below is crew demand for the placed work against the people proposed.</li>
             <li>Breaks are reported, never repaired.</li>
             <li>Change the order book, the crews, a route or the policy and the day re-places.</li>
           </ul>

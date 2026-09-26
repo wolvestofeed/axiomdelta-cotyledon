@@ -11,10 +11,11 @@ import { hhmm, spanOf, timeScale } from '@/components/timeline/scale';
 import { clock } from '@/data/crews';
 import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import { TIME_STUDY_STREAM_LABELS, type TimeStudyDoc } from '@/data/time-studies';
-import { isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
+import { datesBetween, isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
 import { schedule, scheduleInputsForDay, type ScheduledBlock } from '@/engine/scheduler';
+import { cycleDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
 import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { useScenario } from '@/state/scenario-store';
@@ -96,15 +97,13 @@ export function DayScheduleClient({
     [closures, today, to, book, resolved.cropPlans, resolved.phases, C, A, pfByChannel, openingLots],
   );
 
-  const dates = useMemo(
-    () => [...new Set([...horizon.productionDays.map((d) => d.productionDate), ...horizon.distributionDays.map((d) => d.date)])].sort(),
-    [horizon.productionDays, horizon.distributionDays],
-  );
+  // Every day of the window: trays on the shelves are watered on days nothing is sown or harvested.
+  const dates = useMemo(() => datesBetween(today, to), [today, to]);
   // The day is view state: the `date` parameter, so the Calendar can link to one.
   const params = useSearchParams();
   const [date, setDate] = useState<string | null>(null);
   const wanted = date ?? params.get('date');
-  const day = wanted && dates.includes(wanted) ? wanted : dates[0] ?? today;
+  const day = wanted && dates.includes(wanted) ? wanted : today;
 
   const inputs = useMemo(() => {
     const production = horizon.productionDays.find((d) => d.productionDate === day);
@@ -118,6 +117,13 @@ export function DayScheduleClient({
       routing: resolved.routing,
     });
   }, [horizon.productionDays, horizon.distributionDays, day, resolved.cropPlans, resolved.equipment, resolved.routing, studies]);
+
+  // The daily stream: the trays on the shelves that day on each plan's daily lines, beside the clock.
+  const shelf = useMemo(() => traysOnShelf(horizon.productionDays, cycleDaysByCode(resolved.cropPlans), day, day)[0] ?? null, [horizon.productionDays, resolved.cropPlans, day]);
+  const daily = useMemo(() => (shelf ? staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0] ?? null : null), [shelf, studies, day]);
+  const dailyLines = daily?.lines.filter((l) => l.stream === 'daily') ?? [];
+  const dailyHours = daily?.dailyStaffHours ?? 0;
+  const traysOnTheShelves = shelf?.trays.reduce((t, x) => t + x.trays, 0) ?? 0;
 
   const result = useMemo(
     () => schedule({ date: day, sowings: inputs.sowings, dispatches: inputs.dispatches, resources: resolved.resources, crews: resolved.crews, capacityInputs: C, policy: resolved.schedulePolicy }),
@@ -224,24 +230,25 @@ export function DayScheduleClient({
       </div>
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={`${num(M.sowingsPlaced)}`} label="Sowings placed" sub={M.sowingsUnplaced > 0 ? `${num(M.sowingsUnplaced)} unplaced · ${num(M.unitsPlaced)} units` : `${num(M.unitsPlaced)} units`} />
-        <Kpi value={num(M.unitsShipped)} label="Units shipped" sub={`${num(M.dispatchesPlaced)} harvest ${M.dispatchesPlaced === 1 ? 'order' : 'orders'}${M.dispatchesUnplaced ? `, ${num(M.dispatchesUnplaced)} unplaced` : ''}`} />
+        <Kpi value={`${num(M.sowingsPlaced)}`} label="Sowings placed" sub={M.sowingsUnplaced > 0 ? `${num(M.sowingsUnplaced)} unplaced · ${num(M.unitsPlaced)} trays` : `${num(M.unitsPlaced)} trays`} />
+        <Kpi value={num(M.unitsShipped)} label="Trays harvested" sub={`${num(M.dispatchesPlaced)} ${M.dispatchesPlaced === 1 ? 'plan' : 'plans'} to the distribution${M.dispatchesUnplaced ? `, ${num(M.dispatchesUnplaced)} unplaced` : ''}`} />
+        <Kpi value={num(traysOnTheShelves)} label="Trays on the shelves" sub={`${hrs(dailyHours)} h of daily stream, off the clock`} />
         <Kpi value={M.firstStartMin === null ? '—' : `${clock(M.firstStartMin)}–${clock(M.lastEndMin ?? 0)}`} label="The day on the clock" sub={`${hrs(M.makespanMin / 60)} h from first start to last end`} />
-        <Kpi value={`${hrs(M.laborHours)} h`} label="Labor the day needs" sub={`${hrs(M.sowingLaborHours)} h sowing · ${hrs(M.harvestLaborHours)} h harvest · ${hrs(M.closedownHours)} h closedown`} />
+        <Kpi value={`${hrs(M.laborHours + dailyHours)} h`} label="Labor the day needs" sub={`${hrs(M.sowingLaborHours)} h sowing · ${hrs(dailyHours)} h daily · ${hrs(M.harvestLaborHours)} h harvest · ${hrs(M.closedownHours)} h closedown`} />
         <Kpi value={M.bindingResourceKey ? `${num((M.utilizationByResource[M.bindingResourceKey] ?? 0) * 100, 0)}%` : '—'} label="Binding resource" sub={M.bindingResourceKey ? resolved.resources.find((r) => r.key === M.bindingResourceKey)?.item ?? M.bindingResourceKey : 'Nothing ran on a unit'} />
-        <Kpi value={resolved.crews.length ? `${hrs(M.idleCrewHours)} h` : 'None'} label={resolved.crews.length ? 'Idle crew hours' : 'Crews proposed'} sub={resolved.crews.length ? `${hrs(M.crewHours)} h scheduled against ${hrs(M.laborHours + M.closedownHours)} h of work` : <Link className="farm-link" href="/farm/capacity">Propose a crew on Capacity</Link>} />
+        <Kpi value={resolved.crews.length ? `${hrs(M.idleCrewHours)} h` : 'None'} label={resolved.crews.length ? 'Idle crew hours' : 'Crews proposed'} sub={resolved.crews.length ? `${hrs(M.crewHours)} h scheduled against ${hrs(M.laborHours + M.closedownHours)} h of placed work` : <Link className="farm-link" href="/farm/capacity">Propose a crew on Capacity</Link>} />
       </div>
 
       <Card title={`The day placed — ${dayLabel}`} className="mt-4">
         {result.blocks.length === 0 ? (
-          <p className="farm-kpi-sub">Nothing to place on this day: the order book has no sowings to sow and no units to ship.</p>
+          <p className="farm-kpi-sub">Nothing to place on this day: the order book sows nothing and harvests nothing.{traysOnTheShelves > 0 ? ' The trays on the shelves take the daily stream below.' : ''}</p>
         ) : (
           <TimelineGrid scale={scale} lanes={lanes} arrows={arrows ? arrowPairs : []} />
         )}
         <p className="farm-kpi-sub mt-2">
-          One lane per Phase 1 unit, plus the steps that need no unit. sowing-stream blocks are dark, harvest lighter, closedown grey; the dashed block is the blackout stage, which runs
-          unattended. A block outlined in the accent is named in a violation below. Precedence lines are the route&rsquo;s finish-to-start edges, derived from each cropPlan&rsquo;s labor
-          standard and editable per step in the scenario. The table below is the same placement.
+          One lane per unit the work runs on, plus one for the steps that need none. Sowing-stream blocks are dark, harvest lighter, closedown grey. A block outlined in the accent is
+          named in a finding below. Precedence lines are the route&rsquo;s finish-to-start edges, derived from each plan&rsquo;s labor standard and editable per step in the scenario. The
+          table below is the same placement; the daily stream is not on the clock.
         </p>
       </Card>
 
@@ -273,9 +280,49 @@ export function DayScheduleClient({
         </div>
       </Card>
 
+      <Card title={`Daily stream — ${num(traysOnTheShelves)} trays on the shelves`} className="mt-4">
+        {dailyLines.length === 0 ? (
+          <p className="farm-kpi-sub">No trays are on the shelves on this day.</p>
+        ) : (
+          <div className="farm-scroll-x">
+            <table className="farm-table compact">
+              <thead>
+                <tr><th>Task</th><th>Station</th><th>Plans</th><th className="num">People at once</th><th className="num">Staff-minutes</th></tr>
+              </thead>
+              <tbody>
+                {dailyLines.map((l) => (
+                  <tr key={`${l.task}|${l.station ?? ''}`}>
+                    <td>{l.task}</td>
+                    <td className="farm-c-soft">{l.station ?? '—'}</td>
+                    <td className="farm-c-soft">{l.cropPlanCodes.join(', ')}</td>
+                    <td className="num">{num(l.headcount)}</td>
+                    <td className="num">{num(l.hours * 60, 1)}</td>
+                  </tr>
+                ))}
+                <tr className="font-semibold!">
+                  <td colSpan={4}>Daily stream, {hrs(dailyHours)} h</td>
+                  <td className="num">{num(dailyHours * 60, 1)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+        {shelf && (
+          <p className="farm-kpi-sub mt-2">
+            On the shelves: {shelf.trays.map((t) => `${t.cropPlanCode} ${num(t.trays)} ${t.trays === 1 ? 'tray' : 'trays'}`).join(' · ')}.
+            {daily && daily.estimatedCropPlans.length > 0 ? ` On the estimated study until an observed one is adopted: ${daily.estimatedCropPlans.join(', ')}.` : ''}
+          </p>
+        )}
+        <p className="farm-kpi-sub mt-2">
+          A daily line is one day&rsquo;s minutes per tray from the plan&rsquo;s labor standard times the trays on the shelves that day; a fixed daily line is once a day per plan. The
+          hours count in the day&rsquo;s labor above and carry no clock time, so the crew load and the findings cover only the placed work. The trays are the horizon&rsquo;s sowings
+          through each plan&rsquo;s cycle days, as on <Link className="farm-link" href="/farm/schedule">Schedule</Link>.
+        </p>
+      </Card>
+
       <Card title={`What the plan breaks — ${num(result.violations.length)} ${result.violations.length === 1 ? 'finding' : 'findings'}`} className="mt-4">
         {result.violations.length === 0 ? (
-          <p className="farm-kpi-sub">Nothing: every step has a free unit, the cooling clock holds, no blackout completes unattended, the harvest meets its distribution time and the day closes on time.</p>
+          <p className="farm-kpi-sub">Nothing: every step has a free unit, the harvest meets its distribution time and the day closes on time.</p>
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table compact">
@@ -321,10 +368,9 @@ export function DayScheduleClient({
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Labor minutes are the cropPlan&rsquo;s time study; at the rack they are the study&rsquo;s blackout line, split across the load and the unload. The rack&rsquo;s minutes and people
-          come from <Link className="farm-link" href="/farm/capacity">Capacity</Link>; the routes and the units from{' '}
-          <Link className="farm-link" href="/farm/time-studies">Time Studies</Link> and <Link className="farm-link" href="/farm/grow-units">Equipment</Link>. Two weeks of staff demand for
-          Staffing are on <Link className="farm-link" href="/farm/schedule">Schedule</Link>.
+          Labor minutes are the plan&rsquo;s time study: its sowing lines per tray sown, its harvest lines per tray shipped. The routes come from{' '}
+          <Link className="farm-link" href="/farm/time-studies">Time Studies</Link>, the units from <Link className="farm-link" href="/farm/grow-units">Grow Units</Link> and the crews
+          from <Link className="farm-link" href="/farm/capacity">Capacity</Link>. Two weeks of staff demand for Staffing are on <Link className="farm-link" href="/farm/schedule">Schedule</Link>.
         </p>
       </Card>
     </>
