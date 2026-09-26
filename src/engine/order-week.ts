@@ -64,7 +64,7 @@ export function unitCostsFor(
   let minutesPerUnit = 0;
   let laborGap = false;
   if (own) {
-    minutesPerUnit = sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing + own.laborSplit.variableMinutesPerUnit.value : 0;
+    minutesPerUnit = sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing + own.laborSplit.variableMinutesPerUnit.value + (own.laborSplit.dailyMinutesPerUnit?.value ?? 0) : 0;
     laborGap = own.laborSplit.fixedMinutesPerSowing.value === 0 && own.laborSplit.variableMinutesPerUnit.value === 0;
   } else if (standard && sowing > 0) {
     minutesPerUnit = laborMinutesForSowing(summarizeStudy(standard), sowing) / sowing;

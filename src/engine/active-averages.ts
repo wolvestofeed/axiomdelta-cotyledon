@@ -80,7 +80,7 @@ export function activeCropPlanAverages(
     // without a study — never another crop plan's typed figure (Roadmap N3).
     const summary = standard ? summarizeStudy(standard) : null;
     const laborMinutesPerUnit = own
-      ? sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing + own.laborSplit.variableMinutesPerUnit.value : 0
+      ? sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing + own.laborSplit.variableMinutesPerUnit.value + (own.laborSplit.dailyMinutesPerUnit?.value ?? 0) : 0
       : summary && sowing > 0 ? laborMinutesForSowing(summary, sowing) / sowing : 0;
     const serve = costToServe(r, own ?? a, cap, laborMinutesPerUnit);
     return {
