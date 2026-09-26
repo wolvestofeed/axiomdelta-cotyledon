@@ -25,7 +25,8 @@
     "farm:training": "tsx scripts/import-farm-training.ts",
     "farm:facility-scenario": "tsx scripts/facility-farm-scenario.ts",
     "farm:agent-eval": "tsx scripts/farm-agent-eval.ts",
-    "clean": "rm -rf .next node_modules"
+    "clean": "rm -rf .next node_modules",
+    "farm:glossary": "tsx scripts/generate-farm-glossary.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

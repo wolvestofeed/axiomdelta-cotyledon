@@ -1,6 +1,6 @@
 /**
  * MicroFarm — the glossary as data, tiers 1 and 2 (`docs/glossary.md` is the authority; tier 3 is internal and stays there).
- * Regenerated from the document; a subscriber-facing term links its science rows.
+ * Regenerated from the document by `pnpm farm:glossary`; a subscriber-facing term links its science rows.
  */
 
 export interface GlossaryEntry {

@@ -21,6 +21,7 @@ export const metadata: Metadata = {
 const LINKS = [
   { href: '/farm/subscriber-portal', label: 'Orders and invoices' },
   { href: '/farm/subscriber-portal/flat-builder', label: 'Flat Builder' },
+  { href: '/farm/subscriber-portal/glossary', label: 'Glossary' },
   { href: '/farm/subscriber-portal/sign-up', label: 'Create an account' },
 ];
 

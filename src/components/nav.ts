@@ -29,7 +29,8 @@ export const MODULES: NavItem[] = [
   { label: 'Reports', href: '/farm/reports', section: 'Overview', status: 'live' },
   { label: 'Sources', href: '/farm/sources', section: 'Overview', status: 'live', atBottom: true },
 
-  { label: 'Crop plans', href: '/farm/crop-plans', section: 'Production', status: 'live' },
+  { label: 'Grow plans', href: '/farm/crop-plans', section: 'Production', status: 'live' },
+  { label: 'Varieties', href: '/farm/varieties', section: 'Production', status: 'live' },
   { label: 'Time Studies', href: '/farm/time-studies', section: 'Production', status: 'live' },
   { label: 'Production Planning', href: '/farm/production-planning', section: 'Production', status: 'live' },
   { label: 'Day Schedule', href: '/farm/production-planning/schedule', section: 'Production', status: 'live' },
