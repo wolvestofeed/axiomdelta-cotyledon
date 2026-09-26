@@ -76,7 +76,6 @@ describe('C2 — no page or server library reads a figure from plan-data', () =>
     'CROP_PLAN_STATUS_LABELS', // a label
     'allergenMatrix', // the HACCP plan's allergen matrix
     'controlPoints', // the produce-safety plan's control points
-    'roster', // the training course roster
     'facility', // the leased shell's stated size: no definition table yet
     'otherCapacities', // published comparison capacities, shown for comparison only
     'nslpReimbursementBenchmark', // the USDA reimbursement benchmark, sourced

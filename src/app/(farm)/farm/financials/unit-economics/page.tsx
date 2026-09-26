@@ -10,11 +10,13 @@ import { channelCropPlanEconomics, phaseEconomics } from '@/engine/phase';
 import { assumptionsFor } from '@/engine/scenario';
 import { useLedgerBook, useStatementPeriod } from '@/state/ledger';
 import { LedgerStatus, PeriodPicker, dollars, signed } from '@/components/ledger/LedgerParts';
-import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { resolveScenarioInputs } from '@/engine/scenario';
+import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The defaults an edit is measured against: the resolver with no overlay (Roadmap N10, C2). */
-const DEFAULTS = resolveScenarioInputs({});
+// The plan's defaults on the grow seed library, never the Phase 1-era fallback.
+const DEFAULTS = resolveScenarioInputs({}, growPlanSeed.map((p) => projectCropPlan(p)));
 import { useScenario } from '@/state/scenario-store';
 import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
 import { PageControls } from '@/components/PageControls';

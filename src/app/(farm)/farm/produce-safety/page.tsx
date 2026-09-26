@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, Notice } from '@/components/ui';
-import { controlPoints } from '@/data/plan-data';
 import { clock } from '@/data/crews';
 import { getResolvedActiveInputs } from '@/server/scenarios';
 import { CCP2_LIMITS, evaluateCcp2, controlPointsForPlan, STAGE_CONTROL_POINTS } from '@/engine/produce-safety';
@@ -103,7 +102,6 @@ async function ProduceSafetyPageInner() {
 
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={STAGE_CONTROL_POINTS.length} label="Stage control points" sub="seed sanitation, spent-water test, temperature and humidity, harvest check" />
-        <Kpi value={controlPoints.length} label="Phase 1-era critical control points" sub="on the cooling log until the sowing record is re-based" />
         <Kpi value={`${completeLots} / ${blackoutLots.length}`} label="Blackout lots with every load recorded" sub={missingRecord.length === 0 ? 'Every rack load of every blackout component' : `${missingRecord.length} lot(s) with a load unrecorded`} />
         <Kpi value={failed.length} label="Failed stage records" sub="Computed from the readings, one per rack load" />
         <Kpi value={`${tracedBack} / ${coolingLog.length}`} label="Records traceable to a supplier" sub="Recorded at receiving" />
@@ -173,26 +171,6 @@ async function ProduceSafetyPageInner() {
         <p className="farm-kpi-sub mt-2">Each control point on the plan&rsquo;s stages is recorded, a gap or failed on the sowing; a gap is never a pass. The spent-water verdict is computed from the results.</p>
       </Card>
 
-      <Card title="Phase 1-era critical control points" className="mt-4">
-        <div className="farm-scroll-x">
-          <table className="farm-table">
-            <thead>
-              <tr><th>CONTROL POINT</th><th>Step</th><th>Critical limit</th><th>Monitoring</th><th>Corrective action</th></tr>
-            </thead>
-            <tbody>
-              {controlPoints.map((c) => (
-                <tr key={c.id}>
-                  <td className={`font-semibold! ${(c.id === 'control-point-2' ? 'farm-c-accent' : 'farm-c-ink')}`}>{c.id}</td>
-                  <td className="font-medium!">{c.step}</td>
-                  <td className="farm-c-soft">{c.criticalLimit}</td>
-                  <td className="farm-c-soft max-w-64!">{c.monitoring}</td>
-                  <td className="farm-c-soft max-w-64!">{c.correctiveAction}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
 
       <Card title="control-point-2 cooling log — 135°F → 70°F within 2h, then 70°F → 41°F within 4h more" className="mt-4">
         <div className="farm-scroll-x">

@@ -8,13 +8,14 @@ import { SectionSave } from '@/components/SectionSave';
 import { deriveGrowCapacity, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { defaultGrowUnits } from '@/engine';
-import { costCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
 import { lightLine, planStageDays, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { resolveScenarioInputs } from '@/engine/scenario';
+import { growPlanSeed } from '@/data/grow-plans-seed';
 import { clock } from '@/data/crews';
 import type { StatusTag } from '@/data/tagged';
 import { useScenario } from '@/state/scenario-store';
@@ -23,7 +24,8 @@ import { PageControls } from '@/components/PageControls';
 import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
 
 /** The defaults an edit is measured against: the resolver with no overlay. */
-const DEFAULTS = resolveScenarioInputs({});
+// The plan's defaults on the grow seed library, never the Phase 1-era fallback.
+const DEFAULTS = resolveScenarioInputs({}, growPlanSeed.map((p) => projectCropPlan(p)));
 const hoursOf = (min: number) => Math.round((min / 60) * 100) / 100;
 
 /**

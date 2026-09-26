@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PageHeader, Card, Kpi, PreviewBanner, num } from '@/components/ui';
 import { RecordedLinkList } from '@/components/RecordedLinks';
 import { trainingCourses } from '@/data/seed-invented';
-import { roster } from '@/data/plan-data';
+import { roster } from '@/data/roster';
 import { getFarmAccess } from '@/server/access';
 import { TrainingDocs } from '@/components/TrainingDocs';
 import { listTrainingDocs, listTrainingAssignments, listActiveStaff, syncOrientationAssignments } from '@/server/training';
@@ -92,7 +92,7 @@ async function TrainingPageInner() {
 
       <div className="grid gap-3 mt-4 farm-autofit-11">
         <Kpi value={trainingCourses.length} label="Courses (placeholder)" sub={`${num(totalLessons)} lessons across courses · the ${num(activeTrainingDocs.length)} document${activeTrainingDocs.length === 1 ? '' : 's'} in force are real`} />
-        <Kpi value={`${rolesWithCourse} / ${roles.length}`} label="Roles with a course assigned" sub={`${num(headcount)} people across the roster`} />
+        <Kpi value={`${rolesWithCourse} / ${roles.length}`} label="Roles with a course assigned" sub={`${num(headcount)} ${headcount === 1 ? 'person' : 'people'} across the roster`} />
         <Kpi value={`${rolesWithCert} / ${roles.length}`} label="Roles with a certificate on file" sub="Documents in the registry" />
         <Kpi value="Fixed sequence" label="Distribution model" sub="Video/audio + assessment" />
       </div>
@@ -140,8 +140,8 @@ async function TrainingPageInner() {
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Roles are the plan&apos;s position titles, placeholders until Staffing&apos;s roster is connected
-          (<Link className="farm-link" href="/farm/staffing">HR</Link>) — no real person appears. A certificate is a document registered on{' '}
+          The roster is Rob, who grows alone, and the Grower, the next production hire, at no headcount until
+          hired. Staffing&apos;s roster replaces it when it is connected (<Link className="farm-link" href="/farm/staffing">HR</Link>). A certificate is a document registered on{' '}
           <Link className="farm-link" href="/farm/sources">Sources</Link>, the same registry the factors
           and invoices resolve to. Assignments are facts of record, held outside any scenario.
         </p>

@@ -41,14 +41,14 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
 
   const readme = wb.addWorksheet('Read Me');
   const lines: [string, string][] = [
-    ['MicroFarm — Time Study Sheet', `Prepared ${asOf}. ${cropPlans.length} crop plans in the library.`],
+    ['MicroFarm — Time Study Sheet', `Prepared ${asOf}. ${cropPlans.length} grow plans in the library.`],
     ['', ''],
-    ['What this is', 'The instrument for timing a crop plan. One block per crop plan, its tasks off that crop plan\'s own served components, on two streams. The sowing stream is the sow: receiving, mise en place, a prep and a sow per hot component, component blackout and stage, line turnaround. The harvest stream runs first thing each distribution day from staged components: a cold assembly per cold component, unit and assemble, seal and label, the temperature check at pack, load for transport. There is no second blackout and no cold-hold task; end-of-day closedown is not on a study.'],
-    ['Streams', 'Sowing lines are timed against the sowing harvested. Harvest lines are timed on a distribution day against the units shipped that day; a fixed harvest line (loading the vehicle) counts once per distribution day. Write the units shipped beside the harvest lines.'],
-    ['How to run a study', '1. Pick a crop plan and a production day. 2. Write the study date, the observer and the sowing size actually produced on the block. 3. Time each task: the people on it, and the clock times it started and ended. Elapsed minutes are end minus start; labor minutes are the people-minutes the task took (people × elapsed where everyone worked the whole task). 4. Mark whether the task is fixed per sowing (the same time whatever the sowing size) or scales with units. 5. Record the quality result (pass, hold or fail) and any notes.'],
-    ['Sowing size', 'Labor minutes mean nothing without the sowing they were timed at. The sowing size printed on each block is the derived sowing at the plan\'s defaults; write down the sowing actually observed.'],
-    ['Entering the study', 'A timed sowing is entered on Labor in the OS — Record a time study — dated, with the observer and the quality result. It joins the crop plan\'s log and the trends; an admin adopts it as the crop plan\'s labor standard. This sheet is not imported.'],
-    ['Estimated studies', 'Every crop plan carries an estimated study until its first observed study is entered: a mock estimate per step, built from the plan\'s 14-task estimate and the stage processing standards, labelled Estimated. The "Standards on file" tab lists each crop plan\'s current standard and its basis; the reference minutes on each block are that standard\'s.'],
+    ['What this is', 'The instrument for timing a grow plan. One block per plan, its tasks on three streams from Vallecito\'s 2023 tray study. The sowing stream is the sow day: supplies in, seed received and sorted, the prep station, trays prepped, trays sown. The daily stream is every day a tray is on its grow unit: the watering its stage takes, nutrient preparation under the lights, inspection and sanitization. The harvest stream is the distribution day: the harvest station prepped, the trays packed and labelled at the harvest check, the station cleaned. End-of-day closedown is not on a study.'],
+    ['Streams', 'Sowing lines are timed against the trays sown. Daily lines are timed on one day against the trays on the shelves that day. Harvest lines are timed on a distribution day against the trays shipped that day. Write the trays beside each stream\'s lines.'],
+    ['How to run a study', '1. Pick a grow plan and a sow day. 2. Write the study date, the observer and the trays actually sown on the block. 3. Time each task: the people on it, and the clock times it started and ended. Elapsed minutes are end minus start; labor minutes are the people-minutes the task took (people × elapsed where everyone worked the whole task). 4. Mark whether the task is fixed (the same time whatever the trays) or scales with trays. 5. Record the quality result (pass, hold or fail) and any notes.'],
+    ['Sowing size', 'Labor minutes mean nothing without the trays they were timed at. The sowing printed on each block is what one of the workspace\'s grow units takes of the plan\'s format; write down the trays actually observed.'],
+    ['Entering the study', 'A timed sowing is entered on Time Studies in the OS, dated, with the observer and the quality result. It joins the plan\'s log and the trends; an admin adopts it as the plan\'s labor standard. This sheet is not imported.'],
+    ['Estimated studies', 'Every grow plan carries an estimated study until its first observed study is entered: Vallecito\'s 2023 tray study per tray, each daily task spread over the plan\'s cycle days, labelled Estimated. The "Standards on file" tab lists each plan\'s current standard and its basis; the reference minutes on each block are that standard\'s.'],
     ['Legend', 'Shaded cells are what the observer fills in. Blue text is carried from the OS. No wage or pay appears on this sheet.'],
   ];
   for (const [k, v] of lines) readme.addRow([k, v]);
@@ -60,7 +60,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   });
 
   const sheet = wb.addWorksheet('Time Study Sheet');
-  const header = ['Crop plan code', 'Crop plan', 'Study date', 'Observer', 'Sowing size (units)', 'Seq', 'Task', 'Stream (sowing / daily / harvest)', 'Station (suggested)', 'CONTROL POINT', 'Staff', 'Start', 'End', 'Elapsed min', 'Labor min', 'Scales with (fixed / variable)', 'Quality (pass / hold / fail)', 'Notes', 'Reference: standard basis', 'Reference: standard labor min'];
+  const header = ['Grow plan code', 'Grow plan', 'Study date', 'Observer', 'Sowing size (trays)', 'Seq', 'Task', 'Stream (sowing / daily / harvest)', 'Station (suggested)', 'CONTROL POINT', 'Staff', 'Start', 'End', 'Elapsed min', 'Labor min', 'Scales with (fixed / variable)', 'Quality (pass / hold / fail)', 'Notes', 'Reference: standard basis', 'Reference: standard labor min'];
   sheet.addRow(header).font = { bold: true };
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
   const OBSERVER_COLS = [3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 18];
@@ -104,7 +104,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   widths(sheet, [12, 40, 12, 16, 12, 6, 52, 12, 34, 8, 7, 8, 8, 11, 10, 16, 16, 30, 16, 14]);
 
   const standards = wb.addWorksheet('Standards on file');
-  standards.addRow(['Crop plan code', 'Crop plan', 'Standard basis', 'Studied on', 'Sowing (units)', 'Observer', 'Quality', 'Seq', 'Task', 'Stream', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'Scales with', 'Adopted on', 'Notes']).font = { bold: true };
+  standards.addRow(['Grow plan code', 'Grow plan', 'Standard basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Seq', 'Task', 'Stream', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'Scales with', 'Adopted on', 'Notes']).font = { bold: true };
   standards.views = [{ state: 'frozen', ySplit: 1 }];
   for (const cropPlan of ordered) {
     const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
@@ -137,7 +137,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   widths(standards, [12, 40, 12, 12, 10, 16, 8, 6, 60, 10, 34, 7, 11, 10, 10, 12, 80]);
 
   const log = wb.addWorksheet('Studies on file');
-  log.addRow(['Crop plan code', 'Basis', 'Studied on', 'Sowing (units)', 'Observer', 'Quality', 'Labor min', 'Sowing stream min', 'Harvest stream min', 'Fixed min / sowing', 'Variable min / unit', 'Min / unit', 'Adopted on', 'Adopted by', 'Standard']).font = { bold: true };
+  log.addRow(['Grow plan code', 'Basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Labor min', 'Sowing stream min', 'Harvest stream min', 'Fixed min / sowing', 'Variable min / tray', 'Min / tray', 'Adopted on', 'Adopted by', 'Standard']).font = { bold: true };
   for (const cropPlan of ordered) {
     const mine = studiesForCropPlan(library.studies, cropPlan.code);
     const standard = laborStandard(mine);

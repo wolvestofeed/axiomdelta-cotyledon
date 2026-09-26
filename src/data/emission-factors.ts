@@ -17,7 +17,7 @@
  * used.
  */
 
-import { cropPlan, type StatusTag } from '@/data/plan-data';
+import type { StatusTag } from '@/data/tagged';
 import compiledFoodJson from '@/data/input-factors-compiled.json';
 
 // ── Unit identities (arithmetic, not research figures) ──────────────────────
@@ -351,11 +351,8 @@ export interface CropPlanFoodMapping {
   note?: string;
 }
 
-const tortillaLine = (() => {
-  const l = cropPlan.inputs.find((i) => i.name === 'Corn tortilla, 6 in');
-  if (!l || l.unitMassOz === undefined) throw new Error('Corn tortilla line must carry unitMassOz');
-  return { unitMassOz: l.unitMassOz, yieldStatus: l.yieldStatus };
-})();
+/** A 6-inch corn tortilla's mass (USDA FoodData Central, generic product, 25 g): the Phase 1-era map's one piece line. */
+const tortillaLine: { unitMassOz: number; yieldStatus: StatusTag } = { unitMassOz: 0.88, yieldStatus: 'SOURCED' };
 
 export const cropPlanFoodCategoryMap: Record<string, CropPlanFoodMapping> = {
   'Ground beef, 85/15': { category: 'bovine-meat-beef-herd' },
@@ -367,12 +364,11 @@ export const cropPlanFoodCategoryMap: Record<string, CropPlanFoodMapping> = {
   'Garlic, peeled': { category: 'onions-and-leeks', note: 'Allium; the study has no garlic product.' },
   'Corn tortilla, 6 in': {
     category: 'maize-unit',
-    // One constant, not two: the mass per piece is the crop plan line's `unitMassOz`
-    // (USDA FoodData Central, generic 6-inch corn tortilla) and carries that
-    // line's tag. The actual product has not been weighed.
+    // The mass per piece is USDA FoodData Central's generic 6-inch corn tortilla, SOURCED.
+    // The actual product has not been weighed.
     massKgPerEach: tortillaLine.unitMassOz * KG_PER_OZ,
     massStatus: tortillaLine.yieldStatus,
-    note: 'Mass per 6-inch tortilla is the crop plan line\'s unit mass (USDA FoodData Central, generic product); the actual product has not been weighed.',
+    note: 'Mass per 6-inch tortilla is USDA FoodData Central\'s generic product; the actual product has not been weighed.',
   },
   'Cheddar, shredded': { category: 'cheese' },
   'Chili-cumin spice blend': { category: null, note: 'No spice product in the study; small mass.' },

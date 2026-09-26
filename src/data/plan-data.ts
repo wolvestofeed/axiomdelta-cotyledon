@@ -846,27 +846,6 @@ export const allergenMatrix: AllergenRow[] = [
 // the day's labor is DERIVED from the production plan (`_engine/staffing.ts`);
 // crews are a proposed answer in the scenario (`_data/crews.ts`).
 
-// Plan role titles — position titles stand in for employee names (no real person
-// appears). No pay is held here (Roadmap O1): Staffing holds the roster, wages
-// and burden. Training assigns courses and certificates to these roles until
-// Staffing's roster is connected.
-export interface RosterPosition {
-  title: string;
-  headcount: number;
-  shift: string;
-  onFloor?: boolean; // works production-floor hours (default true)
-}
-
-export const roster: RosterPosition[] = [
-  // The COO / GM does not work floor hours; the Culinary Director takes one of
-  // the two Lead Sous roles and works the floor.
-  { title: 'COO / General Manager', headcount: 1, shift: 'Leadership (off-floor)', onFloor: false },
-  { title: 'Culinary Director (Lead Chef)', headcount: 1, shift: 'Shift 1 & 2 (working lead)', onFloor: true },
-  { title: 'Production Lead / Sous', headcount: 1, shift: 'Shift 1 & 2' },
-  { title: 'Line Sow', headcount: 6, shift: 'Shift 1 & 2' },
-  { title: 'Prep Sow', headcount: 3, shift: 'Overlap' },
-];
-
 // Payroll burden split rates — PLACEHOLDERS the sowing ledger splits standard
 // labor with until Staffing's rates arrive.
 export const compDefaults = {
