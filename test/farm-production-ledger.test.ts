@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { journalIsBalanced } from '@/ledger';
-import { cropPlan, phases } from '@/data/plan-data';
+import { phases } from '@/data/plan-data';
+import { resolveScenarioInputs } from '@/engine/scenario';
 import {
   FARM_COA,
   duplicateAccountCodes,
@@ -11,7 +12,6 @@ import {
   ACC_ABNORMAL_SPOILAGE,
   ACC_OH_CONTROL,
   ACC_OH_APPLIED,
-  ACC_MATERIAL_USAGE_VAR,
 } from '@/data/coa-farm';
 import {
   componentCosting,
@@ -34,7 +34,10 @@ import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { traceabilityLotCode, traceabilityGaps } from '@/engine/traceability';
 
 const DATE = '2026-09-14';
-const cap = deriveCapacity(cropPlan);
+// A sowing of the seed grow plans' reference plan.
+const R0 = resolveScenarioInputs();
+const cropPlan = R0.cropPlan;
+const cap = deriveCapacity(cropPlan, R0.capacityInputs);
 const units = cap.sowingSize;
 const components = componentCosting(cropPlan);
 const nc = normalCapacity(phases);
@@ -43,8 +46,8 @@ const nc = normalCapacity(phases);
 const annualFixed = manufacturingOverheadBudget().annual;
 
 function sowingAtStandard(): SowingExecution {
-  return standardSowing('B-260914-01', DATE, units, components, 'AMK-E-001@2026-09-13', (c) =>
-    traceabilityLotCode('AMK', 'AMKE001', DATE, c, 1),
+  return standardSowing('B-260914-01', DATE, units, components, `${cropPlan.code}@2026-09-13`, (c) =>
+    traceabilityLotCode('MF', cropPlan.code.replace('-', ''), DATE, c, 1),
   );
 }
 
@@ -53,7 +56,7 @@ function ledgerFor(sowing: SowingExecution, actualUnits = nc.unitsPerYear) {
     overhead: absorbOverhead(annualFixed, nc, actualUnits),
     purchaseOrderCost: buildPurchaseOrder(units, cropPlan).total,
     pricePerUnit: phases[0].pricePerUnit,
-  });
+  }, cropPlan);
 }
 
 describe('Farm chart of accounts', () => {
@@ -213,19 +216,6 @@ describe('variances when the sowing does not run to standard', () => {
     expect(two.balanced).toBe(true);
   });
 
-  it('relieves a cold-component usage variance from the pack stage, not the sow stage', () => {
-    const b = sowingAtStandard();
-    const cheese = b.components.find((c) => c.component === 'Cheddar')!;
-    cheese.seedIssuedLb += 2;
-    cheese.packedLb += 2;
-    const led = ledgerFor(b);
-    expect(led.balanced).toBe(true);
-    const cold = led.entries.find((e) => e.id.endsWith('ISSUE-COLD'))!;
-    expect(cold.lines.some((l) => l.accountCode === ACC_MATERIAL_USAGE_VAR && l.debitCents > 0)).toBe(true);
-    const hot = led.entries.find((e) => e.id.endsWith('ISSUE-HOT'))!;
-    expect(hot.lines.some((l) => l.accountCode === ACC_MATERIAL_USAGE_VAR)).toBe(false);
-  });
-
   it('flags a material net variance for proration rather than dumping it in COGS', () => {
     const b = sowingAtStandard();
     const po = buildPurchaseOrder(units, cropPlan).total;
@@ -248,7 +238,7 @@ describe('the mass balance invariant', () => {
 
   it('refuses a sowing with unaccounted weight', () => {
     const b = sowingAtStandard();
-    b.components[1].packedLb -= 25; // 25 lb vanishes with no scrap record
+    b.components[0].packedLb -= 1; // 1 lb vanishes with no scrap record
     const mb = massBalance(b);
     expect(mb.balanced).toBe(false);
     expect(mb.failures[0]).toContain('unaccounted for');
@@ -256,9 +246,9 @@ describe('the mass balance invariant', () => {
 
   it('accepts weight that leaves as recorded scrap', () => {
     const b = sowingAtStandard();
-    b.components[1].packedLb -= 25;
-    b.components[1].scrap = [
-      { reason: 'DROPPED_OR_DAMAGED', lb: 25, stage: 'PACK', note: 'pan dropped at assembly' },
+    b.components[0].packedLb -= 1;
+    b.components[0].scrap = [
+      { reason: 'DROPPED_OR_DAMAGED', lb: 1, stage: 'PACK', note: 'tray dropped at the harvest station' },
     ];
     expect(massBalance(b).balanced).toBe(true);
   });
@@ -289,10 +279,9 @@ describe('the mass balance invariant', () => {
     expect(MASS_BALANCE_TOLERANCE_LB).toBeGreaterThan(0);
   });
 
-  it('records the sow stage as a mass GAIN, not a loss', () => {
+  it('records the grow as a mass GAIN from seed to harvest, not a loss', () => {
     const mb = massBalance(sowingAtStandard());
-    const rice = mb.components.find((c) => c.component === 'Cilantro-lime rice')!;
-    expect(rice.sowDeltaLb).toBeGreaterThan(0);
+    expect(mb.components[0]!.sowDeltaLb).toBeGreaterThan(0);
   });
 });
 
@@ -356,27 +345,6 @@ describe('the shrink allowance is on the record (Roadmap I3)', () => {
     expect(led.variances.materialUsage).toBeCloseTo(5 * (card.seedCostPerLb ?? 0), 2);
   });
 
-  it('J7: abnormal spoilage after the sprouting rack carries the stage\'s labor and overhead, before it carries none', () => {
-    const blackout = sowingAtStandard();
-    blackout.components[0]!.scrap.push({ reason: 'BLACKOUT_FAILURE', lb: 10, stage: 'BLACKOUT', note: 'control-point-2 limit not met' });
-    blackout.components[0]!.packedLb -= 10;
-    const led = ledgerFor(blackout);
-    const card = components.find((k) => k.name === blackout.components[0]!.component)!;
-    const materialOnly = 10 * (card.harvestedCostPerLb ?? 0);
-    expect(led.amounts.abnormalSpoilage).toBeGreaterThan(materialOnly);
-    const hotBlackoutLb = components.filter((k) => k.isHot).reduce((s, k) => s + (k.blackoutOz * units) / 16, 0);
-    const conversionPerLb = (led.amounts.directLaborStandard + led.amounts.overheadAbsorbed) / hotBlackoutLb;
-    expect(led.amounts.abnormalSpoilage).toBeCloseTo(10 * ((card.harvestedCostPerLb ?? 0) + conversionPerLb), 2);
-    expect(led.balanced).toBe(true);
-    expect(led.notes.some((n) => n.includes('fully absorbed cost'))).toBe(true);
-
-    const prep = sowingAtStandard();
-    prep.components[0]!.seedIssuedLb += 10;
-    prep.components[0]!.scrap.push({ reason: 'DROPPED_OR_DAMAGED', lb: 10, stage: 'PREP', note: 'case dropped' });
-    const raw = ledgerFor(prep);
-    expect(raw.amounts.abnormalSpoilage).toBeCloseTo(10 * (card.seedCostPerLb ?? 0), 2); // material only, no conversion yet
-  });
-
   it('a record with no allowance on it classifies by reason alone', () => {
     const k = classifyScrap({ scrap: [{ reason: 'TRIM', lb: 100, stage: 'SOW', note: '' }, { reason: 'CONTAMINATION', lb: 1, stage: 'PACK', note: '' }] });
     expect(k[0]).toMatchObject({ normalLb: 100, abnormalLb: 0 });
@@ -397,7 +365,7 @@ describe('traceability rides on the consumption journal', () => {
 
   it('names the output lot and its inputs', () => {
     const e = led.traceability[0];
-    expect(e.output.traceabilityLotCode).toMatch(/^AMK-/);
+    expect(e.output.traceabilityLotCode).toMatch(/^MF-/);
     expect(e.inputs.length).toBeGreaterThan(0);
     expect(e.output.quantity).toBeGreaterThan(0);
   });
@@ -417,18 +385,15 @@ describe('traceability rides on the consumption journal', () => {
   });
 
   it('generates a stable, sortable lot code', () => {
-    expect(traceabilityLotCode('AMK', 'AMKE001', '2026-09-14', 'Beef and bean base', 1)).toBe(
-      'AMK-AMKE001-260914-BEEFAN-01',
-    );
+    expect(traceabilityLotCode('MF', 'BROC01', '2026-09-14', 'Di Cicco broccoli', 1)).toBe('MF-BROC01-260914-DICICC-01');
   });
 });
 
 describe('weights reach the ledger, which is what Production Planning was missing', () => {
   it('reports purchased, harvested, blackout and packed pounds for the sowing', () => {
     const w = ledgerFor(sowingAtStandard()).weights;
-    expect(w.purchasedLb).toBeGreaterThan(100); // a 275-unit sowing on the Phase 1 line
-    expect(w.harvestedLb).toBeGreaterThan(w.purchasedLb); // water uptake
-    expect(w.blackoutLb).toBeLessThan(w.harvestedLb); // cold components are not blackout
-    expect(w.packedLb).toBeCloseTo(w.harvestedLb, 1);
+    expect(w.purchasedLb).toBeGreaterThan(0);
+    expect(w.harvestedLb).toBeGreaterThan(w.purchasedLb); // seed to greens
+    expect(w.packedLb).toBeCloseTo(w.harvestedLb, 1); // a live tray packs what it harvests
   });
 });

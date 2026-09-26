@@ -10,7 +10,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { assumptions as typed } from '@/data/plan-data';
-import { seedLibrary } from '@/data/crop-plans-seed';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PackagingLibrary } from '@/data/packaging';
 import { seedPackagingLibrary } from '@/data/packaging';
@@ -21,18 +22,21 @@ import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { laborMinutesForSowing, summarizeStudy } from '@/engine/time-studies';
 import { planProductionDay } from '@/engine/production-plan';
 
+const seedLibrary = growPlanSeed.map((p) => projectCropPlan(p));
 const R = resolveScenarioInputs({}, seedLibrary);
 const rate = R.assumptions.labor.blendedLoadedWage.value;
-const e002 = R.cropPlans.find((r) => r.code === 'AMK-E-002')!;
-const e009 = R.cropPlans.find((r) => r.code === 'AMK-E-009')!;
+// A tray plan and a jar plan: the jar plan skips the blackout and light waterings, so its minutes differ.
+const e002 = R.cropPlans.find((r) => r.code === 'BROC-01')!;
+const e009 = R.cropPlans.find((r) => r.code === 'MUNG-01')!;
 
 describe('labor is each crop plan\'s own standard', () => {
-  it('two crop plans on different sowings no longer carry the same minutes', () => {
-    const a = assumptionsFor(R, e002.code).laborSplit;
-    const b = assumptionsFor(R, e009.code).laborSplit;
-    expect(a.variableMinutesPerUnit.value).not.toBeCloseTo(b.variableMinutesPerUnit.value, 3);
-    // And neither is the typed figure every crop plan used to carry.
-    expect(a.variableMinutesPerUnit.value).not.toBeCloseTo(typed.laborSplit.variableMinutesPerUnit.value, 3);
+  it('two plans on different stage schedules no longer carry the same minutes', () => {
+    const minutes = (code: string, sowing: number) => laborMinutesPerUnit(R.laborStandards[code]!, sowing)!;
+    const a = minutes(e002.code, deriveCapacity(e002, R.capacityInputs).sowingSize);
+    const b = minutes(e009.code, deriveCapacity(e009, R.capacityInputs).sowingSize);
+    expect(a).not.toBeCloseTo(b, 3);
+    // And neither is the typed figure every plan used to carry.
+    expect(assumptionsFor(R, e002.code).laborSplit.variableMinutesPerUnit.value).not.toBeCloseTo(typed.laborSplit.variableMinutesPerUnit.value, 3);
   });
 
   it('with no study library loaded, a crop plan carries its code estimate — the one the database is seeded with', () => {
@@ -45,9 +49,9 @@ describe('labor is each crop plan\'s own standard', () => {
   });
 
   it('a loaded library with no study for the crop plan is a gap, never a borrowed figure', () => {
-    const std = laborStandardFor(e002, [], 275);
+    const std = laborStandardFor(e002, [], 20);
     expect(std.basis).toBe('none');
-    expect(laborMinutesPerUnit(std, 275)).toBeNull();
+    expect(laborMinutesPerUnit(std, 20)).toBeNull();
     const withGap = resolveScenarioInputs({}, seedLibrary, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, []);
     expect(withGap.laborStandards[e002.code]!.basis).toBe('none');
     expect(assumptionsFor(withGap, e002.code).laborSplit.fixedMinutesPerSowing.value).toBe(0);
@@ -101,8 +105,8 @@ describe('one cost per unit, whichever surface asks (conformance C1, as far as N
     const plan = planProductionDay({
       productionDate: '2026-09-14',
       requirements: [
-        { cropPlanCode: e002.code, cropPlanName: e002.name, units: 400, baseUnits: 400, byChannel: [], orders: 1, inLibrary: true },
-        { cropPlanCode: e009.code, cropPlanName: e009.name, units: 900, baseUnits: 900, byChannel: [], orders: 1, inLibrary: true },
+        { cropPlanCode: e002.code, cropPlanName: e002.name, units: 20, baseUnits: 20, byChannel: [], orders: 1, inLibrary: true },
+        { cropPlanCode: e009.code, cropPlanName: e009.name, units: 60, baseUnits: 60, byChannel: [], orders: 1, inLibrary: true },
       ],
       onHand: {},
       cropPlans: R.cropPlans,
@@ -135,7 +139,7 @@ describe('packaging is the crop plan\'s picks at the library cost — no placeho
     expect(assumptionsFor(withPicks, e009.code).perUnit.packaging.value).toBe(0);
   });
 
-  it('picks with no cost entered cost zero — the AMK-E-002 bowl, lid and label as they are today', () => {
+  it('picks with no cost entered cost zero', () => {
     const seed = seedPackagingLibrary();
     const bare = seed.packages.map((p, i) => ({ ...p, id: `pkg-${i}`, manualUnitCost: null, supplierItemId: null }));
     const lib: PackagingLibrary = {

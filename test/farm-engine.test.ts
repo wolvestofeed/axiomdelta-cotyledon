@@ -30,6 +30,8 @@ import { assumptions, capacityInputs, cropPlan, timeStudy } from '@/data/plan-da
 import { menuCropPlans, adultCropPlans } from '@/data/crop-plans-seed';
 import { crews as seedCrews, newCrew } from '@/data/crews';
 import { resolveScenarioInputs, type CapacityOverlay, type CrewOverlay } from '@/engine/scenario';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 
 /** The default capacity inputs with some leaves overridden — a scenario in miniature. */
 const capWith = (over: CapacityOverlay = {}) => resolveScenarioInputs({ capacity: over }).capacityInputs;
@@ -49,18 +51,22 @@ describe('farm — crop plan costing', () => {
   });
 });
 
-describe('farm — crop plan yields carry their own provenance', () => {
-  it('every stored harvested yield equals SEED quantity × yield factor (no drift)', () => {
-    for (const i of cropPlan.inputs) {
-      expect(i.seedQtyPerSowing * i.yieldToHarvest, i.name).toBeCloseTo(i.harvestedYieldPerSowing, 3);
+describe('farm — plan yields carry their own provenance', () => {
+  const growLines = growPlanSeed.flatMap((p) => projectCropPlan(p).inputs.map((i) => ({ plan: p.code, i })));
+  it('every stored harvested yield equals SEED quantity × yield factor (no drift), on every seed grow plan', () => {
+    for (const { plan, i } of growLines) {
+      expect(i.seedQtyPerSowing * i.yieldToHarvest, `${plan} ${i.name}`).toBeCloseTo(i.harvestedYieldPerSowing, 9);
     }
   });
-  it('every input line names the source of its yield, separately from its price', () => {
-    for (const i of cropPlan.inputs) {
-      expect(i.yieldSource.length, i.name).toBeGreaterThan(0);
-      expect(i.yieldStatus, i.name).toBeTruthy();
+  it('every line names the source of its yield, separately from its price', () => {
+    for (const { plan, i } of growLines) {
+      expect(i.yieldSource.length, `${plan} ${i.name}`).toBeGreaterThan(0);
+      expect(i.yieldStatus, `${plan} ${i.name}`).toBeTruthy();
     }
   });
+});
+
+describe('farm — the Phase 1-era bowl\'s published yields', () => {
   it('the three USDA Food Buying Guide yields are the published figures', () => {
     const y = (n: string) => cropPlan.inputs.find((i) => i.name.startsWith(n))!.yieldToHarvest;
     expect(y('Ground beef')).toBe(0.75);
@@ -325,7 +331,8 @@ describe('farm — proposed crews are checked against the requirement, never the
     expect(newCrewDefaultsFor(rated)).toEqual({ startMin: 420, endMin: 1140, headcount: 2 });
     const added = crewsWith({ 'crew-1': { label: 'Proposed' } })[0];
     expect(added.headcount.status).toBe('STATED');
-    expect([added.startMin.value, added.endMin.value, added.headcount.value]).toEqual([420, 1140, 2]);
+    // The resolver's reference plan is a grow plan: no rack to load, so one person across the operating day.
+    expect([added.startMin.value, added.endMin.value, added.headcount.value]).toEqual([420, 1140, 1]);
     expect(newCrew('x', {}, { startMin: 1, endMin: 2, headcount: 3 }).headcount.value).toBe(3);
   });
 });

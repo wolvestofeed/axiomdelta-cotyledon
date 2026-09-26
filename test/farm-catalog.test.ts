@@ -348,7 +348,7 @@ describe('farm catalog — candidate or approved, and the price in force on a da
 });
 
 describe('farm catalog — the price of an input line (Roadmap N1, decision 7)', () => {
-  const beef = 'Ground beef, 85/15'; // the seed crop plan's own line name
+  const beef = 'Ground beef, 85/15'; // an input line name, for the quote alone
   const q = (over: Partial<Parameters<typeof resolveInputPrice>[0]> = {}) =>
     resolveInputPrice({
       input: beef,
@@ -389,7 +389,9 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
   });
 
   it('the resolver writes the catalog price onto the line and says where it came from', () => {
-    const catalog = { s1: [line({ item: 'Ground beef', unitPrice: 4.85 })] };
+    const seedName = resolveScenarioInputs().cropPlan.inputs[0]!.name;
+    const beef = seedName;
+    const catalog = { s1: [line({ item: seedName, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
       { sustainability: { inputSupplier: { [beef]: 's1' } } },
       undefined, undefined, undefined, undefined, undefined, undefined,
@@ -404,11 +406,13 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
   });
 
   it('a price typed on the scenario outranks the catalog, and stops claiming its source', () => {
-    const catalog = { s1: [line({ item: 'Ground beef', unitPrice: 4.85 })] };
+    const R0 = resolveScenarioInputs();
+    const beef = R0.cropPlan.inputs[0]!.name;
+    const catalog = { s1: [line({ item: beef, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
       {
         sustainability: { inputSupplier: { [beef]: 's1' } },
-        inputs: { [`AMK-E-001::${beef}`]: { seedUnitCost: 6 } },
+        inputs: { [`${R0.cropPlan.code}::${beef}`]: { seedUnitCost: 6 } },
       },
       undefined, undefined, undefined, undefined, undefined, undefined,
       catalog,

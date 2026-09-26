@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
 import { seedSubscribers } from '@/data/subscribers';
-import { cropPlans as seedCropPlans } from '@/data/plan-data';
 import { simulateForecast } from '@/engine/forecast-timeline';
 import { postPlanLedger, depreciationForMonth } from '@/engine/plan-ledger';
 
 const subscribers = seedSubscribers();
+const inputs = resolveScenarioInputs();
+const seedCropPlans = inputs.cropPlans;
 const saved = seedSubscriptionCycles(seedCropPlans, '2026-09-14');
 const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
-const inputs = resolveScenarioInputs();
 const timeline = simulateForecast({ inputs, cycles });
 const started = performance.now();
 const plan = postPlanLedger({ timeline, inputs });

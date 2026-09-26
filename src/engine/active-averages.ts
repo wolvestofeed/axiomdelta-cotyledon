@@ -79,8 +79,10 @@ export function activeCropPlanAverages(
     // else its study. No study is a GAP — zero minutes, counted as a crop plan
     // without a study — never another crop plan's typed figure (Roadmap N3).
     const summary = standard ? summarizeStudy(standard) : null;
+    // One formula with the cost card (`costPerUnit`): the fixed minutes spread over the sowing, none
+    // with no sowing, and the per-unit and daily minutes whatever the sowing.
     const laborMinutesPerUnit = own
-      ? sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing + own.laborSplit.variableMinutesPerUnit.value + (own.laborSplit.dailyMinutesPerUnit?.value ?? 0) : 0
+      ? (sowing > 0 ? own.laborSplit.fixedMinutesPerSowing.value / sowing : 0) + own.laborSplit.variableMinutesPerUnit.value + (own.laborSplit.dailyMinutesPerUnit?.value ?? 0)
       : summary && sowing > 0 ? laborMinutesForSowing(summary, sowing) / sowing : 0;
     const serve = costToServe(r, own ?? a, cap, laborMinutesPerUnit);
     return {

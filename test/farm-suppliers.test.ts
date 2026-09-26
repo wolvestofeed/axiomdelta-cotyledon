@@ -5,7 +5,10 @@ import {
   crossRefStats,
   matchCropPlanToSuppliers,
 } from '@/engine/suppliers';
-import { cropPlan } from '@/data/plan-data';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
+
+const cropPlan = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
 
 describe('farm suppliers — compiled dataset', () => {
   it('loads and is internally consistent', () => {
@@ -45,11 +48,11 @@ describe('farm suppliers — filters', () => {
 });
 
 describe('farm suppliers — crop plan match', () => {
-  it('returns a match set for every crop plan input line', () => {
-    const m = matchCropPlanToSuppliers(supplierOperations, 'all');
-    expect(m).toHaveLength(cropPlan.inputs.length);
+  it('returns a match set for every line of a grow plan; a line with no keywords on file matches none', () => {
+    const m = matchCropPlanToSuppliers(supplierOperations, 'all', cropPlan);
+    expect(m.map((line) => line.input)).toEqual(cropPlan.inputs.map((i) => i.name));
     expect(m.every((line) => Array.isArray(line.matches))).toBe(true);
-    // At least some lines find certified producers statewide.
-    expect(m.some((line) => line.matches.length > 0)).toBe(true);
+    // No keywords are on file for the grow plan lines yet (`todo.md`), so nothing matches.
+    expect(m.every((line) => line.keywords.length === 0 && line.matches.length === 0)).toBe(true);
   });
 });

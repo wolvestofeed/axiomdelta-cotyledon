@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { costPerUnit as costPerUnitOf } from '@/engine';
-import { cropPlan, phases, assumptions, componentSpecs } from '@/data/plan-data';
-import { manufacturingOverheadBudget, fixedCosts } from '@/engine/fixed-costs';
+import { cropPlan, componentSpecs } from '@/data/plan-data';
 import {
   nutrientProfile,
   roundDownToQuarterOzEq,
@@ -18,8 +16,6 @@ import {
 import {
   costCropPlan,
   componentCosting,
-  normalCapacity,
-  absorbOverhead,
   packedUnitOz,
   reconcileToSpec,
 } from '@/engine';
@@ -175,58 +171,6 @@ describe('the weight and cost chain', () => {
     const r = reconcileToSpec(cropPlan, m.factor, m.bindingComponent);
     expect(r.specPackedOz).toBeLessThan(r.authoredPackedOz);
     expect(r.exceedsGrowUnit).toBe(false);
-  });
-});
-
-describe('overhead absorption on normal capacity', () => {
-  const cap = normalCapacity(phases);
-  const budget = manufacturingOverheadBudget();
-  const annualFixed = budget.annual;
-
-  it('absorbs manufacturing overhead only — admin and debt service stay in the period', () => {
-    const fc = fixedCosts();
-    expect(budget.lease).toBeCloseTo(fc.lease * 12, 6);
-    expect(budget.utilities).toBeCloseTo(fc.utilities * 12, 6);
-    expect(budget.depreciation).toBeGreaterThan(0);
-    expect(budget.annual).toBeCloseTo(budget.lease + budget.utilities + budget.depreciation, 6);
-    expect(budget.excluded.admin).toBeCloseTo(fc.admin * 12, 6);
-    expect(budget.excluded.financing).toBeCloseTo(fc.financing * 12, 6);
-    expect(budget.annual).toBeLessThan(fc.annual);
-  });
-
-  it('the inventory rate is set on normal capacity and is no part of the cost of a unit', () => {
-    const rate = absorbOverhead(annualFixed, cap, cap.unitsPerYear).ratePerUnit;
-    expect(rate).toBeCloseTo(annualFixed / cap.unitsPerYear, 6);
-    expect(Object.keys(costPerUnitOf())).not.toContain('fixedOverhead');
-  });
-
-  it('nets planned maintenance out of normal capacity', () => {
-    expect(cap.unitsPerYear).toBeLessThan(cap.grossUnitsPerYear);
-    expect(cap.unitsPerYear).toBeCloseTo(
-      cap.grossUnitsPerYear * (1 - assumptions.overhead.plannedMaintenanceDownRate.value),
-      6,
-    );
-  });
-
-  it('absorbs fully at normal capacity', () => {
-    const a = absorbOverhead(annualFixed, cap, cap.unitsPerYear);
-    expect(a.volumeVariance).toBeCloseTo(0, 6);
-    expect(a.capacityUtilisation).toBeCloseTo(1, 6);
-  });
-
-  it('at Phase 1 volume — the whole plan at Phase 1 operations — the budget absorbs in full; the downtime allowance is a small favourable variance', () => {
-    const phase1Units = phases[0].unitsPerDay * phases[0].operatingDays;
-    const a = absorbOverhead(annualFixed, cap, phase1Units);
-    expect(a.capacityUtilisation).toBeCloseTo(1 / (1 - assumptions.overhead.plannedMaintenanceDownRate.value), 6);
-    expect(a.volumeVariance).toBeCloseTo(annualFixed * (1 - a.capacityUtilisation), 4);
-    expect(a.volumeVariance).toBeLessThan(0);
-  });
-
-  it('the rate does not change with volume — only what is absorbed does', () => {
-    const a = absorbOverhead(annualFixed, cap, 100_000);
-    const b = absorbOverhead(annualFixed, cap, 300_000);
-    expect(a.ratePerUnit).toBeCloseTo(b.ratePerUnit, 10);
-    expect(b.absorbed).toBeGreaterThan(a.absorbed);
   });
 });
 

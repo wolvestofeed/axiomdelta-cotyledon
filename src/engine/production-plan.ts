@@ -923,22 +923,3 @@ export function singleCropPlanRun(input: {
     contributionPerUnit: input.units > 0 ? contribution / input.units : 0,
   };
 }
-
-/** The blackout rack ceiling per crop plan — sowing sizes differ with mass, first loads with sow times. */
-export function ceilingByCropPlan(cropPlans: readonly CropPlanDef[], capacityInputs: CapacityInputs): { cropPlanCode: string; cropPlanName: string; status: CropPlanDef['status']; sowingSize: number; canopyMassPerUnit: number; maxUnitsPerDay: number; cyclesPerDay: number; sowToBlackoutMinutes: number | null; firstLoadMin: number | null; stageGaps: number }[] {
-  return cropPlans.map((r) => {
-    const cap = deriveCapacity(r, capacityInputs, 1);
-    return {
-      cropPlanCode: r.code,
-      cropPlanName: r.name,
-      status: r.status,
-      sowingSize: cap.sowingSize,
-      canopyMassPerUnit: cap.canopyMassPerUnit,
-      maxUnitsPerDay: cap.maxUnitsPerDay,
-      cyclesPerDay: cap.cyclesPerDay,
-      sowToBlackoutMinutes: cap.stage.sowToBlackoutMinutes,
-      firstLoadMin: cap.blackoutWindow.firstLoadBasis === 'none' ? null : cap.blackoutWindow.startMin,
-      stageGaps: cap.stage.gaps.length,
-    };
-  });
-}

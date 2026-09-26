@@ -3,16 +3,20 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { seedLibrary } from '@/data/crop-plans-seed';
-import { assumptions, capacityInputs } from '@/data/plan-data';
+import { assumptions } from '@/data/plan-data';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { resolveScenarioInputs as resolveLibrary } from '@/engine/scenario';
 import { costToServe, deriveCapacity } from '@/engine';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeCropPlanAverages, sowingElapsedMinutes } from '@/engine/active-averages';
 import type { TimeStudyDoc } from '@/data/time-studies';
 
+const seedLibrary = growPlanSeed.map((p) => projectCropPlan(p));
+const capacityInputs = resolveLibrary({}, seedLibrary).capacityInputs;
 const seeded: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
   id: `s${i}`, cropPlanCode: r.code, adoptedAt: null, adoptedBy: null, source: 'seed',
-  ...estimatedTimeStudy(r, deriveCapacity(r, capacityInputs).sowingSize),
+  ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, capacityInputs).sowingSize)),
 }));
 
 describe('farm dashboard — averages over the active crop plans', () => {
@@ -25,9 +29,9 @@ describe('farm dashboard — averages over the active crop plans', () => {
 
   it('each crop plan is on its own sowing and its own standard; the averages are the plain mean', () => {
     const a = activeCropPlanAverages(seedLibrary, capacityInputs, assumptions, seeded);
-    const e002 = a.cropPlans.find((r) => r.code === 'AMK-E-002')!;
-    expect(e002.sowing).toBe(deriveCapacity(seedLibrary.find((r) => r.code === 'AMK-E-002')!, capacityInputs).sowingSize);
-    expect(e002.laborBasis).toBe('estimated');
+    const broc = a.cropPlans.find((r) => r.code === 'BROC-01')!;
+    expect(broc.sowing).toBe(deriveCapacity(seedLibrary.find((r) => r.code === 'BROC-01')!, capacityInputs).sowingSize);
+    expect(broc.laborBasis).toBe('estimated');
     expect(a.onEstimate).toBe(a.count);
     expect(a.withoutStudy).toBe(0);
     expect(a.inputCostPerUnit).toBeCloseTo(a.cropPlans.reduce((s, r) => s + r.inputCostPerUnit, 0) / a.count, 10);

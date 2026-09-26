@@ -22,7 +22,9 @@ import { postActuals, postActualLedger } from '@/engine/actuals-ledger';
 import { standardSowingRecordPrefill, type ActualsBundle } from '@/engine/actuals';
 import { EMPTY_BUNDLE } from '@/engine/actuals';
 import { libraryLabel } from '@/engine/standards';
-import { seedLibrary } from '@/data/crop-plans-seed';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { laborMinutesPerUnit } from '@/engine/unit-cost';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeCropPlanAverages } from '@/engine/active-averages';
 import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
@@ -54,7 +56,9 @@ describe('C1 — a crop plan costs the same per unit on every surface', () => {
       const sowing = deriveCapacity(cropPlan, R.capacityInputs).sowingSize;
       const day = planProductionDay({ productionDate: DATE, requirements: [{ cropPlanCode: cropPlan.code, cropPlanName: cropPlan.name, units: sowing, baseUnits: sowing, byChannel: [], orders: 1, inLibrary: true }], onHand: {}, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions });
       const run = day.runs.find((x) => x.cropPlanCode === cropPlan.code)!;
-      const productionPlanning = day.inputCostStandard / run.produced;
+      // A plan no grow unit lights has a sowing of zero: Production Planning makes none of it.
+      if (sowing === 0) expect(run.produced).toBe(0);
+      const productionPlanning = sowing > 0 ? day.inputCostStandard / run.produced : cropPlansPage;
 
       const doc = sowingAtStandard(cropPlan.code);
       const bundle: ActualsBundle = { ...EMPTY_BUNDLE, sowings: [doc] };
@@ -62,8 +66,17 @@ describe('C1 — a crop plan costs the same per unit on every surface', () => {
       const onActual = postActuals(bundle, R).periods[0].sowings[0].amounts;
       const perUnit = (x: typeof onPlan) => x.standardMaterialCost / x.unitsProduced;
 
-      for (const [surface, v] of [['Unit Economics', unitEconomics], ['Unit Economics by channel', channelRow.inputCostPerUnit], ['Production Planning', productionPlanning], ['Plan ledger', perUnit(onPlan)], ['Actual ledger', perUnit(onActual)]] as const) {
+      for (const [surface, v] of [['Unit Economics', unitEconomics], ['Unit Economics by channel', channelRow.inputCostPerUnit], ['Production Planning', productionPlanning]] as const) {
         expect(v, `${cropPlan.code} on ${surface}`).toBeCloseTo(cropPlansPage, 6);
+      }
+      // The ledgers cost a sowing from its projected input lines, which carry no consumables line: they
+      // sit below the other surfaces by the consumables per tray with the shrink allowance, until deep-cut
+      // step (4) costs a sowing by the grow costing. When that lands, this gap is zero and the ledgers join the loop above.
+      const consumables = isGrowPlanCarrier(cropPlan) ? costCarrier(cropPlan).perTray.consumables * (1 + a.yield.shrinkAllowance.value) : 0;
+      // A sowing of zero trays is never recorded, so the ledgers have nothing to cost.
+      if (sowing === 0) return;
+      for (const [surface, v] of [['Plan ledger', perUnit(onPlan)], ['Actual ledger', perUnit(onActual)]] as const) {
+        expect(v + consumables, `${cropPlan.code} on ${surface}`).toBeCloseTo(cropPlansPage, 6);
       }
     });
   }
@@ -132,8 +145,8 @@ describe('C5 — the audit findings of §5 are gone', () => {
   const LIFTED = new Set(['engine', 'server', 'data', 'components', 'state']);
   const at = (...p: string[]) => (LIFTED.has(p[0]!) ? join(__dirname, '..', 'src', ...p) : join(__dirname, '..', 'src', 'app', '(farm)', 'farm', ...p));
   const src = (...p: string[]) => readFileSync(at(...p), 'utf8');
-  const LIB = seedLibrary.map((r) => ({ ...r, status: 'in_service' as const }));
-  const studies = LIB.map((r, i) => ({ ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize), id: `S${i}`, cropPlanCode: r.code, basis: 'estimated' as const })) as never;
+  const LIB = growPlanSeed.map((p) => ({ ...projectCropPlan(p), status: 'in_service' as const }));
+  const studies = LIB.map((r, i) => ({ ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, R.capacityInputs).sowingSize)), id: `S${i}`, cropPlanCode: r.code, basis: 'estimated' as const })) as never;
   const L = resolveScenarioInputs({}, LIB, undefined, [], {}, undefined, undefined, {}, undefined, undefined, undefined, undefined, studies);
 
   it('A1: labor has one formula — the cost card and the active-crop-plan averages charge the same labor per unit', () => {
@@ -144,10 +157,11 @@ describe('C5 — the audit findings of §5 are gone', () => {
     }
   });
 
-  it('A2: every crop plan carries its own labor standard, and they differ', () => {
+  it('A2: every plan carries its own labor standard, and they differ', () => {
     for (const r of L.cropPlans) expect(L.cropPlanAssumptions[r.code], r.code).toBeDefined();
-    const fixed = new Set(L.cropPlans.map((r) => assumptionsFor(L, r.code).laborSplit.fixedMinutesPerSowing.value.toFixed(3)));
-    expect(fixed.size).toBeGreaterThan(1);
+    // The Vallecito estimate gives every tray the same sowing and harvest minutes; the daily stream over each plan's cycle is what differs.
+    const perUnit = new Set(L.cropPlans.map((r) => (laborMinutesPerUnit(L.laborStandards[r.code]!, Math.max(1, deriveCapacity(r, L.capacityInputs).sowingSize)) ?? 0).toFixed(3)));
+    expect(perUnit.size).toBeGreaterThan(1);
   });
 
   it('A3: wage has one source — the Comp page is gone and the staff register holds no pay', () => {

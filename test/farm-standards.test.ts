@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { cropPlan, assumptions } from '@/data/plan-data';
+import { assumptions } from '@/data/plan-data';
 import { deriveCapacity } from '@/engine';
 import { resolveScenarioInputs, inputKey, assumptionsFor } from '@/engine/scenario';
 import { standardSowingRecordPrefill, type ActualsBundle, type SowingRecordDoc } from '@/engine/actuals';
 import { postActuals } from '@/engine/actuals-ledger';
 import { standardInForce, standardHistory, nextStandardVersion, standardDiffers, standardLabel, libraryLabel, type StandardVersionDoc } from '@/engine/standards';
 
-const sowingSize = deriveCapacity(cropPlan).sowingSize;
-// What an approval freezes since Roadmap N3: the crop plan at its OWN assumptions —
-// its labor standard and packaging — from the resolved plan, not the typed
-// shared ones every crop plan used to share.
+// What an approval freezes since Roadmap N3: the plan at its OWN assumptions — its labor
+// standard and packaging — from the resolved plan, on the seed grow plans' reference plan.
 const R0 = resolveScenarioInputs();
+const cropPlan = R0.cropPlan;
+const sowingSize = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
 const ownAssumptions = assumptionsFor(R0, cropPlan.code);
 const version = (n: number, effectiveFrom: string, over: Partial<StandardVersionDoc> = {}): StandardVersionDoc => ({
   id: `s${n}`, cropPlanCode: cropPlan.code, version: n, effectiveFrom, approvedBy: 'cpa@example.com', approvedAt: `${effectiveFrom}T09:00:00.000Z`, notes: null,
@@ -32,13 +32,13 @@ describe('approved standard versions (Roadmap J5)', () => {
     expect(standardInForce(versions, cropPlan.code, '2026-08-01')?.version).toBe(1);
     expect(standardInForce(versions, cropPlan.code, '2026-09-14')?.version).toBe(1);
     expect(standardInForce(versions, cropPlan.code, '2026-09-15')?.version).toBe(3);
-    expect(standardInForce(versions, 'AMK-E-999', '2026-09-15')).toBeNull();
+    expect(standardInForce(versions, 'NONE-99', '2026-09-15')).toBeNull();
   });
 
   it('history is newest first, the next version number follows the highest, labels are code@vN', () => {
     expect(standardHistory(versions, cropPlan.code).map((v) => v.version)).toEqual([3, 2, 1]);
     expect(nextStandardVersion(versions, cropPlan.code)).toBe(4);
-    expect(nextStandardVersion(versions, 'AMK-E-999')).toBe(1);
+    expect(nextStandardVersion(versions, 'NONE-99')).toBe(1);
     expect(standardLabel(versions[0]!)).toBe(`${cropPlan.code}@v1`);
     expect(libraryLabel(cropPlan.code)).toBe(`${cropPlan.code}@library`);
   });

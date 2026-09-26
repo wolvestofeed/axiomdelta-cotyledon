@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { cropPlan as seed } from '@/data/plan-data';
 import { resolveScenarioInputs, inputKey } from '@/engine/scenario';
 import { cropPlanToRows, rowsToCropPlan, referenceCropPlan, isGrowPlanCode, type LibraryCropPlan } from '@/engine/crop-plan-library';
 import { growPlanSeed } from '@/data/grow-plans-seed';
@@ -19,11 +18,12 @@ const lib = (code: string, status: LibraryCropPlan['status'] = 'in_service'): Li
 };
 
 describe('scenario resolver with a library', () => {
-  it('defaults to the code seed when no library is given', () => {
+  it('defaults to the seed grow plans when no library is given, the first In Service the reference', () => {
     const r = resolveScenarioInputs();
-    expect(r.cropPlans).toHaveLength(1);
-    expect(r.cropPlan.code).toBe(seed.code);
-    expect(isGrowPlanCode(seed.code)).toBe(false);
+    expect(r.cropPlans.map((x) => x.code)).toEqual(growPlanSeed.map((p) => p.code));
+    expect(r.cropPlans.every((x) => isGrowPlanCode(x.code))).toBe(true);
+    expect(r.cropPlan.code).toBe(growPlanSeed.find((p) => p.status === 'in_service')?.code ?? growPlanSeed[0]!.code);
+    expect(resolveScenarioInputs({}, []).cropPlans.map((x) => x.code)).toEqual(r.cropPlans.map((x) => x.code));
   });
 
   it('carries every library plan and picks the first In Service as the reference', () => {

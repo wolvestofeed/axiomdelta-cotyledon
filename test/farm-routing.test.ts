@@ -1,176 +1,95 @@
 /**
- * MicroFarm — the process route per crop plan, the units as resources and the
- * scheduler's scenario sections (scheduler build plan §0, W0 steps 3 and 4).
+ * MicroFarm — the process route per plan, the units as resources and the scheduler's scenario
+ * sections (scheduler build plan §0, W0 steps 3 and 4), on the seed grow plans.
  */
 
 import { describe, it, expect } from 'vitest';
 import { equipmentSeed } from '@/data/capex';
-import { capacityInputs } from '@/data/plan-data';
-import { seedLibrary } from '@/data/crop-plans-seed';
-import { timeStudySeed, TIME_STUDY_SEED_CROP_PLAN, type TimeStudyDoc } from '@/data/time-studies';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
-import { deriveRoute, routeDepths, routeOrder, routeOverlayFor, routeKey, routeResources, stepDuration, stepLaborMinutes } from '@/engine/routing';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { deriveRoute, routeDepths, routeOrder, routeOverlayFor, routeKey, routeResources } from '@/engine/routing';
 import { isEmptyConfig, resolveScenarioInputs, SCENARIO_SECTIONS } from '@/engine/scenario';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 
-const byCode = (code: string) => seedLibrary.find((r) => r.code === code)!;
+const lib = growPlanSeed.map((p) => projectCropPlan(p));
+const cap = resolveScenarioInputs({}, lib).capacityInputs;
+const byCode = (code: string) => lib.find((r) => r.code === code)!;
 const standardFor = (code: string): TimeStudyDoc => {
   const r = byCode(code);
-  const seed = code === TIME_STUDY_SEED_CROP_PLAN ? timeStudySeed : estimatedTimeStudy(r, deriveCapacity(r, capacityInputs).sowingSize);
-  return { id: `s-${code}`, cropPlanCode: code, adoptedAt: null, adoptedBy: null, source: 'seed', ...seed };
+  return { id: `s-${code}`, cropPlanCode: code, adoptedAt: null, adoptedBy: null, source: 'seed', ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, cap).sowingSize)) };
 };
 const route = (code: string, overlay?: Parameters<typeof deriveRoute>[0]['overlay']) => deriveRoute({ cropPlan: byCode(code), standard: standardFor(code), equipment: equipmentSeed, overlay });
 const step = (r: ReturnType<typeof route>, id: string) => r.steps.find((s) => s.id === id)!;
+const aResource = routeResources(equipmentSeed)[0]!.key;
 
-describe('farm routing — a route for every crop plan', () => {
-  it('derives a route from every crop plan’s standard, one step a line, in an order every edge respects', () => {
-    for (const r of seedLibrary) {
+describe('farm routing — a route for every plan', () => {
+  it('derives a route from every plan\'s standard: one step a sowing or harvest line, in an order every edge respects, the daily lines left to the calendar', () => {
+    for (const r of lib) {
       const rt = route(r.code);
-      expect(rt.steps).toHaveLength(standardFor(r.code).lines.length);
+      expect(rt.steps).toHaveLength(standardFor(r.code).lines.filter((l) => l.stream !== 'daily').length);
       expect(rt.order).not.toBeNull();
       expect(new Set(rt.steps.map((s) => s.id)).size).toBe(rt.steps.length);
       expect(rt.findings.filter((f) => f.kind === 'unclassified-line' || f.kind === 'cycle' || f.kind === 'unknown-predecessor')).toEqual([]);
-      expect(rt.steps.filter((s) => s.kind === 'blackout').map((s) => s.stream)).toEqual(['sowing']);
+      expect(rt.steps.some((s) => s.kind === 'blackout')).toBe(false);
+      expect(rt.steps.every((s) => s.resourceKey === null)).toBe(true);
       // No edge crosses the streams.
       for (const s of rt.steps) for (const a of s.after) expect(step(rt, a).stream).toBe(s.stream);
     }
   });
 
-  it('the plan’s own study for AMK-E-001 classifies every line', () => {
-    const rt = route('AMK-E-001');
-    expect(rt.steps.some((s) => s.kind === 'other')).toBe(false);
-    expect(rt.findings).toEqual([]);
-    expect(rt.steps.filter((s) => s.kind === 'sow').every((s) => s.resourceKey !== null)).toBe(true);
-  });
-});
-
-describe('farm routing — precedence off the kinds', () => {
-  const rt = route('AMK-E-002');
-
-  it('sowing: receiving → scaling → prep → sow, the sows alongside each other, the blackout after every sow, the turnaround after the blackout', () => {
-    expect(step(rt, 'receiving').after).toEqual([]);
-    expect(step(rt, 'scaling').after).toEqual(['receiving']);
-    expect(step(rt, 'prep:Spanish rice').after).toEqual(['scaling']);
-    expect(step(rt, 'sow:Beef & bean mix').after).toEqual(['prep:Beef & bean mix']);
-    expect(step(rt, 'sow:Spanish rice').after).toEqual(['prep:Spanish rice']);
-    expect(step(rt, 'blackout').after.sort()).toEqual(['sow:Beef & bean mix', 'sow:Spanish rice']);
-    expect(step(rt, 'turnaround').after).toEqual(['blackout']);
-  });
-
-  it('harvest: cold assemblies from staged components → assemble → seal → check at pack → load', () => {
-    expect(step(rt, 'cold:Pico & corn').after).toEqual([]);
-    expect(step(rt, 'assemble').after).toEqual(['cold:Pico & corn']);
-    expect(step(rt, 'seal').after).toEqual(['assemble']);
-    expect(step(rt, 'pack-check').after).toEqual(['seal']);
-    expect(step(rt, 'load').after).toEqual(['pack-check']);
-  });
-
-  it('resources come off the stage map and the Phase 1 list', () => {
-    expect(step(rt, 'sow:Beef & bean mix').resourceKey).toBe('Tilting braising pan / shelf, 40 gal');
-    expect(step(rt, 'sow:Spanish rice').resourceKey).toBe('Steam-jacketed tilting sprouting rack, 100 gal');
-    expect(step(rt, 'blackout').resourceKey).toBe('Blackout rack, 200 lb capacity');
-    expect(step(rt, 'prep:Spanish rice').resourceKey).toBe('Vertical cutter mixer, 45 qt');
-    expect(step(rt, 'seal').resourceKey).toBe('Tray sealer, semi-automatic');
-    expect(step(rt, 'assemble').resourceKey).toBeNull();
-    expect(rt.findings).toEqual([]);
-  });
-
-  it('minutes: a fixed line is setup, a per-unit line runs per unit at the sowing studied', () => {
-    const sowing = rt.sowingSize;
-    const blackout = step(rt, 'blackout');
-    expect(blackout.setupMinutes).toBe(0);
-    expect(stepDuration(blackout, sowing)).toBeCloseTo(25, 10);
-    expect(stepLaborMinutes(blackout, sowing)).toBeCloseTo(50, 10);
-    expect(stepDuration(step(rt, 'receiving'), 999)).toBe(30);
-    expect(step(rt, 'load')).toMatchObject({ setupMinutes: 10, runMinutesPerUnit: 0, stream: 'harvest' });
-    expect(blackout.attended).toBe(true);
-  });
-
-  it('a tended sow is not attended for its run', () => {
-    const smoked = route('AMK-E-003').steps.find((s) => s.id === 'sow:Smoked chicken')!;
-    expect(smoked.attended).toBe(false);
-  });
-});
-
-describe('farm routing — report, never repair', () => {
-  it('a sow with no process on file names no grow unit and says so', () => {
-    const rt = route('AMK-E-007');
-    expect(step(rt, 'sow:Black beans').resourceKey).toBeNull();
-    expect(rt.findings).toContainEqual(expect.objectContaining({ kind: 'no-resource', stepId: 'sow:Black beans' }));
-  });
-
-  it('an overnight process is carried as a prior-day step and reported against the no-overnight rule', () => {
-    const rt = route('AMK-E-009');
-    expect(step(rt, 'sow:Pulled pork').priorDay).toBe(true);
-    expect(rt.findings).toContainEqual(expect.objectContaining({ kind: 'overnight-process', stepId: 'sow:Pulled pork' }));
-  });
-
-  it('a crop plan with no study has no route', () => {
-    const rt = deriveRoute({ cropPlan: byCode('AMK-E-002'), standard: null, equipment: equipmentSeed });
+  it('a plan with no study has no route', () => {
+    const rt = deriveRoute({ cropPlan: byCode('BROC-01'), standard: null, equipment: equipmentSeed });
     expect(rt.steps).toEqual([]);
     expect(rt.findings.map((f) => f.kind)).toEqual(['no-study']);
-  });
-
-  it('a sow whose grow unit is not on the Phase 1 list is reported, not moved', () => {
-    const noShelf = equipmentSeed.map((e) => (/^Tilting braising pan/.test(e.item) ? { ...e, status: 'no' as const } : e));
-    const rt = deriveRoute({ cropPlan: byCode('AMK-E-002'), standard: standardFor('AMK-E-002'), equipment: noShelf });
-    expect(step(rt, 'sow:Beef & bean mix').resourceKey).toBeNull();
-    expect(rt.findings).toContainEqual(expect.objectContaining({ kind: 'no-resource', stepId: 'sow:Beef & bean mix' }));
   });
 });
 
 describe('farm routing — the scenario edits a step', () => {
   it('moves an edge, a crew size or a resource and marks the step edited', () => {
-    const rt = route('AMK-E-002', { blackout: { after: ['sow:Spanish rice'] }, seal: { staff: 3, setupMinutes: 5 }, 'sow:Spanish rice': { resourceKey: 'Jar stand oven, full size 20-pan' } });
-    expect(step(rt, 'blackout')).toMatchObject({ after: ['sow:Spanish rice'], edited: true });
-    expect(step(rt, 'seal')).toMatchObject({ staff: 3, setupMinutes: 5, edited: true });
-    expect(step(rt, 'sow:Spanish rice').resourceKey).toBe('Jar stand oven, full size 20-pan');
-    expect(step(rt, 'assemble').edited).toBe(false);
+    const rt = route('BROC-01', { 'sow#5': { after: ['prep#1'] }, 'harvest#7': { staff: 3, setupMinutes: 5 }, 'prep#2': { resourceKey: aResource } });
+    expect(step(rt, 'sow#5')).toMatchObject({ after: ['prep#1'], edited: true });
+    expect(step(rt, 'harvest#7')).toMatchObject({ staff: 3, setupMinutes: 5, edited: true });
+    expect(step(rt, 'prep#2').resourceKey).toBe(aResource);
+    expect(step(rt, 'harvest#6').edited).toBe(false);
     expect(rt.findings).toEqual([]);
   });
 
   it('an unknown predecessor, an unknown step, an unknown resource and a cycle are reported; the edges stand as edited', () => {
-    const rt = route('AMK-E-002', { load: { after: ['nope'] }, ghost: { staff: 1 }, seal: { resourceKey: 'Nothing on the list' }, receiving: { after: ['turnaround'] } });
+    const rt = route('BROC-01', { 'harvest#8': { after: ['nope'] }, ghost: { staff: 1 }, 'harvest#7': { resourceKey: 'Nothing on the list' }, 'prep#1': { after: ['sow#5'] } });
     const kinds = rt.findings.map((f) => f.kind);
     expect(kinds).toContain('unknown-predecessor');
     expect(kinds).toContain('unknown-resource');
     expect(kinds).toContain('cycle');
     expect(rt.order).toBeNull();
-    expect(step(rt, 'receiving').after).toEqual(['turnaround']);
+    expect(step(rt, 'prep#1').after).toEqual(['sow#5']);
   });
 
   it('routeOrder takes the ready step with the lowest study position', () => {
     expect(routeOrder([{ id: 'b', seq: 2, after: [] }, { id: 'a', seq: 1, after: ['b'] }, { id: 'c', seq: 3, after: [] }])).toEqual(['b', 'a', 'c']);
   });
 
-  it('the routing section is keyed by crop plan and step', () => {
-    const routing = { [routeKey('AMK-E-002', 'seal')]: { staff: 3 }, [routeKey('AMK-E-003', 'seal')]: { staff: 4 } };
-    expect(routeOverlayFor(routing, 'AMK-E-002')).toEqual({ seal: { staff: 3 } });
+  it('the routing section is keyed by plan and step', () => {
+    const routing = { [routeKey('BROC-01', 'harvest#7')]: { staff: 3 }, [routeKey('PEA-01', 'harvest#7')]: { staff: 4 } };
+    expect(routeOverlayFor(routing, 'BROC-01')).toEqual({ 'harvest#7': { staff: 3 } });
   });
 });
 
-describe('farm routing — precedence depth, the process map’s columns', () => {
-  const rt = route('AMK-E-002');
-  const depths = routeDepths(rt.steps);
+describe('farm routing — precedence depth, the process map\'s columns', () => {
+  const depths = routeDepths(route('BROC-01').steps);
 
   it('a step sits one column past its deepest predecessor, within its own stream', () => {
-    expect(depths.get('receiving')).toBe(0);
-    expect(depths.get('scaling')).toBe(1);
-    expect(depths.get('prep:Spanish rice')).toBe(2);
-    expect(depths.get('sow:Spanish rice')).toBe(3);
-    expect(depths.get('blackout')).toBe(4);
-    expect(depths.get('turnaround')).toBe(5);
+    for (const id of ['prep#1', 'prep#2', 'prep#3', 'prep#4']) expect(depths.get(id)).toBe(0);
+    expect(depths.get('sow#5')).toBe(1);
   });
 
-  it('the sows share a column, and the harvest stream starts again at zero', () => {
-    expect(depths.get('sow:Beef & bean mix')).toBe(depths.get('sow:Spanish rice'));
-    expect(depths.get('cold:Pico & corn')).toBe(0);
-    expect(depths.get('assemble')).toBe(1);
-    expect(depths.get('load')).toBe(4);
+  it('the harvest stream starts again at zero and runs in a chain', () => {
+    expect(['harvest#6', 'harvest#7', 'harvest#8'].map((id) => depths.get(id))).toEqual([0, 1, 2]);
   });
 
   it('a cycle leaves the steps at a depth rather than looping', () => {
-    const cyclic = route('AMK-E-002', { receiving: { after: ['turnaround'] } });
+    const cyclic = route('BROC-01', { 'prep#1': { after: ['sow#5'] } });
     const d = routeDepths(cyclic.steps);
     expect(d.size).toBe(cyclic.steps.length);
     expect([...d.values()].every((x) => Number.isFinite(x))).toBe(true);
@@ -199,7 +118,7 @@ describe('farm scenario — the scheduler’s sections', () => {
   it('routing, resources and schedulePolicy are sections of a saved scenario', () => {
     expect(SCENARIO_SECTIONS).toEqual(expect.arrayContaining(['routing', 'resources', 'schedulePolicy']));
     expect(isEmptyConfig({ schedulePolicy: {} })).toBe(true);
-    expect(isEmptyConfig({ routing: { [routeKey('AMK-E-002', 'seal')]: { staff: 3 } } })).toBe(false);
+    expect(isEmptyConfig({ routing: { [routeKey('BROC-01', 'harvest#7')]: { staff: 3 } } })).toBe(false);
   });
 
   it('resolves the schedule policy defaults, tagged, and the scenario’s edits onto them', () => {
@@ -207,25 +126,22 @@ describe('farm scenario — the scheduler’s sections', () => {
     expect(d.distributionTimeMin).toMatchObject({ value: 630, status: 'PLACEHOLDER' });
     expect(d.closedownStaff).toMatchObject({ value: 2, status: 'STATED' });
     expect(d.closedownMinutes).toMatchObject({ value: 30, status: 'STATED' });
-    expect(d.allowUnattendedBlackout.value).toBe(false);
-    const e = resolveScenarioInputs({ schedulePolicy: { distributionTimeMin: 660, allowUnattendedBlackout: true, priorityRule: 'longest-path' } }).schedulePolicy;
+    const e = resolveScenarioInputs({ schedulePolicy: { distributionTimeMin: 660, priorityRule: 'longest-path' } }).schedulePolicy;
     expect(e.distributionTimeMin.value).toBe(660);
-    expect(e.allowUnattendedBlackout.value).toBe(true);
     expect(e.priorityRule.value).toBe('longest-path');
     expect(resolveScenarioInputs().schedulePolicy.distributionTimeMin.value).toBe(630);
   });
 
   it('resolves the resources off the equipment, with the scenario’s edits', () => {
-    const r = resolveScenarioInputs({ resources: { 'Tilting braising pan / shelf, 40 gal': { concurrentSowings: 2 } } });
-    expect(r.resources.find((x) => x.key === 'Blackout rack, 200 lb capacity')!.changeoverMinutes.value).toBe(0);
-    expect(r.resources.find((x) => x.key === 'Tilting braising pan / shelf, 40 gal')!.concurrentSowings).toMatchObject({ value: 2, status: 'STATED' });
+    const r = resolveScenarioInputs({ resources: { [aResource]: { concurrentSowings: 2 } } });
+    expect(r.resources.find((x) => x.key === aResource)!.concurrentSowings).toMatchObject({ value: 2, status: 'STATED' });
   });
 
   it('carries the routing edits for the routes to read', () => {
-    const routing = { [routeKey('AMK-E-002', 'blackout')]: { after: ['sow:Spanish rice'] } };
+    const routing = { [routeKey('BROC-01', 'sow#5')]: { after: ['prep#1'] } };
     const r = resolveScenarioInputs({ routing });
     expect(r.routing).toEqual(routing);
-    const rt = deriveRoute({ cropPlan: byCode('AMK-E-002'), standard: standardFor('AMK-E-002'), equipment: r.equipment, overlay: routeOverlayFor(r.routing, 'AMK-E-002') });
-    expect(step(rt, 'blackout').after).toEqual(['sow:Spanish rice']);
+    const rt = deriveRoute({ cropPlan: byCode('BROC-01'), standard: standardFor('BROC-01'), equipment: r.equipment, overlay: routeOverlayFor(r.routing, 'BROC-01') });
+    expect(step(rt, 'sow#5').after).toEqual(['prep#1']);
   });
 });

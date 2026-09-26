@@ -7,9 +7,10 @@ import { describe, it, expect } from 'vitest';
 import { equipmentSeed } from '@/data/capex';
 import { newCrew } from '@/data/crews';
 import { capacityInputs } from '@/data/plan-data';
-import { seedLibrary } from '@/data/crop-plans-seed';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { tagged } from '@/data/tagged';
-import { timeStudySeed, TIME_STUDY_SEED_CROP_PLAN, type TimeStudyDoc } from '@/data/time-studies';
+import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
 import { routeOrder, routeResources, type CropPlanRoute, type RouteResource, type RouteStep } from '@/engine/routing';
 import { resolveScenarioInputs, type SchedulePolicyOverlay } from '@/engine/scenario';
@@ -206,77 +207,27 @@ describe('farm scheduler — priority rules are a policy input', () => {
   });
 });
 
-describe('farm scheduler — the crop plan library', () => {
+describe('farm scheduler — the plan library', () => {
+  const lib = growPlanSeed.map((p) => projectCropPlan(p));
+  const R = resolveScenarioInputs({}, lib);
   const studyFor = (code: string): TimeStudyDoc => {
-    const r = seedLibrary.find((x) => x.code === code)!;
-    const seed = code === TIME_STUDY_SEED_CROP_PLAN ? timeStudySeed : estimatedTimeStudy(r, deriveCapacity(r, capacityInputs).sowingSize);
-    return { id: `s-${code}`, cropPlanCode: code, adoptedAt: null, adoptedBy: null, source: 'seed', ...seed };
+    const r = lib.find((x) => x.code === code)!;
+    return { id: `s-${code}`, cropPlanCode: code, adoptedAt: null, adoptedBy: null, source: 'seed', ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize) };
   };
-  const R = resolveScenarioInputs({});
 
   it('labor reconciles to staff demand for the same day, from the same time studies', () => {
-    const code = 'AMK-E-002';
+    const code = 'BROC-01';
     const studies = [studyFor(code)];
-    const size = deriveCapacity(seedLibrary.find((x) => x.code === code)!, capacityInputs).sowingSize;
+    const size = deriveCapacity(lib.find((x) => x.code === code)!, R.capacityInputs).sowingSize;
     const runs = [{ cropPlanCode: code, cropPlanName: code, sowingsScheduled: 2, produced: 2 * size }];
-    const shipments = [{ cropPlanCode: code, filledBase: 125 }];
-    const inputs = scheduleInputsForDay({ productionRuns: runs, shipments, cropPlans: seedLibrary, studies, equipment: equipmentSeed, routing: {} });
-    const r = schedule({ date: '2027-02-01', sowings: inputs.sowings, dispatches: inputs.dispatches, resources: routeResources(equipmentSeed), crews: [], capacityInputs, policy: R.schedulePolicy });
-    const demand = staffDemand({ from: '2027-02-01', to: '2027-02-01', studies, days: [{ productionDate: '2027-02-01', runs }], harvest: [{ date: '2027-02-01', shipments: [{ cropPlanCode: code, cropPlanName: code, units: 125 }] }] });
+    const shipments = [{ cropPlanCode: code, filledBase: 20 }];
+    const inputs = scheduleInputsForDay({ productionRuns: runs, shipments, cropPlans: lib, studies, equipment: equipmentSeed, routing: {} });
+    const r = schedule({ date: '2027-02-01', sowings: inputs.sowings, dispatches: inputs.dispatches, resources: routeResources(equipmentSeed), crews: [], capacityInputs: R.capacityInputs, policy: R.schedulePolicy });
+    const demand = staffDemand({ from: '2027-02-01', to: '2027-02-01', studies, days: [{ productionDate: '2027-02-01', runs }], harvest: [{ date: '2027-02-01', shipments: [{ cropPlanCode: code, cropPlanName: code, units: 20 }] }] });
     expect(r.metrics.sowingsPlaced).toBe(2);
     expect(r.metrics.laborHours).toBeCloseTo(demand.days[0]!.staffHours, 9);
     expect(r.metrics.sowingLaborHours).toBeCloseTo(demand.days[0]!.sowingStaffHours, 9);
     expect(r.metrics.harvestLaborHours).toBeCloseTo(demand.days[0]!.harvestStaffHours, 9);
-  });
-
-  // The rated day for AMK-E-001 on a given equipment list: five sowings of the one-rack sowing size.
-  const ratedDay = (equipment: typeof equipmentSeed) => {
-    const code = 'AMK-E-001';
-    const size = deriveCapacity(seedLibrary.find((x) => x.code === code)!, capacityInputs).sowingSize;
-    const inputs = scheduleInputsForDay({ productionRuns: [{ cropPlanCode: code, sowingsScheduled: 5, produced: 5 * size }], cropPlans: seedLibrary, studies: [studyFor(code)], equipment, routing: {} });
-    const r = schedule({ date: '2027-02-01', sowings: inputs.sowings, dispatches: [], resources: routeResources(equipment), crews: [], capacityInputs, policy: R.schedulePolicy });
-    const loads = r.blocks.filter((b) => b.kind === 'rack-load').sort((a, b) => a.startMin - b.startMin);
-    return { r, inputs, loads, size };
-  };
-  const oneRack = equipmentSeed.map((e) => (/^Blackout rack/.test(e.item) ? { ...e, qty: 1 } : e));
-
-  it('AMK-E-001 on one rack: the rated day’s five sowings placed one after another, every sow done by its load, no control-point-2 breach', () => {
-    const { r, inputs, loads } = ratedDay(oneRack);
-    expect(r.metrics.sowingsPlaced).toBe(5);
-    expect(loads).toHaveLength(5);
-    for (let i = 1; i < loads.length; i++) expect(loads[i]!.startMin).toBeGreaterThanOrEqual(loads[i - 1]!.startMin + 125 - 1e-9);
-    for (const l of loads) {
-      const sows = r.blocks.filter((b) => b.orderId === l.orderId && b.kind === 'step' && inputs.routes[0]!.steps.find((s) => s.id === b.stepId)?.kind === 'sow');
-      expect(sows.length).toBeGreaterThan(0);
-      for (const c of sows) expect(c.endMin).toBeLessThanOrEqual(l.startMin + 1e-9);
-    }
-    expect(r.violations.filter((v) => v.kind === 'control-point-cooling-stage')).toEqual([]);
-    expect(r.metrics.bindingResourceKey).toBe('Blackout rack, 200 lb capacity');
-  });
-
-  it('the two Phase 1 racks are two slots: the same five sowings, the same sowing size, at most two racks occupied at once, the day done sooner', () => {
-    // A sowing binds to one rack; a second rack is a parallel stream, never a larger sowing.
-    const one = ratedDay(oneRack);
-    const two = ratedDay(equipmentSeed);
-    expect(two.size).toBe(one.size);
-    expect(two.r.metrics.sowingsPlaced).toBe(5);
-    expect(two.loads).toHaveLength(5);
-    // Never a third occupancy inside any 125-minute rack window: two slots, each serial.
-    for (let i = 2; i < two.loads.length; i++) expect(two.loads[i]!.startMin).toBeGreaterThanOrEqual(two.loads[i - 2]!.startMin + 125 - 1e-9);
-    // And the racks do run alongside each other: at least one pair of loads closer than one occupancy.
-    expect(two.loads.some((l, i) => i > 0 && l.startMin < two.loads[i - 1]!.startMin + 125)).toBe(true);
-    const last = (loads: typeof one.loads) => Math.max(...loads.map((l) => l.startMin));
-    expect(last(two.loads)).toBeLessThan(last(one.loads));
-    expect(two.r.violations.filter((v) => v.kind === 'control-point-cooling-stage')).toEqual([]);
-  });
-
-  it('an overnight sow is reported as a prior-day step and not placed', () => {
-    const code = 'AMK-E-009';
-    const size = deriveCapacity(seedLibrary.find((x) => x.code === code)!, capacityInputs).sowingSize;
-    const inputs = scheduleInputsForDay({ productionRuns: [{ cropPlanCode: code, sowingsScheduled: 1, produced: size }], cropPlans: seedLibrary, studies: [studyFor(code)], equipment: equipmentSeed, routing: {} });
-    const r = schedule({ date: '2027-02-01', sowings: inputs.sowings, dispatches: [], resources: routeResources(equipmentSeed), crews: [], capacityInputs, policy: R.schedulePolicy });
-    expect(r.violations.find((v) => v.kind === 'prior-day-step')).toMatchObject({ stepId: 'sow:Pulled pork' });
-    expect(r.blocks.some((b) => b.stepId === 'sow:Pulled pork')).toBe(false);
   });
 
   it('the schedule policy resolves crew mode and harvest direction, tagged', () => {

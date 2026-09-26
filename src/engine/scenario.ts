@@ -22,7 +22,6 @@ import {
   assumptions as defaultAssumptions,
   capacityInputs as defaultCapacityInputs,
   cropPlan as defaultCropPlan,
-  cropPlans as seedCropPlans,
   type CropPlanDef,
   phases as defaultPhases,
   phaseProfiles as defaultPhaseProfiles,
@@ -40,7 +39,11 @@ import type { TimeStudyDoc } from '@/data/time-studies';
 import { sowingGrowUnitsFrom } from '@/engine/equipment';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, ratedDaySlots, newCrewDefaultsFor } from '@/engine/staffing';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+
+/** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
+const seedCropPlans: readonly CropPlanDef[] = growPlanSeed.map((p) => projectCropPlan(p));
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price';
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
@@ -494,7 +497,7 @@ function put<T>(target: { value: T }, override: T | undefined): void {
  */
 export function resolveScenarioInputs(
   config: FarmScenarioConfig = {},
-  /** The crop plan library. Omitted = the seed list (tests, engine defaults). */
+  /** The crop plan library. Omitted = the seed grow plans (tests, engine defaults). */
   library: readonly CropPlanDef[] = seedCropPlans,
   /** The subscriber library. Omitted = the seed placeholders built from the channel constants. */
   subscribers: readonly SubscriberDef[] = seedSubscribers(),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cropPlan, phases } from '@/data/plan-data';
+import { phases } from '@/data/plan-data';
 import { componentCosting, deriveCapacity } from '@/engine';
 import {
   addMonths,
@@ -278,9 +278,12 @@ describe('K3 — the forecast year’s outstanding shares', () => {
 });
 
 describe('Phase K — actuals', () => {
-  const sowingSize = deriveCapacity(cropPlan).sowingSize;
+  // A sowing of the seed grow plans' reference plan, the plan the ledger resolves by default.
+  const R0 = resolveScenarioInputs();
+  const cropPlan = R0.cropPlan;
+  const sowingSize = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
   const k = componentCosting(cropPlan);
-  const lines = k.flatMap((c) => c.lines.map((l) => ({ input: l.name, qty: (l.seedQtyPerSowing * sowingSize) / 100, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.seedUnitCost * 100) })));
+  const lines = k.flatMap((c) => c.lines.map((l) => ({ input: l.name, qty: (l.seedQtyPerSowing * sowingSize) / cropPlan.sowingUnits, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.seedUnitCost * 100) })));
   const r1: ReceiptDoc = { ...receipt('r1', lines, null), receivedOn: '2027-02-02' };
   const pre = standardSowingRecordPrefill('2027-02-03', 1, sowingSize, cropPlan);
   const base: ActualsBundle = {

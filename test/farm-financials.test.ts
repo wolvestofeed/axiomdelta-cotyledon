@@ -5,20 +5,10 @@ import {
   fixedCosts,
   phaseEconomics,
 } from '@/engine/financials';
-import { costPerUnit, deriveCapacity, laborForDay } from '@/engine';
-import { assumptions as planAssumptions } from '@/data/plan-data';
+import { costPerUnit, costPerUnit as costPerUnitOf, deriveCapacity, laborForDay, normalCapacity, absorbOverhead } from '@/engine';
+import { assumptions as planAssumptions, assumptions, phases } from '@/data/plan-data';
+import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { resolveScenarioInputs } from '@/engine/scenario';
-
-// The equal-distribution share at the defaults: the reference crop plan AMK-E-001
-// loads at 07:55 (growing from 07:00; its brown rice, 55 min, is its longest sow
-// on file), 4 cycles to the 19:00 close on the Phase 1 line — one 200 lb blast
-// blackout rack, a 275 sowing = 1,100 a day × 261 production days (2026 weekdays,
-// no closure entered) = 287,100 base units of capacity against 461,406
-// base-unit equivalents of demand. Phase 1 operations:
-// all planned volume is prospects — 1,000 a day over 180 days = 180,000 units —
-// which fits, so every channel is produced in full.
-const ANNUAL_CAPACITY = 1_100 * 261;
-const DEMAND_BASE = 180_000;
 
 describe('farm financials — per-phase economics', () => {
   it('Phase 1 is the base; Phase 2/3 units are 1.5×', () => {
@@ -31,12 +21,14 @@ describe('farm financials — per-phase economics', () => {
     const e = phaseEconomics();
     expect(e[1].inputCostPerUnit).toBeCloseTo(e[0].inputCostPerUnit * 1.5, 6);
   });
-  it('unit factor shrinks sowing size and daily ceiling', () => {
+  it('the sowing is what one grow unit takes in trays, whatever the channel\'s unit factor', () => {
     const e = phaseEconomics();
-    expect(e[0].sowingSize).toBe(275);
-    expect(e[0].maxUnitsPerDay).toBe(1375); // 5 cycles: the 07:55–19:00 window ÷ 125-min occupancy
-    expect(e[1].sowingSize).toBe(175); // 200 lb / (0.6841 × 1.5) → 194.9 → floor 25
-    expect(e[1].maxUnitsPerDay).toBe(875);
+    const R = resolveScenarioInputs();
+    const cap = deriveCapacity(R.cropPlan, R.capacityInputs);
+    for (const p of e) {
+      expect(p.sowingSize).toBe(cap.grow!.sowingTrays);
+      expect(p.maxUnitsPerDay).toBe(cap.grow!.sowingTrays * cap.grow!.unitCount);
+    }
   });
   it('the cost of a unit is food + labor + packaging: no distribution and no fixed cost (operating-model §3.5)', () => {
     const e = phaseEconomics()[0];
@@ -85,3 +77,55 @@ describe('farm financials — capex rollup', () => {
   });
 });
 
+describe('overhead absorption on normal capacity', () => {
+  const cap = normalCapacity(phases);
+  const budget = manufacturingOverheadBudget();
+  const annualFixed = budget.annual;
+
+  it('absorbs manufacturing overhead only — admin and debt service stay in the period', () => {
+    const fc = fixedCosts();
+    expect(budget.lease).toBeCloseTo(fc.lease * 12, 6);
+    expect(budget.utilities).toBeCloseTo(fc.utilities * 12, 6);
+    expect(budget.depreciation).toBeGreaterThan(0);
+    expect(budget.annual).toBeCloseTo(budget.lease + budget.utilities + budget.depreciation, 6);
+    expect(budget.excluded.admin).toBeCloseTo(fc.admin * 12, 6);
+    expect(budget.excluded.financing).toBeCloseTo(fc.financing * 12, 6);
+    expect(budget.annual).toBeLessThan(fc.annual);
+  });
+
+  it('the inventory rate is set on normal capacity and is no part of the cost of a unit', () => {
+    const rate = absorbOverhead(annualFixed, cap, cap.unitsPerYear).ratePerUnit;
+    expect(rate).toBeCloseTo(annualFixed / cap.unitsPerYear, 6);
+    const R = resolveScenarioInputs();
+    expect(Object.keys(costPerUnitOf(R.cropPlan, R.assumptions, R.capacityInputs))).not.toContain('fixedOverhead');
+  });
+
+  it('nets planned maintenance out of normal capacity', () => {
+    expect(cap.unitsPerYear).toBeLessThan(cap.grossUnitsPerYear);
+    expect(cap.unitsPerYear).toBeCloseTo(
+      cap.grossUnitsPerYear * (1 - assumptions.overhead.plannedMaintenanceDownRate.value),
+      6,
+    );
+  });
+
+  it('absorbs fully at normal capacity', () => {
+    const a = absorbOverhead(annualFixed, cap, cap.unitsPerYear);
+    expect(a.volumeVariance).toBeCloseTo(0, 6);
+    expect(a.capacityUtilisation).toBeCloseTo(1, 6);
+  });
+
+  it('at Phase 1 volume — the whole plan at Phase 1 operations — the budget absorbs in full; the downtime allowance is a small favourable variance', () => {
+    const phase1Units = phases[0].unitsPerDay * phases[0].operatingDays;
+    const a = absorbOverhead(annualFixed, cap, phase1Units);
+    expect(a.capacityUtilisation).toBeCloseTo(1 / (1 - assumptions.overhead.plannedMaintenanceDownRate.value), 6);
+    expect(a.volumeVariance).toBeCloseTo(annualFixed * (1 - a.capacityUtilisation), 4);
+    expect(a.volumeVariance).toBeLessThan(0);
+  });
+
+  it('the rate does not change with volume — only what is absorbed does', () => {
+    const a = absorbOverhead(annualFixed, cap, 100_000);
+    const b = absorbOverhead(annualFixed, cap, 300_000);
+    expect(a.ratePerUnit).toBeCloseTo(b.ratePerUnit, 10);
+    expect(b.absorbed).toBeGreaterThan(a.absorbed);
+  });
+});

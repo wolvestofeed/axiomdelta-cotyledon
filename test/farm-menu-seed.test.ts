@@ -1,20 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { menuCropPlans, adultCropPlans, seedLibrary, MENU_CODES, ADULT_CODES, adultVariant, studentProteinOz, ADULT_UPGRADE_PLACEHOLDER, ADULT_PROTEIN_TARGET_OZ, UNIT_PROTEIN } from '@/data/crop-plans-seed';
-import { seedSubscribers, planSeedSubscribers, CURRENT_PROSPECT_UNITS_PER_DAY } from '@/data/subscribers';
-import { dbSeedSubscribers } from '@/server/seed-writes';
-import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { pickupPoints } from '@/data/seed-invented';
-import { capacityInputs, phaseProfiles } from '@/data/plan-data';
+import { capacityInputs } from '@/data/plan-data';
 import { deriveCapacity, costCropPlan, canopyMassPerUnit, packedUnitOz } from '@/engine';
 import { creditCropPlan, creditableLines } from '@/engine/nutrition';
-import { resolveSubscriberPickupPoints, channelDemand } from '@/engine/demand';
-import { orderBook, cycleCropPlanOn, datesBetween } from '@/engine/orders';
-import { requirementsFor, planProductionDay, planHorizon, unitFactorFor } from '@/engine/production-plan';
-import { resolveScenarioInputs } from '@/engine/scenario';
+import { unitFactorFor } from '@/engine/production-plan';
 
-const MON = '2026-09-14';
-const R = resolveScenarioInputs({}, seedLibrary);
-const PF = Object.fromEntries(phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
 
 describe('the ten-unit menu as library rows', () => {
   it('is ten student crop plans on Subscriptions and ten adult variants on the other two channels, the code crop plan last', () => {
@@ -125,75 +115,5 @@ describe('the ten-unit menu as library rows', () => {
     // Every price on the menu is a placeholder except the two cited lines.
     const cited = menuCropPlans.flatMap((r) => r.inputs).filter((l) => l.status === 'SOURCED').map((l) => l.name);
     expect(new Set(cited)).toEqual(new Set(['Ground beef, regenerative', 'Pinto beans, dry']));
-  });
-});
-
-describe('the Plan seed: one contracted subscriber, prospects carrying no volume', () => {
-  it('the engine default reproduces the operating model constants and neutral test names', () => {
-    const c = seedSubscribers();
-    expect(c.map((x) => x.name)).toEqual(['Test Subscriber #1', 'Test Subscriber #2', 'Test Subscriber #3']);
-    expect(c.every((x) => x.status === 'prospect')).toBe(true);
-    expect(c[0].pickupPoints.map((s) => s.expectedUnitsPerDay)).toEqual([492, 277, 231]);
-    expect(pickupPoints.map((s) => s.name)).toEqual(['Test Pickup point 1', 'Test Pickup point 2', 'Test Pickup point 3', 'Test Pickup point 4']);
-    expect(c[2].pickupPoints[0].name).toBe('Test Pickup point 5');
-  });
-
-  it('the database seeds the contracted subscriber at its stated 125 units a day and every prospect at zero', () => {
-    const plan = planSeedSubscribers();
-    expect(CURRENT_PROSPECT_UNITS_PER_DAY).toBe(125);
-    const contracted = plan.filter((c) => c.status === 'contracted');
-    expect(contracted).toHaveLength(1);
-    expect(contracted[0].channel).toBe(1);
-    expect(contracted[0].pickupPoints.flatMap((x) => x.services).map((sv) => sv.picks.at(-1)?.units)).toEqual([125]);
-    // The prospect's term dates are not on file: the pickup point carries no calendar rather than an invented one.
-    expect(contracted[0].pickupPoints.every((x) => x.calendar.length === 0)).toBe(true);
-    expect(contracted[0].notes).toContain('125');
-    // The name was never given, and the row says so rather than carrying one.
-    expect(contracted[0].name).toContain('not on file');
-    expect(contracted[0].pricePerUnitCents).toBeNull();
-    expect(contracted[0].paymentTerms).toBeNull();
-    for (const c of plan.filter((x) => x.status === 'prospect')) {
-      expect(c.pickupPoints.flatMap((x) => x.services).every((sv) => sv.picks.every((pk) => pk.units === 0))).toBe(true);
-    }
-    expect(plan.every((c) => c.source === 'seed')).toBe(true);
-    expect(dbSeedSubscribers()).toEqual(plan);
-  });
-
-  it('demand splits contracted from planned, and the Plan seed is contracted only', () => {
-    const d = channelDemand(planSeedSubscribers());
-    expect(d.byChannel[1].unitsPerDay).toBe(125);
-    expect(d.byChannel[1].contractedUnitsPerDay).toBe(125);
-    expect(d.byChannel[1].contractedSubscribers).toBe(1);
-    // No term on file: every Monday-to-Friday of the forecast year from 2027-01-01, the pick carried forward.
-    const weekdays2027 = datesBetween('2027-01-01', '2027-12-31').filter((x) => { const w = new Date(`${x}T00:00:00Z`).getUTCDay(); return w >= 1 && w <= 5; }).length;
-    expect(d.totalAnnualUnits).toBe(125 * weekdays2027);
-    expect(d.contractedAnnualUnits).toBe(d.totalAnnualUnits);
-    // The engine default is all prospects: every unit in it is planned volume.
-    const e = channelDemand(seedSubscribers());
-    expect(e.contractedAnnualUnits).toBe(0);
-    expect(e.byChannel[1].contractedUnitsPerDay).toBe(0);
-  });
-
-  it('every production day of a two-week horizon fits the blackout rack', () => {
-    const subscribers = planSeedSubscribers();
-    const saved = seedSubscriptionCycles(seedLibrary, MON);
-    const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
-    // The stated volume takes effect 2026-09-15, so the fortnight runs to the Monday that returns to day 1.
-    const to = '2026-09-28';
-    const book = orderBook({ pickupPoints: resolveSubscriberPickupPoints(subscribers), subscribers, cycles, orders: [], from: MON, to, channelPriceCents: { 1: 1000, 2: 1500, 3: 1600 } });
-    expect(new Set(book.map((o) => o.cropPlanCode)).size).toBe(10); // the student menu only: the adult channels have no planned volume
-    for (const d of datesBetween(MON, to)) {
-      const reqs = requirementsFor(book.filter((o) => o.orderDate === d), R.cropPlans, PF);
-      const plan = planProductionDay({ productionDate: d, requirements: reqs, onHand: {}, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions });
-      expect(plan.fits).toBe(true);
-      if (reqs.length) {
-        expect(reqs).toHaveLength(1); // the student menu only
-        expect(plan.runs.every((r) => r.sowingsNeeded <= 1)).toBe(true);
-        expect(plan.totalRequired).toBeLessThanOrEqual(CURRENT_PROSPECT_UNITS_PER_DAY);
-      }
-    }
-    const h = planHorizon({ from: MON, to, book, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, unitFactorByChannel: PF, openingLots: [], shelfLifeDays: 30 });
-    expect(h.totals.daysThatDoNotFit).toBe(0);
-    expect(h.totals.filledUnits).toBeCloseTo(h.totals.orderedUnits, 6);
   });
 });

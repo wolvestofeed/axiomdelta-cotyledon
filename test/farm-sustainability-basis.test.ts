@@ -4,10 +4,15 @@ import { standardSowingRecordPrefill, type ActualsBundle, type DistributionDoc }
 import { expiredMassKg, mixFoodFootprint, receivedMassKg, sustainabilityBasis } from '@/engine/sustainability-basis';
 import { energyFromReadings, serviceFromRecords, waterFromReadings, type ReadingDoc } from '@/engine/sustainability-records';
 import { cropPlanFoodFootprint } from '@/engine/carbon';
+import { leadDaysFor } from '@/engine/grow-calendar';
+import { isoAddDays } from '@/engine/orders';
 
 const R = resolveScenarioInputs({});
 const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
 const channel = cropPlan.channels[0];
+const seedName = cropPlan.inputs.find((i) => i.unit === 'lb')!.name;
+// A grow sowing is stock from its first harvest day: each lot ships on its harvest date.
+const harvest = (sown: string) => isoAddDays(sown, leadDaysFor(cropPlan));
 const pf = Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
 
 const sowing = (date: string, units: number) => ({ ...standardSowingRecordPrefill(date, 1, units, cropPlan as never), id: `B-${date}`, closedAt: date });
@@ -15,14 +20,14 @@ const distribution = (date: string, units: number, over: Partial<DistributionDoc
 
 describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
   const bundle: Pick<ActualsBundle, 'sowings' | 'receipts' | 'distributions'> = {
-    sowings: [sowing('2025-12-30', 100), sowing('2026-03-02', 500), sowing('2026-06-01', 300)],
+    sowings: [sowing('2025-12-01', 100), sowing('2026-03-02', 500), sowing('2026-06-01', 300)],
     receipts: [
       { id: 'R1', poId: null, supplierId: null, supplierName: null, receivedOn: '2026-03-01', invoiceNumber: null, invoiceTotalCents: 0, receivedBy: null, notes: null, lines: [
-        { input: 'Pinto beans, dry', qty: 50, unit: 'lb', lotCode: 'L1', unitPriceCents: 100 },
-        { input: 'Pinto beans, dry', qty: 20, unit: 'lb', lotCode: 'L2', unitPriceCents: 100, condition: 'rejected' },
+        { input: seedName, qty: 50, unit: 'lb', lotCode: 'L1', unitPriceCents: 100 },
+        { input: seedName, qty: 20, unit: 'lb', lotCode: 'L2', unitPriceCents: 100, condition: 'rejected' },
       ] },
     ],
-    distributions: [distribution('2025-12-31', 100), distribution('2026-03-03', 400), distribution('2026-03-04', 100, { cropPlanCode: null, pickupPointId: 'pickup-point-02', pickupPointName: 'Test Pickup point 2' })],
+    distributions: [distribution(harvest('2025-12-01'), 100), distribution(harvest('2026-03-02'), 400), distribution(isoAddDays(harvest('2026-03-02'), 1), 100, { cropPlanCode: null, pickupPointId: 'pickup-point-02', pickupPointName: 'Test Pickup point 2' })],
   };
   const basis = sustainabilityBasis({ kind: 'actual', bundle, from: '2026-01-01', to: '2026-12-31', shelfLifeDays: 30, cropPlans: R.cropPlans, unitFactorByChannel: pf });
 
@@ -34,12 +39,12 @@ describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
     expect(basis.unitsWithNoCropPlan).toBe(100);
     expect(basis.units.find((m) => m.cropPlanCode === cropPlan.code)!.units).toBe(400);
     expect(basis.byPickupPoint.map((s) => [s.pickupPointId, s.units, s.distributionDays])).toEqual([['pickup-point-01', 400, 1], ['pickup-point-02', 100, 1]]);
-    expect(basis.received).toEqual([{ input: 'Pinto beans, dry', unit: 'lb', qty: 50 }]);
+    expect(basis.received).toEqual([{ input: seedName, unit: 'lb', qty: 50 }]);
     expect(receivedMassKg(basis)[0].massKg).toBeCloseTo(50 * 0.45359237, 9);
   });
 
   it('names units that passed shelf life unshipped inside the window', () => {
-    // 500 made 03-02, 400 shipped 03-03 → 100 expire 04-01; 300 made 06-01 expire 07-01. Nothing after.
+    // 500 sown 03-02, 400 shipped at harvest → 100 expire 30 days after it; 300 sown 06-01 expire 30 days after their harvest. Nothing after.
     expect(basis.expiredByCropPlan[cropPlan.code]).toBeCloseTo(400, 9);
     expect(expiredMassKg(basis, R.cropPlans).units).toBeCloseTo(400, 9);
   });
