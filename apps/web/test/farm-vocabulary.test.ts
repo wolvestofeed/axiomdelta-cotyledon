@@ -44,7 +44,13 @@ const ALLOWED = new Set([
   'apps/web/test/farm-vocabulary.test.ts',
   'CLAUDE.md', // names the origin and the words themselves
   'docs/roadmap.md', // names the origin
-  'docs/roadmaps/phase-', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-0-lift.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-1-swap-and-tenancy.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-2-growing-domain.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-3-subscriptions-and-distribution.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-4-staffing.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-5-facility-and-sustainability.md', // the phase roadmaps name what each phase replaced
+  'docs/roadmaps/phase-6-software-as-a-product.md', // the phase roadmaps name what each phase replaced
   'docs/todo.md', // names the origin
 ]);
 
