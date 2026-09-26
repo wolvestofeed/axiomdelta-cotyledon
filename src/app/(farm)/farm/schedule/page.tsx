@@ -8,7 +8,7 @@ import { withWorkspace } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
-/** Schedule (Roadmap O3): two weeks of production staff demand, and the operating day with the blackout rack tasks. */
+/** Schedule (Roadmap O3): two weeks of production staff demand on the three labor streams, and the operating day. */
 export default async function SchedulePage() {
   return withWorkspace(() => SchedulePageInner());
 }

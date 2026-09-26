@@ -140,47 +140,10 @@ export const facility = {
 } as const;
 
 export const capacityInputs = {
-  // One blackout rack rack's load. A sowing binds to ONE unit of each grow unit
-  // it passes through — a second rack is a parallel stream, never a larger
-  // sowing — so no unit count multiplies this. Read from
-  // the equipment library at run time (`sowingGrowUnitsFrom`); this is the
-  // fallback when no library is in hand. Planned build-outs never count
-  //. The former `blackoutRackUnits` input is retired.
-  capacityPerUnitLb: t(200, 'PLACEHOLDER', 'lb/cycle', 'Estimated — the rated load in the item name; an open field on Equipment'),
-
-  // Blackout rack OCCUPANCY per sowing = load + blackout + unload. Only the blackout stage is
-  // an equipment rating; load and unload are handling time. The engine sums them
-  // (`blackoutRackOccupancyMinutes`) and divides the blackout window by the SUM — never
-  // by the blackout stage alone, which would load and unload the rack in zero
-  // minutes. Sowing size does not depend on any of these: it comes off mass.
-  // The rack is NOT sanitized between sowings: it is
-  // sanitized at the end of a shift or day, immediately after a food spill, and
-  // between foods when allergens were uncovered. Defrosting is periodic
-  // maintenance to keep the unit running efficiently, never part of production.
-  loadMinutes: t(
-    25,
-    'PLACEHOLDER',
-    'min',
-    'Pouring the finished sow into 2-inch hotel pans and loading the rack — an estimate. Starts the minute the sow ends.',
-  ),
-  blackoutMinutes: t(
-    90,
-    'PLACEHOLDER',
-    'min',
-    'The rated thermodynamic cycle: 160°F to 38°F in 90 minutes or less at rated load, industry convention — an EQUIPMENT rating. The REGULATORY limit is a different measurement: FDA Food Code 3-501.14, 135°F to 70°F within 2 h and to 41°F within 6 h total (control-point-2). This is the only element the cooling limit applies to. Replace from the equipment spec sheet.',
-  ),
-  unloadMinutes: t(
-    10,
-    'PLACEHOLDER',
-    'min',
-    'Out of the rack to cold hold. Seeded from the time-study task "Cold hold to harvest" (10 min elapsed, 1 staff). No published figure exists.',
-  ),
-
-  // The OPERATING DAY is how the business chooses to run the plant, not who is
-  // on the schedule. Capacity comes off the equipment, the process minutes and
-  // this window. Labor is DERIVED from the plan as a requirement and a proposed
-  // crew register is checked against it (`_engine/staffing.ts`) — a crew never
-  // caps the ceiling.
+  // The OPERATING DAY is how the business chooses to run the facility, not who is
+  // on the schedule. Capacity comes off the grow units; labor is DERIVED from the
+  // plan as a requirement and a proposed crew register is checked against it
+  // (`staffing.ts`) — a crew never caps the ceiling.
   operatingOpenMin: t(
     420,
     'PLACEHOLDER',
@@ -191,32 +154,16 @@ export const capacityInputs = {
     1140,
     'PLACEHOLDER',
     'min from midnight',
-    'Working presumption 19:00 for the two-shift day; nothing is stated. Every rack cycle counted in the daily ceiling is loaded, blackout and unloaded inside the operating day.',
+    'Working presumption 19:00 for the two-shift day; nothing is stated.',
   ),
 
-  // Headcount each blackout rack task needs at the same moment. The labor requirement
-  // places these on the clock; they size the requirement, never the ceiling.
-  loadStaff: t(2, 'PLACEHOLDER', 'people', 'Seeded from the time-study task "Component blackout and stage" (2 staff). The time study is an estimate, not an observation.'),
-  unloadStaff: t(1, 'PLACEHOLDER', 'people', 'Seeded from the time-study task "Cold hold to harvest" (1 staff).'),
-
-  sowingRoundingUnits: 25, // floor sowing size to the nearest 25 units
-  // Annual production capacity = daily ceiling × the days the farm produces.
-  // Grow decouples production from service, so the annual check — not the
-  // same-day stack of every channel — is what decides whether the phase volumes
-  // in the P&L are producible at all.
+  // The days the farm sows in a year.
   productionDaysPerYear: t(
     261,
     'DERIVED',
     'days/year',
     'The production calendar (Roadmap J1): the Monday–Friday production weekdays of the plan year less the dated closures entered on Actuals. 261 is 2026 with no closure entered; the resolver recounts it from the loaded closures. Service days per channel are separate (prospect 180, corporate 250, retail 333).',
   ),
-} as const;
-
-// Non-blackout-rack capacities, shown for comparison only (blackout rack treated as binding).
-export const otherCapacities = {
-  jarStandOvenPanPositions: t(40, 'PLACEHOLDER', 'pans'),
-  tiltingShelfGal: t(80, 'PLACEHOLDER', 'gal'),
-  sproutingRackGal: t(160, 'PLACEHOLDER', 'gal', '100 gal + 60 gal'),
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -372,7 +319,7 @@ export interface PhaseRow {
   operatingDays: number;
   /**
    * Share of this channel's demand that is produced and sold, 0–1. `null` means
-   * the default: the same share for every channel, set by what the blackout rack can
+   * the default: the same share for every channel, set by what the grow units can
    * make against total demand (equal distribution). A typed value is the
    * operator's allocation. The engine reports over-allocation; it does not
    * refuse it.

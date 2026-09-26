@@ -341,7 +341,7 @@ export async function insertSubscriptionCycles(db: SeedDb, cycles: readonly Subs
  * The database's subscriber seed (Roadmap N1): the one contracted subscriber at its
  * stated 125 units a day, and a prospect per channel carrying no volume. The
  * crop plan library is no longer read for it — seeded demand is what is
- * contracted, not what the blackout rack could hold.
+ * contracted, not what the grow units could hold.
  */
 export function dbSeedSubscribers(): SubscriberDef[] {
   return planSeedSubscribers();

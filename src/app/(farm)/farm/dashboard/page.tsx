@@ -47,7 +47,7 @@ const DASHBOARD_PURPOSE = 'See today\'s plan, stock, capacity and anything that 
 const DASHBOARD_HOW = (
   <ul>
     <li>One facility produces grow units for Austin prospects.</li>
-    <li>Demand draws finished inventory, inventory triggers whole sowings, and the blackout rack sets the ceiling.</li>
+    <li>Demand draws finished inventory, inventory triggers whole sowings, and the grow units set the ceiling.</li>
     <li>Every tile traces to a module.</li>
   </ul>
 );
@@ -84,7 +84,6 @@ async function loadOperatingPicture() {
 
   // Plant figures across the active crop plans: each on its own sowing (Roadmap N9).
   const caps = active.map((r) => deriveCapacity(r, R.capacityInputs));
-  const cap = caps[0] ?? deriveCapacity(R.cropPlans[0], R.capacityInputs);
   const plant = { sowingSize: mean(caps.map((c) => c.sowingSize)), cyclesPerDay: mean(caps.map((c) => c.cyclesPerDay)), maxUnitsPerDay: mean(caps.map((c) => c.maxUnitsPerDay)) };
 
   // Today: the next production day from the order book on the selected world.
@@ -111,7 +110,7 @@ async function loadOperatingPicture() {
   const basis = await postSustainabilityBasis(kind, view.config);
   const mix = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: pf, selection: R.sustainability.inputBasis, options: [...curatedOptions, ...supplierOptions] });
   const foodCo2 = { perUnit: mean(foots.map((f) => f.totalKgCo2ePerUnit)), periodKg: mix.referenceKg, periodLabel: isPlan ? `forecast year from ${basis.from}` : `reporting year ${basis.from.slice(0, 4)}`, unmappedCropPlans: mix.cropPlansWithUnmappedLines.length, activeCount: active.length };
-  return { R, pos, cap, plant, day, foodCo2, closures, isPlan, cycles, orders };
+  return { R, pos, plant, day, foodCo2, closures, isPlan, cycles, orders };
 }
 
 type Picture = Awaited<ReturnType<typeof loadOperatingPicture>>;
@@ -351,7 +350,7 @@ async function AdminDashboard() {
 
 function dayNote(day: Picture['day']): string {
   if (!day.productionDate) return 'No order in the next two weeks on this world.';
-  return `Next production day ${day.productionDate}: ${num(day.sowings)} sowings · ${num(day.units)} units${day.shortfall > 0 ? ` · ${num(day.shortfall)} short of cycles` : ''} · ${coverText(day)}-day cover`;
+  return `Next production day ${day.productionDate}: ${num(day.sowings)} sowings · ${num(day.units)} units${day.shortfall > 0 ? ` · ${num(day.shortfall)} short: no room on a grow unit` : ''} · ${coverText(day)}-day cover`;
 }
 
 const isoAddDaysLocal = (iso: string, n: number): string => {
@@ -374,7 +373,7 @@ async function ownClock(staffId: string, calendar: PayCalendar) {
 async function OperatorDashboard({ staffId }: { staffId: string | null }) {
   const picture = await loadOperatingPicture();
   const own = staffId ? await ownClock(staffId, picture.R.payCalendar) : null;
-  const { pos, cap, plant, day } = picture;
+  const { pos, plant, day } = picture;
   const avgFood = activeCropPlanAverages(picture.R.cropPlans, picture.R.capacityInputs, picture.R.assumptions, [], picture.R.cropPlanAssumptions);
   const sup = supplierDataset.counts;
   const pipe = pipelineStats(prospectRecords);
@@ -384,9 +383,9 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       section: 'Production',
       stats: [
         { label: 'Input cost / unit, active average', value: money(avgFood.inputCostPerUnit) },
-        { label: 'Sowing, active average', value: num(plant.sowingSize) },
-        { label: 'Max units / day, average', value: num(plant.maxUnitsPerDay) },
-        { label: 'Blackout rack cycles / day', value: num(plant.cyclesPerDay, 1) },
+        { label: 'Sowing (trays), active average', value: num(plant.sowingSize) },
+        { label: 'Trays sown / day at most, average', value: num(plant.maxUnitsPerDay) },
+        { label: 'Grow units per plan, average', value: num(plant.cyclesPerDay, 1) },
       ],
       note: dayNote(day),
     },
@@ -439,7 +438,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       />
 
       <div className="farm-hero">
-        <HeroStat value={num(plant.sowingSize)} label="Sowing — active-crop-plan average" sub={`One rack's load each; ${num(cap.cyclesPerDay)} cycles a day on one rack`} />
+        <HeroStat value={num(plant.sowingSize)} label="Sowing — active-crop-plan average" sub={`Trays one grow unit takes; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
         <HeroStat value={coverText(day)} label="Days of cover" sub={`Finished stock over a distribution day's orders; ${picture.R.assumptions.inventory.blackoutShelfLife.value}-day shelf life`} />
         <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-crop-plan average, at standard" />

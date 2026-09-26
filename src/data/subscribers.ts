@@ -17,7 +17,7 @@
  *                           volume until a forecast is entered on its pickup points.
  *
  * Every seeded row is `source: 'seed'` and its note says what it is. Nothing
- * here is sized to the blackout rack: what the plant could make is a capacity figure,
+ * here is sized to the grow units: what the facility could make is a capacity figure,
  * not demand.
  */
 

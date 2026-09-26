@@ -297,7 +297,7 @@ const productionHistory: Builder = (ctx) => {
   return {
     summary: table([{ label: 'Month' }, { label: 'Sows', num: true }, { label: 'Rack loads', num: true }, { label: 'Units planned', num: true }, { label: 'Units packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap lb', num: true }, { label: 'Mass-balanced', num: true }], rows),
     detail: table([{ label: 'Date' }, { label: 'Sowing' }, { label: 'Crop plan' }, { label: 'Loads', num: true }, { label: 'Planned', num: true }, { label: 'Packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap lb', num: true }, { label: 'Mass balance' }], detail),
-    basis: `Sowing records on ${ctx.worldLabel}. A record is one sow and the sow is the lot; a double sowing is one record with two rack loads.`,
+    basis: `Sowing records on ${ctx.worldLabel}. A record is one plan's sowings on one sow day, and the sow is the lot.`,
     empty: sowings.length === 0 ? (selected.kind === 'plan' ? 'The forecast places no sowing.' : 'No sowing record has been closed.') : undefined,
   };
 };
@@ -308,9 +308,9 @@ const capacityUtilisation: Builder = (ctx) => {
   const summary = table([{ label: 'Measure' }, { label: 'Value', num: true }], [
     row(['Production days with a run', horizon.productionDays.length]),
     row(['Sowings', t.sowings]),
-    row(['Blackout rack cycles used', t.cyclesUsed]),
-    row(['Blackout rack cycles available on those days', t.cyclesAvailable]),
-    row(['Utilisation, cycles used over available', pct(t.utilisation, 0)]),
+    row(['Sowings started', t.cyclesUsed]),
+    row(['Sowing starts the grow units allow on those days', t.cyclesAvailable]),
+    row(['Utilisation, starts used over allowed', pct(t.utilisation, 0)]),
     row(['Days that do not fit', t.daysThatDoNotFit], t.daysThatDoNotFit > 0 ? 'over' : undefined),
     row(['Units ordered', num(t.orderedUnits)]),
     row(['Units filled', num(t.filledUnits)]),
@@ -318,12 +318,12 @@ const capacityUtilisation: Builder = (ctx) => {
     row(['Base units expired past shelf life', num(Math.round(t.expiredBase))], t.expiredBase > 0 ? 'over' : undefined),
     row(['Closing stock, base units', num(Math.round(t.closingStockBase))]),
   ]);
-  const detail = table([{ label: 'Date' }, { label: 'Sowings', num: true }, { label: 'Units made', num: true }, { label: 'Cycles used', num: true }, { label: 'Available', num: true }, { label: 'Utilisation', num: true }, { label: 'Ordered', num: true }, { label: 'Filled', num: true }, { label: 'Expired', num: true }, { label: 'Closing stock', num: true }, { label: 'Fits' }],
+  const detail = table([{ label: 'Date' }, { label: 'Sowings', num: true }, { label: 'Units made', num: true }, { label: 'Starts used', num: true }, { label: 'Starts allowed', num: true }, { label: 'Utilisation', num: true }, { label: 'Ordered', num: true }, { label: 'Filled', num: true }, { label: 'Expired', num: true }, { label: 'Closing stock', num: true }, { label: 'Fits' }],
     horizon.byDate.map((d) => row([d.date, d.sowings, num(Math.round(d.unitsProduced)), d.cyclesUsed, d.cyclesAvailable, d.sowings > 0 ? pct(d.utilisation, 0) : '—', num(Math.round(d.orderedBase)), num(Math.round(d.filledBase)), num(Math.round(d.expiredBase)), num(Math.round(d.closingStockBase)), d.fits ? 'Yes' : 'No'], d.fits ? undefined : 'over')));
   return {
     summary,
     detail,
-    basis: `The order book from ${horizonFrom} to ${horizonTo} on ${ctx.worldLabel}, rolled through production against the plant's blackout rack cycles. Whole sowings only.`,
+    basis: `The order book from ${horizonFrom} to ${horizonTo} on ${ctx.worldLabel}, rolled through production onto the grow units, each sowing held on its unit for its cycle. Whole sowings only.`,
     empty: horizon.byDate.length === 0 ? 'No order in the next two weeks on this world.' : undefined,
   };
 };

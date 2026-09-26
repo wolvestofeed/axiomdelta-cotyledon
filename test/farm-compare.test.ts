@@ -40,7 +40,7 @@ const overCapacity: ScheduleResult['violations'][number] = { kind: 'resource-ove
 
 describe('farm compare — the same day under two scenarios', () => {
   it('tables each measure with both sides and the difference', () => {
-    const c = compareDays({ label: 'Plan', result: result() }, { label: 'Two crews', result: result({ unitsPlaced: 1375, sowingsPlaced: 5, laborHours: 24, idleCrewHours: 2, crewHours: 36 }) }, 'Blackout rack, 200 lb capacity');
+    const c = compareDays({ label: 'Plan', result: result() }, { label: 'Two crews', result: result({ unitsPlaced: 1375, sowingsPlaced: 5, laborHours: 24, idleCrewHours: 2, crewHours: 36 }) });
     const row = (key: string) => c.rows.find((r) => r.key === key)!;
     expect(c.labelA).toBe('Plan');
     expect(c.labelB).toBe('Two crews');
@@ -76,14 +76,8 @@ describe('farm compare — the same day under two scenarios', () => {
     expect(compareDays({ label: 'A', result: result() }, { label: 'B', result: result() }).rows.some((r) => r.key === 'daily')).toBe(false);
   });
 
-  it('the blackout rack row appears only when the blackout rack is named, and reads its utilisation', () => {
-    const withKey = compareDays({ label: 'A', result: result() }, { label: 'B', result: result({ utilizationByResource: { 'Blackout rack, 200 lb capacity': 0.75 } }) }, 'Blackout rack, 200 lb capacity');
-    expect(withKey.rows.find((r) => r.key === 'blackout_rack')).toMatchObject({ a: 0.6, b: 0.75 });
-    expect(compareDays({ label: 'A', result: result() }, { label: 'B', result: result() }).rows.some((r) => r.key === 'blackout_rack')).toBe(false);
-  });
-
   it('two runs of the same scenario are identical', () => {
-    const c = compareDays({ label: 'A', result: result() }, { label: 'A', result: result() }, 'Blackout rack, 200 lb capacity');
+    const c = compareDays({ label: 'A', result: result() }, { label: 'A', result: result() });
     expect(c.identical).toBe(true);
     expect(c.rows.every((r) => r.delta === null || r.delta === 0)).toBe(true);
   });

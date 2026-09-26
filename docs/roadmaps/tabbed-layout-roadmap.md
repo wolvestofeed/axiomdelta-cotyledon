@@ -135,7 +135,7 @@ table names no risk for it. **Ledger** is the only such page and is converted.
 |---|---|---|
 | Crop plans | 4.9 | `CropPlanEditor` draft lives inside the Library card; `CropPlanSelector.setCode` (`router.replace`, no fragment) drops the hash; `SectionSave` inside the input-lines card; ⌘P prints one tab |
 | Capacity | 4.4 | Two `SectionSave`s both claim `capacity` — Revert in one tab discards the other's edits; selector drops the hash; every input in Plant inputs is read in three other tabs |
-| Production Planning | 3.8 / 3.4 | `SowingCloseForm` (12 fields) inside a tab; its Close button is in the Blackout rack card while §5 puts the form in Requirements; Distribution day and Horizon cards are shared controls not lifted; Horizon Summary is empty for an operator; five `?level=day` links, not four |
+| Production Planning | 3.8 / 3.4 | Distribution day and Horizon cards are shared controls not lifted; Horizon Summary is empty for an operator; five `?level=day` links, not four |
 | Actuals | 2.8 → 7 | `OpeningBalanceForm` rendered outside `ActualsClient`; two server cards need slots; `?period=` links drop the hash; `msg` spans three tabs |
 | Orders | 3.3 → 20 | `ShipForm` (lots, temperature, signature; posts revenue and COGS) and `FlatPlanForm` keep their draft inside the form |
 | HR | 2.8 → 28 | Punches tab is empty for an operator on Plan; `StaffingConnection` is a server card; period selector inside the Hours card |

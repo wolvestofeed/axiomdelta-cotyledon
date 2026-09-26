@@ -11,7 +11,6 @@
 
 import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine, type CropPlanDef } from '@/data/plan-data';
 import { equipmentSeed } from '@/data/capex';
-import { sowingGrowUnitsFrom, type SowingGrowUnit } from '@/engine/equipment';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
 import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
@@ -19,13 +18,11 @@ type CropPlan = CropPlanDef;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
  * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
- * (`resolveScenarioInputs`); absent, the code seed's Phase 1 list stands in. `sowingGrowUnits`
- * is the Phase 1-era list the stage and routing code still reads until part 6.
+ * (`resolveScenarioInputs`); absent, the code seed's Phase 1 list stands in.
  */
-export type CapacityInputs = typeof defaultCapacityInputs & { sowingGrowUnits?: readonly SowingGrowUnit[]; growUnits?: readonly GrowUnit[] };
+export type CapacityInputs = typeof defaultCapacityInputs & { growUnits?: readonly GrowUnit[] };
 
 /** The Phase 1 grow units of the code seed — the fallback when no equipment library is in hand. */
-export const defaultSowingGrowUnits: readonly SowingGrowUnit[] = sowingGrowUnitsFrom(equipmentSeed);
 export const defaultGrowUnits: readonly GrowUnit[] = growUnitsFrom(equipmentSeed);
 
 /** Floor `n` down to the nearest `step` (e.g. sowing size to nearest 25). */
@@ -386,9 +383,9 @@ export function absorbOverhead(
 // ── Capacity & the derived sowing size ───────────────────────────────────────
 
 /**
- * Canopy mass per unit = sum of harvested yields of HOT components only, over
- * the authored sowing. Tortilla and cheese are cold-packed and excluded. This is
- * what the blackout rack bounds the sowing on, and it differs per crop plan.
+ * Canopy mass per unit: the harvested yield of the lines flagged `isHotComponent`,
+ * over the authored sowing, per crop plan. The sowing is sized off the grow unit,
+ * never off this.
  */
 export function canopyMassPerUnit(
   cropPlan: CropPlan,
@@ -441,50 +438,14 @@ export function packedUnitOz(
   return { hotOz, coldOz, eachOz, totalOz: hotOz + coldOz + eachOz, seedOz };
 }
 
-// ── The day a sowing is placed in ────────────────────────────────────────────
-
-/** The operating day as a sowing reads it; on a grow plan the whole day, one sowing per grow unit. */
-export interface BlackoutWindow {
-  /** The operating day the plant runs — a scenario input, not a staffing fact. */
-  openMin: number;
-  closeMin: number;
-  /** Minutes from opening to the first load; null when the crop plan has no sow time on file. */
-  firstLoadAfterOpenMin: number | null;
-  /** `stage`: the crop plan's sow times; `none`: no component has a sow time on file. */
-  firstLoadBasis: 'stage' | 'none';
-  /** First load: opening plus the minutes the sows need before it. */
-  startMin: number;
-  /** The operating day's close. Every counted cycle is unloaded by then. */
-  endMin: number;
-  minutes: number;
-  occupancyMinutes: number;
-  /** Whole occupancy blocks that fit in the window — the closed-form cycles per day. */
-  cycles: number;
-  /**
-   * One more sowing could be LOADED before close, with its blackout and unload
-   * running past it. Reported, never counted in `cycles`: that cycle
-   * runs the plant outside its operating day. Whether anyone is there to unload
-   * it is a staffing finding (`_engine/staffing.ts`), not a capacity fact.
-   */
-  loadBeforeCloseExtraCycle: boolean;
-}
-
 export interface CapacityProfile {
-  lbPerCycle: number;
   canopyMassPerUnit: number;
   unitsPerCycleRaw: number;
-  sowingSize: number; // DERIVED, floored to nearest step — off mass, never off time
-  loadMinutes: number;
-  blackoutMinutes: number;
-  unloadMinutes: number;
-  occupancyMinutes: number; // DERIVED: the three above
-  blackoutWindow: BlackoutWindow; // DERIVED from the operating day and the crop plan's sow-to-blackout time
-  cyclesPerDay: number; // DERIVED: floor(window ÷ occupancy) — one rack's serial stream
-  /**
-   * DERIVED: sowing size × cycles — the ONE-STREAM ceiling, one rack run
-   * serially. With N racks in service the plant's ceiling is a placement
-   * result (`planProductionDay` with `lines`, the scheduler), never N × this.
-   */
+  /** DERIVED: the trays one grow unit takes of the plan's format; zero on a plan that is not a grow plan. */
+  sowingSize: number;
+  /** DERIVED: the grow units that take the plan — each can start one sowing a day. */
+  cyclesPerDay: number;
+  /** DERIVED: sowing size × the sowings a day. The sustained ceiling over the cycle is on `grow`. */
   maxUnitsPerDay: number;
   /** Set on a grow plan: the sowing in trays, the units that take it, the cycle and the sustained ceiling. */
   grow?: GrowCapacity;
@@ -497,40 +458,24 @@ export function deriveCapacity(
 ): CapacityProfile {
   if (isGrowPlanCarrier(cropPlan)) return deriveGrowProfile(cropPlan, cap, unitFactor);
   // A plan that is not a grow plan takes no grow unit: a sowing of zero.
-  const openMin = cap.operatingOpenMin.value;
-  const closeMin = cap.operatingCloseMin.value;
-  const day = Math.max(0, closeMin - openMin);
-  const blackoutWindow: BlackoutWindow = { openMin, closeMin, firstLoadAfterOpenMin: null, firstLoadBasis: 'none', startMin: closeMin, endMin: closeMin, minutes: 0, occupancyMinutes: day, cycles: 0, loadBeforeCloseExtraCycle: false };
-  return { lbPerCycle: 0, canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor), unitsPerCycleRaw: 0, sowingSize: 0, loadMinutes: 0, blackoutMinutes: 0, unloadMinutes: 0, occupancyMinutes: day, blackoutWindow, cyclesPerDay: 0, maxUnitsPerDay: 0 };
+  return { canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor), unitsPerCycleRaw: 0, sowingSize: 0, cyclesPerDay: 0, maxUnitsPerDay: 0 };
 }
 
 /**
  * A grow plan's capacity in the crop plan profile's shape (outline §5 rule 1): the sowing is the
- * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. No rack
- * minutes enter it: the day is the operating day, and each grow unit that takes the plan can
- * start one sowing in it, so the sowings a day are the units. The sustained ceiling, trays across
- * the units over the cycle, is on `grow`; the horizon's shelf ledger holds each sowing for its cycle.
+ * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. Each grow
+ * unit that takes the plan can start one sowing a day, so the sowings a day are the units. The
+ * sustained ceiling, trays across the units over the cycle, is on `grow`; the horizon's shelf
+ * ledger holds each sowing for its cycle.
  */
 function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan').GrowPlanDef }, cap: CapacityInputs, unitFactor: number): CapacityProfile {
   const grow = deriveGrowCapacity(cropPlan.plan, cap.growUnits ?? defaultGrowUnits);
-  const openMin = cap.operatingOpenMin.value;
-  const closeMin = cap.operatingCloseMin.value;
-  const day = Math.max(0, closeMin - openMin);
-  const blackoutWindow: BlackoutWindow = { openMin, closeMin, firstLoadAfterOpenMin: 0, firstLoadBasis: 'stage', startMin: openMin, endMin: closeMin, minutes: day, occupancyMinutes: day, cycles: grow.unitCount, loadBeforeCloseExtraCycle: false };
-  const cyclesPerDay = grow.unitCount;
-  const massPerUnit = canopyMassPerUnit(cropPlan, unitFactor);
   return {
-    lbPerCycle: (grow.sowingTrays * massPerUnit),
-    canopyMassPerUnit: massPerUnit,
+    canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor),
     unitsPerCycleRaw: grow.sowingTrays,
     sowingSize: grow.sowingTrays,
-    loadMinutes: 0,
-    blackoutMinutes: 0,
-    unloadMinutes: 0,
-    occupancyMinutes: blackoutWindow.occupancyMinutes,
-    blackoutWindow,
-    cyclesPerDay,
-    maxUnitsPerDay: grow.sowingTrays * cyclesPerDay,
+    cyclesPerDay: grow.unitCount,
+    maxUnitsPerDay: grow.sowingTrays * grow.unitCount,
     grow,
   };
 }

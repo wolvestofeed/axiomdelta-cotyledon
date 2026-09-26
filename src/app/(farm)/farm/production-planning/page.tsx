@@ -43,7 +43,6 @@ async function ProductionPlanningPageInner() {
       />
       <ProductionPlanningClient
         canEdit={access.isSuperAdmin}
-        canRecord={access.isOperator}
         showFinancials={access.isSuperAdmin}
         closures={calendar.closures}
         cycles={cycles}
@@ -52,7 +51,6 @@ async function ProductionPlanningPageInner() {
         distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units }))}
         receipts={actuals.receipts}
         rawSowings={actuals.sowings}
-        standards={actuals.standards ?? []}
         purchaseOrders={pos.map((po) => ({ id: po.id, poNumber: po.poNumber, status: po.status, orderedFor: po.orderedFor, supplierId: po.supplierId, supplierName: po.supplierName, lines: po.lines.map((l) => ({ input: l.input, qty: l.qty, unit: l.unit })) }))}
         studies={studyLibrary.studies}
         today={today}

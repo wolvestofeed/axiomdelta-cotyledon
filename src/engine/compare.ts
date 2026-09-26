@@ -46,7 +46,6 @@ const pick = (a: number, b: number, moreIsBetter: boolean): 'a' | 'b' | 'same' =
   return (b > a) === moreIsBetter ? 'b' : 'a';
 };
 
-const utilisationOf = (r: ScheduleResult, key: string | null): number | null => (key ? r.metrics.utilizationByResource[key] ?? 0 : null);
 
 /** A side's daily stream on the day: the trays on the shelves and the minutes their daily lines take, off the clock. */
 export interface DailyStreamOnDay {
@@ -55,16 +54,13 @@ export interface DailyStreamOnDay {
 }
 
 /**
- * Compare two placed days. `blackoutRackKey` names the unit the blackout rack row reads —
- * the caller passes the blackout rack's equipment key, since the scheduler
- * knows units by key and not by kind. A side's `daily` adds the trays on the
+ * Compare two placed days. A side's `daily` adds the trays on the
  * shelves and the daily stream beside the clock; the rows appear when either
  * side carries one.
  */
 export function compareDays(
   a: { label: string; result: ScheduleResult; daily?: DailyStreamOnDay },
   b: { label: string; result: ScheduleResult; daily?: DailyStreamOnDay },
-  blackoutRackKey: string | null = null,
 ): DayComparison {
   const A = a.result.metrics;
   const B = b.result.metrics;
@@ -79,8 +75,6 @@ export function compareDays(
     ...(note ? { note } : {}),
   });
   const laborPerUnit = (m: typeof A) => (m.unitsPlaced > 0 ? (m.laborHours * 60) / m.unitsPlaced : 0);
-  const blackoutA = utilisationOf(a.result, blackoutRackKey);
-  const blackoutB = utilisationOf(b.result, blackoutRackKey);
 
   const rows: CompareRow[] = [
     num('units', 'Trays sown', 'units', A.unitsPlaced, B.unitsPlaced, true, 'Whole sowings only; a sowing that does not fit is unplaced, never part-made.'),
@@ -109,9 +103,6 @@ export function compareDays(
         ]
       : []),
     num('closedown', 'Closedown hours', 'hours', A.closedownHours, B.closedownHours, null),
-    ...(blackoutRackKey
-      ? [num('blackout_rack', 'Blackout rack utilisation', 'percent', blackoutA ?? 0, blackoutB ?? 0, null, 'Busy minutes inside the operating day over the day × its slots.')]
-      : []),
     num('violations', 'Findings', 'count', a.result.violations.length, b.result.violations.length, false, 'Everything the placement breaks; nothing is repaired to clear one.'),
   ];
 

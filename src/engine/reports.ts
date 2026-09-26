@@ -83,8 +83,8 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
   {
     id: 'capacity-utilisation',
     section: 'Production',
-    title: 'Capacity and blackout rack utilisation, next two weeks',
-    blurb: 'The order book rolled through production: sowings, blackout rack cycles used against available, days that do not fit, and stock expiring.',
+    title: 'Capacity and grow unit use, next two weeks',
+    blurb: 'The order book rolled through production: sowings started against the starts the grow units allow, days that do not fit, and stock expiring.',
     themes: ['utilisation'],
     world: 'selected',
     sourceHref: '/farm/capacity',

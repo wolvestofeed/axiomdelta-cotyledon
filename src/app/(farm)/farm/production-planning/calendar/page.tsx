@@ -21,7 +21,7 @@ async function CalendarPageInner() {
       <PageHeader
         title="Calendar"
         purpose="Scan the month for days that don't fit, then open one."
-        functions={['Sowings', 'Cycles used', 'Units shipped', 'Units expired', 'Findings']}
+        functions={['Sowings', 'Sowing starts used', 'Units shipped', 'Units expired', 'Findings']}
         connects={[
           { href: '/farm/orders', dir: 'from' },
           { href: '/farm/production-planning/schedule', dir: 'to' },
@@ -29,7 +29,7 @@ async function CalendarPageInner() {
         howItWorks={
           <ul>
             <li>The order book is rolled through production, month by month.</li>
-            <li>Each day carries sowings harvested, units made, cycles used, shipped against ordered, stock past shelf life and findings raised.</li>
+            <li>Each day carries its sowings, trays sown, the sowing starts used of those the grow units allow, shipped against ordered, stock past shelf life and findings raised.</li>
             <li>A day that doesn&rsquo;t fit, or breaks a limit, is outlined.</li>
             <li>Pick a day to open it on the Day Schedule.</li>
           </ul>

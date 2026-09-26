@@ -49,7 +49,7 @@ import { payPeriodsOverlapping } from '@/engine/payroll';
 import { assumptionsFor, type ResolvedInputs } from '@/engine/scenario';
 import { orderBook, isoAddDays, type BookOrder } from '@/engine/orders';
 import { planHorizon, type HorizonPlan } from '@/engine/production-plan';
-import { equipmentInServiceOn, isBlackoutRack, countsTowardCapital } from '@/engine/equipment';
+import { countsTowardCapital } from '@/engine/equipment';
 import { extendedCost, lineInForceOn, loanPrincipal } from '@/engine/fixed-costs';
 import { libraryLabel } from '@/engine/standards';
 import { laborForDay } from '@/engine';
@@ -98,7 +98,7 @@ export type TimelineGapKind =
   | 'no_supplier_terms'
   | 'fixed_cost_payment_timing'
   | 'unfilled_units'
-  | 'no_line_in_service'
+  | 'no_grow_unit'
   | 'undated_equipment';
 
 export interface TimelineGap {
@@ -154,25 +154,6 @@ export function horizonEnd(from: string, years: number): string {
   return isoAddDays(addMonths(from, 12 * years), -1);
 }
 
-/**
- * Blackout racks in service on each date, as a step function over the dated
- * equipment. Each unit is one line (decision 20). A production day before the
- * forecast start makes the window's first distributions, so it reads the lines
- * the forecast opens with.
- */
-function linesOnFn(inputs: ResolvedInputs, from: string): (date: string) => number {
-  const blackoutRacks = inputs.datedEquipment.filter((l) => isBlackoutRack(l.item) && l.qty > 0);
-  const cache = new Map<string, number>();
-  return (date: string) => {
-    let n = cache.get(date);
-    if (n === undefined) {
-      n = equipmentInServiceOn(blackoutRacks, date < from ? from : date).reduce((s, l) => s + l.qty, 0);
-      cache.set(date, n);
-    }
-    return n;
-  };
-}
-
 export function simulateForecast(input: TimelineInput): ForecastTimeline {
   const { inputs } = input;
   const horizonYears = input.horizonYears ?? inputs.forecast.horizonYears;
@@ -191,7 +172,6 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
   const orders = orderBook({ pickupPoints: inputs.demand.pickupPoints, subscribers: inputs.subscribers, cycles: input.cycles, orders: [], from, to, channelPriceCents, cropPlanNames, closures: inputs.closures });
 
   // ── Production ────────────────────────────────────────────────────────────
-  const linesOn = linesOnFn(inputs, from);
   const assumptions = inputs.assumptions;
   const shelfLifeDays = assumptions.inventory.blackoutShelfLife.value;
   const unitFactorByChannel = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value]));
@@ -208,10 +188,9 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     shelfLifeDays,
     channels: inputs.phases.map((p) => p.phase),
     closures: inputs.closures,
-    linesOn,
   });
-  const noLine = horizon.productionDays.filter((d) => d.cyclesAvailable === 0 && d.runs.length > 0);
-  if (noLine.length > 0) gap('no_line_in_service', 'Production dates with orders and no blackout rack in service in this forecast: nothing is made, and those orders are unfilled.', noLine.length);
+  const noUnit = horizon.productionDays.reduce((n, d) => n + d.runs.filter((r) => r.net > 0 && r.sowingSize === 0).length, 0);
+  if (noUnit > 0) gap('no_grow_unit', 'Orders for plans no grow unit in this forecast takes: nothing is sown for them, and those orders are unfilled.', noUnit);
   const undated = inputs.datedEquipment.filter((l) => l.inServiceBasis === 'undated' && l.qty > 0);
   if (undated.length > 0) gap('undated_equipment', 'Planned Phase 2 and 3 equipment with no in-service date in this forecast: not in service and not bought on any date.', undated.length);
 
@@ -220,11 +199,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
   const sowings: SowingRecordDoc[] = [];
   const laborCostOn = new Map<string, number>();
   const laborHoursOn = new Map<string, number>();
-  // A sowing record is one sow and the sow is the lot.
-  // The day plan loads a crop plan's sowings on whichever rack is free; the
-  // sowings loaded at the same minute were filled from one sow — a double sowing
-  // — and are one record with that many rack loads. A sowing loaded later is
-  // another sow: another record, another lot.
+  // A sowing record is one plan's sowings on one sow day: one sow, one lot.
   for (const day of horizon.productionDays) {
     let seq = 0;
     for (const run of day.runs) {
@@ -232,25 +207,18 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       const cropPlan = inputs.cropPlans.find((r) => r.code === run.cropPlanCode);
       if (!cropPlan) continue;
       const a = assumptionsFor(inputs, cropPlan.code);
-      const loads = day.schedule.filter((b) => b.fits && b.cropPlanCode === run.cropPlanCode);
-      const sows = new Map<number, number>();
-      for (const b of loads) sows.set(b.loadMin, (sows.get(b.loadMin) ?? 0) + 1);
-      const perSow = sows.size ? [...sows.entries()].sort((x, y) => x[0] - y[0]).map(([, n]) => n) : [run.sowingsScheduled];
-      for (const rackLoads of perSow) {
-        seq += 1;
-        const units = rackLoads * run.sowingSize;
-        const labor = laborForDay(rackLoads, units, a);
-        const prefill = standardSowingRecordPrefill(day.productionDate, seq, units, cropPlan, shrink, libraryLabel(cropPlan.code));
-        sowings.push({
-          ...prefill,
-          id: `PLAN-sowing-${day.productionDate}-${seq}`,
-          sowingsRun: rackLoads,
-          actualLaborHours: labor.totalLaborHours,
-          actualLaborRate: a.labor.blendedLoadedWage.value,
-          closedBy: 'plan',
-          closedAt: day.productionDate,
-        });
-      }
+      seq += 1;
+      const labor = laborForDay(run.sowingsScheduled, run.produced, a);
+      const prefill = standardSowingRecordPrefill(day.productionDate, seq, run.produced, cropPlan, shrink, libraryLabel(cropPlan.code));
+      sowings.push({
+        ...prefill,
+        id: `PLAN-sowing-${day.productionDate}-${seq}`,
+        sowingsRun: run.sowingsScheduled,
+        actualLaborHours: labor.totalLaborHours,
+        actualLaborRate: a.labor.blendedLoadedWage.value,
+        closedBy: 'plan',
+        closedAt: day.productionDate,
+      });
       laborCostOn.set(day.productionDate, (laborCostOn.get(day.productionDate) ?? 0) + run.laborCost);
       laborHoursOn.set(day.productionDate, (laborHoursOn.get(day.productionDate) ?? 0) + run.laborHours);
     }
@@ -288,7 +256,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       notes: `${o.subscriberName} · ${o.serviceName ?? 'service'} · ${o.cropPlanCode} · ${o.priceBasis === 'contract' ? 'contracted price' : 'channel price'}`,
     });
   }
-  if (unfilledUnits > 1e-6) gap('unfilled_units', 'Units ordered that the lines in service could not make in time: not distributed and not invoiced.', Math.round(unfilledUnits));
+  if (unfilledUnits > 1e-6) gap('unfilled_units', 'Units ordered that no grow unit had room to sow in time: not distributed and not invoiced.', Math.round(unfilledUnits));
 
   // ── Purchasing: whole cases net of what rounding left on hand ─────────────
   const supplierOf = new Map<string, string | null>();

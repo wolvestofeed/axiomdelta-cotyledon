@@ -4,7 +4,6 @@ import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycle
 import { seedSubscribers } from '@/data/subscribers';
 import { simulateForecast, horizonEnd } from '@/engine/forecast-timeline';
 import { isBlackoutRack } from '@/engine/equipment';
-import { equipmentSeed } from '@/data/capex';
 
 // The suite runs the longest option: a forecast expanded to three years.
 const inputs = resolveScenarioInputs({ forecast: { horizonYears: 3 } });
@@ -119,55 +118,31 @@ describe('the forecast timeline (Roadmap N4b)', () => {
     }
   });
 
-  it('capacity on a date is the lines in service: a second rack dated into service doubles the cycles from that date, not the sowing', () => {
-    // The seed carries both racks on Phase 1. Split them here so the
-    // second can be dated: the library with one on Phase 1 and one undated on Phase 2.
-    const blackoutRack = equipmentSeed.find((e) => isBlackoutRack(e.item))!;
-    const secondKey = `${blackoutRack.key} (Phase 2)`;
-    const split = equipmentSeed.flatMap((e) => (e.key === blackoutRack.key ? [{ ...e, qty: 1 }, { ...e, key: secondKey, phase: 2 as const, qty: 1 }] : [e]));
-    const one = resolveScenarioInputs({ forecast: { horizonYears: 3 } }, undefined, undefined, undefined, undefined, split);
-    const dated = resolveScenarioInputs({ forecast: { horizonYears: 3, equipment: { [secondKey]: { inServiceDate: '2027-03-01' } } } }, undefined, undefined, undefined, undefined, split);
-    const t1 = simulateForecast({ inputs: one, cycles });
-    const t2 = simulateForecast({ inputs: dated, cycles });
-    const before = t2.horizon.productionDays.find((d) => d.productionDate < '2027-03-01' && d.runs.length > 0)!;
-    const after = t2.horizon.productionDays.find((d) => d.productionDate >= '2027-03-01' && d.runs.length > 0)!;
-    expect(after.cyclesAvailable).toBe(before.cyclesAvailable * 2);
-    expect(after.runs.map((r) => r.sowingSize)).toEqual(t1.horizon.productionDays.find((d) => d.productionDate === after.productionDate)!.runs.map((r) => r.sowingSize));
-    expect(t2.documents.capitalPurchases.find((c) => c.key === secondKey)?.purchasedOn).toBe('2027-03-01');
-    expect(t1.documents.capitalPurchases.find((c) => c.key === secondKey)).toBeUndefined();
-    // The seed itself opens with both racks: two lines from the first production day.
-    const opening = t.horizon.productionDays.find((d) => d.runs.length > 0)!;
-    expect(opening.cyclesAvailable).toBe(before.cyclesAvailable * 2);
-  });
-
   it('normal capacity is the plan’s own production a year, net of planned downtime', () => {
     expect(t.normalCapacity.perYear).toBeCloseTo(t.horizon.totals.producedBase / 3, 9);
     expect(t.normalCapacity.netPerYear).toBeCloseTo(t.normalCapacity.perYear * (1 - t.normalCapacity.plannedDowntimeRate), 9);
   });
 });
 
-describe('the forecast opens with its Phase 1 line', () => {
-  it('a production day before the start that makes the first distributions has the opening line', () => {
-    expect(t.gaps.find((g) => g.kind === 'no_line_in_service')).toBeUndefined();
+describe('the forecast reads no rack', () => {
+  it('dating the blackout racks later leaves every sowing where it was, and every plan has a grow unit', () => {
+    expect(t.gaps.find((g) => g.kind === 'no_grow_unit')).toBeUndefined();
     const late = resolveScenarioInputs({ forecast: { horizonYears: 3, equipment: Object.fromEntries(inputs.datedEquipment.filter((l) => isBlackoutRack(l.item) && l.phase === 1).map((l) => [l.key, { inServiceDate: '2027-02-01' }])) } });
     const t3 = simulateForecast({ inputs: late, cycles });
-    expect(t3.gaps.find((g) => g.kind === 'no_line_in_service')?.count).toBeGreaterThan(0);
-    expect(t3.horizon.productionDays.filter((d) => d.productionDate >= '2027-02-01').every((d) => d.cyclesAvailable > 0)).toBe(true);
+    expect(t3.horizon.totals.producedBase).toBe(t.horizon.totals.producedBase);
+    expect(t3.horizon.totals.sowings).toBe(t.horizon.totals.sowings);
   });
 });
 
-describe('a Plan sowing record is one sow, and the sow is the lot', () => {
-  it('each sow is one record carrying its sowings, units and labor, one lot per component', () => {
+describe('a Plan sowing record is one plan\'s sowings on one sow day, and the sow is the lot', () => {
+  it('each plan\'s sow day is one record carrying its sowings, trays and labor, one lot per component', () => {
     let checked = 0;
     for (const day of t.horizon.productionDays) {
       for (const run of day.runs) {
         if (run.produced <= 0) continue;
-        const loads = day.schedule.filter((b) => b.fits && b.cropPlanCode === run.cropPlanCode);
-        const sows = new Map<number, number>();
-        for (const b of loads) sows.set(b.loadMin, (sows.get(b.loadMin) ?? 0) + 1);
         const records = t.documents.sowings.filter((b) => b.productionDate === day.productionDate && b.cropPlanCode === run.cropPlanCode);
-        expect(records, `${day.productionDate} ${run.cropPlanCode}`).toHaveLength(sows.size);
-        expect(records.map((r) => r.sowingsRun).sort()).toEqual([...sows.values()].sort());
+        expect(records, `${day.productionDate} ${run.cropPlanCode}`).toHaveLength(1);
+        expect(records[0]!.sowingsRun).toBe(run.sowingsScheduled);
         expect(records.reduce((s, r) => s + r.goodUnits, 0)).toBe(run.produced);
         expect(records.reduce((s, r) => s + (r.actualLaborHours ?? 0), 0)).toBeCloseTo(run.laborHours, 9);
         // One lot per component per sow: no lot code repeats across the crop plan's records that day.

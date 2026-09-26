@@ -187,7 +187,7 @@ export function CalendarClient({
 
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={num(totals.sowings)} label="Sowings in the month" sub={`${num(totals.units)} units made`} />
-        <Kpi value={totals.available > 0 ? `${num((totals.used / totals.available) * 100, 0)}%` : '—'} label="Cycles used" sub={`${num(totals.used)} of ${num(totals.available)} the plant has on production days`} />
+        <Kpi value={totals.available > 0 ? `${num((totals.used / totals.available) * 100, 0)}%` : '—'} label="Sowing starts used" sub={`${num(totals.used)} of ${num(totals.available)} the grow units allow on production days`} />
         <Kpi value={num(totals.filled)} label="Units shipped" sub={totals.ordered > 0 ? `of ${num(totals.ordered)} ordered` : 'Nothing ordered in the month'} />
         <Kpi value={num(totals.expired)} label="Units expired" sub="Stock that reached the end of its shelf life" />
         <Kpi value={num(totals.findings)} label="Findings across the month" sub={totals.doNotFit > 0 ? `${num(totals.doNotFit)} days do not fit the plant` : 'Every day fits the plant'} />
@@ -197,7 +197,7 @@ export function CalendarClient({
         <MonthGrid days={days} onPick={pick} selectedDate={selected} />
         <p className="farm-kpi-sub mt-2">
           The horizon runs from today to the end of the month shown, so days before today are dimmed and carry no plan. A cell reads sowings and units made, what shipped against what
-          was ordered, stock that expired, and findings from placing that day. The bar is the share of the plant&rsquo;s cycles the day used. A day outlined in the accent does not fit,
+          was ordered, stock that expired, and findings from placing that day. The bar is the share of the sowing starts the grow units allow that the day used. A day outlined in the accent does not fit,
           expired stock, or raised a finding. Picking a day with a plan opens it on the{' '}
           <Link className="farm-link" href="/farm/production-planning/schedule">Day Schedule</Link>.
         </p>
@@ -207,7 +207,7 @@ export function CalendarClient({
         <div className="farm-scroll-x">
           <table className="farm-table compact">
             <thead>
-              <tr><th>Day</th><th className="num">Sowings</th><th className="num">Units made</th><th className="num">Cycles</th><th className="num">Used</th><th className="num">Ordered</th><th className="num">Shipped</th><th className="num">Expired</th><th className="num">Closing stock</th><th className="num">Findings</th><th>Fits</th></tr>
+              <tr><th>Day</th><th className="num">Sowings</th><th className="num">Units made</th><th className="num">Starts allowed</th><th className="num">Used</th><th className="num">Ordered</th><th className="num">Shipped</th><th className="num">Expired</th><th className="num">Closing stock</th><th className="num">Findings</th><th>Fits</th></tr>
             </thead>
             <tbody>
               {inMonth.length === 0 && <tr><td colSpan={11} className="farm-c-soft">No day of this month is in the horizon: the order book has nothing to make or ship.</td></tr>}

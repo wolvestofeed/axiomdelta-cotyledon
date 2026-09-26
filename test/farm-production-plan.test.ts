@@ -277,14 +277,13 @@ describe('the grow model', () => {
     expect(harvested.unmatchedByCropPlan['BROC-01']).toBe(20);
   });
 
-  it('grow capacity reads no rack minutes: the sowings a day are the grow units that take the plan', () => {
+  it('the sowings a day are the grow units that take the plan, and the operating day does not move them', () => {
     const broc = plan('BROC-01');
     const cap = deriveCapacity(broc, G.capacityInputs, 1);
     expect(cap.cyclesPerDay).toBe(cap.grow!.unitCount);
-    expect([cap.loadMinutes, cap.blackoutMinutes, cap.unloadMinutes]).toEqual([0, 0, 0]);
-    expect(cap.blackoutWindow).toMatchObject({ startMin: G.capacityInputs.operatingOpenMin.value, endMin: G.capacityInputs.operatingCloseMin.value, cycles: cap.grow!.unitCount, loadBeforeCloseExtraCycle: false });
-    const slower = { ...G.capacityInputs, loadMinutes: { ...G.capacityInputs.loadMinutes, value: 600 }, unloadMinutes: { ...G.capacityInputs.unloadMinutes, value: 600 } };
-    expect(deriveCapacity(broc, slower, 1)).toEqual(cap);
+    expect(cap.maxUnitsPerDay).toBe(cap.sowingSize * cap.grow!.unitCount);
+    const shorter = { ...G.capacityInputs, operatingCloseMin: { ...G.capacityInputs.operatingCloseMin, value: 600 } };
+    expect(deriveCapacity(broc, shorter, 1)).toEqual(cap);
   });
 
   it('a grow sow day\'s labor is the plan\'s own sowing stream: no rack task and no Phase 1-era study task', () => {

@@ -53,14 +53,6 @@ describe('farm — proposed crews are checked against the requirement, never the
 });
 
 describe('farm — scenario resolver carries the plant inputs, the calendar and the crews', () => {
-  it('legacy saved keys resolve onto the plant inputs; an explicit new key wins over the legacy one', () => {
-    const R = resolveScenarioInputs({ capacity: { cycleTimeMinutes: 100, blackoutWindowHours: 7 } });
-    expect(R.capacityInputs.blackoutMinutes.value).toBe(100);
-    expect(R.capacityInputs.operatingCloseMin.value).toBe(720 + 7 * 60); // 7 h from the old 12:00 first load
-    expect(resolveScenarioInputs({ capacity: { firstLoadMin: 780, blackoutWindowHours: 6 } }).capacityInputs.operatingCloseMin.value).toBe(1140);
-    expect(resolveScenarioInputs({ capacity: { blackoutMinutes: 80, cycleTimeMinutes: 100 } }).capacityInputs.blackoutMinutes.value).toBe(80);
-    expect(resolveScenarioInputs({ capacity: { operatingCloseMin: 1000, blackoutWindowOverrideHours: 9 } }).capacityInputs.operatingCloseMin.value).toBe(1000);
-  });
   it('production days are counted from the production calendar unless a scenario types them', () => {
     expect(resolveScenarioInputs({}).capacityInputs.productionDaysPerYear.value).toBe(261); // 2027 weekdays, no closure (the forecast year, Roadmap K)
     const christmas = [{ startDate: '2027-12-24', endDate: '2027-12-24' }]; // a Friday

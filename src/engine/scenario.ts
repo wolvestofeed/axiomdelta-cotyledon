@@ -35,7 +35,6 @@ import { productionDaysInYear, PLAN_YEAR, type DateRange } from '@/engine/period
 import { deriveCapacity, type CapacityInputs } from '@/engine';
 import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, type CropPlanLaborStandard } from '@/engine/unit-cost';
 import type { TimeStudyDoc } from '@/data/time-studies';
-import { sowingGrowUnitsFrom } from '@/engine/equipment';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
 import { projectCropPlan } from '@/engine/grow-plan-bridge';
@@ -115,35 +114,11 @@ export interface PhaseProfileOverlay {
 }
 
 export interface CapacityOverlay {
-  /** @deprecated Retired 2026-09-17: a sowing binds to one rack and a second rack is a parallel stream, so no unit count multiplies capacity. Ignored. */
-  blackoutRackUnits?: number;
-  capacityPerUnitLb?: number;
-  /** Blackout rack occupancy elements — the engine sums them; only `blackoutMinutes` faces the cooling clock. */
-  loadMinutes?: number;
-  blackoutMinutes?: number;
-  unloadMinutes?: number;
-  /** @deprecated Retired 2026-09-15: the blackout rack is not sanitized between sowings, and defrosting is maintenance. Ignored. */
-  sanitizeMinutes?: number;
-  /** The operating day the plant runs, minutes from midnight. */
+  /** The operating day, minutes from midnight. */
   operatingOpenMin?: number;
   operatingCloseMin?: number;
-  /** @deprecated Retired 2026-09-14: the first load is read from each crop plan's sow times. Ignored. */
-  firstLoadAfterOpenMin?: number;
-  /** Headcount each blackout rack task needs at once — sizes the labor requirement, never the ceiling. */
-  loadStaff?: number;
-  unloadStaff?: number;
-  /** @deprecated Retired 2026-09-15 with `sanitizeMinutes`. Ignored. */
-  sanitizeStaff?: number;
   /** Typed production days per year; absent = counted from the production calendar. */
   productionDaysPerYear?: number;
-  /** @deprecated Saved before 2026-09-14 as a clock time. Ignored except as the start of a legacy typed blackout window. */
-  firstLoadMin?: number;
-  /** @deprecated Saved before 2026-09-14; a window from the first load, resolved onto `operatingCloseMin`. */
-  blackoutWindowOverrideHours?: number;
-  /** @deprecated Saved before 2026-09-13; resolves onto `blackoutMinutes` when that key is absent. */
-  cycleTimeMinutes?: number;
-  /** @deprecated Saved before 2026-09-13; resolves like `blackoutWindowOverrideHours`. */
-  blackoutWindowHours?: number;
 }
 
 /**
@@ -563,37 +538,13 @@ export function resolveScenarioInputs(
 
   // Capacity: the plant ---------------------------------------------------
   const capacityInputs = structuredClone(defaultCapacityInputs) as unknown as {
-    capacityPerUnitLb: { value: number };
-    loadMinutes: { value: number };
-    blackoutMinutes: { value: number };
-    unloadMinutes: { value: number };
     operatingOpenMin: { value: number };
     operatingCloseMin: { value: number };
-    loadStaff: { value: number };
-    unloadStaff: { value: number };
     productionDaysPerYear: { value: number };
-    sowingRoundingUnits: number;
   };
   const c = config.capacity ?? {};
-  // `c.blackoutRackUnits` on an older forecast is ignored: one rack is the sowing.
-  put(capacityInputs.capacityPerUnitLb, c.capacityPerUnitLb);
-  put(capacityInputs.loadMinutes, c.loadMinutes);
-  // Legacy keys from scenarios saved before the occupancy decomposition.
-  put(capacityInputs.blackoutMinutes, c.blackoutMinutes ?? c.cycleTimeMinutes);
-  put(capacityInputs.unloadMinutes, c.unloadMinutes);
   put(capacityInputs.operatingOpenMin, c.operatingOpenMin);
-  // Legacy: a blackout window typed in hours ran from a clock-time first load
-  // (12:00 unless the scenario typed one); its end becomes the close.
-  const legacyWindowHours = c.blackoutWindowOverrideHours ?? c.blackoutWindowHours;
-  put(
-    capacityInputs.operatingCloseMin,
-    c.operatingCloseMin ??
-      (legacyWindowHours !== undefined && legacyWindowHours !== null
-        ? (c.firstLoadMin ?? 720) + legacyWindowHours * 60
-        : undefined),
-  );
-  put(capacityInputs.loadStaff, c.loadStaff);
-  put(capacityInputs.unloadStaff, c.unloadStaff);
+  put(capacityInputs.operatingCloseMin, c.operatingCloseMin);
   // Production days come off the production calendar unless a scenario types them.
   capacityInputs.productionDaysPerYear.value = c.productionDaysPerYear ?? productionDaysInYear(PLAN_YEAR, closures);
 
@@ -802,7 +753,6 @@ export function resolveScenarioInputs(
   // Crop plans page and production planning use.
   const finalCapacity = {
     ...(capacityInputs as unknown as typeof defaultCapacityInputs),
-    sowingGrowUnits: sowingGrowUnitsFrom(equipment.length > 0 ? equipment : equipmentSeed),
     growUnits: growUnitsFrom(equipment.length > 0 ? equipment : equipmentSeed),
   } as unknown as CapacityInputs;
   const sharedAssumptions = assumptions as unknown as ResolvedInputs['assumptions'];

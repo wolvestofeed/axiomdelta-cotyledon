@@ -88,7 +88,6 @@ describe('C2 — no page or server library reads a figure from plan-data', () =>
   const ALLOWED = new Set([
     'CROP_PLAN_STATUS_LABELS', // a label
     'facility', // the leased shell's stated size: no definition table yet
-    'otherCapacities', // published comparison capacities, shown for comparison only
     'nslpReimbursementBenchmark', // the USDA reimbursement benchmark, sourced
   ]);
   const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });

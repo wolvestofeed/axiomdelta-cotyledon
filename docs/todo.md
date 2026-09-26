@@ -22,6 +22,8 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - Lint: three react-hooks errors carried from the source, `OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`; fix when those files are touched.
 - Nested async server components rendered as JSX elements lose the workspace scope; only the dashboard does it today, by calling them as functions. Add a structural check if the pattern spreads.
 - The Muse-era topic build plans in `roadmaps/` describe kitchen builds; re-base or delete each in the phase that touches its module.
+- The dashboard's order-week note reads "No order in the next two weeks on this world" under a table of 625 units, and its copy prints identifiers ("cropPlan's", "pickupPoints").
+- Conformance C2's allowlist and `plan-data.ts` still carry `nslpReimbursementBenchmark`, the USDA school-lunch reimbursement figure from the source client.
 
 ## Across the products
 
