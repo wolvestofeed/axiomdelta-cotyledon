@@ -21,8 +21,8 @@ async function ProductionPlanningPageInner() {
     <>
       <PageHeader
         title="Production Planning"
-        purpose="Plan one crop plan run, one distribution day, or a whole period."
-        functions={['Single crop plan run', 'Distribution day', 'Horizon', 'Sowing records closed']}
+        purpose="Plan one grow plan run, one distribution day, or a whole period."
+        functions={['Single run', 'Distribution day', 'Horizon', 'Sowings on the grow units', 'Purchase requirement']}
         connects={[
           { href: '/farm/orders', dir: 'from' },
           { href: '/farm/production-planning/schedule', dir: 'to' },
@@ -31,11 +31,11 @@ async function ProductionPlanningPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>A single run takes a crop plan, a quantity and a channel through sowing sizing, the weight chain, labor, the purchase requirement and the economics.</li>
-            <li>A distribution day is every order on a date, exploded across crop plans and netted against finished goods on hand.</li>
-            <li>The shortfall is sized into whole sowings per crop plan and placed on the shared blackout rack.</li>
-            <li>Sowing records close on the distribution day.</li>
-            <li>The horizon rolls the order book through production for a period and feeds the channel allocation.</li>
+            <li>A single run takes a grow plan, a quantity in trays and a channel through the sowing one grow unit takes, the seed-to-harvest chain, labor on the three streams, the purchase requirement and the economics.</li>
+            <li>A distribution day is every order on a date, each back-planned to its plan&rsquo;s sow date, exploded into trays and netted against finished goods on hand.</li>
+            <li>The shortfall is sized into whole sowings per plan, each placed on a grow unit whose fixture delivers its light line and which has room for the whole cycle.</li>
+            <li>A sowing dated today is closed in the Grow Room; closed records are listed here.</li>
+            <li>The horizon rolls the order book through the shelves for a period, reads each day beside the stock, and feeds the channel allocation.</li>
           </ul>
         }
         status="live"

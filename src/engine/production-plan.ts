@@ -597,8 +597,9 @@ export function planHorizon(input: {
     const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
     if (cropPlan && isGrowPlanCarrier(cropPlan) && o.trays > 0) ledger.place(cropPlan, o.sowDate, o.trays, null);
   }
-  const placeSowing = (cropPlan: CropPlanDef, productionDate: string, trays: number): boolean =>
-    isGrowPlanCarrier(cropPlan) ? ledger.place(cropPlan, productionDate, trays, null).placed : true;
+  // A placed sowing carries the first distribution date it serves, so a day page can list its own sowings.
+  const placeSowingFor = (servesFrom: string) => (cropPlan: CropPlanDef, productionDate: string, trays: number): boolean =>
+    isGrowPlanCarrier(cropPlan) ? ledger.place(cropPlan, productionDate, trays, servesFrom).placed : true;
 
   // Each order is made on the production date its plan needs: a grow plan's sow date
   // (distribution date less days to harvest, on a production day), a Phase 1-era plan's the day before.
@@ -648,7 +649,7 @@ export function planHorizon(input: {
         if (lot.remaining <= 0 || lot.expires < servesFrom) continue;
         onHand[lot.cropPlanCode] = (onHand[lot.cropPlanCode] ?? 0) + lot.remaining;
       }
-      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date), placeSowing });
+      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date), placeSowing: placeSowingFor(servesFrom) });
       for (const run of plan.runs) {
         if (run.produced <= 0) continue;
         lots.push({ sowingId: `plan-${ev.date}-${run.cropPlanCode}`, cropPlanCode: run.cropPlanCode, produced: ev.date, expires: isoAddDays(ev.date, input.shelfLifeDays), qtyProduced: run.produced, remaining: run.produced });

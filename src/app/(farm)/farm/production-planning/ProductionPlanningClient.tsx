@@ -17,6 +17,7 @@ import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
 import { clock } from '@/data/crews';
 import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import { STAGE_BY_KEY } from '@/data/stage-schedule';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
 import {
   requirementsFor,
@@ -27,7 +28,12 @@ import {
   singleCropPlanRun,
   toRequirementLines,
   distributedConsumption,
+  type FinishedLot,
+  type HorizonProductionDay,
 } from '@/engine/production-plan';
+import { stageOn, type CalendarSowing } from '@/engine/grow-calendar';
+import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { GRAMS_PER_LB } from '@/engine/grow-costing';
 import { standardSowingRecordPrefill, type SowingRecordDoc, type ReceiptDoc } from '@/engine/actuals';
 import { rawStockOnHand, openOrders, netRequirements, netToRequirementLines, type PoLike, type NetRequirements } from '@/engine/net-requirements';
 import type { DateRange } from '@/engine/periods';
@@ -47,6 +53,7 @@ const nextServiceDay = (d: string) => {
   for (let i = 0; i < 7 && !SERVICE_WEEKDAYS.includes(weekdayOf(x)); i++) x = isoAddDays(x, 1);
   return x;
 };
+const grams = (lb: number) => lb * GRAMS_PER_LB;
 
 interface SowingRow { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number; closedBy: string | null }
 
@@ -118,6 +125,30 @@ export function ProductionPlanningClient({
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
   const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
+  // The library on the grow model: sowings go on grow units for their cycle days, and the day and
+  // the horizon read the grow calendar. A library with no grow plan keeps the Phase 1-era planner.
+  const growLibrary = useMemo(() => resolved.cropPlans.some(isGrowPlanCarrier), [resolved.cropPlans]);
+  const planOf = useCallback((code: string) => {
+    const r = resolved.cropPlans.find((x) => x.code === code);
+    return r && isGrowPlanCarrier(r) ? r.plan : null;
+  }, [resolved.cropPlans]);
+  // Recorded sowings still inside their cycle are on the shelves when a window opens.
+  const openingSowings = useMemo(
+    () =>
+      sowings
+        .filter((b) => b.goodUnits > 0)
+        .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+        .filter((b) => {
+          const plan = planOf(b.cropPlanCode);
+          return plan !== null && stageOn(plan, b.sowDate, today).stage !== 'off';
+        }),
+    [sowings, planOf, today],
+  );
+  const stageToday = (s: CalendarSowing) => {
+    const plan = planOf(s.cropPlanCode);
+    const st = plan ? stageOn(plan, s.sowDate, today) : null;
+    return st && st.stage !== 'off' ? `${STAGE_BY_KEY[st.stage].name}, day ${st.dayOfCycle}` : '—';
+  };
 
   // ── Level 1: single crop plan run ────────────────────────────────────────────
   const { cropPlan: runCropPlan } = useSelectedCropPlan();
@@ -145,6 +176,10 @@ export function ProductionPlanningClient({
     [runCropPlan, runUnits, runChannel, runPrice, runOpening, runChannelPrice, runOwnUnit, pfByChannel, premiumByChannel, resolved.capacityInputs, resolved.cropPlanAssumptions, A],
   );
   const runRequirement = useMemo(() => toRequirementLines(run.purchase.lines), [run.purchase.lines]);
+  // A grow plan's run: the sowing in trays of one grow unit, the cycle, and the cost per tray by line kind.
+  const runGrow = useMemo(() => (isGrowPlanCarrier(runCropPlan) && run.cap.grow ? { grow: run.cap.grow, costing: costCarrier(runCropPlan) } : null), [runCropPlan, run.cap.grow]);
+  const runLabor = resolved.laborStandards[runCropPlan.code];
+  const runAssumptions = resolved.cropPlanAssumptions[runCropPlan.code] ?? A;
 
   // ── Level 2: distribution day ─────────────────────────────────────────────────
   const [dayDate, setDayDate] = useState(() => nextServiceDay(today));
@@ -176,13 +211,67 @@ export function ProductionPlanningClient({
       std ? standardLabel(std) : undefined,
     );
   }, [closing, closingCropPlan, productionDate, sowingCountByDate, shrink, standards]);
-  const recordedToday = useMemo(() => sowings.filter((b) => b.productionDate === productionDate), [sowings, productionDate]);
   // Raw stock on the production morning and what is on order: the net requirement is what is bought.
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
-  const dayStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: productionDate }), [receipts, rawSowings, productionDate]);
-  const dayNet = useMemo(() => netRequirements({ days: [{ productionDate, lines: day.purchase.lines }], stock: dayStock, onOrder }), [productionDate, day.purchase.lines, dayStock, onOrder]);
   const dayUnits = dayBook.reduce((s, o) => s + o.units, 0);
   const dayByChannel = channels.map((c) => ({ ...c, units: dayBook.filter((o) => o.channel === c.phase).reduce((s, o) => s + o.units, 0) }));
+
+  // The day on the grow model: each order back-planned to its plan's sow date, the sowings placed on
+  // the grow units for their cycle — the horizon over this one distribution date.
+  const dayLots = useMemo(() => {
+    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.cropPlanCode] === undefined);
+    // A typed on-hand figure stands in for the records of its plan as one lot inside shelf life.
+    for (const [code, qty] of Object.entries(onHandOverride)) {
+      const produced = isoAddDays(dayDate, -1);
+      lots.push({ sowingId: `typed-${code}`, cropPlanCode: code, produced, expires: isoAddDays(produced, shelfLife), qtyProduced: qty, remaining: qty });
+    }
+    return lots;
+  }, [sowings, consumption, shelfLife, dayDate, onHandOverride]);
+  const dayHorizon = useMemo(
+    () =>
+      growLibrary
+        ? planHorizon({
+            closures,
+            crews: resolved.crews,
+            from: dayDate,
+            to: dayDate,
+            book: dayBook,
+            cropPlans: resolved.cropPlans,
+            capacityInputs: resolved.capacityInputs,
+            assumptions: A,
+            cropPlanAssumptions: resolved.cropPlanAssumptions,
+            unitFactorByChannel: pfByChannel,
+            openingLots: dayLots,
+            openingSowings,
+            shelfLifeDays: shelfLife,
+            productionWeekdays: SERVICE_WEEKDAYS,
+            channels: channels.map((c) => c.phase),
+          })
+        : null,
+    [growLibrary, closures, resolved.crews, dayDate, dayBook, resolved.cropPlans, resolved.capacityInputs, A, resolved.cropPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels],
+  );
+  const dayRuns = useMemo(() => (dayHorizon?.productionDays ?? []).flatMap((p) => p.runs.map((r) => ({ ...r, sowDate: p.productionDate }))), [dayHorizon]);
+  const daySowings = useMemo(() => (dayHorizon?.growCalendar?.sowings ?? []).filter((s) => s.distributionDate === dayDate).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.cropPlanCode.localeCompare(b.cropPlanCode)), [dayHorizon, dayDate]);
+  const sowDates = useMemo(() => (dayHorizon?.productionDays ?? []).map((p) => p.productionDate), [dayHorizon]);
+  const firstSowDate = sowDates[0] ?? dayDate;
+  const dayNoRoom = daySowings.filter((s) => !s.placed).reduce((s, x) => s + x.trays, 0);
+  const dayDist = dayHorizon?.distributionDays[0];
+  const dayStockAsOf = growLibrary ? firstSowDate : productionDate;
+  const dayStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: dayStockAsOf }), [receipts, rawSowings, dayStockAsOf]);
+  const dayNet = useMemo(
+    () =>
+      netRequirements({
+        days: dayHorizon ? dayHorizon.productionDays.map((p) => ({ productionDate: p.productionDate, lines: p.purchase.lines })) : [{ productionDate, lines: day.purchase.lines }],
+        stock: dayStock,
+        onOrder,
+      }),
+    [dayHorizon, productionDate, day.purchase.lines, dayStock, onOrder],
+  );
+  const dayGross = dayHorizon ? dayHorizon.productionDays.reduce((s, p) => s + p.purchase.total, 0) : day.purchase.total;
+  const dayRunsMade = dayHorizon ? dayRuns.filter((r) => r.produced > 0).length : day.runs.filter((r) => r.produced > 0).length;
+  const dayProduced = dayHorizon ? dayHorizon.totals.producedBase : day.totalProduced;
+  const recordedForDay = useMemo(() => sowings.filter((b) => (growLibrary ? sowDates.includes(b.productionDate) : b.productionDate === productionDate)), [sowings, growLibrary, sowDates, productionDate]);
+  const dayTitleDates = growLibrary ? (sowDates.length ? sowDates.map(dateLabel).join(', ') : dateLabel(dayDate)) : dateLabel(productionDate);
 
   // ── Level 3: horizon ──────────────────────────────────────────────────────
   const [hFrom, setHFrom] = useState(today);
@@ -203,11 +292,12 @@ export function ProductionPlanningClient({
         cropPlanAssumptions: resolved.cropPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
+        openingSowings,
         shelfLifeDays: shelfLife,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: channels.map((c) => c.phase),
       }),
-    [closures, hFrom, hTo, hBook, resolved.cropPlans, resolved.capacityInputs, A, pfByChannel, openingLots, shelfLife, channels, resolved.crews],
+    [closures, hFrom, hTo, hBook, resolved.cropPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.cropPlanAssumptions],
   );
   const hStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: hFrom }), [receipts, rawSowings, hFrom]);
   const hNet = useMemo(
@@ -215,6 +305,16 @@ export function ProductionPlanningClient({
     [horizon.productionDays, hStock, onOrder],
   );
   const needByOf = (n: NetRequirements) => Object.fromEntries(n.lines.filter((l) => l.needBy).map((l) => [l.input, l.needBy as string]));
+  const cal = horizon.growCalendar;
+  const hNoRoom = (cal?.sowings ?? []).filter((s) => !s.placed);
+  const hPeak = (cal?.days ?? []).reduce((m, d) => Math.max(m, d.traysOnShelf), 0);
+  // One row per date of the window: the shelves (the calendar) beside the stock (the horizon's rows).
+  const hByDate = useMemo(() => {
+    if (!cal) return [];
+    const stockOn = new Map(horizon.byDate.map((r) => [r.date, r]));
+    return cal.days.map((d) => ({ ...d, stock: stockOn.get(d.date) }));
+  }, [cal, horizon.byDate]);
+  const traysSown = (p: HorizonProductionDay) => p.runs.reduce((s, r) => s + r.produced, 0);
 
   return (
     <>
@@ -232,14 +332,14 @@ export function ProductionPlanningClient({
             <div className="flex flex-wrap gap-3 items-end">
               <span className="farm-kpi-sub">{CROP_PLAN_STATUS_LABELS[runCropPlan.status]}{runCropPlan.channels.length ? ` · authored for ${runCropPlan.channels.map((c) => channelLabel(c)).join(', ')}` : ' · listed on no channel'}</span>
               {canEdit && <button type="button" className="farm-btn" onClick={() => setEditor((e) => !e)}>{editor ? 'Close editor' : 'Add New Crop plan'}</button>}
-              <label className="farm-kpi-sub">Units<br /><input className="farm-input w-28!" type="number" min={0} step={1} value={runUnits} onChange={(e) => setRunUnits(Math.max(0, Number(e.target.value) || 0))} /></label>
+              <label className="farm-kpi-sub">{runGrow ? `Units (trays of the ${runGrow.costing.format.name})` : 'Units'}<br /><input className="farm-input w-28!" type="number" min={0} step={1} value={runUnits} onChange={(e) => setRunUnits(Math.max(0, Number(e.target.value) || 0))} /></label>
               <label className="farm-kpi-sub">Channel<br />
                 <select className="farm-select" value={runChannel} onChange={(e) => { const ch = Number(e.target.value); setRunChannel(ch); setRunPrice(''); }}>
                   {channels.map((c) => <option key={c.phase} value={c.phase}>{channelLabel(c.phase)}{runCropPlan.channels.includes(c.phase) ? '' : ' · not listed'}</option>)}
                 </select>
               </label>
               <label className="farm-kpi-sub">Price / unit $ (blank = channel {money(runChannelPrice)})<br /><input className="farm-input w-28!" type="number" min={0} step={0.01} value={runPrice} onChange={(e) => setRunPrice(e.target.value === '' ? '' : Number(e.target.value))} /></label>
-              <label className="farm-kpi-sub">Opening finished inventory (base units)<br /><input className="farm-input w-28!" type="number" min={0} step={25} value={runOpening} onChange={(e) => setRunOpening(Math.max(0, Number(e.target.value) || 0))} /></label>
+              <label className="farm-kpi-sub">Opening finished inventory ({runGrow ? 'trays' : 'base units'})<br /><input className="farm-input w-28!" type="number" min={0} step={runGrow ? 1 : 25} value={runOpening} onChange={(e) => setRunOpening(Math.max(0, Number(e.target.value) || 0))} /></label>
             </div>
             <p className="farm-kpi-sub mt-2">
               A cropPlan saved from the editor is a library cropPlan from that moment and runs here at once.{' '}
@@ -250,58 +350,105 @@ export function ProductionPlanningClient({
             {editor && <div className="mt-3"><CropPlanEditor mode="create" library={library} channels={channels.map((c) => ({ phase: c.phase, market: c.market }))} onDone={() => setEditor(false)} /></div>}
           </Card>
 
-          <div className="grid gap-3 mt-4 farm-autofit-11">
-            <Kpi value={num(run.sowings)} label="Sowings (whole only)" sub={`${num(run.produced)} base units for ${num(run.baseUnits)} needed`} />
-            <Kpi value={num(run.cap.sowingSize)} label="Sowing size (derived)" sub={`${run.cap.canopyMassPerUnit.toFixed(3)} lb blackout / unit`} />
-            <Kpi value={<span>{num(run.cyclesRequired)} of {num(run.cyclesAvailable)} <CheckPill ok={run.fits} okLabel="fits" overLabel="over" /></span>} label="Blackout rack cycles" sub="One sowing is one cycle by construction" />
-            <Kpi value={`${num(Math.round(run.blackoutLb))} lb`} label="Canopy mass for the run" sub={`${num(Math.round(run.harvestedLb))} lb harvested · hot components only enter the rack`} />
-            <Kpi value={money(run.inputCostPerUnit)} label="Input cost / unit" sub={`${money(run.laborPerUnit)} run labor / unit (time study)`} />
-            {showFinancials && <Kpi value={money(run.contributionPerUnit)} label="Contribution / unit" sub="Before fixed overhead" />}
-          </div>
+          {runGrow ? (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(run.sowings)} label="Sowings (whole only)" sub={`${num(run.produced)} trays for ${num(run.baseUnits)} needed`} />
+              <Kpi value={`${num(runGrow.grow.sowingTrays)} trays`} label="Sowing — what one grow unit takes" sub={runGrow.grow.binding ? `one ${runGrow.grow.binding.unit.item.toLowerCase()}` : 'no grow unit takes this plan'} />
+              <Kpi value={<span>{num(run.sowings)} of {num(runGrow.grow.unitCount)} <CheckPill ok={run.sowings <= runGrow.grow.unitCount} okLabel="at once" overLabel="over" /></span>} label="Grow units the run takes" sub={run.sowings <= runGrow.grow.unitCount ? `each sowing holds its unit for the ${num(runGrow.grow.cycleDays)}-day cycle` : `${num(run.sowings - runGrow.grow.unitCount)} sowing${run.sowings - runGrow.grow.unitCount === 1 ? '' : 's'} past the units wait a ${num(runGrow.grow.cycleDays)}-day cycle`} />
+              <Kpi value={`${num(Math.round(grams(run.harvestedLb)))} g`} label="Harvest for the run" sub={`${num(Math.round(grams(run.purchasedLb)))} g seed sown · ${num(runGrow.costing.harvestGramsPerTray, 0)} g a tray from the variety record`} />
+              <Kpi value={money(run.inputCostPerUnit)} label="Input cost / tray" sub={`${money(run.laborPerUnit)} run labor / tray on the three streams`} />
+              {showFinancials && <Kpi value={money(run.contributionPerUnit)} label="Contribution / tray" sub="Before fixed overhead" />}
+            </div>
+          ) : (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(run.sowings)} label="Sowings (whole only)" sub={`${num(run.produced)} base units for ${num(run.baseUnits)} needed`} />
+              <Kpi value={num(run.cap.sowingSize)} label="Sowing size (derived)" sub={`${run.cap.canopyMassPerUnit.toFixed(3)} lb blackout / unit`} />
+              <Kpi value={<span>{num(run.cyclesRequired)} of {num(run.cyclesAvailable)} <CheckPill ok={run.fits} okLabel="fits" overLabel="over" /></span>} label="Blackout rack cycles" sub="One sowing is one cycle by construction" />
+              <Kpi value={`${num(Math.round(run.blackoutLb))} lb`} label="Canopy mass for the run" sub={`${num(Math.round(run.harvestedLb))} lb harvested · hot components only enter the rack`} />
+              <Kpi value={money(run.inputCostPerUnit)} label="Input cost / unit" sub={`${money(run.laborPerUnit)} run labor / unit (time study)`} />
+              {showFinancials && <Kpi value={money(run.contributionPerUnit)} label="Contribution / unit" sub="Before fixed overhead" />}
+            </div>
+          )}
 
           <div className="grid gap-4 mt-4 farm-autofit-20">
-            <Card title="The run in pounds — four weights, one production">
-              <table className="farm-table">
-                <thead><tr><th>Stage</th><th className="num">Pounds</th><th className="num">Oz / unit</th></tr></thead>
-                <tbody>
-                  <tr><td>As purchased</td><td className="num">{num(Math.round(run.purchasedLb))}</td><td className="num">{((run.purchasedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
-                  <tr><td>Harvested</td><td className="num">{num(Math.round(run.harvestedLb))}</td><td className="num">{((run.harvestedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
-                  <tr><td>Blackouted (hot components)</td><td className="num">{num(Math.round(run.blackoutLb))}</td><td className="num">{((run.blackoutLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
-                  <tr className="total"><td>Packed, at {money(run.costPerPackedOz, 4)} per packed oz</td><td className="num">{num(Math.round(run.packedLb))}</td><td className="num">{((run.packedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
-                </tbody>
-              </table>
-              <table className="farm-table mt-3">
-                <tbody>
-                  <tr><td>Purchase order, case-rounded, incl. the {(shrink * 100).toFixed(0)}% normal-spoilage allowance</td><td className="num">{money(run.purchase.total)}</td></tr>
-                  <tr><td>CropPlan standard for {num(run.produced)} units, incl. the same allowance</td><td className="num">{money(run.inputCostStandard)}</td></tr>
-                  <tr className="total"><td>Difference held in raw materials (case rounding, not a price variance)</td><td className="num">{money(run.carriedForward)}</td></tr>
-                  <tr><td>Closing finished inventory after the {num(run.units)} units ship</td><td className="num">{num(run.closing)} base units</td></tr>
-                </tbody>
-              </table>
-            </Card>
+            {runGrow ? (
+              <Card title="The run in grams — seed to harvest, and by line kind">
+                <table className="farm-table">
+                  <thead><tr><th>Stage</th><th className="num">Grams</th><th className="num">g / tray</th></tr></thead>
+                  <tbody>
+                    <tr><td>Seed sown</td><td className="num">{num(Math.round(grams(run.purchasedLb)))}</td><td className="num">{num(runGrow.costing.seedGramsPerTray, 1)}</td></tr>
+                    <tr><td>Harvested ({num(runGrow.costing.yieldToHarvest, 2)}× the seed, from the variety record until a closed sowing observes it)</td><td className="num">{num(Math.round(grams(run.harvestedLb)))}</td><td className="num">{num(runGrow.costing.harvestGramsPerTray, 1)}</td></tr>
+                    <tr className="total"><td>Packed as harvested, at {money(run.costPerPackedOz, 4)} per oz</td><td className="num">{num(Math.round(grams(run.packedLb)))}</td><td className="num">{num(runGrow.costing.harvestGramsPerTray, 1)}</td></tr>
+                  </tbody>
+                </table>
+                <table className="farm-table mt-3">
+                  <thead><tr><th>Line kind</th><th className="num">$ / tray</th><th className="num">For {num(run.produced)} trays</th></tr></thead>
+                  <tbody>
+                    {(['seed', 'medium', 'nutrient', 'light', 'consumables'] as const).map((k) => (
+                      <tr key={k}><td>{k === 'consumables' ? 'Consumables (tray set, sanitizer)' : `${k[0]!.toUpperCase()}${k.slice(1)}`}</td><td className="num">{money(runGrow.costing.perTray[k], 4)}</td><td className="num">{money(runGrow.costing.perTray[k] * run.produced)}</td></tr>
+                    ))}
+                    <tr className="total"><td>Inputs, before the {(shrink * 100).toFixed(0)}% shrink allowance</td><td className="num">{money(runGrow.costing.perTray.total, 4)}</td><td className="num">{money(runGrow.costing.perTray.total * run.produced)}</td></tr>
+                  </tbody>
+                </table>
+                <table className="farm-table mt-3">
+                  <tbody>
+                    <tr><td>Purchase order, pack-rounded, incl. the {(shrink * 100).toFixed(0)}% shrink allowance</td><td className="num">{money(run.purchase.total)}</td></tr>
+                    <tr><td>Plan standard for {num(run.produced)} trays, incl. the same allowance</td><td className="num">{money(run.inputCostStandard)}</td></tr>
+                    <tr className="total"><td>Difference held in raw materials (pack rounding, not a price variance)</td><td className="num">{money(run.carriedForward)}</td></tr>
+                    <tr><td>Closing finished inventory after the {num(run.units)} trays ship</td><td className="num">{num(run.closing)} trays</td></tr>
+                  </tbody>
+                </table>
+              </Card>
+            ) : (
+              <Card title="The run in pounds — four weights, one production">
+                <table className="farm-table">
+                  <thead><tr><th>Stage</th><th className="num">Pounds</th><th className="num">Oz / unit</th></tr></thead>
+                  <tbody>
+                    <tr><td>As purchased</td><td className="num">{num(Math.round(run.purchasedLb))}</td><td className="num">{((run.purchasedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
+                    <tr><td>Harvested</td><td className="num">{num(Math.round(run.harvestedLb))}</td><td className="num">{((run.harvestedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
+                    <tr><td>Blackouted (hot components)</td><td className="num">{num(Math.round(run.blackoutLb))}</td><td className="num">{((run.blackoutLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
+                    <tr className="total"><td>Packed, at {money(run.costPerPackedOz, 4)} per packed oz</td><td className="num">{num(Math.round(run.packedLb))}</td><td className="num">{((run.packedLb * 16) / Math.max(1, run.produced)).toFixed(2)}</td></tr>
+                  </tbody>
+                </table>
+                <table className="farm-table mt-3">
+                  <tbody>
+                    <tr><td>Purchase order, case-rounded, incl. the {(shrink * 100).toFixed(0)}% normal-spoilage allowance</td><td className="num">{money(run.purchase.total)}</td></tr>
+                    <tr><td>CropPlan standard for {num(run.produced)} units, incl. the same allowance</td><td className="num">{money(run.inputCostStandard)}</td></tr>
+                    <tr className="total"><td>Difference held in raw materials (case rounding, not a price variance)</td><td className="num">{money(run.carriedForward)}</td></tr>
+                    <tr><td>Closing finished inventory after the {num(run.units)} units ship</td><td className="num">{num(run.closing)} base units</td></tr>
+                  </tbody>
+                </table>
+              </Card>
+            )}
 
             {showFinancials && (
-            <Card title={`Economics of ${num(run.units)} units on ${channelLabel(runChannel)}`}>
+            <Card title={`Economics of ${num(run.units)} ${runGrow ? 'trays' : 'units'} on ${channelLabel(runChannel)}`}>
               <table className="farm-table">
                 <tbody>
                   <tr><td>Revenue at {money(runPrice === '' ? runChannelPrice : runPrice)}</td><td className="num">{money(run.revenue)}</td></tr>
-                  <tr><td>Input cost sold ({money(run.inputCostPerUnit)} / unit)</td><td className="num">({money(run.inputCostSold)})</td></tr>
-                  <tr><td>Direct labor for the run — {run.laborHours.toFixed(1)} h at {money(A.labor.blendedLoadedWage.value)}/h (time study, fixed + variable)</td><td className="num">({money(run.laborCost)})</td></tr>
-                  <tr><td>Packaging ({money(run.packagingPerUnit)} / unit)</td><td className="num">({money(run.packaging)})</td></tr>
-                  <tr><td>Distribution ({money(run.distributionPerUnit)} / unit)</td><td className="num">({money(run.distribution)})</td></tr>
+                  <tr><td>Input cost sold ({money(run.inputCostPerUnit)} / {runGrow ? 'tray' : 'unit'})</td><td className="num">({money(run.inputCostSold)})</td></tr>
+                  <tr><td>Direct labor for the run — {run.laborHours.toFixed(1)} h at {money(A.labor.blendedLoadedWage.value)}/h ({runGrow ? 'sowing, daily and harvest streams' : 'time study, fixed + variable'})</td><td className="num">({money(run.laborCost)})</td></tr>
+                  <tr><td>Packaging ({money(run.packagingPerUnit)} / {runGrow ? 'tray' : 'unit'})</td><td className="num">({money(run.packaging)})</td></tr>
+                  <tr><td>Distribution ({money(run.distributionPerUnit)} / {runGrow ? 'tray' : 'unit'})</td><td className="num">({money(run.distribution)})</td></tr>
                   {run.commission > 0 && <tr><td>Marketplace commission ({pct(CHANNEL_COMMISSION_PHASE3, 0)} of price)</td><td className="num">({money(run.commission)})</td></tr>}
                   <tr className="total"><td>Contribution before fixed overhead</td><td className="num">{money(run.contribution)}</td></tr>
-                  <tr><td>Per unit</td><td className="num">{money(run.contributionPerUnit)}</td></tr>
+                  <tr><td>Per {runGrow ? 'tray' : 'unit'}</td><td className="num">{money(run.contributionPerUnit)}</td></tr>
                 </tbody>
               </table>
-              <p className="farm-kpi-sub mt-2">
-                Labor here is the run&rsquo;s own hours on {runCropPlan.code}&rsquo;s own labor standard ({LABOR_BASIS_LABELS[resolved.laborStandards[runCropPlan.code]?.basis ?? 'none'].toLowerCase()}) — {num(run.sowings)} × {num(resolved.laborStandards[runCropPlan.code]?.fixedMinutesPerSowing ?? 0, 0)} fixed minutes plus {num(run.produced)} × {(resolved.laborStandards[runCropPlan.code]?.variableMinutesPerUnit ?? 0).toFixed(3)} variable minutes — priced at the loaded wage. The cost of a unit on Unit Economics and on CropPlans uses the same standard at one full sowing. Fixed overhead is on <Link className="farm-link" href="/farm/financials/unit-economics">Unit Economics</Link>.
-              </p>
+              {runGrow ? (
+                <p className="farm-kpi-sub mt-2">
+                  Labor here is the run&rsquo;s own hours on {runCropPlan.code}&rsquo;s labor standard ({LABOR_BASIS_LABELS[runLabor?.basis ?? 'none'].toLowerCase()}): {num(run.sowings)} × {num(runAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} minutes a sowing on the sow day, plus {num(run.produced)} × {(runAssumptions.laborSplit.dailyMinutesPerUnit?.value ?? 0).toFixed(1)} minutes a tray over the days on the shelf, plus {num(run.produced)} × {runAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(1)} minutes a tray on the harvest day — priced at the loaded wage. The cost of a tray on Unit Economics and on Grow plans uses the same standard at one full sowing. Fixed overhead is on <Link className="farm-link" href="/farm/financials/unit-economics">Unit Economics</Link>.
+                </p>
+              ) : (
+                <p className="farm-kpi-sub mt-2">
+                  Labor here is the run&rsquo;s own hours on {runCropPlan.code}&rsquo;s own labor standard ({LABOR_BASIS_LABELS[runLabor?.basis ?? 'none'].toLowerCase()}) — {num(run.sowings)} × {num(runLabor?.fixedMinutesPerSowing ?? 0, 0)} fixed minutes plus {num(run.produced)} × {(runLabor?.variableMinutesPerUnit ?? 0).toFixed(3)} variable minutes — priced at the loaded wage. The cost of a unit on Unit Economics and on CropPlans uses the same standard at one full sowing. Fixed overhead is on <Link className="farm-link" href="/farm/financials/unit-economics">Unit Economics</Link>.
+                </p>
+              )}
             </Card>
             )}
           </div>
 
-          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={runRequirement} unitsProduced={run.produced} title={`Purchase orders — ${runCropPlan.code}, ${num(run.produced)} units`} />
+          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={runRequirement} unitsProduced={run.produced} title={`Purchase orders — ${runCropPlan.code}, ${num(run.produced)} ${runGrow ? 'trays' : 'units'}`} />
         </>
       )}
 
@@ -310,118 +457,245 @@ export function ProductionPlanningClient({
           <Card title="Distribution day">
             <PageControls><label className="farm-kpi-sub inline-flex items-center gap-2">Distribution date<input className="farm-input" type="date" value={dayDate} onChange={(e) => { if (e.target.value) { setDayDate(e.target.value); setClosing(null); setOnHandOverride({}); } }} /></label></PageControls>
             <div className="flex flex-wrap gap-3 items-end">
-              <span className="farm-kpi-sub">Distributed {dateLabel(dayDate)} · produced <strong className="farm-c-ink">{dateLabel(productionDate)}</strong> · {num(Math.round(dayUnits))} units in {dayBook.length} order{dayBook.length === 1 ? '' : 's'}</span>
+              {dayHorizon ? (
+                <span className="farm-kpi-sub">Distributed {dateLabel(dayDate)} · sown <strong className="farm-c-ink">{sowDates.length ? sowDates.map(dateLabel).join(', ') : 'nothing'}</strong> · {num(Math.round(dayUnits))} units in {dayBook.length} order{dayBook.length === 1 ? '' : 's'}</span>
+              ) : (
+                <span className="farm-kpi-sub">Distributed {dateLabel(dayDate)} · produced <strong className="farm-c-ink">{dateLabel(productionDate)}</strong> · {num(Math.round(dayUnits))} units in {dayBook.length} order{dayBook.length === 1 ? '' : 's'}</span>
+              )}
             </div>
-            <p className="farm-kpi-sub mt-2">
-              Nothing is served on the day it is harvested: the units distributed on this date are made on the last production weekday before it, blackouted and held. Orders come from <Link className="farm-link" href="/farm/orders">Orders</Link>: forecast orders from each subscriber&rsquo;s flat plan and its services&rsquo; units per service, plus the confirmed and typed orders on file. Units are exploded into base units — at the cropPlan&rsquo;s own unit when it is authored for the channel, else at the channel&rsquo;s unit factor — netted against finished goods on hand on the production morning, and sized into whole sowings per cropPlan.
-            </p>
-          </Card>
-
-          <div className="grid gap-3 mt-4 farm-autofit-11">
-            <Kpi value={num(Math.round(dayUnits))} label="Units ordered" sub={dayByChannel.filter((c) => c.units > 0).map((c) => `${num(Math.round(c.units))} ${c.market}`).join(' · ') || 'no orders on this date'} />
-            <Kpi value={num(Math.round(day.totalRequired))} label="Base units required" sub={`${day.runs.length} crop plan${day.runs.length === 1 ? '' : 's'}`} />
-            <Kpi value={<span>{num(day.cyclesRequired)} of {num(day.cyclesAvailable)} <CheckPill ok={day.fits} okLabel="fits" overLabel="does not fit" /></span>} label="Blackout rack cycles" sub={`${clock(day.blackoutWindow.startMin)}–${clock(day.blackoutWindow.endMin)} window ÷ ${day.blackoutWindow.occupancyMinutes} min occupancy`} />
-            <Kpi value={num(day.runs.reduce((s, r) => s + r.sowingsScheduled, 0))} label="Sowings to run" sub={`${num(Math.round(day.totalProduced))} base units produced${day.totalShortfall > 0 ? ` · ${num(Math.round(day.totalShortfall))} short` : ''}`} />
-            <Kpi value={`${num(Math.round(day.blackoutLb))} lb`} label="Canopy mass" sub={`${num(Math.round(day.blackoutCeilingLb))} lb the racks take in the day`} />
-            <Kpi value={`${day.laborHours.toFixed(1)} h`} label="Direct labor" sub={`${money(day.laborCost)} at the loaded wage`} />
-          </div>
-
-          <Card title={`Production requirements — ${dateLabel(productionDate)}`} className="mt-4">
-            {day.runs.length === 0 && <p className="farm-kpi-sub">No orders on {dateLabel(dayDate)}. A service with units per service and a flat plan on Subscribers put forecast orders here.</p>}
-            {day.runs.length > 0 && (
-              <div className="farm-scroll-x">
-                <table className="farm-table">
-                  <thead>
-                    <tr><th>Crop plan</th><th className="num">Units</th><th className="num">Required (base)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing size</th><th className="num">Sowings</th><th className="num">Produced</th><th className="num">Closing</th><th className="num">Food at standard</th></tr>
-                  </thead>
-                  <tbody>
-                    {day.runs.map((r) => {
-                      const req = requirements.find((q) => q.cropPlanCode === r.cropPlanCode);
-                      const overridden = onHandOverride[r.cropPlanCode] !== undefined;
-                      return (
-                        <tr key={r.cropPlanCode}>
-                          <td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td>
-                          <td className="num">{num(Math.round(req?.units ?? 0))}<div className="farm-c-faint farm-fs-2xs">{(req?.byChannel ?? []).map((c) => `${channelLabel(c.channel)} ${num(Math.round(c.units))}${c.unitFactor !== 1 ? ` × ${c.unitFactor}` : ''}`).join(' · ')}</div></td>
-                          <td className="num">{num(Math.round(r.required))}</td>
-                          <td className="num">
-                            <input className="farm-num-input" type="number" min={0} step={1} value={Math.round(r.onHand)} onChange={(e) => setOnHandOverride((m) => ({ ...m, [r.cropPlanCode]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${r.cropPlanCode} on hand`} />
-                            <div className="farm-fs-2xs"><StatusBadge status={overridden ? 'STATED' : 'DERIVED'} title={overridden ? 'Typed for this view; not saved.' : `From ${stock.lots.filter((l) => l.cropPlanCode === r.cropPlanCode && l.remaining > 0 && l.expires >= productionDate).length} closed sowing record(s) inside shelf life, less distributed orders.`} />{overridden && <button type="button" className="farm-btn py-0! px-[0.3rem]! ml-[0.3rem]! farm-fs-2xs" onClick={() => setOnHandOverride((m) => { const n = { ...m }; delete n[r.cropPlanCode]; return n; })}>records</button>}</div>
-                          </td>
-                          <td className="num">{num(Math.round(r.net))}</td>
-                          <td className="num">{num(r.sowingSize)}</td>
-                          <td className="num">{num(r.sowingsScheduled)}{r.sowingsScheduled < r.sowingsNeeded ? <div className="farm-c-over farm-fs-2xs">{num(r.sowingsNeeded)} needed</div> : null}</td>
-                          <td className="num">{num(Math.round(r.produced))}{r.shortfall > 0 ? <div className="farm-c-over farm-fs-2xs">{num(Math.round(r.shortfall))} short</div> : null}</td>
-                          <td className="num">{num(Math.round(r.closing))}</td>
-                          <td className="num">{money(r.inputCostStandard)}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="total"><td>All crop plans</td><td className="num">{num(Math.round(dayUnits))}</td><td className="num">{num(Math.round(day.totalRequired))}</td><td className="num">—</td><td className="num">{num(Math.round(day.runs.reduce((s, r) => s + r.net, 0)))}</td><td className="num">—</td><td className="num">{num(day.runs.reduce((s, r) => s + r.sowingsScheduled, 0))}</td><td className="num">{num(Math.round(day.totalProduced))}</td><td className="num">{num(Math.round(day.runs.reduce((s, r) => s + r.closing, 0)))}</td><td className="num">{money(day.inputCostStandard)}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {Object.keys(stock.expiredByCropPlan).length > 0 && (
-              <p className="farm-kpi-sub mt-2 farm-c-placeholder">
-                Past shelf life on {productionDate}, unconsumed: {Object.entries(stock.expiredByCropPlan).map(([k, v]) => `${num(Math.round(v))} ${k}`).join(', ')}. Not counted as on hand.
+            {dayHorizon ? (
+              <p className="farm-kpi-sub mt-2">
+                A live tray is distributed inside its harvest window: each order on this date is back-planned to its plan&rsquo;s sow date, the distribution date less the plan&rsquo;s days to harvest, on a production day. Orders come from <Link className="farm-link" href="/farm/orders">Orders</Link>: forecast orders from each subscriber&rsquo;s flat plan and its services&rsquo; units per service, plus the confirmed and typed orders on file. Units are trays of the plan&rsquo;s format, netted against finished goods on hand, sized into whole sowings of what one grow unit takes, and each sowing is placed on a unit with room for its whole cycle. The month view is the <Link className="farm-link" href="/farm/production-planning/grow-calendar">Grow Calendar</Link>.
+              </p>
+            ) : (
+              <p className="farm-kpi-sub mt-2">
+                Nothing is served on the day it is harvested: the units distributed on this date are made on the last production weekday before it, blackouted and held. Orders come from <Link className="farm-link" href="/farm/orders">Orders</Link>: forecast orders from each subscriber&rsquo;s flat plan and its services&rsquo; units per service, plus the confirmed and typed orders on file. Units are exploded into base units — at the cropPlan&rsquo;s own unit when it is authored for the channel, else at the channel&rsquo;s unit factor — netted against finished goods on hand on the production morning, and sized into whole sowings per cropPlan.
               </p>
             )}
-            <p className="farm-kpi-sub mt-2">
-              On hand is what the closed sowing records say is inside the {shelfLife}-day shelf life on the production morning, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. Overshoot on whole sowings is the closing stock; the horizon carries it to the next distribution date.
-            </p>
           </Card>
 
-          <Card title="The blackout rack, in order" className="mt-4">
-            {day.schedule.length === 0 ? <p className="farm-kpi-sub">Nothing to blackout.</p> : (
-              <div className="farm-scroll-x">
-                <table className="farm-table">
-                  <thead><tr><th className="num">#</th><th>Crop plan</th><th className="num">Units</th><th className="num">Load</th><th className="num">Unload</th><th className="num">Rack free</th><th>Fits</th><th /></tr></thead>
-                  <tbody>
-                    {day.schedule.map((b) => (
-                      <tr key={b.seq}>
-                        <td className="num">{b.seq}</td>
-                        <td>{b.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{b.cropPlanName}</div></td>
-                        <td className="num">{num(b.units)}</td>
-                        <td className="num">{clock(b.loadMin)}</td>
-                        <td className="num">{clock(b.unloadMin)}</td>
-                        <td className="num">{clock(b.freeMin)}</td>
-                        <td><CheckPill ok={b.fits} okLabel="in the window" overLabel="past the window" /></td>
-                        <td className="num">{canRecordHere && b.fits && <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setClosing({ seq: b.seq, cropPlanCode: b.cropPlanCode, units: b.units })}>Close sowing record</button>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <p className="farm-kpi-sub mt-2">
-              Sowings are placed one cycle apart from the first load, largest requirement first; each takes the rack for {day.blackoutWindow.occupancyMinutes} minutes (load, blackout, unload). A sowing past the window is not made that day — it is the named shortfall above, not a plan that slips to 14:00.
-            </p>
-          </Card>
+          {dayHorizon ? (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(Math.round(dayUnits))} label="Units ordered" sub={dayByChannel.filter((c) => c.units > 0).map((c) => `${num(Math.round(c.units))} ${c.market}`).join(' · ') || 'no orders on this date'} />
+              <Kpi value={num(Math.round(dayHorizon.totals.orderedBase))} label="Trays required" sub={`${dayRuns.length} plan${dayRuns.length === 1 ? '' : 's'} · ${num(Math.round(dayDist?.filledBase ?? 0))} filled from stock and the sowings`} />
+              <Kpi value={num(dayHorizon.totals.sowings)} label="Sowings to run" sub={`${num(Math.round(dayHorizon.totals.producedBase))} trays sown${(dayDist?.unfilledBase ?? 0) > 0.5 ? ` · ${num(Math.round(dayDist!.unfilledBase))} unfilled` : ''}`} />
+              <Kpi value={num(sowDates.length)} label="Sow days" sub={sowDates.length ? `${sowDates[0]} to ${sowDates[sowDates.length - 1]}` : 'no sowing for this date'} />
+              <Kpi value={<span>{num(dayNoRoom)} <CheckPill ok={dayNoRoom === 0} okLabel="every sowing placed" overLabel="no room" /></span>} label="Trays with no room" sub={dayNoRoom > 0 ? `${daySowings.filter((s) => !s.placed).length} sowing${daySowings.filter((s) => !s.placed).length === 1 ? '' : 's'} no grow unit holds for the cycle` : 'each sowing holds a grow unit for its cycle'} />
+              <Kpi value={`${dayHorizon.productionDays.reduce((s, p) => s + p.laborHours, 0).toFixed(1)} h`} label="Direct labor" sub={`${money(dayHorizon.productionDays.reduce((s, p) => s + p.laborCost, 0))} at the loaded wage, on the three streams`} />
+            </div>
+          ) : (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(Math.round(dayUnits))} label="Units ordered" sub={dayByChannel.filter((c) => c.units > 0).map((c) => `${num(Math.round(c.units))} ${c.market}`).join(' · ') || 'no orders on this date'} />
+              <Kpi value={num(Math.round(day.totalRequired))} label="Base units required" sub={`${day.runs.length} crop plan${day.runs.length === 1 ? '' : 's'}`} />
+              <Kpi value={<span>{num(day.cyclesRequired)} of {num(day.cyclesAvailable)} <CheckPill ok={day.fits} okLabel="fits" overLabel="does not fit" /></span>} label="Blackout rack cycles" sub={`${clock(day.blackoutWindow.startMin)}–${clock(day.blackoutWindow.endMin)} window ÷ ${day.blackoutWindow.occupancyMinutes} min occupancy`} />
+              <Kpi value={num(day.runs.reduce((s, r) => s + r.sowingsScheduled, 0))} label="Sowings to run" sub={`${num(Math.round(day.totalProduced))} base units produced${day.totalShortfall > 0 ? ` · ${num(Math.round(day.totalShortfall))} short` : ''}`} />
+              <Kpi value={`${num(Math.round(day.blackoutLb))} lb`} label="Canopy mass" sub={`${num(Math.round(day.blackoutCeilingLb))} lb the racks take in the day`} />
+              <Kpi value={`${day.laborHours.toFixed(1)} h`} label="Direct labor" sub={`${money(day.laborCost)} at the loaded wage`} />
+            </div>
+          )}
 
-          <Card title={`Labor the day requires, and the proposed crews checked against it — ${dateLabel(productionDate)}`} className="mt-4">
-            <StaffingPanel labor={day.labor} staffing={day.staffing} crews={resolved.crews} />
-            <p className="farm-kpi-sub mt-2">
-              The requirement comes off the sowings placed on the blackoutRack above. Crews are proposed on <Link className="farm-link" href="/farm/capacity">Capacity</Link>; a gap is a finding here and never takes a cycle away from the day.
-            </p>
-          </Card>
+          {dayHorizon ? (
+            <Card title={`Production requirements — for ${dateLabel(dayDate)}`} className="mt-4">
+              {dayRuns.length === 0 && <p className="farm-kpi-sub">No orders on {dateLabel(dayDate)}. A service with units per service and a flat plan on Subscribers put forecast orders here.</p>}
+              {dayRuns.length > 0 && (
+                <div className="farm-scroll-x">
+                  <table className="farm-table">
+                    <thead>
+                      <tr><th>Plan</th><th>Sow date</th><th className="num">Units</th><th className="num">Required (trays)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing (trays)</th><th className="num">Sowings</th><th className="num">Sown</th><th className="num">Closing</th><th className="num">Inputs at standard</th></tr>
+                    </thead>
+                    <tbody>
+                      {dayRuns.map((r) => {
+                        const req = requirements.find((q) => q.cropPlanCode === r.cropPlanCode);
+                        const overridden = onHandOverride[r.cropPlanCode] !== undefined;
+                        const lotsOf = dayLots.filter((l) => l.cropPlanCode === r.cropPlanCode && !l.sowingId.startsWith('typed-')).length;
+                        return (
+                          <tr key={`${r.sowDate}|${r.cropPlanCode}`}>
+                            <td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td>
+                            <td className="whitespace-nowrap!">{dateLabel(r.sowDate)}</td>
+                            <td className="num">{num(Math.round(req?.units ?? 0))}<div className="farm-c-faint farm-fs-2xs">{(req?.byChannel ?? []).map((c) => `${channelLabel(c.channel)} ${num(Math.round(c.units))}${c.unitFactor !== 1 ? ` × ${c.unitFactor}` : ''}`).join(' · ')}</div></td>
+                            <td className="num">{num(Math.round(r.required))}</td>
+                            <td className="num">
+                              <input className="farm-num-input" type="number" min={0} step={1} value={Math.round(r.onHand)} onChange={(e) => setOnHandOverride((m) => ({ ...m, [r.cropPlanCode]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${r.cropPlanCode} on hand`} />
+                              <div className="farm-fs-2xs"><StatusBadge status={overridden ? 'STATED' : 'DERIVED'} title={overridden ? 'Typed for this view; not saved.' : `From ${lotsOf} closed sowing record(s) inside shelf life on the distribution date, less distributed orders.`} />{overridden && <button type="button" className="farm-btn py-0! px-[0.3rem]! ml-[0.3rem]! farm-fs-2xs" onClick={() => setOnHandOverride((m) => { const n = { ...m }; delete n[r.cropPlanCode]; return n; })}>records</button>}</div>
+                            </td>
+                            <td className="num">{num(Math.round(r.net))}</td>
+                            <td className="num">{num(r.sowingSize)}{r.sowingSize === 0 && <div className="farm-c-over farm-fs-2xs">no unit takes it</div>}</td>
+                            <td className="num">{num(r.sowingsScheduled)}{r.sowingsScheduled < r.sowingsNeeded ? <div className="farm-c-over farm-fs-2xs">{num(r.sowingsNeeded)} needed</div> : null}</td>
+                            <td className="num">{num(Math.round(r.produced))}{r.shortfall > 0 ? <div className="farm-c-over farm-fs-2xs">{num(Math.round(r.shortfall))} short</div> : null}</td>
+                            <td className="num">{num(Math.round(r.closing))}</td>
+                            <td className="num">{money(r.inputCostStandard)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="total"><td>All plans</td><td /><td className="num">{num(Math.round(dayUnits))}</td><td className="num">{num(Math.round(dayHorizon.totals.orderedBase))}</td><td className="num">—</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.net, 0)))}</td><td className="num">—</td><td className="num">{num(dayHorizon.totals.sowings)}</td><td className="num">{num(Math.round(dayHorizon.totals.producedBase))}</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.closing, 0)))}</td><td className="num">{money(dayHorizon.productionDays.reduce((s, p) => s + p.inputCostStandard, 0))}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="farm-kpi-sub mt-2">
+                On hand is what the closed sowing records say is inside the {shelfLife}-day shelf life on the distribution date, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. A sowing is what one grow unit takes in trays of the plan&rsquo;s format; overshoot on whole sowings is the closing stock, and the horizon carries it to the next distribution date.
+              </p>
+            </Card>
+          ) : (
+            <Card title={`Production requirements — ${dateLabel(productionDate)}`} className="mt-4">
+              {day.runs.length === 0 && <p className="farm-kpi-sub">No orders on {dateLabel(dayDate)}. A service with units per service and a flat plan on Subscribers put forecast orders here.</p>}
+              {day.runs.length > 0 && (
+                <div className="farm-scroll-x">
+                  <table className="farm-table">
+                    <thead>
+                      <tr><th>Crop plan</th><th className="num">Units</th><th className="num">Required (base)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing size</th><th className="num">Sowings</th><th className="num">Produced</th><th className="num">Closing</th><th className="num">Food at standard</th></tr>
+                    </thead>
+                    <tbody>
+                      {day.runs.map((r) => {
+                        const req = requirements.find((q) => q.cropPlanCode === r.cropPlanCode);
+                        const overridden = onHandOverride[r.cropPlanCode] !== undefined;
+                        return (
+                          <tr key={r.cropPlanCode}>
+                            <td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td>
+                            <td className="num">{num(Math.round(req?.units ?? 0))}<div className="farm-c-faint farm-fs-2xs">{(req?.byChannel ?? []).map((c) => `${channelLabel(c.channel)} ${num(Math.round(c.units))}${c.unitFactor !== 1 ? ` × ${c.unitFactor}` : ''}`).join(' · ')}</div></td>
+                            <td className="num">{num(Math.round(r.required))}</td>
+                            <td className="num">
+                              <input className="farm-num-input" type="number" min={0} step={1} value={Math.round(r.onHand)} onChange={(e) => setOnHandOverride((m) => ({ ...m, [r.cropPlanCode]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${r.cropPlanCode} on hand`} />
+                              <div className="farm-fs-2xs"><StatusBadge status={overridden ? 'STATED' : 'DERIVED'} title={overridden ? 'Typed for this view; not saved.' : `From ${stock.lots.filter((l) => l.cropPlanCode === r.cropPlanCode && l.remaining > 0 && l.expires >= productionDate).length} closed sowing record(s) inside shelf life, less distributed orders.`} />{overridden && <button type="button" className="farm-btn py-0! px-[0.3rem]! ml-[0.3rem]! farm-fs-2xs" onClick={() => setOnHandOverride((m) => { const n = { ...m }; delete n[r.cropPlanCode]; return n; })}>records</button>}</div>
+                            </td>
+                            <td className="num">{num(Math.round(r.net))}</td>
+                            <td className="num">{num(r.sowingSize)}</td>
+                            <td className="num">{num(r.sowingsScheduled)}{r.sowingsScheduled < r.sowingsNeeded ? <div className="farm-c-over farm-fs-2xs">{num(r.sowingsNeeded)} needed</div> : null}</td>
+                            <td className="num">{num(Math.round(r.produced))}{r.shortfall > 0 ? <div className="farm-c-over farm-fs-2xs">{num(Math.round(r.shortfall))} short</div> : null}</td>
+                            <td className="num">{num(Math.round(r.closing))}</td>
+                            <td className="num">{money(r.inputCostStandard)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="total"><td>All crop plans</td><td className="num">{num(Math.round(dayUnits))}</td><td className="num">{num(Math.round(day.totalRequired))}</td><td className="num">—</td><td className="num">{num(Math.round(day.runs.reduce((s, r) => s + r.net, 0)))}</td><td className="num">—</td><td className="num">{num(day.runs.reduce((s, r) => s + r.sowingsScheduled, 0))}</td><td className="num">{num(Math.round(day.totalProduced))}</td><td className="num">{num(Math.round(day.runs.reduce((s, r) => s + r.closing, 0)))}</td><td className="num">{money(day.inputCostStandard)}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {Object.keys(stock.expiredByCropPlan).length > 0 && (
+                <p className="farm-kpi-sub mt-2 farm-c-placeholder">
+                  Past shelf life on {productionDate}, unconsumed: {Object.entries(stock.expiredByCropPlan).map(([k, v]) => `${num(Math.round(v))} ${k}`).join(', ')}. Not counted as on hand.
+                </p>
+              )}
+              <p className="farm-kpi-sub mt-2">
+                On hand is what the closed sowing records say is inside the {shelfLife}-day shelf life on the production morning, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. Overshoot on whole sowings is the closing stock; the horizon carries it to the next distribution date.
+              </p>
+            </Card>
+          )}
 
-          {closing && closingPrefill && world.recording && (
+          {dayHorizon ? (
+            <Card title="Sowings on the grow units" className="mt-4">
+              {daySowings.length === 0 ? <p className="farm-kpi-sub">Nothing to sow: stock covers the date, or it has no orders.</p> : (
+                <div className="farm-scroll-x">
+                  <table className="farm-table">
+                    <thead><tr><th>Plan</th><th>Sow</th><th>Harvest window</th><th className="num">Trays</th><th>Grow unit</th><th>Today</th></tr></thead>
+                    <tbody>
+                      {daySowings.map((s) => (
+                        <tr key={s.id} className={s.placed ? '' : 'farm-c-accent'}>
+                          <td>{s.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{s.cropPlanName}</div></td>
+                          <td className="whitespace-nowrap!">{dateLabel(s.sowDate)}</td>
+                          <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
+                          <td className="num">{num(s.trays)}</td>
+                          <td>{s.placed ? s.unitItem : <span className="farm-c-over">no room on any unit for the {num(s.cycleDays)}-day cycle</span>}</td>
+                          <td>{stageToday(s)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="farm-kpi-sub mt-2">
+                A sowing goes on a grow unit whose fixture delivers the plan&rsquo;s light line and which has room on every day of the cycle, largest unit first; a sowing no unit holds is the shortfall above, never squeezed onto a shelf. A sowing dated today is in the <Link className="farm-link" href="/farm/grow-room">Grow Room</Link>&rsquo;s Sow queue, where it is closed with the grow form; the harvest window is when its trays are distributed.
+              </p>
+            </Card>
+          ) : (
+            <Card title="The blackout rack, in order" className="mt-4">
+              {day.schedule.length === 0 ? <p className="farm-kpi-sub">Nothing to blackout.</p> : (
+                <div className="farm-scroll-x">
+                  <table className="farm-table">
+                    <thead><tr><th className="num">#</th><th>Crop plan</th><th className="num">Units</th><th className="num">Load</th><th className="num">Unload</th><th className="num">Rack free</th><th>Fits</th><th /></tr></thead>
+                    <tbody>
+                      {day.schedule.map((b) => (
+                        <tr key={b.seq}>
+                          <td className="num">{b.seq}</td>
+                          <td>{b.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{b.cropPlanName}</div></td>
+                          <td className="num">{num(b.units)}</td>
+                          <td className="num">{clock(b.loadMin)}</td>
+                          <td className="num">{clock(b.unloadMin)}</td>
+                          <td className="num">{clock(b.freeMin)}</td>
+                          <td><CheckPill ok={b.fits} okLabel="in the window" overLabel="past the window" /></td>
+                          <td className="num">{canRecordHere && b.fits && <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setClosing({ seq: b.seq, cropPlanCode: b.cropPlanCode, units: b.units })}>Close sowing record</button>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="farm-kpi-sub mt-2">
+                Sowings are placed one cycle apart from the first load, largest requirement first; each takes the rack for {day.blackoutWindow.occupancyMinutes} minutes (load, blackout, unload). A sowing past the window is not made that day — it is the named shortfall above, not a plan that slips to 14:00.
+              </p>
+            </Card>
+          )}
+
+          {dayHorizon ? (
+            <Card title="Labor the sow days require, and the proposed crews checked against it" className="mt-4">
+              {dayHorizon.productionDays.length === 0 ? <p className="farm-kpi-sub">No sowing, no labor.</p> : (
+                <>
+                  <div className="farm-scroll-x">
+                    <table className="farm-table">
+                      <thead><tr><th>Sow day</th><th className="num">Sowings</th><th className="num">Trays</th><th className="num">Labor hours</th><th className="num">Labor cost</th><th>Crews</th></tr></thead>
+                      <tbody>
+                        {dayHorizon.productionDays.map((p) => (
+                          <tr key={p.productionDate}>
+                            <td className="whitespace-nowrap!">{dateLabel(p.productionDate)}</td>
+                            <td className="num">{num(p.runs.reduce((s, r) => s + r.sowingsScheduled, 0))}</td>
+                            <td className="num">{num(Math.round(traysSown(p)))}</td>
+                            <td className="num">{p.laborHours.toFixed(1)}</td>
+                            <td className="num">{money(p.laborCost)}</td>
+                            <td>{p.staffing.checked ? <CheckPill ok={p.staffing.findings.length === 0} okLabel="staffed" overLabel={`${p.staffing.findings.length} finding${p.staffing.findings.length === 1 ? '' : 's'}`} /> : 'no crew proposed'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {dayHorizon.productionDays.map((p) => (
+                    <div key={p.productionDate} className="mt-3">
+                      <div className="farm-kpi-sub mb-1">{dateLabel(p.productionDate)}</div>
+                      <StaffingPanel labor={p.labor} staffing={p.staffing} crews={resolved.crews} />
+                    </div>
+                  ))}
+                </>
+              )}
+              <p className="farm-kpi-sub mt-2">
+                The sow day&rsquo;s hours are the sowing stream and, with the harvest stream and the days on the shelf, the plan&rsquo;s labor standard for the trays sown. Crews are proposed on <Link className="farm-link" href="/farm/capacity">Capacity</Link>; a gap is a finding here and never takes a shelf away from the day. The daily stream across every day on the shelves is on <Link className="farm-link" href="/farm/schedule">Schedule</Link>.
+              </p>
+            </Card>
+          ) : (
+            <Card title={`Labor the day requires, and the proposed crews checked against it — ${dateLabel(productionDate)}`} className="mt-4">
+              <StaffingPanel labor={day.labor} staffing={day.staffing} crews={resolved.crews} />
+              <p className="farm-kpi-sub mt-2">
+                The requirement comes off the sowings placed on the blackoutRack above. Crews are proposed on <Link className="farm-link" href="/farm/capacity">Capacity</Link>; a gap is a finding here and never takes a cycle away from the day.
+              </p>
+            </Card>
+          )}
+
+          {!dayHorizon && closing && closingPrefill && world.recording && (
             <div className="mt-4">
               <SowingCloseForm prefill={closingPrefill} sowingCountByDate={sowingCountByDate} standardSowingSize={closing.units} cropPlanName={closingCropPlan?.name} rawLots={dayStock.lots} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
             </div>
           )}
 
-          {recordedToday.length > 0 && (
-            <Card title={`Sowing records closed for ${dateLabel(productionDate)}`} className="mt-4">
+          {recordedForDay.length > 0 && (
+            <Card title={`Sowing records closed for ${dayTitleDates}`} className="mt-4">
               <table className="farm-table"><tbody>
-                {recordedToday.map((b) => <tr key={b.sowingId}><td>{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.cropPlanCode} · {b.closedBy ?? 'unsigned'}</div></td><td className="num">{num(Math.round(b.goodUnits))} good units</td></tr>)}
+                {recordedForDay.map((b) => <tr key={b.sowingId}><td>{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.cropPlanCode} · {b.productionDate} · {b.closedBy ?? 'unsigned'}</div></td><td className="num">{num(Math.round(b.goodUnits))} {dayHorizon ? 'trays' : 'good units'}</td></tr>)}
               </tbody></table>
               <p className="farm-kpi-sub mt-2">Listed with the period on <Link className="farm-link" href="/farm/actuals">Actuals</Link>, where the ledger posts from them.</p>
             </Card>
           )}
 
-          <NetCard title="Purchase requirement — the net, one order across crop plans" net={dayNet} stock={dayStock} gross={day.purchase.total} shrink={shrink} runs={day.runs.filter((r) => r.produced > 0).length} onOrderDrafts={onOrder.draftsByInput} />
-          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={netToRequirementLines(dayNet)} unitsProduced={day.totalProduced} defaultDate={productionDate} title={`Purchase orders by supplier — ${dateLabel(productionDate)}`} needBy={needByOf(dayNet)} today={today} summary={`${money(dayNet.netTotal)} net to buy for ${num(Math.round(day.totalProduced))} units`} />
+          <NetCard title={dayHorizon ? 'Purchase requirement — the net, one order across plans and sow days' : 'Purchase requirement — the net, one order across crop plans'} net={dayNet} stock={dayStock} gross={dayGross} shrink={shrink} runs={dayRunsMade} onOrderDrafts={onOrder.draftsByInput} grow={Boolean(dayHorizon)} />
+          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={netToRequirementLines(dayNet)} unitsProduced={dayProduced} defaultDate={dayStockAsOf} title={`Purchase orders by supplier — ${dayTitleDates}`} needBy={needByOf(dayNet)} today={today} summary={`${money(dayNet.netTotal)} net to buy for ${num(Math.round(dayProduced))} ${dayHorizon ? 'trays' : 'units'}`} />
         </>
       )}
 
@@ -433,21 +707,40 @@ export function ProductionPlanningClient({
               <label className="farm-kpi-sub inline-flex items-center gap-2">To<input className="farm-input" type="date" value={hTo} onChange={(e) => e.target.value && setHTo(e.target.value)} /></label>
             </PageControls>
             <div className="flex flex-wrap gap-3 items-end">
-              <span className="farm-kpi-sub">{horizon.distributionDays.length} distribution date{horizon.distributionDays.length === 1 ? '' : 's'} · {horizon.productionDays.length} production day{horizon.productionDays.length === 1 ? '' : 's'} · opening stock {num(Math.round(openingLots.reduce((s, l) => s + l.remaining, 0)))} base units from records</span>
+              <span className="farm-kpi-sub">{horizon.distributionDays.length} distribution date{horizon.distributionDays.length === 1 ? '' : 's'} · {horizon.productionDays.length} {cal ? 'sow day' : 'production day'}{horizon.productionDays.length === 1 ? '' : 's'} · opening stock {num(Math.round(openingLots.reduce((s, l) => s + l.remaining, 0)))} {cal ? 'trays' : 'base units'} from records{cal && openingSowings.length ? ` · ${num(openingSowings.reduce((s, x) => s + x.trays, 0))} recorded trays on the shelves` : ''}</span>
             </div>
-            <p className="farm-kpi-sub mt-2">
-              The order book for the period, rolled through production: each production weekday makes the next distribution date&rsquo;s orders net of stock, whole sowings overshoot into stock inside the {shelfLife}-day shelf life, and a distribution date draws its orders from stock oldest first. What the racks cannot make is an unfilled order, shared equally across the channels on that cropPlan — the same rule as equal distribution on the annual allocation.
-            </p>
+            {cal ? (
+              <p className="farm-kpi-sub mt-2">
+                The order book for the period, rolled through the shelves: each order is sown on its plan&rsquo;s sow date, the sowing holds its grow unit for the plan&rsquo;s cycle, whole sowings overshoot into stock inside the {shelfLife}-day shelf life, and a distribution date draws its orders from stock oldest first. A sowing no unit can hold is an unfilled order, shared equally across the channels on that plan — the same rule as equal distribution on the annual allocation.
+              </p>
+            ) : (
+              <p className="farm-kpi-sub mt-2">
+                The order book for the period, rolled through production: each production weekday makes the next distribution date&rsquo;s orders net of stock, whole sowings overshoot into stock inside the {shelfLife}-day shelf life, and a distribution date draws its orders from stock oldest first. What the racks cannot make is an unfilled order, shared equally across the channels on that cropPlan — the same rule as equal distribution on the annual allocation.
+              </p>
+            )}
           </Card>
 
-          <div className="grid gap-3 mt-4 farm-autofit-11">
-            <Kpi value={num(Math.round(horizon.totals.orderedUnits))} label="Units ordered" sub={`${num(Math.round(horizon.totals.orderedBase))} base units`} />
-            <Kpi value={num(Math.round(horizon.totals.filledUnits))} label="Units filled" sub={horizon.totals.orderedUnits > 0 ? `${pct(horizon.totals.filledUnits / horizon.totals.orderedUnits)} of ordered` : '—'} />
-            <Kpi value={num(horizon.totals.sowings)} label="Sowings" sub={`${num(Math.round(horizon.totals.producedBase))} base units produced`} />
-            <Kpi value={pct(horizon.totals.utilisation)} label="Blackout rack cycles used" sub={`${num(horizon.totals.cyclesUsed)} of ${num(horizon.totals.cyclesAvailable)} on production days`} />
-            <Kpi value={<CheckPill ok={horizon.totals.daysThatDoNotFit === 0} okLabel="every day fits" overLabel={`${horizon.totals.daysThatDoNotFit} day${horizon.totals.daysThatDoNotFit === 1 ? '' : 's'} over`} />} label="Capacity" sub="Sowings against the plant's cycles" />
-            <Kpi value={num(Math.round(horizon.totals.expiredBase))} label="Expired past shelf life" sub={`${num(Math.round(horizon.totals.closingStockBase))} base units in stock at the end`} />
-          </div>
+          {cal ? (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(Math.round(horizon.totals.orderedUnits))} label="Units ordered" sub={`${num(Math.round(horizon.totals.orderedBase))} trays`} />
+              <Kpi value={num(Math.round(horizon.totals.filledUnits))} label="Units filled" sub={horizon.totals.orderedUnits > 0 ? `${pct(horizon.totals.filledUnits / horizon.totals.orderedUnits)} of ordered` : '—'} />
+              <Kpi value={num(horizon.totals.sowings)} label="Sowings" sub={`${num(Math.round(horizon.totals.producedBase))} trays sown · ${num(hPeak)} on the shelves at the peak`} />
+              {cal.utilisation.map((u) => (
+                <Kpi key={u.unitKey} value={u.available > 0 ? pct(u.share) : '—'} label={`${u.item} in use`} sub={`${num(u.used)} of ${num(u.available)} tray-days over the window`} />
+              ))}
+              <Kpi value={<CheckPill ok={hNoRoom.length === 0} okLabel="every sowing placed" overLabel={`${hNoRoom.length} sowing${hNoRoom.length === 1 ? '' : 's'} with no room`} />} label="Capacity" sub={hNoRoom.length ? `${num(hNoRoom.reduce((s, x) => s + x.trays, 0))} trays no grow unit holds for the cycle` : 'each sowing holds a grow unit for its cycle'} />
+              <Kpi value={num(Math.round(horizon.totals.expiredBase))} label="Expired past shelf life" sub={`${num(Math.round(horizon.totals.closingStockBase))} trays in stock at the end`} />
+            </div>
+          ) : (
+            <div className="grid gap-3 mt-4 farm-autofit-11">
+              <Kpi value={num(Math.round(horizon.totals.orderedUnits))} label="Units ordered" sub={`${num(Math.round(horizon.totals.orderedBase))} base units`} />
+              <Kpi value={num(Math.round(horizon.totals.filledUnits))} label="Units filled" sub={horizon.totals.orderedUnits > 0 ? `${pct(horizon.totals.filledUnits / horizon.totals.orderedUnits)} of ordered` : '—'} />
+              <Kpi value={num(horizon.totals.sowings)} label="Sowings" sub={`${num(Math.round(horizon.totals.producedBase))} base units produced`} />
+              <Kpi value={pct(horizon.totals.utilisation)} label="Blackout rack cycles used" sub={`${num(horizon.totals.cyclesUsed)} of ${num(horizon.totals.cyclesAvailable)} on production days`} />
+              <Kpi value={<CheckPill ok={horizon.totals.daysThatDoNotFit === 0} okLabel="every day fits" overLabel={`${horizon.totals.daysThatDoNotFit} day${horizon.totals.daysThatDoNotFit === 1 ? '' : 's'} over`} />} label="Capacity" sub="Sowings against the plant's cycles" />
+              <Kpi value={num(Math.round(horizon.totals.expiredBase))} label="Expired past shelf life" sub={`${num(Math.round(horizon.totals.closingStockBase))} base units in stock at the end`} />
+            </div>
+          )}
 
           {showFinancials && (
             <>
@@ -468,26 +761,34 @@ export function ProductionPlanningClient({
               </table>
             </div>
             <p className="farm-kpi-sub mt-2">
-              What the order book asked for and what the lines in service could make over these dates. The same run over the forecast&rsquo;s horizon is the <Link className="farm-link" href="/farm/financials/pnl">Plan ledger</Link>.
+              What the order book asked for and what the {cal ? 'grow units' : 'lines in service'} could make over these dates. The same run over the forecast&rsquo;s horizon is the <Link className="farm-link" href="/farm/financials/pnl">Plan ledger</Link>.
             </p>
           </Card>
             </>
           )}
 
           <div className="grid gap-4 mt-4 farm-autofit-22">
-            <Card title="Production days">
+            <Card title={cal ? 'Sow days' : 'Production days'}>
               {horizon.productionDays.length === 0 ? <p className="farm-kpi-sub">No orders in the period.</p> : (
                 <div className="farm-scroll-x">
                   <table className="farm-table">
-                    <thead><tr><th>Made on</th><th>For</th><th>Sowings by crop plan</th><th className="num">Cycles</th><th>Fits</th></tr></thead>
+                    {cal ? (
+                      <thead><tr><th>Sown on</th><th>For</th><th>Sowings by plan</th><th className="num">Trays</th><th>Placed</th></tr></thead>
+                    ) : (
+                      <thead><tr><th>Made on</th><th>For</th><th>Sowings by crop plan</th><th className="num">Cycles</th><th>Fits</th></tr></thead>
+                    )}
                     <tbody>
                       {horizon.productionDays.map((p) => (
                         <tr key={p.productionDate}>
                           <td>{dateLabel(p.productionDate)}</td>
                           <td className="farm-fs-xs">{p.distributionDates.map((d) => dateLabel(d)).join(', ')}</td>
                           <td className="farm-fs-xs">{p.runs.filter((r) => r.sowingsNeeded > 0).map((r) => `${r.cropPlanCode} × ${r.sowingsScheduled}${r.sowingsScheduled < r.sowingsNeeded ? ` of ${r.sowingsNeeded}` : ''}`).join(' · ') || 'stock covers it'}</td>
-                          <td className="num">{num(p.runs.reduce((s, r) => s + r.sowingsScheduled, 0))} / {num(p.cyclesAvailable)}</td>
-                          <td><CheckPill ok={p.fits} okLabel="fits" overLabel="over" /></td>
+                          {cal ? (
+                            <td className="num">{num(Math.round(traysSown(p)))}</td>
+                          ) : (
+                            <td className="num">{num(p.runs.reduce((s, r) => s + r.sowingsScheduled, 0))} / {num(p.cyclesAvailable)}</td>
+                          )}
+                          <td><CheckPill ok={p.fits} okLabel={cal ? 'on the shelves' : 'fits'} overLabel={cal ? 'no room' : 'over'} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -499,7 +800,7 @@ export function ProductionPlanningClient({
               {horizon.distributionDays.length === 0 ? <p className="farm-kpi-sub">No orders in the period.</p> : (
                 <div className="farm-scroll-x">
                   <table className="farm-table">
-                    <thead><tr><th>Date</th><th className="num">Units ordered</th><th className="num">Base ordered</th><th className="num">Filled</th><th className="num">Unfilled</th></tr></thead>
+                    <thead><tr><th>Date</th><th className="num">Units ordered</th><th className="num">{cal ? 'Trays ordered' : 'Base ordered'}</th><th className="num">Filled</th><th className="num">Unfilled</th></tr></thead>
                     <tbody>
                       {horizon.distributionDays.map((d) => (
                         <tr key={d.date}>
@@ -517,14 +818,50 @@ export function ProductionPlanningClient({
             </Card>
           </div>
 
-          <NetCard title={`Purchase requirement — the net over the horizon, ${horizon.productionDays.length} production day${horizon.productionDays.length === 1 ? '' : 's'}`} net={hNet} stock={hStock} gross={horizon.productionDays.reduce((s, p) => s + p.purchase.total, 0)} shrink={shrink} runs={horizon.productionDays.reduce((s, p) => s + p.runs.filter((r) => r.produced > 0).length, 0)} onOrderDrafts={onOrder.draftsByInput} />
-          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={netToRequirementLines(hNet)} unitsProduced={horizon.totals.producedBase} defaultDate={hNet.toBuy.map((l) => l.needBy).filter((d): d is string => Boolean(d)).sort()[0] ?? hFrom} title="Purchase orders by supplier — the horizon" needBy={needByOf(hNet)} today={today} summary={`${money(hNet.netTotal)} net to buy for ${num(Math.round(horizon.totals.producedBase))} base units`} />
+          {cal && (
+            <Card title="By date — the shelves beside the stock" className="mt-4">
+              <div className="farm-scroll-x">
+                <table className="farm-table compact">
+                  <thead>
+                    <tr><th>Date</th><th className="num">Sown</th><th className="num">On the shelves</th><th className="num">In harvest window</th><th className="num">Waterings</th><th className="num">No room</th><th className="num">Ordered</th><th className="num">Filled</th><th className="num">Unfilled</th><th className="num">Expired</th><th className="num">Stock at close</th></tr>
+                  </thead>
+                  <tbody>
+                    {hByDate.map((d) => {
+                      const w = d.waterings.mist + d.waterings.bottom + d.waterings.rinse;
+                      const dash = (n: number) => (n > 0.5 ? num(Math.round(n)) : '—');
+                      return (
+                        <tr key={d.date} className={d.date === today ? 'font-semibold' : ''}>
+                          <td className="whitespace-nowrap!">{dateLabel(d.date)}</td>
+                          <td className="num">{dash(d.traysSown)}</td>
+                          <td className="num">{dash(d.traysOnShelf)}</td>
+                          <td className="num">{dash(d.traysHarvestable)}</td>
+                          <td className="num">{dash(w)}</td>
+                          <td className="num">{d.unplacedTrays > 0 ? <span className="farm-c-over">{num(d.unplacedTrays)}</span> : '—'}</td>
+                          <td className="num">{dash(d.stock?.orderedBase ?? 0)}</td>
+                          <td className="num">{dash(d.stock?.filledBase ?? 0)}</td>
+                          <td className="num">{(d.stock?.unfilledBase ?? 0) > 0.5 ? <span className="farm-c-over">{num(Math.round(d.stock!.unfilledBase))}</span> : '—'}</td>
+                          <td className="num">{dash(d.stock?.expiredBase ?? 0)}</td>
+                          <td className="num">{dash(d.stock?.closingStockBase ?? 0)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="farm-kpi-sub mt-2">
+                The shelves are the grow calendar: trays sown that day, trays on the grow units by their stage, trays inside their harvest window, the waterings the daily stream owes, and trays with no room. The stock is the horizon&rsquo;s roll: what the date ordered, what stock filled, what expired unconsumed and what is left at the close. The month view with each day by stage and by unit is the <Link className="farm-link" href="/farm/production-planning/grow-calendar">Grow Calendar</Link>.
+              </p>
+            </Card>
+          )}
+
+          <NetCard title={`Purchase requirement — the net over the horizon, ${horizon.productionDays.length} ${cal ? 'sow day' : 'production day'}${horizon.productionDays.length === 1 ? '' : 's'}`} net={hNet} stock={hStock} gross={horizon.productionDays.reduce((s, p) => s + p.purchase.total, 0)} shrink={shrink} runs={horizon.productionDays.reduce((s, p) => s + p.runs.filter((r) => r.produced > 0).length, 0)} onOrderDrafts={onOrder.draftsByInput} grow={Boolean(cal)} />
+          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={netToRequirementLines(hNet)} unitsProduced={horizon.totals.producedBase} defaultDate={hNet.toBuy.map((l) => l.needBy).filter((d): d is string => Boolean(d)).sort()[0] ?? hFrom} title="Purchase orders by supplier — the horizon" needBy={needByOf(hNet)} today={today} summary={`${money(hNet.netTotal)} net to buy for ${num(Math.round(horizon.totals.producedBase))} ${cal ? 'trays' : 'base units'}`} />
 
           {horizon.byCropPlan.length > 0 && (
-            <Card title="By crop plan over the horizon" className="mt-4">
+            <Card title={cal ? 'By plan over the horizon' : 'By crop plan over the horizon'} className="mt-4">
               <div className="farm-scroll-x">
                 <table className="farm-table">
-                  <thead><tr><th>Crop plan</th><th className="num">Base ordered</th><th className="num">Produced</th><th className="num">Sowings</th></tr></thead>
+                  <thead><tr><th>{cal ? 'Plan' : 'Crop plan'}</th><th className="num">{cal ? 'Trays ordered' : 'Base ordered'}</th><th className="num">{cal ? 'Trays sown' : 'Produced'}</th><th className="num">Sowings</th></tr></thead>
                   <tbody>
                     {horizon.byCropPlan.map((r) => <tr key={r.cropPlanCode}><td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td><td className="num">{num(Math.round(r.orderedBase))}</td><td className="num">{num(Math.round(r.producedBase))}</td><td className="num">{num(r.sowings)}</td></tr>)}
                   </tbody>
@@ -539,22 +876,23 @@ export function ProductionPlanningClient({
 }
 
 
-/** The net requirement table: gross at standard, stock applied, on order applied, net, cases. */
-function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { title: string; net: NetRequirements; stock: ReturnType<typeof rawStockOnHand>; gross: number; shrink: number; runs: number; onOrderDrafts: Record<string, number> }) {
+/** The net requirement table: gross at standard, stock applied, on order applied, net, packs. */
+function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts, grow }: { title: string; net: NetRequirements; stock: ReturnType<typeof rawStockOnHand>; gross: number; shrink: number; runs: number; onOrderDrafts: Record<string, number>; grow: boolean }) {
   const stockValue = Object.values(stock.byInput).reduce((s, l) => s + l.valueCents, 0) / 100;
   const drafts = net.lines.filter((l) => (onOrderDrafts[l.input] ?? 0) > 0).length;
+  const runWord = grow ? 'plan sowing' : 'crop plan run';
   return (
     <Card title={title} className="mt-4">
       <div className="grid gap-3 farm-autofit-11 mb-3!">
-        <Kpi value={money(gross)} label="Gross at the crop plan standard" sub={`Case-rounded, incl. the ${(shrink * 100).toFixed(0)}% allowance, ${runs} crop plan run${runs === 1 ? '' : 's'}`} />
+        <Kpi value={money(gross)} label={grow ? 'Gross at the plan standard' : 'Gross at the crop plan standard'} sub={`${grow ? 'Pack' : 'Case'}-rounded, incl. the ${(shrink * 100).toFixed(0)}% allowance, ${runs} ${runWord}${runs === 1 ? '' : 's'}`} />
         <Kpi value={money(net.lines.reduce((s, l) => s + l.onHandApplied * l.seedUnitCost, 0))} label="Covered by stock on hand" sub={`${Object.keys(stock.byInput).length} input${Object.keys(stock.byInput).length === 1 ? '' : 's'} on hand from receipts, ${money(stockValue)} at invoice`} />
         <Kpi value={money(net.lines.reduce((s, l) => s + l.onOrderApplied * l.seedUnitCost, 0))} label="Covered by orders arriving in time" sub={drafts > 0 ? `${drafts} line${drafts === 1 ? '' : 's'} also on a draft order, not counted` : 'Issued orders less receipts against them'} />
-        <Kpi value={money(net.netTotal)} label="Net to buy" sub={`${net.toBuy.length} line${net.toBuy.length === 1 ? '' : 's'}, case-rounded on the net`} />
+        <Kpi value={money(net.netTotal)} label="Net to buy" sub={`${net.toBuy.length} line${net.toBuy.length === 1 ? '' : 's'}, ${grow ? 'pack' : 'case'}-rounded on the net`} />
       </div>
       {net.lines.length === 0 ? <p className="farm-kpi-sub">Nothing to make, nothing to buy.</p> : (
         <div className="farm-scroll-x">
           <table className="farm-table">
-            <thead><tr><th>Input</th><th className="num">Gross</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Net</th><th className="num">Pack</th><th className="num">Cases</th><th className="num">Extended</th><th>Need by</th></tr></thead>
+            <thead><tr><th>Input</th><th className="num">Gross</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Net</th><th className="num">Pack</th><th className="num">{grow ? 'Packs' : 'Cases'}</th><th className="num">Extended</th><th>Need by</th></tr></thead>
             <tbody>
               {net.lines.map((l) => (
                 <tr key={`${l.input}|${l.unit}`}>
@@ -569,7 +907,7 @@ function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { ti
                   <td className="farm-fs-xs">{l.needBy ?? '—'}</td>
                 </tr>
               ))}
-              <tr className="total"><td colSpan={7}>Net, case-rounded</td><td className="num">{money(net.netTotal)}</td><td /></tr>
+              <tr className="total"><td colSpan={7}>Net, {grow ? 'pack' : 'case'}-rounded</td><td className="num">{money(net.netTotal)}</td><td /></tr>
             </tbody>
           </table>
         </div>
@@ -580,7 +918,7 @@ function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { ti
         </p>
       )}
       <p className="farm-kpi-sub mt-2">
-        Stock on hand is receipts less issues on closed sowing records, oldest lot first, as of the production morning. On order is issued purchase orders less the receipts booked against them, applied only where the order&rsquo;s production date is on or before the day. The net is what is bought; the generator below reads it by supplier, with the catalog lead time giving each line an order-by date.
+        Stock on hand is receipts less issues on closed sowing records, oldest lot first, as of the {grow ? 'first sow day' : 'production morning'}. On order is issued purchase orders less the receipts booked against them, applied only where the order&rsquo;s {grow ? 'sow' : 'production'} date is on or before the day. The net is what is bought; the generator below reads it by supplier, with the catalog lead time giving each line an order-by date.
       </p>
     </Card>
   );
