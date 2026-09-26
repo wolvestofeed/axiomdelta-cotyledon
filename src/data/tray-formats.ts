@@ -105,6 +105,11 @@ export const TRAY_FORMATS: readonly TrayFormatDef[] = [
 
 export const TRAY_FORMAT_BY_KEY: Readonly<Record<TrayFormatKey, TrayFormatDef>> = Object.fromEntries(TRAY_FORMATS.map((f) => [f.key, f])) as Record<TrayFormatKey, TrayFormatDef>;
 
+/** What one unit of a format is called on screen: a jar for a sprout, a tray otherwise. */
+export function unitWordsFor(format: TrayFormatKey): { one: string; many: string } {
+  return TRAY_FORMAT_BY_KEY[format].kind === 'sprout' ? { one: 'jar', many: 'jars' } : { one: 'tray', many: 'trays' };
+}
+
 /** The growing formats: those with a tray on a shelf. */
 export const GROWING_FORMATS: readonly TrayFormatDef[] = TRAY_FORMATS.filter((f) => f.kind === 'live');
 

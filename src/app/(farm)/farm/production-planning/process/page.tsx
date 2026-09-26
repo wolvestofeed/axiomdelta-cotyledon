@@ -17,8 +17,8 @@ async function ProcessPageInner() {
     <>
       <PageHeader
         title="Process"
-        purpose="Follow a crop plan's route step by step, and edit any step for this forecast."
-        functions={['Sowing stream', 'Harvest stream', 'The route', 'Labor standard', 'Findings']}
+        purpose="Follow a grow plan's route and stage schedule step by step, and edit any step for this forecast."
+        functions={['Sowing stream', 'Stage schedule', 'Daily stream', 'Harvest stream', 'The route']}
         connects={[
           { href: '/farm/time-studies', dir: 'from' },
           { href: '/farm/grow-units', dir: 'from' },
@@ -26,10 +26,11 @@ async function ProcessPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>The sowing stream sows: receiving, scaling, a prep and a sow per hot component, the blackout rack, the line turnaround.</li>
-            <li>The harvest stream ships what a sowing already blackout and staged.</li>
+            <li>The sowing stream is the sow day: receiving, seed sorting, prep and the sow, per tray sown.</li>
+            <li>The stage schedule is the cycle the sowing runs on its grow unit, day by day from the sow date. The daily stream beside it is the watering and inspection every tray on the shelves takes each day.</li>
+            <li>The harvest stream is the distribution day: the harvest station, the pack and the clean, per tray shipped.</li>
             <li>Steps are the labor standard in precedence order. Columns are precedence depth, so steps in one column may run alongside each other. Lines are finish-to-start.</li>
-            <li>Every step is derived from the crop plan&rsquo;s time study, its stage map and the Phase 1 equipment list.</li>
+            <li>Every step is derived from the plan&rsquo;s time study and the grow units.</li>
             <li>Every figure can be edited for this forecast, which moves the map and the Day Schedule with it.</li>
           </ul>
         }
