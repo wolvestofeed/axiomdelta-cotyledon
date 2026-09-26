@@ -46,7 +46,7 @@ Every figure carries a provenance tag: `SOURCED`, `STATED`, `PLACEHOLDER`, `DERI
 
 ## 6. Git
 
-Never `git commit` or `git push` without explicit per-action approval from Rob. Approval is per action, never carried across tasks. Read-only git is always fine. Development is on localhost only until a domain is registered; there is no deployment target yet.
+Commit at each completed phase part, after the phase file and the master roadmap are updated, with the attribution line the harness gives; a build in progress is never committed. Never `git push`: pushing is Rob's per-action decision. Read-only git is always fine. Development is on localhost only until a domain is registered; there is no deployment target yet.
 
 ## 7. Stack
 
