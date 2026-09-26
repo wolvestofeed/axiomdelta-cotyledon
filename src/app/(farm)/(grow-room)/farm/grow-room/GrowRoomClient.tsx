@@ -15,7 +15,8 @@ import { clock } from '@/data/crews';
 import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import type { ResolvedInputs } from '@/engine/scenario';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
-import { requirementsFor, finishedGoodsOnHand, planProductionDay, productionDateFor, unitFactorFor, type Consumption } from '@/engine/production-plan';
+import { requirementsFor, finishedGoodsOnHand, planProductionDay, planHorizon, productionDateFor, unitFactorFor, type Consumption } from '@/engine/production-plan';
+import { stageOn, type CalendarSowing } from '@/engine/grow-calendar';
 import { standardSowingRecordPrefill, finishedLotsOf, type SowingRecordDoc, type ReceiptDoc } from '@/engine/actuals';
 import { rawStockOnHand, rawLotsByUseBy, openOrders } from '@/engine/net-requirements';
 import type { DateRange } from '@/engine/periods';
@@ -106,7 +107,7 @@ export function GrowRoomClient({
   purchaseOrders: ReceivePo[];
 }) {
   const [receivingPoId, setReceivingPoId] = useState<string | null>(null);
-  const [closing, setClosing] = useState<{ seq: number; cropPlanCode: string; units: number } | null>(null);
+  const [closing, setClosing] = useState<{ seq: number; cropPlanCode: string; units: number; growUnitKey?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShipOrder | null>(null);
   const [withinDays, setWithinDays] = useState<number | 'all'>(7);
 
@@ -159,13 +160,27 @@ export function GrowRoomClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distributionDate, inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A]);
   const closedToday = useMemo(() => sowings.filter((b) => b.productionDate === today), [sowings, today]);
+  // ── Sow: the grow calendar's sowings dated today, back-planned from the order book ──
+  const hasGrowPlans = inputs.cropPlans.some(isGrowPlanCarrier);
+  const growQueue = useMemo<CalendarSowing[]>(() => {
+    if (!hasGrowPlans) return [];
+    const to = isoAddDays(today, 28);
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today });
+    const openingSowings = sowings
+      .filter((b) => b.goodUnits > 0)
+      .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+      .filter((b) => { const r = inputs.cropPlans.find((x) => x.code === b.cropPlanCode); return r && isGrowPlanCarrier(r) && stageOn(r.plan, b.sowDate, today).stage !== 'off'; });
+    const h = planHorizon({ from: today, to, book: bookFor(today, to), cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: A, cropPlanAssumptions: inputs.cropPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
+    return (h.growCalendar?.sowings ?? []).filter((x) => x.sowDate === today && x.distributionDate !== null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasGrowPlans, inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A, closures]);
   const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
   const rawStock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: today }), [receipts, sowings, today]);
   const closingCropPlan = closing ? inputs.cropPlans.find((r) => r.code === closing.cropPlanCode) : undefined;
   const closingPrefill = useMemo(() => {
     if (!closing || !closingCropPlan) return null;
     const std = standardInForce(standards, closing.cropPlanCode, today);
-    return standardSowingRecordPrefill(
+    const prefill = standardSowingRecordPrefill(
       today,
       (sowingCountByDate[today] ?? 0) + 1,
       closing.units,
@@ -173,6 +188,7 @@ export function GrowRoomClient({
       std ? std.snapshot.assumptions.yield.shrinkAllowance.value : shrink,
       std ? standardLabel(std) : undefined,
     );
+    return closing.growUnitKey !== undefined ? { ...prefill, growUnitKey: closing.growUnitKey } : prefill;
   }, [closing, closingCropPlan, today, sowingCountByDate, shrink, standards]);
 
   // ── Ship: today's confirmed orders ────────────────────────────────────────
@@ -220,8 +236,28 @@ export function GrowRoomClient({
         )}
       </Card>
 
-      <Card title={day ? `Close — ${day.schedule.length} sowing${day.schedule.length === 1 ? '' : 'es'} planned today, for ${dateLabel(distributionDate!)}` : 'Close — no production day'} className="mt-4">
-        {!day ? (
+      <Card title={hasGrowPlans ? `Sow — ${growQueue.length} sowing${growQueue.length === 1 ? '' : 's'} dated today on the grow calendar` : day ? `Close — ${day.schedule.length} sowing${day.schedule.length === 1 ? '' : 'es'} planned today, for ${dateLabel(distributionDate!)}` : 'Close — no production day'} className="mt-4">
+        {hasGrowPlans ? (
+          growQueue.length === 0 ? (
+            <p className="farm-kpi-sub">No sowing is back-planned to {dateLabel(today)}: nothing on the order book needs sowing today. The month is on the <Link className="farm-link" href="/farm/production-planning/grow-calendar">Grow Calendar</Link>.</p>
+          ) : (
+            <div className="farm-floor-queue">
+              {growQueue.map((x, i) => {
+                const closed = closedToday.some((b) => b.cropPlanCode === x.cropPlanCode && i < closedToday.filter((b) => b.cropPlanCode === x.cropPlanCode).length);
+                return (
+                  <div key={x.id} className={`farm-floor-row${closed ? ' done' : ''}`}>
+                    <div>
+                      <div className="farm-floor-row-title">{i + 1} · {x.cropPlanCode} {x.cropPlanName} · {num(x.trays)} trays</div>
+                      <div className="farm-floor-row-sub">for {dateLabel(x.distributionDate!)} · harvest window {x.harvestFrom} to {x.harvestTo} · {x.placed ? `on the ${x.unitItem?.toLowerCase() ?? 'grow unit'}` : 'no room on any grow unit'} · <CheckPill ok={x.placed} okLabel="placed" overLabel="no room" /></div>
+                    </div>
+                    {!closed && <button type="button" className={`farm-btn${closing?.seq === i + 1 ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === i + 1 ? null : { seq: i + 1, cropPlanCode: x.cropPlanCode, units: x.trays, growUnitKey: x.unitKey }))}>Close sowing record</button>}
+                    {closed && <span className="farm-kpi-sub">closed</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : !day ? (
           <p className="farm-kpi-sub">No distribution day is produced on {dateLabel(today)}.</p>
         ) : day.schedule.length === 0 ? (
           <p className="farm-kpi-sub">Nothing to make today: on hand covers {dateLabel(distributionDate!)}.</p>
