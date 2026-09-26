@@ -163,7 +163,7 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
   // ── Cold Chain ──────────────────────────────────────────────────────────
   {
     id: 'inventory-position',
-    section: 'Cold Chain',
+    section: 'Inventory & Quality',
     title: 'Inventory position and shelf-life exposure',
     blurb: 'Finished lots on hand and the units in them, lots within seven days of shelf life, units past shelf life unconsumed, and raw lots past the date on the case.',
     themes: ['loss'],
@@ -172,7 +172,7 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
   },
   {
     id: 'cooling-compliance',
-    section: 'Cold Chain',
+    section: 'Inventory & Quality',
     title: 'control-point-2 cooling compliance by month',
     blurb: 'Stage records per rack load: passed, failed, and blackout lots with a load unrecorded, computed from the readings on the closed sowing records.',
     themes: ['compliance'],

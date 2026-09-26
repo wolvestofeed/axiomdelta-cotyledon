@@ -54,8 +54,8 @@ export const MODULES: NavItem[] = [
   { label: 'Payables', href: '/farm/payables', section: 'Financials & Accounting', status: 'live', adminOnly: true },
   { label: 'Capital & Financing', href: '/farm/financials/capital', section: 'Financials & Accounting', status: 'live', adminOnly: true },
 
-  { label: 'Inventory', href: '/farm/inventory', section: 'Cold Chain', status: 'live' },
-  { label: 'Produce Safety', href: '/farm/produce-safety', section: 'Cold Chain', status: 'live' },
+  { label: 'Inventory', href: '/farm/inventory', section: 'Inventory & Quality', status: 'live' },
+  { label: 'Produce Safety', href: '/farm/produce-safety', section: 'Inventory & Quality', status: 'live' },
 
   { label: 'Procurement', href: '/farm/procurement', section: 'Supply Chain', status: 'live' },
   { label: 'Suppliers', href: '/farm/suppliers', section: 'Supply Chain', status: 'partial' },

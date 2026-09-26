@@ -25,7 +25,6 @@ import { listLoans, listFixedCostLines, listLeasehold } from '@/server/finance';
 import { billBalances } from '@/engine/working-capital';
 import { CLOCK_STATE_LABELS, clockStateOf, hoursRun, payPeriodFor, type PayCalendar } from '@/engine/payroll';
 import { pipelineStats } from '@/engine/prospects';
-import { controlPoints } from '@/data/plan-data';
 import { supplierDataset } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
 import { cropPlanFoodFootprint } from '@/engine/carbon';
@@ -39,6 +38,10 @@ import { listSupplierLcaOptions } from '@/server/supplier-lca';
 import { lcaOptions as curatedOptions } from '@/data/lca-options';
 import { factorRegistry } from '@/data/emission-factors';
 import { withWorkspace } from '@/server/workspace';
+import { STAGE_CONTROL_POINTS } from '@/data/produce-safety';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { planStageDays } from '@/data/grow-plan';
+import { cycleDays } from '@/data/stage-schedule';
 
 const DASHBOARD_PURPOSE = 'See today\'s plan, stock, capacity and anything that needs attention.';
 const DASHBOARD_HOW = (
@@ -117,16 +120,16 @@ function coverText(day: Picture['day']): string {
   return day.daysOfCover === null ? '—' : day.daysOfCover.toFixed(1);
 }
 
-function coldChainCard({ R, cap, day }: Picture): SectionCardProps {
+function coldChainCard({ day }: Picture): SectionCardProps {
   return {
-    section: 'Cold Chain',
+    section: 'Inventory & Quality',
     stats: [
-      { label: 'CCPs monitored', value: num(controlPoints.length) },
-      { label: 'Blackout shelf life', value: `${R.assumptions.inventory.blackoutShelfLife.value} days` },
+      { label: 'Stage control points', value: num(STAGE_CONTROL_POINTS.length) },
+      { label: 'Trays on the shelves today', value: num(day.shelf?.traysOnShelf ?? 0) },
+      { label: 'In their harvest window today', value: num(day.shelf?.traysHarvestable ?? 0) },
       { label: 'Days of cover', value: coverText(day) },
-      { label: 'Blackout stage', value: `${cap.blackoutMinutes} min` },
     ],
-    note: `Blackout stage ${cap.blackoutMinutes} min against the Food Code limits of ${cap.cooling.stageOneLimitMin} min (135°F to 70°F) and ${cap.cooling.totalLimitMin} min (135°F to 41°F); ${cap.occupancyMinutes} min rack occupancy per sowing; CCPs logged per sowing.`,
+    note: `Seed sanitation, the spent-water test on jars, temperature and humidity, and the harvest check, recorded on the sowing. ${day.shelf ? `${num(day.shelf.sowingsInWindow)} sowing${day.shelf.sowingsInWindow === 1 ? '' : 's'} start in the next two weeks, ${num(day.shelf.traysSownInWindow)} trays${day.shelf.noRoom > 0 ? `; ${num(day.shelf.noRoom)} with no room on any grow unit` : ''}.` : 'No grow plan in the library.'}`,
   };
 }
 
@@ -136,10 +139,10 @@ function sustainabilityCard({ foodCo2 }: Picture): SectionCardProps {
     stats: [
       { label: 'Food CO2e / unit, active-crop-plan average', value: `${foodCo2.perUnit.toFixed(2)} kg` },
       { label: 'Food footprint', value: `${(foodCo2.periodKg / 1000).toFixed(1)} t` },
-      { label: 'Crop plans with unmapped inputs', value: `${num(foodCo2.unmappedCropPlans)} served` },
+      { label: 'Plans with unmapped lines', value: `${num(foodCo2.unmappedCropPlans)} served` },
       { label: 'Factors on file', value: num(factorRegistry.length) },
     ],
-    note: `Scope 3 purchased food on the reference basis (study means), ${foodCo2.periodLabel}, crop plan by crop plan. An input with no mapping to a study product carries no footprint.`,
+    note: `Scope 3 purchased inputs on the reference basis (study means), ${foodCo2.periodLabel}, plan by plan. A line with no mapping to a study product carries no footprint.`,
   };
 }
 
@@ -183,8 +186,10 @@ async function AdminDashboard() {
   // its own labor standard — the seeded estimates until actuals replace them.
   const avg = activeCropPlanAverages(R.cropPlans, R.capacityInputs, R.assumptions, studies.studies, R.cropPlanAssumptions);
   const basisNote = avg.count === 0
-    ? 'No crop plan is In Service.'
-    : `Averaged over ${num(avg.count)} active crop plan${avg.count === 1 ? '' : 's'}, each on its own one-line sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until actuals replace them.`;
+    ? 'No grow plan is In Service.'
+    : `Averaged over ${num(avg.count)} active grow plan${avg.count === 1 ? '' : 's'}, each on its own sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until observed studies are adopted.`;
+  const growPlans = R.cropPlans.filter((r) => r.status === 'in_service').filter(isGrowPlanCarrier);
+  const meanCycle = growPlans.length ? growPlans.reduce((t, r) => t + cycleDays(planStageDays(r.plan)), 0) / growPlans.length : 0;
 
   // ── Alerts (Roadmap K2): supplier bills that do not match their purchase
   //    order and receipts are flagged here and held from payment.
@@ -265,7 +270,7 @@ async function AdminDashboard() {
       <PageHeader
         title="Admin Dashboard"
         purpose={DASHBOARD_PURPOSE}
-        functions={['Production', 'Financials & Accounting', 'Cold Chain', 'Supply Chain', 'Sustainability']}
+        functions={['Production', 'Financials & Accounting', 'Inventory & Quality', 'Supply Chain', 'Sustainability']}
         howItWorks={DASHBOARD_HOW}
         status="live"
       />
@@ -273,12 +278,12 @@ async function AdminDashboard() {
       {/* Headline hero band. On a dark ground the hero is the brightest object
           on the page, not a coloured block — see _components/farm.css. */}
       <div className="farm-hero farm-hero-green">
-        <div className="farm-card-title col-span-full! farm-c-accent m-0!">Mean Averages for Active Crop plans</div>
-        <HeroStat value={<>{money(avg.asPurchasedPerUnit)} <span className="farm-hero-arrow">→</span> {money(avg.costToServePerUnit)}</>} label="Purchased Service Cost" sub="Inputs at purchase prices → food, labor, packaging, distribution" />
-        <HeroStat value={money(avg.inputCostPerUnit)} label="Input cost per unit" sub="Sowing cost ÷ units, with the shrink allowance" />
-        <HeroStat value={`${num(avg.sowingMinutes / 60, 1)} h`} label="Sowing time" sub={`${num(avg.sowingMinutes)} clock minutes, receiving to cold hold`} />
-        <HeroStat value={num(avg.laborMinutesPerUnit, 2)} label="Labor minutes per unit" sub="Fixed minutes over the sowing plus the per-unit minutes" />
-        <HeroStat value={money(avg.laborCostPerUnit)} label="Labor cost per unit" sub="At the placeholder loaded rate until Staffing" />
+        <div className="farm-card-title col-span-full! farm-c-accent m-0!">Mean averages for active grow plans, per tray</div>
+        <HeroStat value={<>{money(avg.inputCostPerUnit)} <span className="farm-hero-arrow">→</span> {money(avg.costToServePerUnit)}</>} label="Inputs → cost to serve" sub="Seed, medium, nutrient, light and consumables → plus labor, packaging, distribution" />
+        <HeroStat value={money(avg.inputCostPerUnit)} label="Input cost per tray" sub="The four line kinds and consumables, with the shrink allowance" />
+        <HeroStat value={`${num(meanCycle, 1)} days`} label="Cycle on the shelf" sub="Sow through the harvest window" />
+        <HeroStat value={num(avg.laborMinutesPerUnit, 2)} label="Labor minutes per tray" sub="Sow day, every day on the shelf, harvest day" />
+        <HeroStat value={money(avg.laborCostPerUnit)} label="Labor cost per tray" sub="At the placeholder loaded rate until Staffing" />
       </div>
       <p className="farm-kpi-sub mt-2">{basisNote}</p>
 
@@ -428,7 +433,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       <PageHeader
         title="Dashboard"
         purpose={DASHBOARD_PURPOSE}
-        functions={['Production', 'Cold Chain', 'Supply Chain', 'Sustainability', 'People']}
+        functions={['Production', 'Inventory & Quality', 'Supply Chain', 'Sustainability', 'People']}
         howItWorks={DASHBOARD_HOW}
         status="live"
       />

@@ -28,6 +28,8 @@ export interface DashboardToday {
   distributionDays: number;
   /** Closing stock over the mean base units a distribution day orders; null with no orders in the window. */
   daysOfCover: number | null;
+  /** The grow calendar's today: trays on the grow units, trays inside their harvest window, sowings started in the window, sowings with no room. */
+  shelf: { traysOnShelf: number; traysHarvestable: number; sowingsInWindow: number; traysSownInWindow: number; noRoom: number } | null;
 }
 
 export function dashboardToday(input: {
@@ -63,6 +65,17 @@ export function dashboardToday(input: {
   const distributions = horizon.distributionDays;
   const perDistribution = distributions.length > 0 ? distributions.reduce((t, d) => t + d.orderedBase, 0) / distributions.length : 0;
   const closing = day ? horizon.byDate.find((b) => b.date === day.productionDate)?.closingStockBase ?? 0 : input.openingLots.reduce((t, l) => t + l.remaining, 0);
+  const cal = horizon.growCalendar;
+  const todayOnShelf = cal?.days.find((d) => d.date === input.today);
+  const shelf = cal
+    ? {
+        traysOnShelf: todayOnShelf?.traysOnShelf ?? 0,
+        traysHarvestable: todayOnShelf?.traysHarvestable ?? 0,
+        sowingsInWindow: cal.days.reduce((t, d) => t + d.sowingsStarted, 0),
+        traysSownInWindow: cal.days.reduce((t, d) => t + d.traysSown, 0),
+        noRoom: cal.sowings.filter((s) => !s.placed).length,
+      }
+    : null;
   return {
     productionDate: day?.productionDate ?? null,
     sowings: day ? day.runs.reduce((t, r) => t + r.sowingsScheduled, 0) : 0,
@@ -71,6 +84,7 @@ export function dashboardToday(input: {
     closingStockBase: closing,
     distributionDays: distributions.length,
     daysOfCover: perDistribution > 0 ? closing / perDistribution : null,
+    shelf,
   };
 }
 
