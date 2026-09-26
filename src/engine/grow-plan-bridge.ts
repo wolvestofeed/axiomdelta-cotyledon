@@ -16,8 +16,13 @@ import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import { costGrowPlan, defaultGrowCostContext, fixtureFor, type GrowCostContext, type GrowPlanCosting } from '@/engine/grow-costing';
 
-/** A crop plan that carries the grow plan it was projected from. */
-export type GrowPlanCarrier = CropPlanDef & { plan: GrowPlanDef };
+/**
+ * A crop plan that is also the grow plan it was projected from: the grow plan's own fields at the
+ * top level (format, lines, stage days, note and what the library read attached), the legacy
+ * fields beside them, and the grow plan again as `plan`. A module moved onto the grow plan reads
+ * the carrier as a `GrowPlanDef`; one not yet moved still finds `inputs`.
+ */
+export type GrowPlanCarrier = GrowPlanDef & CropPlanDef & { plan: GrowPlanDef };
 
 export function isGrowPlanCarrier(x: unknown): x is GrowPlanCarrier {
   return typeof x === 'object' && x !== null && 'plan' in x && typeof (x as { plan?: unknown }).plan === 'object' && (x as { plan: { lines?: unknown } }).plan !== null && Array.isArray((x as { plan: { lines?: unknown } }).plan.lines);
@@ -87,6 +92,7 @@ export function projectCropPlan(plan: GrowPlanDef, costing: GrowPlanCosting = co
     };
   });
   return {
+    ...plan,
     code: plan.code,
     name: plan.name,
     category: costing.format.name,

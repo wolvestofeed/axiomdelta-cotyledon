@@ -3,7 +3,8 @@
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
-import { CROP_PLAN_STATUS_LABELS, type CropPlanDef } from '@/data/plan-data';
+import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 /**
  * Which library crop plan a page is looking at. The choice is the `crop_plan` search
@@ -12,10 +13,10 @@ import { CROP_PLAN_STATUS_LABELS, type CropPlanDef } from '@/data/plan-data';
  * (the first In Service).
  */
 export function useSelectedCropPlan(): {
-  cropPlan: CropPlanDef;
+  cropPlan: GrowPlanCarrier;
   code: string;
   setCode: (code: string) => void;
-  cropPlans: CropPlanDef[];
+  cropPlans: GrowPlanCarrier[];
 } {
   const { resolved } = useScenario();
   const params = useSearchParams();

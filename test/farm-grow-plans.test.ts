@@ -247,6 +247,12 @@ describe('capacity in trays and cycle days', () => {
 });
 
 describe('the library: rows round-trip the plan and project it for the engine', () => {
+  it('a projected plan is the grow plan: its fields at the top level equal the plan it carries', () => {
+    const c = projectCropPlan(broccoli());
+    const { plan, ...top } = c;
+    for (const k of Object.keys(plan) as (keyof GrowPlanDef)[]) expect(top[k as keyof typeof top]).toEqual(plan[k]);
+  });
+
   const rows = (p: GrowPlanDef) => {
     const { header, lines } = cropPlanToRows(p);
     return rowsToCropPlan({ ...header, id: 'x', version: 1, effectiveFrom: '2026-09-25', updatedAt: '2026-09-25T00:00:00.000Z' }, lines);

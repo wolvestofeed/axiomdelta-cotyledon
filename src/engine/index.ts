@@ -12,7 +12,7 @@
 import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine, type CropPlanDef } from '@/data/plan-data';
 import { equipmentSeed } from '@/data/capex';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
-import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier, isGrowPlanCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 type CropPlan = CropPlanDef;
 /**
@@ -174,7 +174,7 @@ export function costCropPlan(
  * harvest grams, packed as harvested on a live tray), and the medium, nutrient, light and
  * consumable lines carry cost and no mass.
  */
-function costGrowCarrier(cropPlan: CropPlan & { plan: import('@/data/grow-plan').GrowPlanDef }, shrinkAllowance: number, unitFactor: number): CropPlanCosting {
+function costGrowCarrier(cropPlan: GrowPlanCarrier, shrinkAllowance: number, unitFactor: number): CropPlanCosting {
   const g = costCarrier(cropPlan);
   const rate = (costPerUnit: number, oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
   const lines: InputCost[] = cropPlan.inputs.map((ing, i) => {

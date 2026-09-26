@@ -48,7 +48,7 @@ import {
   type SchedulePolicyOverlay,
 } from '@/engine/scenario';
 import { routeKey } from '@/engine/routing';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { SubscriberDef } from '@/data/subscribers';
 import { crews as seedCrews, LEGACY_SEED_CREWS, type NewCrewDefaults } from '@/data/crews';
 import type { DateRange } from '@/engine/periods';
@@ -100,7 +100,7 @@ export interface ScenarioStore {
     value: number | undefined,
   ) => void;
   /** The crop plan library as loaded (no scenario edits) — the standard the edits are measured against. */
-  library: CropPlanDef[];
+  library: GrowPlanCarrier[];
   /** The Nutrients & Supplements library as loaded; the seed list when the server passed none. */
   nutrients: NutrientSolutionDef[];
   setPhase: (phase: number, key: keyof PhaseOverlay, value: number | undefined) => void;
@@ -170,7 +170,7 @@ export function ScenarioProvider({
   /** The open scenario's config the server loaded; omit for plan-data defaults. */
   initialConfig?: FarmScenarioConfig;
   /** The crop plan library the server loaded; omit for the seed list. */
-  library?: CropPlanDef[];
+  library?: GrowPlanCarrier[];
   /** The subscriber library the server loaded; omit for the seed placeholders. */
   subscribers?: SubscriberDef[];
   /** Farm closures from the production calendar; production days per year count off them. */

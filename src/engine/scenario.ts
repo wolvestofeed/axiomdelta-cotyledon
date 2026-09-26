@@ -37,12 +37,12 @@ import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, ty
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
-import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { isGrowPlanCarrier, projectCropPlan, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { measuredConsumption, studiesForCropPlan } from '@/engine/time-studies';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
-const seedCropPlans: readonly CropPlanDef[] = growPlanSeed.map((p) => projectCropPlan(p));
+const seedCropPlans: readonly GrowPlanCarrier[] = growPlanSeed.map((p) => projectCropPlan(p));
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price';
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
@@ -383,9 +383,9 @@ export interface ResolvedInputs {
    * planning loop, the ledger, capacity) read it until orders carry a crop plan
    * each (Roadmap Phase H3/H4).
    */
-  cropPlan: CropPlanDef;
+  cropPlan: GrowPlanCarrier;
   /** Every library crop plan with the scenario's input edits applied. */
-  cropPlans: CropPlanDef[];
+  cropPlans: GrowPlanCarrier[];
   phases: typeof defaultPhases;
   phaseProfiles: typeof defaultPhaseProfiles;
   /** Proposed crews: checked against the labor requirement, never an input to capacity. */
@@ -476,7 +476,7 @@ function put<T>(target: { value: T }, override: T | undefined): void {
 export function resolveScenarioInputs(
   config: FarmScenarioConfig = {},
   /** The crop plan library. Omitted = the seed grow plans (tests, engine defaults). */
-  library: readonly CropPlanDef[] = seedCropPlans,
+  library: readonly GrowPlanCarrier[] = seedCropPlans,
   /** The subscriber library. Omitted = the seed placeholders built from the channel constants. */
   subscribers: readonly SubscriberDef[] = seedSubscribers(),
   /** Farm closures from the production calendar (Roadmap J1). Omitted = none entered. */
@@ -569,12 +569,12 @@ export function resolveScenarioInputs(
   const inputSupplier = config.sustainability?.inputSupplier ?? {};
   const inputPrices: Record<string, ResolvedInputPrice> = {};
   const source = library.length > 0 ? library : seedCropPlans;
-  const cropPlans: CropPlanDef[] = source.map((r) => {
+  const cropPlans: GrowPlanCarrier[] = source.map((r) => {
     // What the plan's approved time studies measured stands over the placeholder watering volumes
     // and the nutrient strength; the plan is projected again so its lines carry the measured cost.
     const measured = timeStudies && isGrowPlanCarrier(r) ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
     const base = measured && isGrowPlanCarrier(r) ? { ...r, ...projectCropPlan({ ...r.plan, measured }) } : r;
-    const rec = structuredClone(base) as CropPlanDef;
+    const rec = structuredClone(base) as GrowPlanCarrier;
     for (const ing of rec.inputs) {
       const supplierId = inputSupplier[ing.name] ?? null;
       const priced = resolveInputPrice({

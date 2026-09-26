@@ -14,7 +14,7 @@ import type { PackagingLibrary } from '@/data/packaging';
 import type { CatalogLine } from '@/engine/catalog';
 import type { FixedCostLineDef, LoanDef } from '@/data/finance';
 import type { LeaseholdLine } from '@/data/capex';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PaymentTerms } from '@/data/working-capital';
 import { compareDays, violationDelta, type DailyStreamOnDay } from '@/engine/compare';
@@ -55,7 +55,7 @@ export function CompareClient({
 }: {
   today: string;
   scenarios: ComparableScenario[];
-  library: CropPlanDef[];
+  library: GrowPlanCarrier[];
   subscribers: SubscriberDef[];
   closures: DateRange[];
   supplierTerms: Record<string, PaymentTerms>;
