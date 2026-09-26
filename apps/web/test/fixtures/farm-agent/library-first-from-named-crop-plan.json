@@ -1,0 +1,17 @@
+{
+  "name": "Library first: an item from a named crop plan is found there before anywhere else",
+  "instruction": "Use the marinara from the meatball pack on the enchiladas instead of the enchilada sauce.",
+  "sourceCropPlanCode": "AMK-E-010",
+  "toolInput": {
+    "sourceCropPlan": "AMK-E-010",
+    "variantName": "",
+    "lineChanges": [{ "kind": "replace", "line": "enchilada sauce", "withItem": "marinara", "fromCropPlan": "meatball pack" }],
+    "laborChanges": [],
+    "facts": ["The enchilada sauce on AMK-E-010 is replaced by the marinara from the meatball pack."]
+  },
+  "expect": {
+    "questions": [{ "id": "line:tomato purée marinara with roasted carrots and spinach:use:AMK-E-008", "kind": "confirm", "waivable": false }],
+    "readyWhen": { "confirmed": ["line:tomato purée marinara with roasted carrots and spinach:use:AMK-E-008"] },
+    "lines": { "has": ["Tomato purée marinara with roasted carrots and spinach"], "lacks": ["Enchilada sauce, mild"] }
+  }
+}

@@ -1,0 +1,172 @@
+/**
+ * MicroFarm — production staff demand (Roadmap O3), on the sowing and harvest streams.
+ */
+
+import { describe, it, expect } from 'vitest';
+import type { TimeStudyDoc } from '@/app/(farm)/farm/_data/time-studies';
+import { staffDemand, staffDemandDocument } from '@/app/(farm)/farm/_engine/staff-demand';
+import { distributedConsumption } from '@/app/(farm)/farm/_engine/production-plan';
+
+const study = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
+  id: 's', cropPlanCode: 'AMK-E-001', studiedOn: '2027-01-04', sowingSize: 500, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: '2027-01-05T09:00:00.000Z', adoptedBy: 'admin', source: 'user_built', basis: 'observed',
+  lines: [
+    { task: 'Rack load', station: 'Blackout rack', staff: 2, elapsedMinutes: 25, laborMinutes: 50, scalesWith: 'fixed', stream: 'sowing' },
+    { task: 'Prep', station: 'Prep bench', staff: 4, elapsedMinutes: 75, laborMinutes: 300, scalesWith: 'variable', stream: 'sowing' },
+  ],
+  ...over,
+});
+
+const run = (cropPlanCode: string, sowingsScheduled: number, produced: number) => ({ cropPlanCode, cropPlanName: cropPlanCode, sowingsScheduled, produced });
+const ship = (cropPlanCode: string, units: number) => ({ cropPlanCode, cropPlanName: cropPlanCode, units });
+
+describe('farm staff demand — the sowing stream, from the day’s sowings', () => {
+  const studies = [
+    study({ id: 'a' }),
+    study({ id: 'b', cropPlanCode: 'AMK-E-002', sowingSize: 400, lines: [{ task: 'Prep', station: 'Prep bench', staff: 3, elapsedMinutes: 60, laborMinutes: 180, scalesWith: 'variable', stream: 'sowing' }] }),
+    study({ id: 'c', cropPlanCode: 'AMK-E-003', adoptedAt: null }),
+  ];
+
+  it('counts a fixed sowing line once per sowing and a per-unit sowing line per unit produced', () => {
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 2, 1100)] }] });
+    const day = d.days[0]!;
+    expect(day.lines.find((l) => l.task === 'Rack load')!.hours).toBeCloseTo((50 * 2) / 60, 10);
+    expect(day.lines.find((l) => l.task === 'Prep')!.hours).toBeCloseTo(((300 / 500) * 1100) / 60, 10);
+    expect(day.sowings).toBe(2);
+    expect(day.units).toBe(1100);
+    expect(day.unitsShipped).toBe(0);
+    expect(day.harvestStaffHours).toBe(0);
+  });
+
+  it('sums the same task and station across crop plans, headcount the most any study names', () => {
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 550), run('AMK-E-002', 1, 400)] }] });
+    const prep = d.days[0]!.lines.find((l) => l.task === 'Prep')!;
+    expect(prep.hours).toBeCloseTo(((300 / 500) * 550 + (180 / 400) * 400) / 60, 10);
+    expect(prep.headcount).toBe(4);
+    expect(prep.cropPlanCodes).toEqual(['AMK-E-001', 'AMK-E-002']);
+  });
+
+  it('a crop plan with no adopted study is staffed from its estimated study, and listed as running on an estimate', () => {
+    const d = staffDemand({
+      from: '2027-01-04',
+      to: '2027-01-08',
+      days: [{ productionDate: '2027-01-04', runs: [run('AMK-E-003', 1, 500)] }],
+      studies: [study({ id: 'e', cropPlanCode: 'AMK-E-003', adoptedAt: null, studiedOn: null, observer: null, qualityResult: null, basis: 'estimated' })],
+    });
+    expect(d.days[0]!.uncovered).toEqual([]);
+    expect(d.days[0]!.staffHours).toBeCloseTo((50 + 300) / 60, 6);
+    expect(d.estimatedCropPlans).toEqual(['AMK-E-003']);
+    expect(d.uncoveredCropPlans).toEqual([]);
+  });
+
+  it('an observed study that is not adopted does not stand in; the estimate does', () => {
+    const d = staffDemand({
+      from: '2027-01-04',
+      to: '2027-01-08',
+      days: [{ productionDate: '2027-01-04', runs: [run('AMK-E-003', 2, 1000)] }],
+      studies: [
+        study({ id: 'o', cropPlanCode: 'AMK-E-003', adoptedAt: null, lines: [{ task: 'Everything', station: null, staff: 1, elapsedMinutes: 999, laborMinutes: 999, scalesWith: 'fixed', stream: 'sowing' }] }),
+        study({ id: 'e', cropPlanCode: 'AMK-E-003', adoptedAt: null, studiedOn: null, basis: 'estimated' }),
+      ],
+    });
+    expect(d.days[0]!.staffHours).toBeCloseTo((2 * 50 + 300 * 2) / 60, 6);
+    expect(d.estimatedCropPlans).toEqual(['AMK-E-003']);
+  });
+
+  it('a crop plan with sowings and no time study at all is listed and carries no demand', () => {
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-02', runs: [run('AMK-E-003', 1, 500)] }] });
+    expect(d.days[0]!.lines).toEqual([]);
+    expect(d.days[0]!.uncovered).toEqual([{ cropPlanCode: 'AMK-E-003', cropPlanName: 'AMK-E-003', sowings: 1, units: 500, unitsShipped: 0 }]);
+    expect(d.uncoveredCropPlans).toEqual(['AMK-E-003']);
+    expect(d.staffHours).toBe(0);
+  });
+
+  it('keeps only days inside the window', () => {
+    const d = staffDemand({
+      from: '2027-02-01',
+      to: '2027-02-14',
+      studies,
+      days: [{ productionDate: '2027-01-29', runs: [run('AMK-E-001', 1, 550)] }, { productionDate: '2027-02-15', runs: [run('AMK-E-001', 1, 550)] }],
+      harvest: [{ date: '2027-02-15', shipments: [ship('AMK-E-001', 100)] }],
+    });
+    expect(d.days).toEqual([]);
+    expect(d.productionDays).toBe(0);
+    expect(d.distributionDays).toBe(0);
+  });
+});
+
+describe('farm staff demand — the harvest stream, per unit shipped that day', () => {
+  const lines = (loadMinutes: number): TimeStudyDoc['lines'] => [
+    { task: 'Component blackout and stage', station: 'Blackout rack', staff: 2, elapsedMinutes: 25, laborMinutes: 50, scalesWith: 'variable', stream: 'sowing' },
+    { task: 'Unit and assemble', station: 'Assembly line', staff: 4, elapsedMinutes: 75, laborMinutes: 300, scalesWith: 'variable', stream: 'harvest' },
+    { task: 'Load for transport', station: 'Dock', staff: 1, elapsedMinutes: loadMinutes, laborMinutes: loadMinutes, scalesWith: 'fixed', stream: 'harvest' },
+  ];
+  const studies = [study({ id: 'a', lines: lines(10) }), study({ id: 'b', cropPlanCode: 'AMK-E-002', sowingSize: 400, lines: lines(12) })];
+
+  it('harvest lines fall on the distribution day and scale with the units shipped, not produced', () => {
+    const d = staffDemand({
+      from: '2027-02-01',
+      to: '2027-02-14',
+      studies,
+      days: [{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 500)] }],
+      harvest: [{ date: '2027-02-02', shipments: [ship('AMK-E-001', 125)] }],
+    });
+    const [production, distribution] = d.days;
+    expect(production!.date).toBe('2027-02-01');
+    expect(production!.lines.map((l) => l.task)).toEqual(['Component blackout and stage']);
+    expect(production!.sowingStaffHours).toBeCloseTo((50 / 500) * 500 / 60, 10);
+    expect(distribution!.date).toBe('2027-02-02');
+    expect(distribution!.sowings).toBe(0);
+    expect(distribution!.unitsShipped).toBe(125);
+    expect(distribution!.lines.find((l) => l.task === 'Unit and assemble')!.hours).toBeCloseTo(((300 / 500) * 125) / 60, 10);
+    expect(distribution!.lines.every((l) => l.stream === 'harvest')).toBe(true);
+    expect(d.productionDays).toBe(1);
+    expect(d.distributionDays).toBe(1);
+  });
+
+  it('a fixed harvest line counts once per distribution day — the largest any shipped crop plan names — not once per crop plan', () => {
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [], harvest: [{ date: '2027-02-02', shipments: [ship('AMK-E-001', 125), ship('AMK-E-002', 80)] }] });
+    const day = d.days[0]!;
+    expect(day.lines.find((l) => l.task === 'Load for transport')!.hours).toBeCloseTo(12 / 60, 10);
+    expect(day.lines.find((l) => l.task === 'Unit and assemble')!.hours).toBeCloseTo(((300 / 500) * 125 + (300 / 400) * 80) / 60, 10);
+    expect(day.harvestStaffHours).toBeCloseTo(day.staffHours, 10);
+  });
+
+  it('a production and a distribution on the same date sum on one day; a shipment with no study is listed', () => {
+    const d = staffDemand({
+      from: '2027-02-01',
+      to: '2027-02-14',
+      studies,
+      days: [{ productionDate: '2027-02-02', runs: [run('AMK-E-001', 1, 500)] }],
+      harvest: [{ date: '2027-02-02', shipments: [ship('AMK-E-001', 125), ship('AMK-E-009', 40), ship('AMK-E-002', 0)] }],
+    });
+    expect(d.days).toHaveLength(1);
+    const day = d.days[0]!;
+    expect(day.sowingStaffHours + day.harvestStaffHours).toBeCloseTo(day.staffHours, 10);
+    expect(day.sowingStaffHours).toBeCloseTo(50 / 60, 10);
+    expect(day.uncovered).toEqual([{ cropPlanCode: 'AMK-E-009', cropPlanName: 'AMK-E-009', sowings: 0, units: 0, unitsShipped: 40 }]);
+    expect(day.unitsShipped).toBe(165);
+  });
+
+  it('the document for Staffing carries tasks, stations, people and hours — no positions, pay or stream', () => {
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 550)] }], harvest: [{ date: '2027-02-02', shipments: [ship('AMK-E-001', 125)] }] });
+    const doc = staffDemandDocument(d, '2027-01-31T12:00:00.000Z');
+    expect(doc.kind).toBe('farm.staff_demand');
+    expect(doc.days.map((x) => x.date)).toEqual(['2027-02-01', '2027-02-02']);
+    expect(Object.keys(doc.days[0]!.lines[0]!).sort()).toEqual(['headcount', 'hours', 'station', 'task']);
+  });
+});
+
+describe('farm — what distributed orders drew from finished goods', () => {
+  it('takes the linked distribution’s units and date, in base units', () => {
+    const c = distributedConsumption(
+      [
+        { status: 'distributed', distributionId: 'd1', cropPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-01', units: 100 },
+        { status: 'confirmed', distributionId: null, cropPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-02', units: 100 },
+      ],
+      [{ id: 'd1', distributedOn: '2027-02-01', units: 96 }],
+      [],
+      { 1: 1.5 },
+    );
+    expect(c).toEqual([{ cropPlanCode: 'AMK-E-001', date: '2027-02-01', baseUnits: 144 }]);
+  });
+});

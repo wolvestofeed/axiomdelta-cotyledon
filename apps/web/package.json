@@ -1,5 +1,5 @@
 {
-  "name": "@ct/web",
+  "name": "@mf/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,8 +14,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
     "@clerk/nextjs": "^7.3.3",
-    "@ct/db": "workspace:*",
-    "@ct/ledger": "workspace:*",
+    "@mf/db": "workspace:*",
+    "@mf/ledger": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",
     "jszip": "^3.10.1",

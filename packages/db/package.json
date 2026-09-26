@@ -1,5 +1,5 @@
 {
-  "name": "@ct/db",
+  "name": "@mf/db",
   "version": "0.1.0",
   "private": true,
   "type": "module",

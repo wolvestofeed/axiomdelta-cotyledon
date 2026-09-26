@@ -3,7 +3,7 @@
  * lexicographic order. Idempotent — files are tracked in the
  * `_migrations` table and skipped on subsequent runs.
  *
- *   DATABASE_URL=postgres://... pnpm --filter @ct/db db:migrate
+ *   DATABASE_URL=postgres://... pnpm --filter @mf/db db:migrate
  */
 
 import { readdir, readFile } from 'node:fs/promises';

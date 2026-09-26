@@ -26,14 +26,14 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@ct/db', '@ct/ledger'],
+  transpilePackages: ['@mf/db', '@mf/ledger'],
   serverExternalPackages: ['pg'],
   async headers() {
     return [
       { source: '/(.*)', headers: SECURITY_HEADERS },
       // Sources registry: the stored document is rendered inside an <iframe> on its own source page.
       {
-        source: '/muse/sources/:id/file',
+        source: '/farm/sources/:id/file',
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Content-Security-Policy', value: CSP_DIRECTIVES.replace("frame-ancestors 'none'", "frame-ancestors 'self'") },
@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
       },
       // Compare dictates an instruction through the Web Speech API on this one route.
       {
-        source: '/muse/production-planning/compare',
+        source: '/farm/production-planning/compare',
         headers: [{ key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), interest-cohort=()' }],
       },
     ];

@@ -1,5 +1,5 @@
 {
-  "name": "@ct/ledger",
+  "name": "@mf/ledger",
   "version": "1.1.1",
   "private": true,
   "type": "module",

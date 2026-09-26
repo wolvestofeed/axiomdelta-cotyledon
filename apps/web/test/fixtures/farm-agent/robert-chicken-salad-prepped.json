@@ -1,0 +1,83 @@
+{
+  "name": "Robert, live 2026-09-19: chicken bought pre-prepared, 'adjust time and labor costs as needed', renamed",
+  "instruction": "duplicate this crop plan with the chicken bought pre-prepared from the supplier adjust time and labor costs as needed rename the new version chicken salad prepped",
+  "sourceCropPlanCode": "AMK-E-005",
+  "toolInput": {
+    "sourceCropPlan": "AMK-E-005",
+    "variantName": "Chicken Salad Prepped",
+    "lineChanges": [
+      {
+        "kind": "changeProcessing",
+        "line": "Chicken, harvested and diced",
+        "withItem": "Chicken, harvested and diced, pre-prepared",
+        "step": "prep",
+        "removeStep": false
+      },
+      {
+        "kind": "changeProcessing",
+        "line": "Chicken, harvested and diced",
+        "step": "sow",
+        "removeStep": false
+      }
+    ],
+    "laborChanges": [],
+    "facts": [
+      "The chicken is bought pre-prepared from the supplier.",
+      "The chicken prep step changes with the new form; minutes and staff are not stated.",
+      "The chicken sow step changes with the new form; whether it goes away is not stated.",
+      "Time and labor costs follow from the change; no figure is stated.",
+      "The variant is named Chicken Salad Prepped."
+    ]
+  },
+  "expect": {
+    "questions": [
+      {
+        "id": "line:chicken, harvested and diced, pre-prepared:seedQtyPerSowing",
+        "kind": "ask",
+        "waivable": true
+      },
+      {
+        "id": "line:chicken, harvested and diced, pre-prepared:yieldToHarvest",
+        "kind": "ask",
+        "waivable": true
+      },
+      {
+        "id": "line:chicken, harvested and diced, pre-prepared:seedUnitCost",
+        "kind": "ask",
+        "waivable": true
+      },
+      {
+        "id": "line:chicken, harvested and diced, pre-prepared:ftl",
+        "kind": "ask",
+        "waivable": true
+      },
+      {
+        "id": "step:prep — chicken salad: wash, trim, cut, scale:laborMinutes",
+        "kind": "ask",
+        "waivable": true
+      },
+      {
+        "id": "step:sow — chicken salad (diced or sliced chicken, tilt shelf):laborMinutes",
+        "kind": "ask",
+        "waivable": true
+      }
+    ],
+    "lines": {
+      "has": [
+        "Chicken, harvested and diced, pre-prepared"
+      ],
+      "lacks": [
+        "Chicken, harvested and diced"
+      ]
+    },
+    "steps": [
+      {
+        "taskHas": "Prep — Chicken salad"
+      },
+      {
+        "taskHas": "Sow — Chicken salad"
+      }
+    ],
+    "variantName": "Chicken Salad Prepped"
+  }
+}

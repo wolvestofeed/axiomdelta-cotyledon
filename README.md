@@ -8,9 +8,9 @@ The production operating system for microgreens and sprouts farms, and the back 
 pnpm install
 cp .env.example apps/web/.env.local   # fill in Clerk, Neon and Anthropic keys
 cp .env.example .env                  # DATABASE_URL for migrations
-pnpm --filter @ct/ledger build && pnpm --filter @ct/db build
+pnpm --filter @mf/ledger build && pnpm --filter @mf/db build
 pnpm db:migrate
-pnpm dev                              # http://localhost:3000 → /muse
+pnpm dev                              # http://localhost:3000 → /farm
 ```
 
 ## Check

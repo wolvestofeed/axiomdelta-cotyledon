@@ -19,7 +19,7 @@ import 'server-only';
  *
  * Failure mode: any Upstash error is logged and **permits** the
  * request (fail-open). Rate-limit infrastructure should never take the
- * site offline. The audit log (`audit_events`) plus the anomaly
+ * pickup point offline. The audit log (`audit_events`) plus the anomaly
  * detector are the backstop for abuse signals when this layer's
  * unavailable.
  *

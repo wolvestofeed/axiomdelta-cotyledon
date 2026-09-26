@@ -1,0 +1,23 @@
+{
+  "name": "A form change with the step's minutes not stated",
+  "instruction": "Buy the carrots pre-cut for the fish pack.",
+  "sourceCropPlanCode": "AMK-E-004",
+  "toolInput": {
+    "sourceCropPlan": "AMK-E-004",
+    "variantName": "",
+    "lineChanges": [{ "kind": "changeProcessing", "line": "carrots", "withItem": "Carrots, pre-cut", "step": "prep", "removeStep": false }],
+    "laborChanges": [],
+    "facts": ["The carrots on AMK-E-004 are bought pre-cut.", "The carrot prep step's minutes in the new form are not stated."]
+  },
+  "expect": {
+    "questions": [
+      { "id": "line:carrots, pre-cut:seedQtyPerSowing", "kind": "ask", "waivable": true },
+      { "id": "line:carrots, pre-cut:yieldToHarvest", "kind": "ask", "waivable": true },
+      { "id": "line:carrots, pre-cut:seedUnitCost", "kind": "ask", "waivable": true },
+      { "id": "line:carrots, pre-cut:ftl", "kind": "ask", "waivable": true },
+      { "id": "step:prep — carrots: wash, trim, cut, scale:laborMinutes", "kind": "ask", "waivable": true }
+    ],
+    "lines": { "has": ["Carrots, pre-cut"], "lacks": ["Carrot matchsticks"] },
+    "steps": [{ "taskHas": "Prep — Carrots" }]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Unsaid step: a form that arrives harvested takes the sow step with it",
+  "instruction": "Buy the chicken already smoked and diced so there's no smoking on our side; scaling it is a five-minute job for one person.",
+  "sourceCropPlanCode": "AMK-E-003",
+  "toolInput": {
+    "sourceCropPlan": "AMK-E-003",
+    "variantName": "",
+    "lineChanges": [
+      { "kind": "changeProcessing", "line": "chicken", "withItem": "Chicken, smoked and diced", "step": "prep", "removeStep": false, "laborMinutes": 5, "staff": 1 },
+      { "kind": "changeProcessing", "line": "chicken", "step": "sow", "removeStep": true }
+    ],
+    "laborChanges": [],
+    "facts": ["The chicken is bought already smoked and diced.", "The chicken prep step is 5 labor minutes with 1 person.", "The chicken sow step goes away; no smoking in this farm."]
+  },
+  "expect": {
+    "questions": [
+      { "id": "line:chicken, smoked and diced:seedQtyPerSowing", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:yieldToHarvest", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:seedUnitCost", "kind": "ask", "waivable": true },
+      { "id": "line:chicken, smoked and diced:ftl", "kind": "ask", "waivable": true }
+    ],
+    "readyWhen": { "waived": ["line:chicken, smoked and diced:seedQtyPerSowing", "line:chicken, smoked and diced:yieldToHarvest", "line:chicken, smoked and diced:seedUnitCost", "line:chicken, smoked and diced:ftl"] },
+    "lines": { "has": ["Chicken, smoked and diced"], "lacks": ["Chicken thighs, boneless skinless"] },
+    "steps": [{ "taskHas": "Prep — Smoked chicken", "laborMinutes": 5, "staff": 1 }, { "taskHas": "Sow — Smoked chicken", "absent": true }]
+  }
+}

@@ -1,0 +1,1512 @@
+/*
+ * ════════════════════════════════════════════════════════════════════════════
+ * IMPACT OS — MASTER THEME  (`_components/farm.css`)
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * ONE MATERIAL, ONE THEME.
+ *   Polished copper on a cold-room ground. Plan of record, forecast and
+ *   actuals are named in the scenario bar, not signalled by colour.
+ *
+ * DARK, BUT NOT A VOID — AND NOT A GLARE.
+ *   The ground is charcoal with a green whisper. Text is off-white, never
+ *   pure white: #FFF on near-black (17–18:1) blooms and ghosts over a long
+ *   day, worst for readers with astigmatism. The ink ladder is set by
+ *   lightness, not hue — strong 15:1 (figures, headings), ink 13.7:1 (body),
+ *   soft 10.3:1, faint 7.5:1 on the card surface — so hierarchy reads at arm's
+ *   length and every tier still clears WCAG AA with room.
+ *
+ * DEPTH FROM LIGHT, NOT FROM BLACK.
+ *   Elevation steps up in lightness (ground → surface → surface-2 →
+ *   surface-3); every panel carries a 1px bevel highlight on its top edge, an
+ *   underside shadow and an ambient drop tinted to the ground's green rather
+ *   than pure black. A 3% grain keeps any surface from reading dead flat.
+ *
+ * COPPER IS THE BRAND; GREEN MEANS VERIFIED.
+ *   Provenance colours are semantic and never decorative: sourced green,
+ *   stated blue, placeholder gold, derived violet, over red. Green and blue
+ *   are held ≥ 15 ΔE apart (OKLab) for normal and colour-deficient vision.
+ *
+ * TYPE: TWO VOICES, ONE SCALE.
+ *   Fraunces for headings and the brand; IBM Plex Sans for the interface;
+ *   IBM Plex Mono for every figure (tabular lining numerals). Sizes come only
+ *   from the --farm-fs-* scale below (floor 0.7rem ≈ 11px for uppercase
+ *   labels; 0.875rem = 14px table and body). Pages never set a size, colour
+ *   or hex inline — they use the classes in "UTILITIES" at the foot of this
+ *   file, or Tailwind layout/spacing utilities.
+ *
+ * THE SIDEBAR IS SOIL.
+ *   Deep copper from the logo's second soil layer (#8E5323 → #804A1F), cream
+ *   ink, mint section heads. Its luminance sits within ~10:1 of the working
+ *   surface, so the eye does not re-adapt between the menu and the page (the
+ *   former limestone sidebar ran ~50:1). Limestone tokens remain for the
+ *   portals and any inline use.
+ *
+ * HOUSE RULES (docs/farm/CLAUDE.md §3, §5)
+ *   - No icons, no illustrations, no decorative SVG. The grain is the one
+ *     exception, as a surface token.
+ *   - Every figure shows its provenance badge; the badges are loud on purpose.
+ *   - Legacy token names (--farm-forest, --farm-olive, --farm-accent-soft …)
+ *     are kept so older references resolve.
+ *
+ * ── UPDATE LOG ─────────────────────────────────────────────────────────────
+ *   2026-09-13 — Created. Dark master theme, panel bevel and ambient-shadow
+ *                system, Fraunces / IBM Plex pairing, semantic palette.
+ *   2026-09-13 — Sandbox (patina) theme removed.
+ *   2026-09-17 — Page tabs (Phase T0).
+ *   2026-09-17 — Visual-quality pass: off-white ink ladder by lightness; the
+ *                --farm-fs-* type scale (29 sizes → 8, 11px floor); elevation
+ *                ladder and tinted shadows; control borders ≥ 3:1; solid
+ *                copper focus ring; visible row hover; page titles in copper
+ *                (was 3.9:1, now 6.3:1); stated re-hued blue; soil sidebar;
+ *                utility classes that replace every static inline style.
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+
+/* ══ TOKENS — LIVE ("facility") ═══════════════════════════════════════ */
+.farm-root {
+  /* Elevation ladder — each step lighter than the one beneath it. */
+  --farm-ground:        #131916;
+  --farm-bg:            #131916;
+  --farm-surface:       #1a221f;
+  --farm-surface-2:     #212b27;
+  --farm-surface-3:     #29342f;
+  --farm-sunk:          #0d1210;
+  --farm-chrome:        #161d1a;
+
+  /* Lines: hairlines stay soft; anything that marks a control clears 3:1. */
+  --farm-line:          #34413c;
+  --farm-line-strong:   #4a5a53;
+  --farm-line-control:  #66786f;   /* 3.5:1 on surface, 4.0:1 on sunk */
+  --farm-bevel:         rgba(255, 255, 255, 0.08);
+  --farm-bevel-hi:      rgba(255, 255, 255, 0.14);
+  --farm-underside:     rgba(3, 9, 7, 0.42);
+  --farm-shade:         4, 10, 8;   /* rgb triplet: shadows tinted to the ground, not pure black */
+  --farm-row-hover:     rgba(255, 255, 255, 0.045);
+
+  /* Ink ladder — solid tones stepped by LIGHTNESS so hierarchy reads without
+     leaning in. On the card surface: strong 15.0 : ink 13.7 : soft 10.3 :
+     faint 7.5. Off-white, never #FFF (halation over long sessions). */
+  --farm-ink-base:      201, 239, 212;   /* rgb triplet, for the few alpha uses */
+  --farm-ink-strong:    #f3f7f4;   /* figures, KPI values, headings */
+  --farm-ink:           #e6ede8;   /* body and table text */
+  --farm-ink-soft:      #b4d6c0;   /* secondary: labels, ledes */
+  --farm-ink-faint:     #93b9a0;   /* muted: notes, captions, column heads */
+
+  /* Type scale — the only font sizes in the OS. 1rem = 16px. */
+  --farm-fs-2xs:  0.7rem;    /* 11.2px — uppercase micro labels, badges, column heads */
+  --farm-fs-xs:   0.78rem;   /* 12.5px — notes, captions, sub-lines */
+  --farm-fs-sm:   0.84rem;   /* 13.4px — secondary text, controls */
+  --farm-fs-base: 0.875rem;  /* 14px   — body and table text */
+  --farm-fs-md:   1rem;      /* 16px   — emphasised lines, small headings */
+  --farm-fs-lg:   1.25rem;   /* 20px   — section headings */
+  --farm-fs-xl:   1.75rem;   /* 28px   — page titles, KPI values */
+  --farm-fs-2xl:  2rem;      /* 32px   — the hero figure */
+
+  --farm-accent:        #d08a4e;   /* polished copper */
+  --farm-accent-hi:     #e8a86f;
+  --farm-accent-deep:   #a3652f;
+  --farm-accent-soft:   rgba(208, 138, 78, 0.14);  /* legacy name */
+  --farm-accent-wash:   rgba(208, 138, 78, 0.14);
+  --farm-accent-ring:   rgba(208, 138, 78, 0.32);
+
+}
+
+/* ══ TOKENS — INVARIANT ACROSS BOTH THEMES ══════════════════════════════ */
+.farm-root {
+  /* Provenance. These never move between themes. */
+  --farm-sourced:       #6fc27f;   /* cilantro-lime  — cited third party   */
+  --farm-stated:        #78a2d8;   /* Hill Country sky — operator-supplied (ΔE 18 from sourced) */
+  --farm-placeholder:   #e3b455;   /* masa gold      — no source yet       */
+  --farm-derived:       #a996e8;   /* epazote        — calculated          */
+  --farm-over:          #e2685f;   /* chile de árbol — limit breached      */
+
+  --farm-heading-on-dark:  var(--farm-ink);
+  --farm-heading-on-light: var(--farm-ink); /* legacy name; surfaces are dark now */
+
+  /* Legacy brand names kept alive for inline styles already in the pages. */
+  /* Hill Country limestone — the sidebar ground. */
+  --farm-stone:         #d9d0bc;
+  --farm-stone-deep:    #c8bda5;
+  --farm-stone-line:    rgba(60, 48, 30, 0.18);
+  --farm-stone-ink:     #1f2622;
+  --farm-stone-ink-soft:#3a4640;
+  --farm-forest:        #2f6b45;
+  --farm-forest-soft:   #3d8757;
+  --farm-olive:         #93a862;
+
+  /* The sidebar — soil from the logo's second layer, cream ink, mint heads. */
+  --farm-side-top:      #8e5323;
+  --farm-side-bottom:   #804a1f;
+  --farm-side-foot:     #7a461d;
+  --farm-side-ink:      #f4eee3;   /* 5.3:1 at the top of the gradient */
+  --farm-side-ink-soft: #eadcc6;   /* 4.6:1 */
+  --farm-side-head:     #c6ead7;   /* mint section heads, 4.7:1 */
+  --farm-side-mark:     #f1cfa6;   /* light copper: tagline, active edge */
+  --farm-side-line:     rgba(244, 238, 227, 0.18);
+  /* The chrome bars: the top bar on a darker step of the sidebar's
+     soil, so sidebar and bars read as one frame; the toolbar on the sunk ground below it. */
+  --farm-bar-top:       #5c341a;   /* side ink 7.9:1, side ink soft 6.9:1 */
+  --farm-bar-bottom:    #4a2a15;   /* side ink 9.6:1 */
+  --farm-bar-line:      rgba(244, 238, 227, 0.22);
+  --farm-bar-field:     #2e1a0d;   /* fields on the soil bar: side ink 11.2:1 */
+  --farm-side-wash:     rgba(244, 238, 227, 0.08);
+  --farm-side-active:   rgba(244, 238, 227, 0.14);
+
+  /* Faces come from next/font/google in layout.tsx, self-hosted so they
+     satisfy the app's `font-src 'self'` CSP. Fallbacks keep the platform
+     legible if the variables are ever absent. */
+  --farm-font:   var(--farm-font-sans), 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --farm-serif:  var(--farm-font-display), Georgia, 'Times New Roman', serif;
+  --farm-mono:   var(--farm-font-mono), Menlo, Monaco, Consolas, monospace;
+
+  --farm-r-sm: 5px;
+  --farm-r:    9px;
+  --farm-r-lg: 13px;
+  --farm-sidebar-w: 12.75rem;
+
+  /* The panel crop-plan. Bevel on top, shadow under, ambient beneath. */
+  --farm-panel-shadow:
+    inset 0 1px 0 var(--farm-bevel),
+    inset 0 -1px 0 var(--farm-underside),
+    0 1px 2px rgba(var(--farm-shade), 0.45),
+    0 10px 26px -14px rgba(var(--farm-shade), 0.75);
+  --farm-panel-shadow-hi:
+    inset 0 1px 0 var(--farm-bevel-hi),
+    inset 0 -1px 0 var(--farm-underside),
+    0 2px 4px rgba(var(--farm-shade), 0.45),
+    0 18px 38px -16px rgba(var(--farm-shade), 0.85);
+
+  --farm-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--farm-ground);
+  color: var(--farm-ink);
+  font-family: var(--farm-font);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+.farm-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: var(--farm-grain);
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+}
+
+.farm-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--farm-sidebar-w) 1fr;
+  min-height: 100vh;
+}
+@media (max-width: 768px) {
+  .farm-shell { grid-template-columns: 1fr; }
+}
+
+/* ══ SIDEBAR ════════════════════════════════════════════════════════════ */
+.farm-sidebar {
+  background: linear-gradient(180deg, var(--farm-side-top) 0%, var(--farm-side-bottom) 100%);
+  color: var(--farm-side-ink);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(var(--farm-shade), 0.6);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12), 4px 0 18px -10px rgba(var(--farm-shade), 0.8);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+@media (max-width: 768px) {
+  .farm-sidebar { position: static; height: auto; }
+}
+.farm-brand {
+  position: relative;
+  /* 5% a side, so the icon spans 90% of the column. */
+  padding: 1.15rem 5% 0.95rem;
+  border-bottom: 1px solid var(--farm-side-line);
+}
+/* A copper rule that fades out — the light catching the edge of the bench. */
+.farm-brand::after {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--farm-side-mark), transparent 72%);
+  opacity: 0.6;
+}
+.farm-brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.4rem;
+}
+/* The sidebar stack: icon, the farm farm name in the H1 face, then the tagline. */
+.farm-brand-icon {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.farm-brand-wordmark {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--farm-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--farm-side-ink);
+}
+/* The tagline under the logo: copper, all caps, IBM Plex Sans. */
+.farm-brand-tagline {
+  display: block;
+  margin-top: 0.55rem;
+  font-family: var(--farm-font-sans), system-ui, sans-serif;
+  /* Sized so the line is as wide as farm farm above it; the indent offsets the trailing letter space so it centres. */
+  font-size: 1.38rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--farm-side-mark);
+}
+.farm-brand-name {
+  font-family: var(--farm-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--farm-side-ink);
+}
+.farm-brand-sub {
+  font-size: var(--farm-fs-2xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--farm-side-mark);
+  margin-top: 0.4rem;
+}
+.farm-nav {
+  padding: 0.65rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.farm-nav-group { margin-top: 0.1rem; }
+.farm-nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-radius: var(--farm-r-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--farm-fs-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--farm-side-head);
+  padding: 0.7rem 0.75rem 0.45rem 0.55rem;
+  text-align: left;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+/* Section titles that run long are set as stacked lines rather than shrunk. */
+.farm-nav-section-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.18;
+}
+.farm-nav-section:hover { color: var(--farm-side-ink); background: var(--farm-side-wash); }
+.farm-nav-section[data-active='true'] { color: var(--farm-side-head); }
+.farm-nav-mark {
+  font-size: var(--farm-fs-base);
+  font-weight: 500;
+  color: var(--farm-side-head);
+  width: 0.75rem;
+  text-align: right;
+}
+.farm-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 0 0.35rem 0.3rem;
+}
+.farm-nav-link {
+  display: block;
+  padding: 0.45rem 0.75rem 0.45rem 0.55rem;
+  border-radius: var(--farm-r-sm);
+  font-size: var(--farm-fs-sm);
+  color: var(--farm-side-ink-soft);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.farm-nav-link.top { font-size: var(--farm-fs-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; }
+/* Menu rules: a thin one between the top links and the sections; a heavier one closing
+   the OS sections, with the external users' portals below it. */
+.farm-nav-rule { border: 0; border-top: 1px solid var(--farm-side-line); margin: 0.45rem 0.35rem; }
+.farm-nav-rule.os { border-top: 2px solid rgba(var(--farm-shade), 0.45); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1); margin: 0.7rem 0.35rem; }
+/* Below the sections, set apart by a rule rather than by position alone. */
+.farm-nav-link.bottom {
+  margin-top: 0.55rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--farm-side-line);
+}
+.farm-nav-link:hover { background: var(--farm-side-wash); color: var(--farm-side-ink); }
+.farm-nav-link[data-active='true'] {
+  color: var(--farm-side-ink);
+  font-weight: 600;
+  border-left-color: var(--farm-side-mark);
+  background: linear-gradient(90deg, var(--farm-side-active), transparent 82%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.farm-sidebar-foot {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding: 0.7rem 0.75rem;
+  border-top: 1px solid var(--farm-side-line);
+  background: var(--farm-side-foot);
+  box-shadow: 0 -8px 16px -12px rgba(var(--farm-shade), 0.7);
+}
+/* The signed-in person's name. */
+.farm-user-pill {
+  display: block;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--farm-side-line);
+  border-radius: 999px;
+  background: rgba(var(--farm-shade), 0.25);
+  font-size: var(--farm-fs-xs);
+  font-weight: 600;
+  color: var(--farm-side-ink);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ══ MAIN COLUMN ════════════════════════════════════════════════════════ */
+.farm-main { min-width: 0; display: flex; flex-direction: column; }
+
+.farm-topbar {
+  /* The page toolbar: the sunk ground, one notch below the page, flat —
+     the tray the page's controls sit in. The 2px copper rule under it is the boundary between
+     chrome and page; nothing below it uses a full-width copper stroke. */
+  background: var(--farm-sunk);
+  border-top: 1px solid var(--farm-side-line);
+  border-bottom: 2px solid var(--farm-accent-deep);
+  padding: 0.55rem 1.5rem;
+  font-size: var(--farm-fs-xs);
+  color: var(--farm-ink-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+/* The second bar's slot for the page's own controls (`PageControls`): the crop-plan
+   selector, the month or period picker, a download. Empty on a page with none. */
+.farm-page-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0; min-width: 0; flex: 1 1 auto; }
+/* The three groups — scope, view, action — in that order; a group with nothing in it takes no room,
+   and a hairline separates the groups that are filled. */
+.farm-page-controls-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.farm-page-controls-group:empty { display: none; }
+.farm-page-controls-group:not(:empty) ~ .farm-page-controls-group:not(:empty) { margin-left: 0.9rem; padding-left: 0.9rem; border-left: 1px solid var(--farm-line-strong); }
+.farm-page-controls .farm-select { max-width: 15rem; text-overflow: ellipsis; }
+.farm-page-controls .farm-input { min-width: 0; }
+.farm-page-controls .farm-input[type='date'] { width: 9.2rem; }
+.farm-page-controls .farm-kpi-sub { margin-top: 0; }
+.farm-page-controls .farm-btn { padding-top: 0.22rem; padding-bottom: 0.22rem; }
+.farm-page-controls form { display: contents; }
+
+.farm-content {
+  padding: 1.6rem 1.5rem 2rem;
+  max-width: 82rem;
+  width: 100%;
+}
+
+/* ══ PAGE HEADER ════════════════════════════════════════════════════════ */
+.farm-page-title {
+  font-family: var(--farm-serif);
+  font-size: var(--farm-fs-xl);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  color: var(--farm-accent);
+  text-wrap: balance;
+}
+.farm-page-lede {
+  color: var(--farm-ink-soft);
+  font-size: var(--farm-fs-base);
+  line-height: 1.55;
+  margin-top: 0.5rem;
+  /* Full width: the lede runs the content's width so the header stays short. */
+  max-width: none;
+}
+
+/* The header slots (page-headers build plan §2): purpose, on this page, connects, how it works. */
+.farm-page-purpose {
+  color: var(--farm-ink-soft);
+  font-size: var(--farm-fs-md);
+  line-height: 1.45;
+  margin-top: 0.4rem;
+  text-wrap: pretty;
+}
+.farm-page-on {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.farm-page-on .farm-chip { padding: 0.18rem 0.65rem; }
+.farm-page-connects {
+  margin-top: 0.55rem;
+  font-size: var(--farm-fs-xs);
+  color: var(--farm-ink-faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+.farm-page-connects .farm-connect-dir { color: var(--farm-ink-soft); font-weight: 600; margin-right: 0.35rem; }
+.farm-page-connects a { color: var(--farm-ink); text-decoration: underline; text-decoration-color: var(--farm-line-strong); text-underline-offset: 2px; }
+.farm-page-connects a:hover { color: var(--farm-accent-hi); }
+.farm-hiw { margin-top: 0.7rem; }
+.farm-hiw-toggle {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--farm-fs-sm);
+  color: var(--farm-ink-soft);
+}
+.farm-hiw-toggle:hover .farm-hiw-label { color: var(--farm-accent-hi); }
+.farm-hiw-toggle:focus-visible { outline: 2px solid var(--farm-accent-hi); outline-offset: 3px; border-radius: 2px; }
+.farm-hiw-label { font-weight: 600; }
+.farm-hiw-affordance { font-size: var(--farm-fs-xs); text-decoration: underline; text-underline-offset: 2px; }
+.farm-hiw-body {
+  margin-top: 0.5rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--farm-accent);
+  max-width: 68ch;
+  color: var(--farm-ink-soft);
+  font-size: var(--farm-fs-sm);
+  line-height: 1.5;
+}
+.farm-hiw-body ul { margin: 0; padding-left: 1.1rem; }
+.farm-hiw-body li + li { margin-top: 0.3rem; }
+@media print {
+  .farm-page-on, .farm-page-connects, .farm-hiw-toggle { display: none; }
+  .farm-hiw-body[hidden] { display: block; }
+  .farm-hiw-body { border-left-color: #000; color: #000; max-width: none; }
+  .farm-hiw-body::before { content: 'How this page works'; display: block; font-weight: 600; margin-bottom: 0.3rem; }
+}
+
+/* The brand line on statement, report and document headers, and the footer. */
+.farm-brandline {
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--farm-ink-faint);
+  margin-bottom: 0.35rem;
+}
+.farm-footer {
+  margin-top: auto;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--farm-line);
+  font-size: var(--farm-fs-2xs);
+  letter-spacing: 0.08em;
+  color: var(--farm-ink-faint);
+}
+
+/* ══ CARDS / PANELS ═════════════════════════════════════════════════════ */
+.farm-card {
+  background: linear-gradient(180deg, var(--farm-surface-2) 0%, var(--farm-surface) 66%);
+  border: 1px solid var(--farm-line);
+  border-radius: var(--farm-r);
+  box-shadow: var(--farm-panel-shadow);
+  padding: 1rem 1.1rem;
+}
+.farm-card-title {
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--farm-ink-faint);
+  margin-bottom: 0.7rem;
+}
+/* Hover elevation — brighter bevel, deeper ambient, border warms to copper. */
+.farm-lift {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.farm-lift:hover {
+  box-shadow: var(--farm-panel-shadow-hi);
+  border-color: var(--farm-line-strong);
+  transform: translateY(-2px);
+}
+
+/* ══ KPI TILE ═══════════════════════════════════════════════════════════ */
+.farm-kpi-value {
+  font-family: var(--farm-mono);
+  font-size: var(--farm-fs-xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--farm-ink-strong);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.farm-kpi-label { font-size: var(--farm-fs-xs); color: var(--farm-ink-soft); margin-top: 0.45rem; }
+.farm-kpi-sub   { font-size: var(--farm-fs-2xs);  color: var(--farm-ink-faint); margin-top: 0.2rem; }
+
+/* ══ TABLES ═════════════════════════════════════════════════════════════ */
+.farm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--farm-fs-base);
+  background: var(--farm-surface);
+}
+.farm-table th {
+  text-align: left;
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--farm-ink-faint);
+  padding: 0.55rem 0.7rem;
+  background: linear-gradient(180deg, var(--farm-surface-2), var(--farm-surface));
+  border-bottom: 1px solid var(--farm-line-strong);
+  box-shadow: inset 0 1px 0 var(--farm-bevel);
+  white-space: normal;
+  vertical-align: bottom;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+.farm-table th.num { text-align: right; }
+.farm-table td {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--farm-line);
+  color: var(--farm-ink);
+  vertical-align: top;
+}
+.farm-table tbody tr { transition: background 0.14s ease; }
+.farm-table tbody tr:hover { background: var(--farm-row-hover); }
+.farm-table tr:last-child td { border-bottom: none; }
+.farm-table .num {
+  text-align: right;
+  font-family: var(--farm-mono);
+  font-size: var(--farm-fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.farm-table tr.total td {
+  font-weight: 700;
+  color: var(--farm-ink-strong);
+  border-top: 1px solid var(--farm-line-strong);
+  background: rgba(255, 255, 255, 0.026);
+}
+/* Compact: tighter cells for tables with in-row controls; columns take their content's width. */
+.farm-table.compact th,
+.farm-table.compact td { padding: 0.45rem 0.45rem; }
+.farm-table.compact td { vertical-align: middle; }
+
+/* Group header row: marks where a category begins in a collapsing library, so the
+   start of each group reads at a glance among its item rows. Copper wash fading
+   right, a copper edge on the left, copper rules above and below. */
+.farm-table tr.farm-group-row td {
+  background: linear-gradient(90deg, rgba(208, 138, 78, 0.16), rgba(208, 138, 78, 0.05) 60%, rgba(208, 138, 78, 0.02));
+  border-top: 1px solid rgba(208, 138, 78, 0.34);
+  border-bottom: 1px solid rgba(208, 138, 78, 0.22);
+  box-shadow: inset 3px 0 0 var(--farm-accent-deep);
+}
+.farm-table tbody tr.farm-group-row:hover td {
+  background: linear-gradient(90deg, rgba(208, 138, 78, 0.24), rgba(208, 138, 78, 0.08) 60%, rgba(208, 138, 78, 0.03));
+}
+.farm-table tr.farm-group-row.is-open td {
+  background: linear-gradient(90deg, rgba(232, 168, 111, 0.28), rgba(208, 138, 78, 0.1) 65%, rgba(208, 138, 78, 0.04));
+  border-bottom-color: var(--farm-accent);
+  box-shadow: inset 3px 0 0 var(--farm-accent-hi);
+}
+.farm-scroll-x { overflow-x: auto; }
+
+/* ══ PROVENANCE BADGES ══════════════════════════════════════════════════ */
+.farm-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--farm-r-sm);
+  border: 1px solid;
+  padding: 0.1rem 0.42rem;
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+.farm-badge.sourced     { color: #b9e6c2; border-color: rgba(111, 194, 127, 0.42); background: rgba(111, 194, 127, 0.14); }
+.farm-badge.stated      { color: #cfe0f5; border-color: rgba(120, 162, 216, 0.40); background: rgba(120, 162, 216, 0.13); }
+.farm-badge.placeholder { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.farm-badge.derived     { color: #d9cff6; border-color: rgba(169, 150, 232, 0.42); background: rgba(169, 150, 232, 0.14); }
+.farm-badge.unconfirmed { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.farm-badge.dated       { color: #f3dda7; border-color: rgba(227, 180, 85, 0.44);  background: rgba(227, 180, 85, 0.14); }
+.farm-badge.yourinput   { color: var(--farm-accent-hi); border-color: var(--farm-accent-ring); background: var(--farm-accent-wash); }
+
+/* ══ CHECK PILLS ════════════════════════════════════════════════════════ */
+.farm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: var(--farm-fs-xs);
+  font-weight: 600;
+  border: 1px solid;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.farm-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.farm-pill.ok   { color: #b9e6c2; border-color: rgba(111, 194, 127, 0.42); background: rgba(111, 194, 127, 0.13); }
+.farm-pill.over { color: #f5bdb7; border-color: rgba(226, 104, 95, 0.45);  background: rgba(226, 104, 95, 0.15); }
+
+/* ══ CERTIFICATION MARK RATINGS ═════════════════════════════════════════ */
+.farm-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--farm-r-sm);
+  border: 1px solid;
+  padding: 0.14rem 0.5rem;
+  font-size: var(--farm-fs-2xs);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: lining-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 1px 2px rgba(var(--farm-shade), 0.4);
+}
+.farm-rating.r3     { background: linear-gradient(180deg, #3d8757, #2f6b45); border-color: #4b9a67; color: #eafaef; }
+.farm-rating.r2     { background: linear-gradient(180deg, #a3ba6e, #7d9150); border-color: #b0c87c; color: #12180d; }
+.farm-rating.r1     { background: linear-gradient(180deg, #c08a58, #95653a); border-color: #cf9d6d; color: #1b1109; }
+.farm-rating.review { background: rgba(227, 180, 85, 0.14); border-color: rgba(227, 180, 85, 0.44); color: #f3dda7; }
+.farm-rating.none   { background: rgba(120, 162, 216, 0.10); border-color: rgba(120, 162, 216, 0.32); color: var(--farm-ink-faint); }
+.farm-rating-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin-top: 0.75rem;
+  font-size: var(--farm-fs-xs);
+  color: var(--farm-ink-soft);
+}
+.farm-rating-legend-title { font-weight: 700; color: var(--farm-ink); letter-spacing: 0.02em; }
+.farm-rating-legend-note  { flex-basis: 100%; color: var(--farm-ink-faint); }
+
+/* ══ CITATIONS & LINKS ══════════════════════════════════════════════════ */
+.farm-cite {
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--farm-accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--farm-accent);
+  white-space: nowrap;
+}
+.farm-cite:hover { border-bottom-style: solid; color: var(--farm-accent-hi); }
+.farm-link {
+  color: var(--farm-accent);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.farm-link:hover { color: var(--farm-accent-hi); border-bottom-color: var(--farm-accent); }
+
+/* ══ NOTICES ════════════════════════════════════════════════════════════ */
+.farm-notice {
+  border: 1px solid var(--farm-line);
+  border-left: 3px solid var(--farm-accent);
+  border-radius: var(--farm-r);
+  padding: 0.8rem 0.95rem;
+  font-size: var(--farm-fs-sm);
+  line-height: 1.55;
+  color: var(--farm-ink-soft);
+  background: linear-gradient(90deg, var(--farm-accent-wash), var(--farm-surface) 34%);
+  box-shadow: var(--farm-panel-shadow);
+}
+.farm-notice-title { font-weight: 600; color: var(--farm-ink); margin-bottom: 0.2rem; }
+
+.farm-preview-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--farm-line);
+  border-left: 3px solid var(--farm-placeholder);
+  border-radius: var(--farm-r);
+  font-size: var(--farm-fs-sm);
+  line-height: 1.5;
+  color: var(--farm-ink-soft);
+  background: linear-gradient(90deg, rgba(227, 180, 85, 0.07), var(--farm-surface) 38%);
+  box-shadow: var(--farm-panel-shadow);
+}
+.farm-preview-tag {
+  flex: none;
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--farm-placeholder);
+}
+
+/* ══ MODULE STATUS STRIP ════════════════════════════════════════════════ */
+.farm-modstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--farm-fs-2xs);
+  border-radius: 999px;
+  padding: 0.12rem 0.6rem;
+  border: 1px solid var(--farm-line);
+  color: var(--farm-ink-soft);
+  background: var(--farm-surface-2);
+  box-shadow: inset 0 1px 0 var(--farm-bevel);
+}
+.farm-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; display: inline-block; }
+.farm-dot.live     { background: var(--farm-sourced); box-shadow: 0 0 6px -1px var(--farm-sourced); }
+.farm-dot.partial  { background: var(--farm-placeholder); }
+.farm-dot.designed { background: rgba(var(--farm-ink-base), 0.55); }
+
+/* ══ SCENARIO BAR ═══════════════════════════════════════════════════════ */
+.farm-scenariobar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1rem;
+  padding: 0.55rem 1.5rem;
+  /* The top bar of the OS: chrome, not a card. Deep soil continuous
+     with the sidebar, flat — no bevel, no lift — so the frame reads as one piece and the
+     cards sit inside it. */
+  background: linear-gradient(180deg, var(--farm-bar-top), var(--farm-bar-bottom));
+  border-bottom: 1px solid var(--farm-bar-line);
+  color: var(--farm-side-ink-soft);
+  font-size: var(--farm-fs-sm);
+}
+.farm-scenariobar-status { display: flex; align-items: center; gap: 0.6rem; font-size: var(--farm-fs-sm); color: var(--farm-side-ink-soft); }
+/* The one thing that changes as you work — the plan of record or the open forecast — in the light copper of the sidebar's active edge. */
+.farm-scenariobar-live strong { color: var(--farm-side-mark); font-weight: 600; }
+.farm-scenariobar-clean { color: var(--farm-side-ink-soft); opacity: 0.75; font-size: var(--farm-fs-xs); }
+/* Controls on soil: ghost buttons in side ink; the copper primary stays and pops two stops off the ground. */
+.farm-scenariobar .farm-btn:not(.primary) {
+  color: var(--farm-side-ink);
+  background: transparent;
+  border-color: var(--farm-bar-line);
+  box-shadow: none;
+}
+.farm-scenariobar .farm-btn:not(.primary):hover:not(:disabled) { background: var(--farm-side-wash); border-color: var(--farm-side-ink-soft); }
+.farm-scenariobar .farm-btn.primary { border-color: var(--farm-accent-hi); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25); }
+.farm-scenariobar .farm-btn:focus-visible { box-shadow: 0 0 0 2px var(--farm-bar-bottom), 0 0 0 4px var(--farm-accent-hi); }
+.farm-scenariobar .farm-input,
+.farm-scenariobar .farm-select {
+  color: var(--farm-side-ink);
+  background: var(--farm-bar-field);
+  border-color: var(--farm-bar-line);
+}
+.farm-scenariobar .farm-input::placeholder { color: var(--farm-side-ink-soft); opacity: 0.7; }
+.farm-scenariobar .farm-input:focus,
+.farm-scenariobar .farm-select:focus { border-color: var(--farm-accent-hi); box-shadow: 0 0 0 2px var(--farm-bar-bottom), 0 0 0 4px var(--farm-accent-hi); }
+.farm-scenariobar .farm-dirty { color: var(--farm-side-mark); background: var(--farm-side-active); border-color: var(--farm-side-mark); }
+.farm-scenariobar .farm-scenariobar-msg.ok  { color: var(--farm-side-head); }
+.farm-scenariobar .farm-scenariobar-msg.err { color: #ffb4ad; }
+.farm-scenariobar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+.farm-scenariobar-msg { flex-basis: 100%; font-size: var(--farm-fs-xs); padding: 0.3rem 0; }
+.farm-scenariobar-msg.ok  { color: var(--farm-sourced); }
+.farm-scenariobar-msg.err { color: var(--farm-over); }
+.farm-dirty {
+  font-size: var(--farm-fs-xs);
+  font-weight: 600;
+  color: var(--farm-accent-hi);
+  background: var(--farm-accent-wash);
+  border: 1px solid var(--farm-accent-ring);
+  border-radius: var(--farm-r-sm);
+  padding: 0.12rem 0.45rem;
+}
+
+/* ══ CONTROLS ═══════════════════════════════════════════════════════════ */
+.farm-input,
+.farm-select {
+  font: inherit;
+  font-size: var(--farm-fs-sm);
+  color: var(--farm-ink);
+  background: var(--farm-sunk);
+  border: 1px solid var(--farm-line-control);
+  border-radius: var(--farm-r-sm);
+  padding: 0.32rem 0.55rem;
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45);
+}
+.farm-input { min-width: 12rem; }
+.farm-input::placeholder { color: var(--farm-ink-faint); }
+.farm-input:focus,
+.farm-select:focus {
+  outline: none;
+  border-color: var(--farm-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45), 0 0 0 2px var(--farm-accent);
+}
+.farm-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: var(--farm-fs-sm); color: var(--farm-ink-soft); }
+.farm-field .farm-input { min-width: 0; width: 100%; }
+.farm-field textarea.farm-input { resize: vertical; }
+
+.farm-btn {
+  font: inherit;
+  font-size: var(--farm-fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--farm-ink);
+  background: linear-gradient(180deg, var(--farm-surface-3), var(--farm-surface));
+  border: 1px solid var(--farm-line-control);
+  border-radius: var(--farm-r-sm);
+  padding: 0.35rem 0.75rem;
+  box-shadow: inset 0 1px 0 var(--farm-bevel), 0 1px 2px rgba(var(--farm-shade), 0.4);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.12s ease;
+}
+.farm-btn:hover:not(:disabled) {
+  border-color: var(--farm-accent-ring);
+  box-shadow: inset 0 1px 0 var(--farm-bevel-hi), 0 2px 8px -2px rgba(var(--farm-shade), 0.6);
+}
+.farm-btn:active:not(:disabled) { transform: translateY(1px); }
+.farm-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--farm-ground), 0 0 0 4px var(--farm-accent); }
+.farm-btn:disabled { opacity: 0.45; cursor: default; }
+.farm-btn.primary {
+  color: #14100b;
+  border-color: var(--farm-accent-deep);
+  background: linear-gradient(180deg, var(--farm-accent-hi), var(--farm-accent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 10px -3px var(--farm-accent-ring);
+}
+.farm-btn.primary:hover:not(:disabled) { filter: brightness(1.07); }
+/* A light button: the unselected half of a two-state toggle (Plan / Actual). */
+.farm-btn.farm-btn-light { color: #14100b; background: var(--farm-ink-strong); border-color: var(--farm-ink-strong); }
+.farm-btn.ghost {
+  background: transparent;
+  border-color: var(--farm-line-control);
+  color: var(--farm-ink-soft);
+  box-shadow: none;
+}
+.farm-btn.ghost:hover:not(:disabled) { color: var(--farm-ink); border-color: var(--farm-line-strong); }
+
+/* ── Page tabs: a top-bar tab menu over one full-width panel card ────────
+ * Markup: <div class="farm-tabs" role="tablist"> <button class="farm-tab" role="tab" aria-selected> …
+ *         </div><div class="farm-tab-panel" role="tabpanel"> … </div>
+ * The tabs sit on the panel's top edge like folder tabs: every tab carries a
+ * stroke, a bevel highlight and a shaded fill; the selected tab takes the
+ * panel's own surface, drops its bottom stroke and opens into the panel, with
+ * a copper highlight on its top edge. The panel is one card, full width, that
+ * grows lengthwise with whatever the open tab holds. */
+.farm-tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.5rem 0.6rem 0;
+}
+/* The panel's top stroke runs under the unselected tabs. */
+.farm-tabs::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--farm-line-strong);
+  z-index: -1;
+}
+.farm-tab {
+  position: relative;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: var(--farm-fs-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--farm-ink-soft);
+  background: linear-gradient(180deg, var(--farm-surface-3) 0%, var(--farm-surface) 100%);
+  border: 1px solid var(--farm-line);
+  border-bottom-color: var(--farm-line-strong);
+  border-radius: var(--farm-r) var(--farm-r) 0 0;
+  padding: 0.5rem 1rem 0.45rem;
+  margin-top: 0.3rem;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 var(--farm-bevel),
+    inset 0 -6px 10px -8px rgba(var(--farm-shade), 0.55);
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.farm-tab:hover {
+  color: var(--farm-ink);
+  border-color: var(--farm-line-strong);
+  background: linear-gradient(180deg, #2c3833 0%, var(--farm-surface-2) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--farm-bevel-hi),
+    inset 0 -6px 10px -8px rgba(var(--farm-shade), 0.45);
+}
+.farm-tab:focus-visible {
+  outline: none;
+  box-shadow: inset 0 1px 0 var(--farm-bevel-hi), 0 0 0 2px var(--farm-accent);
+}
+.farm-tab[aria-selected='true'] {
+  z-index: 2;
+  color: var(--farm-accent-hi);
+  margin-top: 0;
+  padding-top: 0.6rem;
+  padding-bottom: calc(0.45rem + 1px);
+  margin-bottom: -1px;
+  border-color: var(--farm-line-strong);
+  border-bottom-color: transparent;
+  background: linear-gradient(180deg, var(--farm-surface-3) 0%, var(--farm-surface-2) 100%);
+  box-shadow:
+    inset 0 2px 0 var(--farm-accent),
+    inset 0 3px 0 rgba(232, 168, 111, 0.28),
+    0 -4px 14px -8px rgba(208, 138, 78, 0.45);
+}
+.farm-tab[aria-selected='true']::after {
+  /* Seals the selected tab into the panel below it. */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--farm-surface-2);
+}
+.farm-tab-count {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  color: var(--farm-ink-faint);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--farm-line);
+}
+.farm-tab[aria-selected='true'] .farm-tab-count { color: var(--farm-accent-hi); border-color: var(--farm-accent-ring); background: var(--farm-accent-wash); }
+
+/* A bar with more tabs than the panel is wide wraps onto further rows instead of
+   running off the edge (the Reports library, twelve sections). The panel's top
+   stroke runs under the last row; the selected tab still seals into the panel. */
+.farm-tabs.farm-tabs-wrap { flex-wrap: wrap; row-gap: 0.15rem; }
+
+/* The one full-width panel card. Height follows the open tab's content. */
+.farm-tab-panel {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 1.25rem;
+  padding: 1.15rem 1.2rem 1.3rem;
+  background: linear-gradient(180deg, var(--farm-surface-2) 0%, var(--farm-surface) 320px);
+  border: 1px solid var(--farm-line-strong);
+  border-top: none;
+  border-radius: 0 0 var(--farm-r-lg) var(--farm-r-lg);
+  box-shadow:
+    inset 0 -1px 0 var(--farm-underside),
+    0 1px 2px rgba(var(--farm-shade), 0.4),
+    0 14px 32px -16px rgba(var(--farm-shade), 0.75);
+}
+/* Cards inside the panel sit a step down: stroke and bevel, no second drop shadow. */
+.farm-tab-panel .farm-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, rgba(var(--farm-shade), 0.08) 100%);
+  box-shadow: inset 0 1px 0 var(--farm-bevel), inset 0 -1px 0 var(--farm-underside);
+}
+.farm-tab-panel > * + * { margin-top: 1rem; }
+@media (max-width: 768px) {
+  /* Narrow screens: the bar scrolls sideways; the selected tab's seal is traded for the scroll. */
+  .farm-tabs { padding: 0.4rem 0.3rem 0; overflow-x: auto; scrollbar-width: thin; }
+  .farm-tab { padding: 0.45rem 0.75rem 0.4rem; }
+  .farm-tab-panel { padding: 0.9rem 0.8rem 1rem; }
+}
+@media print {
+  .farm-tabs { display: none; }
+  .farm-tab-panel { border: none; box-shadow: none; padding: 0; background: none; }
+}
+
+/* ── The floor layout (Facility · Layout) ────────────────────────────── */
+.farm-plan { display: block; width: 100%; height: auto; touch-action: none; user-select: none; border: 1px solid var(--farm-line); border-radius: var(--farm-r-sm); background: var(--farm-sunk); }
+.farm-plan text { font-family: var(--farm-mono); fill: var(--farm-ink); pointer-events: none; }
+.farm-plan .grid { stroke: rgba(255, 255, 255, 0.05); }
+.farm-plan .shell { fill: none; stroke: var(--farm-ink-soft); stroke-width: 2; }
+.farm-plan .room { fill: rgba(120, 162, 216, 0.12); stroke: var(--farm-stated); stroke-width: 1; }
+.farm-plan .room.spine { fill: rgba(208, 138, 78, 0.10); stroke: var(--farm-accent); stroke-dasharray: 4 3; }
+.farm-plan .room.hood { fill: rgba(227, 180, 85, 0.10); stroke: var(--farm-placeholder); stroke-dasharray: 2 3; }
+.farm-plan .room.exit, .farm-plan .room.drain { fill: rgba(111, 194, 127, 0.16); stroke: var(--farm-sourced); }
+.farm-plan .room.hand_sink { fill: rgba(111, 194, 127, 0.16); stroke: var(--farm-sourced); }
+.farm-plan .room.boundary { fill: none; stroke: var(--farm-accent-hi); stroke-width: 1.5; stroke-dasharray: 6 4; pointer-events: stroke; }
+.farm-plan .halo { fill: rgba(169, 150, 232, 0.10); stroke: var(--farm-derived); stroke-width: 0.75; stroke-dasharray: 3 3; }
+.farm-plan .unit { fill: rgba(237, 242, 239, 0.14); stroke: var(--farm-ink); stroke-width: 1; cursor: grab; }
+.farm-plan .unit.selected { stroke: var(--farm-accent-hi); stroke-width: 2; }
+.farm-plan .unit.flagged { stroke: var(--farm-over); }
+.farm-plan .unit.phase-later { stroke-dasharray: 4 2; opacity: 0.7; }
+.farm-plan .handle { fill: var(--farm-accent); cursor: nwse-resize; }
+@media print {
+  .farm-plan-print-only { display: block !important; }
+  body * { visibility: hidden; }
+  .farm-plan-sheet, .farm-plan-sheet * { visibility: visible; }
+  .farm-plan-sheet { position: absolute; left: 0; top: 0; background: #fff; color: #000; }
+  .farm-plan-sheet .farm-plan { border: none; background: #fff; width: var(--plan-w); height: auto; }
+  .farm-plan-sheet .farm-plan text { fill: #000; }
+  .farm-plan-sheet .farm-plan foreignObject div { color: #000 !important; }
+  .farm-plan-sheet .farm-plan .shell { stroke: #000; }
+  .farm-plan-sheet .farm-plan .unit { fill: none; stroke: #000; }
+  .farm-plan-sheet .farm-plan .room { fill: none; stroke: #333; }
+  .farm-plan-sheet .farm-plan .room.boundary { stroke: #000; stroke-dasharray: 6 4; }
+}
+
+/* ── Editable numeric fields ─────────────────────────────────────────── */
+.farm-editnum { display: inline-flex; align-items: center; gap: 0.3rem; }
+.farm-editnum-affix { color: var(--farm-ink-faint); font-size: var(--farm-fs-sm); }
+.farm-num-input {
+  font: inherit;
+  font-family: var(--farm-mono);
+  font-size: var(--farm-fs-sm);
+  text-align: right;
+  width: 5.5rem;
+  color: var(--farm-ink);
+  background: var(--farm-sunk);
+  border: 1px solid var(--farm-line-control);
+  border-radius: var(--farm-r-sm);
+  padding: 0.18rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45);
+}
+.farm-num-input:focus {
+  outline: none;
+  border-color: var(--farm-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45), 0 0 0 2px var(--farm-accent);
+}
+.farm-num-input.edited { border-color: var(--farm-accent); color: var(--farm-accent-hi); }
+
+/* ── Entity picker / linked chips ────────────────────────────────────── */
+.farm-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--farm-fs-xs);
+  color: var(--farm-ink-soft);
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px dashed var(--farm-line-strong);
+  background: transparent;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+.farm-picker:hover {
+  color: var(--farm-accent-hi);
+  border-color: var(--farm-accent);
+  border-style: solid;
+  background: var(--farm-accent-wash);
+}
+.farm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--farm-fs-xs);
+  padding: 0.22rem 0.35rem 0.22rem 0.65rem;
+  border-radius: 999px;
+  color: var(--farm-ink);
+  background: linear-gradient(180deg, var(--farm-surface-3), var(--farm-surface-2));
+  border: 1px solid var(--farm-line-strong);
+  box-shadow: inset 0 1px 0 var(--farm-bevel);
+}
+.farm-chip-remove {
+  color: var(--farm-ink-faint);
+  cursor: pointer;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: none;
+  border: 0;
+  font: inherit;
+}
+.farm-chip-remove:hover { color: var(--farm-over); background: rgba(226, 104, 95, 0.14); }
+
+/* ── Sliders ─────────────────────────────────────────────────────────── */
+.farm-root input[type='range'],
+.farm-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--farm-accent);
+}
+.farm-root input[type='range']::-webkit-slider-runnable-track,
+.farm-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--farm-sunk);
+  border: 1px solid var(--farm-line-control);
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.6);
+}
+.farm-root input[type='range']::-moz-range-track,
+.farm-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--farm-sunk);
+  border: 1px solid var(--farm-line-control);
+}
+.farm-root input[type='range']::-webkit-slider-thumb,
+.farm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 17px;
+  height: 17px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--farm-accent-hi), var(--farm-accent-deep));
+  border: 1px solid var(--farm-accent-deep);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 2px 7px -1px rgba(var(--farm-shade), 0.75);
+}
+.farm-root input[type='range']::-moz-range-thumb,
+.farm-slider::-moz-range-thumb {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--farm-accent);
+  border: 1px solid var(--farm-accent-deep);
+}
+.farm-root input[type='range']:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--farm-ground), 0 0 0 4px var(--farm-accent); }
+
+/* ══ SECTION SAVE ═══════════════════════════════════════════════════════ */
+.farm-section-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--farm-accent-ring);
+  background: linear-gradient(90deg, var(--farm-accent-wash), var(--farm-surface) 40%);
+  border-radius: var(--farm-r);
+  box-shadow: var(--farm-panel-shadow);
+}
+.farm-section-save .label { font-size: var(--farm-fs-sm); color: var(--farm-accent-hi); font-weight: 600; }
+.farm-section-save .spacer { margin-left: auto; }
+.farm-section-save-msg { flex-basis: 100%; font-size: var(--farm-fs-xs); }
+.farm-section-save-msg.ok  { color: var(--farm-sourced); }
+.farm-section-save-msg.err { color: var(--farm-over); }
+
+/* ══ OMNI SEARCH ════════════════════════════════════════════════════════ */
+/* Condensed to the width of its word; it grows while it has focus. */
+.farm-omni { position: relative; margin-left: auto; flex: 0 0 6.5rem; min-width: 6.5rem; transition: flex-basis 0.16s ease; }
+.farm-omni:focus-within { flex-basis: 20rem; }
+.farm-omni-input {
+  font: inherit;
+  font-size: var(--farm-fs-xs);
+  width: 100%;
+  color: var(--farm-ink);
+  background: var(--farm-surface);
+  border: 1px solid var(--farm-line-control);
+  border-radius: var(--farm-r-sm);
+  padding: 0.3rem 0.6rem;
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45);
+}
+.farm-omni-input::placeholder { color: var(--farm-ink-faint); }
+.farm-omni-input:focus {
+  outline: none;
+  border-color: var(--farm-accent);
+  box-shadow: inset 0 1px 3px rgba(var(--farm-shade), 0.45), 0 0 0 2px var(--farm-accent);
+}
+.farm-omni-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  width: min(30rem, 92vw);
+  max-height: 26rem;
+  overflow-y: auto;
+  background: var(--farm-surface);
+  border: 1px solid var(--farm-line-strong);
+  border-radius: var(--farm-r);
+  box-shadow: 0 20px 48px -16px rgba(var(--farm-shade), 0.85), inset 0 1px 0 var(--farm-bevel);
+}
+.farm-omni-group {
+  padding: 0.35rem 0.7rem;
+  background: linear-gradient(180deg, var(--farm-surface-2), var(--farm-surface));
+  border-bottom: 1px solid var(--farm-line);
+  font-size: var(--farm-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--farm-ink-faint);
+  position: sticky;
+  top: 0;
+}
+.farm-omni-row { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--farm-line); transition: background 0.14s ease; }
+.farm-omni-row:hover { background: var(--farm-row-hover); }
+.farm-omni-main { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; }
+.farm-omni-name { font-size: var(--farm-fs-sm); font-weight: 600; color: var(--farm-ink); text-decoration: none; }
+.farm-omni-name:hover { color: var(--farm-accent-hi); }
+.farm-omni-sub { font-size: var(--farm-fs-xs); color: var(--farm-ink-faint); margin-top: 0.1rem; }
+.farm-omni-surfaces {
+  list-style: none;
+  margin: 0.4rem 0 0.1rem;
+  padding: 0.4rem 0 0 0.7rem;
+  border-top: 1px dashed var(--farm-line);
+  font-size: var(--farm-fs-xs);
+  line-height: 1.75;
+}
+.farm-omni-empty,
+.farm-omni-foot { padding: 0.55rem 0.7rem; font-size: var(--farm-fs-xs); color: var(--farm-ink-faint); }
+.farm-omni-foot { border-top: 1px solid var(--farm-line); background: var(--farm-surface-2); }
+
+/* ══ HERO BAND (Dashboard) ══════════════════════════════════════════════ */
+/* Replaces the forest→olive inline gradient on the dashboard hero. On a dark
+   ground the hero should be the brightest object, not a coloured block. */
+.farm-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--farm-r-lg);
+  padding: 1.3rem 1.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1.1rem 1.6rem;
+  background:
+    radial-gradient(120% 160% at 8% 0%, var(--farm-accent-wash) 0%, transparent 58%),
+    linear-gradient(180deg, var(--farm-surface-3) 0%, var(--farm-surface) 88%);
+  border: 1px solid var(--farm-line-strong);
+  box-shadow: var(--farm-panel-shadow-hi);
+}
+.farm-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--farm-accent) 0%, var(--farm-bevel-hi) 42%, transparent 88%);
+}
+.farm-hero-value {
+  font-family: var(--farm-mono);
+  font-size: var(--farm-fs-2xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--farm-ink-strong);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+/* The Admin Dashboard's Mean Averages card: the corner glow and the top edge in the logo's
+   greens instead of copper, darker, so the headline stays legible. */
+.farm-hero.farm-hero-green {
+  background:
+    radial-gradient(120% 160% at 8% 0%, rgba(14, 107, 78, 0.28) 0%, transparent 58%),
+    linear-gradient(180deg, var(--farm-surface-3) 0%, var(--farm-surface) 88%);
+}
+.farm-hero.farm-hero-green::after {
+  background: linear-gradient(90deg, #0e6b4e 0%, rgba(95, 174, 138, 0.35) 42%, transparent 88%);
+}
+/* The arrow between two figures in a hero value, set small so the figures lead. */
+.farm-hero-arrow { font-size: 0.45em; vertical-align: middle; opacity: 0.8; }
+.farm-hero-label { font-size: var(--farm-fs-xs); color: var(--farm-ink-soft); margin-top: 0.5rem; }
+.farm-hero-sub   { font-size: var(--farm-fs-2xs); color: var(--farm-ink-faint); margin-top: 0.15rem; font-family: var(--farm-mono); }
+
+/* ══ ACCESSIBILITY ══════════════════════════════════════════════════════ */
+.farm-root :focus-visible { outline: 2px solid var(--farm-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .farm-root *,
+  .farm-root *::before,
+  .farm-root *::after { transition: none !important; animation: none !important; }
+  .farm-lift:hover { transform: none; }
+}
+
+/* ══ FLOOR — the operator's surface, tablet-first (Roadmap I5) ═══════════ */
+.farm-floor-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.farm-floor-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem 1.2rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--farm-line);
+  background: linear-gradient(180deg, var(--farm-surface-2), var(--farm-surface));
+}
+.farm-floor-top .farm-brand-name { color: var(--farm-ink); }
+.farm-floor-top { align-items: center; }
+.farm-floor-top .farm-brand-sub { margin-top: 0; }
+.farm-floor-brand { display: inline-flex; align-items: center; gap: 0.7rem; }
+.farm-floor-top .farm-brand-icon { width: 3.25rem; }
+.farm-floor-top .farm-brand-wordmark { margin-top: 0; font-size: 1.1rem; text-align: left; }
+/* The same width as farm farm above it, as in the sidebar. */
+.farm-floor-top .farm-brand-tagline { margin-top: 0.15rem; font-size: 1.17rem; text-indent: 0; text-align: left; }
+.farm-floor-content { padding: 1.1rem 1.25rem 3rem; max-width: 72rem; width: 100%; }
+/* Larger targets for gloved hands: every control on the floor is at least 44px tall. */
+.farm-floor .farm-input,
+.farm-floor .farm-select,
+.farm-floor .farm-num-input {
+  font-size: var(--farm-fs-md);
+  min-height: 44px;
+  padding: 0.45rem 0.7rem;
+}
+.farm-floor .farm-num-input { width: 6.5rem; }
+.farm-floor .farm-btn {
+  font-size: var(--farm-fs-md);
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+}
+.farm-floor .farm-table th,
+.farm-floor .farm-table td { padding-top: 0.55rem; padding-bottom: 0.55rem; font-size: var(--farm-fs-md); }
+.farm-floor .farm-kpi-sub { font-size: var(--farm-fs-sm); }
+.farm-floor-queue { display: grid; gap: 0.6rem; }
+.farm-floor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--farm-line);
+  border-radius: var(--farm-r-sm);
+  background: var(--farm-surface-2);
+}
+.farm-floor-row.done { opacity: 0.6; }
+.farm-floor-row-title { font-weight: 600; font-size: var(--farm-fs-md); }
+.farm-floor-row-sub { color: var(--farm-ink-soft); font-size: var(--farm-fs-sm); }
+
+/* ══ FRONT DOOR (Roadmap P7) ════════════════════════════════════════════
+   `/farm`, its sign-in and the router: the logo mark's landscape across the
+   whole page — its sky (#0E6B4E) behind, the three soil bands drawn by
+   FrontDoorLandscape. Content sits in the sky (the top 57.5%). */
+.farm-root.farm-front { --farm-ground: #0e6b4e; background: var(--farm-ground); }
+.farm-front-landscape { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.farm-front-band { position: absolute; left: 0; right: 0; bottom: 0; }
+/* The wave sits on the band's top edge; its flat foot overlaps the band by a pixel so no seam shows. */
+.farm-front-band svg { position: absolute; left: 0; bottom: calc(100% - 1px); width: 100%; height: 3rem; display: block; }
+.farm-front-main {
+  position: relative;
+  z-index: 1;
+  min-height: 57.5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem 2.5rem;
+}
+.farm-front-welcome { display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center; width: 100%; }
+/* The OS header stack, scaled up: the mark as wide as farm farm, IMPACT OS as wide again. The name is the
+   logo's dark green (#0B2A22), the tagline copper.
+   Everything is in em off one size, so the stack scales as a unit with the viewport. */
+.farm-front-brand { font-size: min(1.3rem, 4.6vw, 1.6vh); width: 11.5em; }
+.farm-front-brand .farm-brand-icon { width: 100%; filter: drop-shadow(0 0.35em 0.8em rgba(var(--farm-shade), 0.28)); }
+.farm-front-brand .farm-brand-wordmark { font-size: 1.3em; margin-top: 0.5em; color: #0b2a22; }
+.farm-front-brand .farm-brand-tagline { font-size: 1.38em; margin-top: 0.4em; color: var(--farm-accent); }
+.farm-front-title { font-size: clamp(1rem, 2.4vw, 1.35rem); font-weight: 600; letter-spacing: 0.06em; color: #f4eee3; }
+.farm-front-enter { font-size: var(--farm-fs-md); padding: 0.7rem 1.4rem; text-decoration: none; letter-spacing: 0.04em; }
+/* The links under a Clerk form: clear of the card, on the logo's dark green so they read over the soil. */
+.farm-front-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.4rem;
+  margin-top: 1.75rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(11, 42, 34, 0.88);
+  font-size: var(--farm-fs-base);
+}
+.farm-front-links .farm-link { color: #f4eee3; }
+.farm-front-card { max-width: 36rem; width: 100%; }
+.farm-front-text { font-size: var(--farm-fs-base); color: var(--farm-ink-soft); line-height: 1.55; }
+.farm-front-choices { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+
+/* ══ UTILITIES ═══════════════════════════════════════════════════════════
+ * The design-system classes pages use instead of inline styles. Type sizes
+ * and ink colours come ONLY from here; layout and spacing use Tailwind
+ * utilities. These replace what were inline styles, so they carry
+ * !important to keep the precedence an inline style had (a class inside a
+ * .farm-table cell must still beat `.farm-table td`).
+ */
+.farm-fs-2xs  { font-size: var(--farm-fs-2xs) !important; }
+.farm-fs-xs   { font-size: var(--farm-fs-xs) !important; }
+.farm-fs-sm   { font-size: var(--farm-fs-sm) !important; }
+.farm-fs-base { font-size: var(--farm-fs-base) !important; }
+.farm-fs-md   { font-size: var(--farm-fs-md) !important; }
+.farm-fs-lg   { font-size: var(--farm-fs-lg) !important; }
+.farm-fs-xl   { font-size: var(--farm-fs-xl) !important; }
+.farm-fs-2xl  { font-size: var(--farm-fs-2xl) !important; }
+
+.farm-c-strong      { color: var(--farm-ink-strong) !important; }
+.farm-c-ink         { color: var(--farm-ink) !important; }
+.farm-c-soft        { color: var(--farm-ink-soft) !important; }
+.farm-c-faint       { color: var(--farm-ink-faint) !important; }
+.farm-c-accent      { color: var(--farm-accent) !important; }
+.farm-c-accent-hi   { color: var(--farm-accent-hi) !important; }
+.farm-c-accent-deep { color: var(--farm-accent-deep) !important; }
+.farm-c-sourced     { color: var(--farm-sourced) !important; }
+.farm-c-stated      { color: var(--farm-stated) !important; }
+.farm-c-placeholder { color: var(--farm-placeholder) !important; }
+.farm-c-derived     { color: var(--farm-derived) !important; }
+.farm-c-over        { color: var(--farm-over) !important; }
+.farm-c-forest      { color: var(--farm-forest) !important; }
+.farm-c-stone-ink   { color: var(--farm-stone-ink) !important; }
+.farm-c-stone-ink-soft { color: var(--farm-stone-ink-soft) !important; }
+
+.farm-mono  { font-family: var(--farm-mono) !important; font-variant-numeric: lining-nums tabular-nums; }
+.farm-serif { font-family: var(--farm-serif) !important; }
+.farm-sans  { font-family: var(--farm-font) !important; }
+
+/* Auto-fit card grids: as many columns of at least N rem as fit. */
+.farm-autofit-8 { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)) !important; }
+.farm-autofit-9 { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)) !important; }
+.farm-autofit-10 { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)) !important; }
+.farm-autofit-11 { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)) !important; }
+.farm-autofit-12 { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)) !important; }
+.farm-autofit-13 { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)) !important; }
+.farm-autofit-14 { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)) !important; }
+.farm-autofit-16 { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)) !important; }
+.farm-autofit-18 { grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)) !important; }
+.farm-autofit-20 { grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)) !important; }
+.farm-autofit-21 { grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr)) !important; }
+.farm-autofit-22 { grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)) !important; }
+.farm-autofit-24 { grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr)) !important; }
+.farm-autofit-26 { grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr)) !important; }
+.farm-autofit-28 { grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr)) !important; }
+.farm-autofit-30 { grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr)) !important; }
+
+/* In-table editing controls (`_components/InlineCells.tsx`). */
+.farm-cell-control { font-size: var(--farm-fs-xs) !important; min-width: 0 !important; padding: 0.3rem 0.5rem !important; }
+/* The button filling a collapsing library's group header row (`tr.farm-group-row`). */
+.farm-group-row-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--farm-ink);
+  text-align: left;
+  cursor: pointer;
+}

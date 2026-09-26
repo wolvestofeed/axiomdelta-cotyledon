@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-09-25T00:00:00Z",
+  "note": "Prospect list (CRM seed). Empty: prospects are entered in the CRM. No compiled market dataset ships with the software.",
+  "source": {
+    "name": "None",
+    "description": "No compiled dataset.",
+    "dataAsOf": "2026-09-25"
+  },
+  "counts": {
+    "total": 0,
+    "charter": 0,
+    "tier1": 0,
+    "tier2": 0,
+    "byStatus": {}
+  },
+  "prospects": []
+}

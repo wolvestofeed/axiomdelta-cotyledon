@@ -1,0 +1,18 @@
+{
+  "name": "Chef shorthand: 86, sub, spuds, the fish pack",
+  "instruction": "86 the paprika and sub the fish pack's spuds in for the hash.",
+  "sourceCropPlanCode": "AMK-E-003",
+  "toolInput": {
+    "sourceCropPlan": "AMK-E-003",
+    "variantName": "",
+    "lineChanges": [{ "kind": "remove", "line": "Smoked paprika" }, { "kind": "swapComponent", "component": "hash", "withComponent": "Crispy potatoes", "fromCropPlan": "fish pack" }],
+    "laborChanges": [],
+    "facts": ["The paprika line is dropped.", "The crispy potatoes from the fish pack replace the sweet potato hash."]
+  },
+  "expect": {
+    "questions": [{ "id": "component:sweet potato hash:use:AMK-E-004:crispy potatoes", "kind": "confirm", "waivable": false }],
+    "readyWhen": { "confirmed": ["component:sweet potato hash:use:AMK-E-004:crispy potatoes"] },
+    "lines": { "has": ["Potato wedges, raw"], "lacks": ["Smoked paprika", "Sweet potatoes"] },
+    "steps": [{ "taskHas": "Crispy potatoes" }, { "taskHas": "Sweet potato hash", "absent": true }]
+  }
+}
