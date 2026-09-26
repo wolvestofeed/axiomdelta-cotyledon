@@ -12,6 +12,7 @@ import { appendPosting } from './posting-log';
 import { massBalance, ABNORMAL_SCRAP_REASONS, type ScrapReason } from '../_engine/sowing';
 import { toSowingExecution } from '../_engine/actuals';
 import { receiptCoverage } from '../_engine/net-requirements';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — recording actuals. Receipts, sowing closes and
@@ -95,7 +96,11 @@ const SowingInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function recordSowing(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordSowing(...args: Parameters<typeof recordSowingInner>): ReturnType<typeof recordSowingInner> {
+  return withWorkspace(() => recordSowingInner(...args));
+}
+
+async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = SowingInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -206,7 +211,11 @@ const ReceiptInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function recordReceipt(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordReceipt(...args: Parameters<typeof recordReceiptInner>): ReturnType<typeof recordReceiptInner> {
+  return withWorkspace(() => recordReceiptInner(...args));
+}
+
+async function recordReceiptInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = ReceiptInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -262,7 +271,11 @@ const DistributionInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function recordDistribution(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordDistribution(...args: Parameters<typeof recordDistributionInner>): ReturnType<typeof recordDistributionInner> {
+  return withWorkspace(() => recordDistributionInner(...args));
+}
+
+async function recordDistributionInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = DistributionInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -300,7 +313,11 @@ const BillInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function recordPeriodBill(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordPeriodBill(...args: Parameters<typeof recordPeriodBillInner>): ReturnType<typeof recordPeriodBillInner> {
+  return withWorkspace(() => recordPeriodBillInner(...args));
+}
+
+async function recordPeriodBillInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = BillInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -335,7 +352,11 @@ const DeleteInput = z.object({
  * Refused inside a locked period; the removal is itself an entry on the trail,
  * so a record that leaves the books leaves a mark.
  */
-export async function deleteActual(input: unknown): Promise<Result> {
+export async function deleteActual(...args: Parameters<typeof deleteActualInner>): ReturnType<typeof deleteActualInner> {
+  return withWorkspace(() => deleteActualInner(...args));
+}
+
+async function deleteActualInner(input: unknown): Promise<Result> {
   const parsed = DeleteInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;

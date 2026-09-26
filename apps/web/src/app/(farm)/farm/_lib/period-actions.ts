@@ -7,6 +7,7 @@ import { farmFiscalPeriods, farmCalendarClosures } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { appendPosting } from './posting-log';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — period lock and the production calendar (Roadmap J1,
@@ -26,7 +27,11 @@ function refuse(e: unknown): { ok: false; error: string } {
 
 const LockInput = z.object({ period, notes: z.string().max(400).nullable().default(null) });
 
-export async function lockPeriod(input: unknown): Promise<Result> {
+export async function lockPeriod(...args: Parameters<typeof lockPeriodInner>): ReturnType<typeof lockPeriodInner> {
+  return withWorkspace(() => lockPeriodInner(...args));
+}
+
+async function lockPeriodInner(input: unknown): Promise<Result> {
   const parsed = LockInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -44,7 +49,7 @@ export async function lockPeriod(input: unknown): Promise<Result> {
     await tx
       .insert(farmFiscalPeriods)
       .values({ period: d.period, status: 'locked', lockedAt: now, lockedBy: who, notes: d.notes, updatedAt: now })
-      .onConflictDoUpdate({ target: farmFiscalPeriods.period, set: { status: 'locked', lockedAt: now, lockedBy: who, notes: d.notes, updatedAt: now } });
+      .onConflictDoUpdate({ target: [farmFiscalPeriods.workspaceId, farmFiscalPeriods.period], set: { status: 'locked', lockedAt: now, lockedBy: who, notes: d.notes, updatedAt: now } });
     await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'lock_period', recordKind: 'period', recordId: d.period, period: d.period, detail: { notes: d.notes } });
     return { ok: true };
   });
@@ -54,7 +59,11 @@ export async function lockPeriod(input: unknown): Promise<Result> {
 
 const ReopenInput = z.object({ period, reason: z.string().trim().min(3, 'A reopen states its reason').max(400) });
 
-export async function reopenPeriod(input: unknown): Promise<Result> {
+export async function reopenPeriod(...args: Parameters<typeof reopenPeriodInner>): ReturnType<typeof reopenPeriodInner> {
+  return withWorkspace(() => reopenPeriodInner(...args));
+}
+
+async function reopenPeriodInner(input: unknown): Promise<Result> {
   const parsed = ReopenInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -87,7 +96,11 @@ const ClosureInput = z
   })
   .refine((c) => c.endDate >= c.startDate, { message: 'The closure ends on or after it starts' });
 
-export async function addClosure(input: unknown): Promise<Result> {
+export async function addClosure(...args: Parameters<typeof addClosureInner>): ReturnType<typeof addClosureInner> {
+  return withWorkspace(() => addClosureInner(...args));
+}
+
+async function addClosureInner(input: unknown): Promise<Result> {
   const parsed = ClosureInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -109,7 +122,11 @@ export async function addClosure(input: unknown): Promise<Result> {
 
 const RemoveClosureInput = z.object({ id: z.string().uuid() });
 
-export async function removeClosure(input: unknown): Promise<Result> {
+export async function removeClosure(...args: Parameters<typeof removeClosureInner>): ReturnType<typeof removeClosureInner> {
+  return withWorkspace(() => removeClosureInner(...args));
+}
+
+async function removeClosureInner(input: unknown): Promise<Result> {
   const parsed = RemoveClosureInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;

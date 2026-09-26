@@ -9,6 +9,7 @@ import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { getEntity } from './entity-directory';
 import { LINK_RELATIONS } from './entity-links';
 import { ENTITY_KINDS } from '../_engine/entity-links';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Record or remove a link that is a fact of record. SUPER ADMIN ONLY.
@@ -32,7 +33,11 @@ const Edge = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
-export async function recordEntityLink(input: unknown): Promise<Result> {
+export async function recordEntityLink(...args: Parameters<typeof recordEntityLinkInner>): ReturnType<typeof recordEntityLinkInner> {
+  return withWorkspace(() => recordEntityLinkInner(...args));
+}
+
+async function recordEntityLinkInner(input: unknown): Promise<Result> {
   const parsed = Edge.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -79,7 +84,11 @@ export async function recordEntityLink(input: unknown): Promise<Result> {
  * Remove one recorded link. Takes the edge rather than the row id so a caller
  * that is replacing a one-to-one link does not have to read the row first.
  */
-export async function removeEntityLink(input: unknown): Promise<Result> {
+export async function removeEntityLink(...args: Parameters<typeof removeEntityLinkInner>): ReturnType<typeof removeEntityLinkInner> {
+  return withWorkspace(() => removeEntityLinkInner(...args));
+}
+
+async function removeEntityLinkInner(input: unknown): Promise<Result> {
   const parsed = Edge.omit({ note: true }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Bad link.' };
   try {
@@ -108,7 +117,11 @@ export async function removeEntityLink(input: unknown): Promise<Result> {
 }
 
 /** Replace the single link a one-to-one relation holds. `toId` undefined clears it. */
-export async function setSingleEntityLink(input: unknown): Promise<Result> {
+export async function setSingleEntityLink(...args: Parameters<typeof setSingleEntityLinkInner>): ReturnType<typeof setSingleEntityLinkInner> {
+  return withWorkspace(() => setSingleEntityLinkInner(...args));
+}
+
+async function setSingleEntityLinkInner(input: unknown): Promise<Result> {
   const parsed = Edge.extend({ toId: z.string().trim().max(200) }).safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Bad link.' };
   try {

@@ -5,10 +5,15 @@ import { loadActuals } from '../_lib/actuals';
 import { listPurchaseOrders } from '../_lib/supplier-catalog';
 import { loadCalendar } from '../_lib/periods';
 import { ProcurementClient } from './ProcurementClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProcurementPage() {
+  return withWorkspace(() => ProcurementPageInner());
+}
+
+async function ProcurementPageInner() {
   const [access, cycles, orders, actuals, pos, calendar] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
   return (

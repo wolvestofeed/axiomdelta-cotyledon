@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — subscribers and pickup points, writes. SUPER ADMIN ONLY.
@@ -40,7 +41,11 @@ const SubscriberInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function createSubscriber(input: unknown): Promise<Result<{ id: string }>> {
+export async function createSubscriber(...args: Parameters<typeof createSubscriberInner>): ReturnType<typeof createSubscriberInner> {
+  return withWorkspace(() => createSubscriberInner(...args));
+}
+
+async function createSubscriberInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = SubscriberInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -55,7 +60,11 @@ export async function createSubscriber(input: unknown): Promise<Result<{ id: str
   return { ok: true, id: inserted[0].id };
 }
 
-export async function updateSubscriber(input: unknown): Promise<Result> {
+export async function updateSubscriber(...args: Parameters<typeof updateSubscriberInner>): ReturnType<typeof updateSubscriberInner> {
+  return withWorkspace(() => updateSubscriberInner(...args));
+}
+
+async function updateSubscriberInner(input: unknown): Promise<Result> {
   const parsed = SubscriberInput.extend({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -77,7 +86,11 @@ const RatingInput = z.object({
 }).refine((v) => v.status !== 'rated' || v.stars !== null, { message: 'A rating carries one, two or three stars.' });
 
 /** The RATING rating MicroFarm assigns a subscriber (Roadmap N7). Super admin. */
-export async function setSubscriberRating(input: unknown): Promise<Result> {
+export async function setSubscriberRating(...args: Parameters<typeof setSubscriberRatingInner>): ReturnType<typeof setSubscriberRatingInner> {
+  return withWorkspace(() => setSubscriberRatingInner(...args));
+}
+
+async function setSubscriberRatingInner(input: unknown): Promise<Result> {
   const parsed = RatingInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -94,7 +107,11 @@ export async function setSubscriberRating(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteSubscriber(input: unknown): Promise<Result> {
+export async function deleteSubscriber(...args: Parameters<typeof deleteSubscriberInner>): ReturnType<typeof deleteSubscriberInner> {
+  return withWorkspace(() => deleteSubscriberInner(...args));
+}
+
+async function deleteSubscriberInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -118,7 +135,11 @@ const PickupPointInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function createSubscriberPickupPoint(input: unknown): Promise<Result<{ id: string }>> {
+export async function createSubscriberPickupPoint(...args: Parameters<typeof createSubscriberPickupPointInner>): ReturnType<typeof createSubscriberPickupPointInner> {
+  return withWorkspace(() => createSubscriberPickupPointInner(...args));
+}
+
+async function createSubscriberPickupPointInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = PickupPointInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -135,7 +156,11 @@ export async function createSubscriberPickupPoint(input: unknown): Promise<Resul
   return { ok: true, id: inserted[0].id };
 }
 
-export async function updateSubscriberPickupPoint(input: unknown): Promise<Result> {
+export async function updateSubscriberPickupPoint(...args: Parameters<typeof updateSubscriberPickupPointInner>): ReturnType<typeof updateSubscriberPickupPointInner> {
+  return withWorkspace(() => updateSubscriberPickupPointInner(...args));
+}
+
+async function updateSubscriberPickupPointInner(input: unknown): Promise<Result> {
   const parsed = PickupPointInput.extend({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -149,7 +174,11 @@ export async function updateSubscriberPickupPoint(input: unknown): Promise<Resul
   return { ok: true };
 }
 
-export async function deleteSubscriberPickupPoint(input: unknown): Promise<Result> {
+export async function deleteSubscriberPickupPoint(...args: Parameters<typeof deleteSubscriberPickupPointInner>): ReturnType<typeof deleteSubscriberPickupPointInner> {
+  return withWorkspace(() => deleteSubscriberPickupPointInner(...args));
+}
+
+async function deleteSubscriberPickupPointInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -182,7 +211,11 @@ async function gate(): Promise<{ userId: string } | { ok: false; error: string }
   }
 }
 
-export async function createSubscriberService(input: unknown): Promise<Result<{ id: string }>> {
+export async function createSubscriberService(...args: Parameters<typeof createSubscriberServiceInner>): ReturnType<typeof createSubscriberServiceInner> {
+  return withWorkspace(() => createSubscriberServiceInner(...args));
+}
+
+async function createSubscriberServiceInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = ServiceInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -198,7 +231,11 @@ export async function createSubscriberService(input: unknown): Promise<Result<{ 
   return { ok: true, id: inserted[0].id };
 }
 
-export async function updateSubscriberService(input: unknown): Promise<Result> {
+export async function updateSubscriberService(...args: Parameters<typeof updateSubscriberServiceInner>): ReturnType<typeof updateSubscriberServiceInner> {
+  return withWorkspace(() => updateSubscriberServiceInner(...args));
+}
+
+async function updateSubscriberServiceInner(input: unknown): Promise<Result> {
   const parsed = ServiceInput.omit({ subscriberPickupPointId: true }).extend({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -209,7 +246,11 @@ export async function updateSubscriberService(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteSubscriberService(input: unknown): Promise<Result> {
+export async function deleteSubscriberService(...args: Parameters<typeof deleteSubscriberServiceInner>): ReturnType<typeof deleteSubscriberServiceInner> {
+  return withWorkspace(() => deleteSubscriberServiceInner(...args));
+}
+
+async function deleteSubscriberServiceInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -227,7 +268,11 @@ const PickInput = z.object({
 });
 
 /** Set the units per service from a date; a pick already on that date is replaced. */
-export async function setVolumePick(input: unknown): Promise<Result> {
+export async function setVolumePick(...args: Parameters<typeof setVolumePickInner>): ReturnType<typeof setVolumePickInner> {
+  return withWorkspace(() => setVolumePickInner(...args));
+}
+
+async function setVolumePickInner(input: unknown): Promise<Result> {
   const parsed = PickInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -244,7 +289,11 @@ export async function setVolumePick(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteVolumePick(input: unknown): Promise<Result> {
+export async function deleteVolumePick(...args: Parameters<typeof deleteVolumePickInner>): ReturnType<typeof deleteVolumePickInner> {
+  return withWorkspace(() => deleteVolumePickInner(...args));
+}
+
+async function deleteVolumePickInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -266,7 +315,11 @@ const CalendarRangeInput = z
   })
   .refine((r) => r.endDate >= r.startDate, { message: 'The end date is before the start date.' });
 
-export async function createPickupPointCalendarRange(input: unknown): Promise<Result<{ id: string }>> {
+export async function createPickupPointCalendarRange(...args: Parameters<typeof createPickupPointCalendarRangeInner>): ReturnType<typeof createPickupPointCalendarRangeInner> {
+  return withWorkspace(() => createPickupPointCalendarRangeInner(...args));
+}
+
+async function createPickupPointCalendarRangeInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = CalendarRangeInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();
@@ -277,7 +330,11 @@ export async function createPickupPointCalendarRange(input: unknown): Promise<Re
   return { ok: true, id: inserted[0].id };
 }
 
-export async function deletePickupPointCalendarRange(input: unknown): Promise<Result> {
+export async function deletePickupPointCalendarRange(...args: Parameters<typeof deletePickupPointCalendarRangeInner>): ReturnType<typeof deletePickupPointCalendarRangeInner> {
+  return withWorkspace(() => deletePickupPointCalendarRangeInner(...args));
+}
+
+async function deletePickupPointCalendarRangeInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   const access = await gate();

@@ -7,6 +7,7 @@ import { PAYMENT_TERMS_LABELS } from '../../../_data/working-capital';
 import { getResolvedActiveInputs } from '../../../_lib/scenarios';
 import { getFarmAccess } from '../../../_lib/access';
 import { AdminOnlyNotice } from '../../../_components/AdminOnly';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,11 @@ const fromCents = (c: number) => c / 100;
  * added, what it bills, what has been applied against it. Computed from the
  * records on every read; nothing on it is stored as a total.
  */
-export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InvoicePage(props: Parameters<typeof InvoicePageInner>[0]) {
+  return withWorkspace(() => InvoicePageInner(props));
+}
+
+async function InvoicePageInner({ params }: { params: Promise<{ id: string }> }) {
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="The invoice" />;
   const { id } = await params;
   const [bundle, { inputs }] = await Promise.all([loadActuals(), getResolvedActiveInputs()]);

@@ -9,6 +9,7 @@ import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from './acc
 import { appendPosting } from './posting-log';
 import { periodOf } from '../_engine/actuals';
 import { READING_METRICS, READING_METRIC_KEYS } from '../_engine/sustainability-records';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — sustainability records, writes (Roadmap N6 slice 4, 0072). An operator
@@ -47,7 +48,11 @@ const ReadingInput = z
     if (v.periodStart && v.periodStart > v.readOn) ctx.addIssue({ code: 'custom', message: 'The bill period starts after it ends.' });
   });
 
-export async function recordReading(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordReading(...args: Parameters<typeof recordReadingInner>): ReturnType<typeof recordReadingInner> {
+  return withWorkspace(() => recordReadingInner(...args));
+}
+
+async function recordReadingInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = ReadingInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -73,7 +78,11 @@ export async function recordReading(input: unknown): Promise<Result<{ id: string
 
 const RemoveInput = z.object({ id: z.string().uuid(), reason: z.string().trim().min(3, 'A removal states why').max(400) });
 
-export async function deleteReading(input: unknown): Promise<Result> {
+export async function deleteReading(...args: Parameters<typeof deleteReadingInner>): ReturnType<typeof deleteReadingInner> {
+  return withWorkspace(() => deleteReadingInner(...args));
+}
+
+async function deleteReadingInner(input: unknown): Promise<Result> {
   const parsed = RemoveInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -102,7 +111,11 @@ const ServiceInput = z.object({
   notes: z.string().trim().max(400).nullable().default(null),
 });
 
-export async function recordRefrigerantService(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordRefrigerantService(...args: Parameters<typeof recordRefrigerantServiceInner>): ReturnType<typeof recordRefrigerantServiceInner> {
+  return withWorkspace(() => recordRefrigerantServiceInner(...args));
+}
+
+async function recordRefrigerantServiceInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = ServiceInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -126,7 +139,11 @@ export async function recordRefrigerantService(input: unknown): Promise<Result<{
   return { ok: true, id };
 }
 
-export async function deleteRefrigerantService(input: unknown): Promise<Result> {
+export async function deleteRefrigerantService(...args: Parameters<typeof deleteRefrigerantServiceInner>): ReturnType<typeof deleteRefrigerantServiceInner> {
+  return withWorkspace(() => deleteRefrigerantServiceInner(...args));
+}
+
+async function deleteRefrigerantServiceInner(input: unknown): Promise<Result> {
   const parsed = RemoveInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

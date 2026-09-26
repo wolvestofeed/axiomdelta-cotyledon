@@ -9,6 +9,7 @@ import { AGING_BUCKETS, AGING_LABELS, agingReport, daysInPeriod, distributionRev
 import { INVOICED_CHANNELS, PAYMENT_TERMS_LABELS } from '../_data/working-capital';
 import { ReceivablesClient, type PendingRoute, type InvoiceRow } from './ReceivablesClient';
 import { AdminOnlyNotice } from '../_components/AdminOnly';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,11 @@ const fromCents = (c: number) => c / 100;
  * to collect for the month. Every figure is computed from the distribution,
  * invoice and payment records.
  */
-export default async function ReceivablesPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function ReceivablesPage(props: Parameters<typeof ReceivablesPageInner>[0]) {
+  return withWorkspace(() => ReceivablesPageInner(props));
+}
+
+async function ReceivablesPageInner({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="Receivables" />;
   const [access, selected, params] = await Promise.all([getFarmAccess(), postSelectedLedger(), searchParams]);
   const { inputs, bundle } = selected;

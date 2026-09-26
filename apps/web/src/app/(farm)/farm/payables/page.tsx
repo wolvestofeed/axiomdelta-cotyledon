@@ -10,6 +10,7 @@ import { AGING_BUCKETS, AGING_LABELS, agingReport, billBalances, dueOn, unbilled
 import { BILL_CATEGORY_LABELS } from '../_engine/actuals';
 import { PayablesClient, type BillRow } from './PayablesClient';
 import { AdminOnlyNotice } from '../_components/AdminOnly';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,11 @@ const fromCents = (c: number) => c / 100;
  * mismatched bill is flagged and not paid until rectified. Aging by days past
  * due, days to pay for the month. Every figure is computed from the records.
  */
-export default async function PayablesPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function PayablesPage(props: Parameters<typeof PayablesPageInner>[0]) {
+  return withWorkspace(() => PayablesPageInner(props));
+}
+
+async function PayablesPageInner({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="Payables" />;
   const [access, selected, pos, params] = await Promise.all([getFarmAccess(), postSelectedLedger(), listPurchaseOrders(), searchParams]);
   const { inputs, bundle } = selected;

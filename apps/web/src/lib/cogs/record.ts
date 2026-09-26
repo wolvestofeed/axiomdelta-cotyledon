@@ -19,6 +19,5 @@ export interface RecordAiCostInput {
 export async function recordAiCostEvent(input: RecordAiCostInput): Promise<void> {
   const inTok = input.usage?.input_tokens ?? 0;
   const outTok = input.usage?.output_tokens ?? 0;
-  // eslint-disable-next-line no-console
   console.info(`AI_USAGE surface=${input.surface} model=${input.model} in=${inTok} out=${outTok} ms=${input.computeMs} outcome=${input.outcome}`);
 }

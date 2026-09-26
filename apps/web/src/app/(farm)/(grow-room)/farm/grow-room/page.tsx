@@ -7,6 +7,7 @@ import { loadCalendar } from '@/app/(farm)/farm/_lib/periods';
 import { routeCompletion } from '@/app/(farm)/farm/_engine/working-capital';
 import { resolveSubscriberPickupPoints } from '@/app/(farm)/farm/_engine/demand';
 import { GrowRoomClient } from './GrowRoomClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,10 @@ export const dynamic = 'force-dynamic';
  * Crop plan and plant figures come from the open forecast; the page states no action.
  */
 export default async function FloorPage() {
+  return withWorkspace(() => FloorPageInner());
+}
+
+async function FloorPageInner() {
   const [access, { inputs }, cycles, orders, actuals, pos, calendar] = await Promise.all([
     getFarmAccess(),
     getResolvedActiveInputs(),

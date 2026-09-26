@@ -11,6 +11,7 @@ import { loadStandards } from './standards';
 import { refuseIfLocked } from './periods';
 import { appendPosting } from './posting-log';
 import { nextStandardVersion, standardLabel, type StandardSnapshot } from '../_engine/standards';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — approving a standard-cost version (Roadmap J5).
@@ -30,7 +31,11 @@ const ApproveInput = z.object({
   notes: z.string().max(400).nullable().default(null),
 });
 
-export async function approveStandard(input: unknown): Promise<Result> {
+export async function approveStandard(...args: Parameters<typeof approveStandardInner>): ReturnType<typeof approveStandardInner> {
+  return withWorkspace(() => approveStandardInner(...args));
+}
+
+async function approveStandardInner(input: unknown): Promise<Result> {
   const parsed = ApproveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;

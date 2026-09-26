@@ -1,41 +1,28 @@
 import 'server-only';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { activeStaffByEmail } from './staff-login';
+import { currentWorkspaceId } from '@/lib/db';
 
 /**
- * Access control for the MicroFarm route group.
+ * Access control for the OS route group.
  *
- * Two roles:
- *   - admin    — the named super admins: everything, including pay and payroll,
- *                the financial statements, receivables and payables, capital and
- *                financing, editing definitions, the plan of record and adoption.
- *   - operator — an operating user of the farm: every operating page, the
- *                Grow Room, schedules, recording, and saving their own forecasts. No
- *                company financials and no pay.
- * An admin is always an operator. There is no third role.
- *
- * An active person on the staff register whose email is their sign-in holds the
- * operator role and is matched to their own record (`staffId`).
- *
- * A signed-in user holds a role when their primary email is on the named list
- * below or in the role's env var (comma-separated), or their Clerk
- * `publicMetadata` carries the flag (`farmSuperAdmin`, `farmOperator`). The named
- * lists are the source of truth so production access does not depend on an env
- * var. Sign-in itself is enforced by `proxy.ts`.
+ * Two roles: admin and operator. An admin is always an operator. There is no third role.
+ * The roles come from the Clerk organization that is the workspace (outline §7): `org:admin`
+ * is an admin, any member is an operator, and the platform admins named below are admins in
+ * every organization they belong to. External portal accounts hold neither role.
+ * Sign-in itself is enforced by `proxy.ts`.
  */
 
-const NAMED_SUPER_ADMINS: string[] = [
+const PLATFORM_ADMINS: string[] = [
   'lonewolf@wolvestofeed.com', // Robert Bogatin
 ];
 
-const NAMED_OPERATORS: string[] = [];
-
-function listFrom(named: string[], envVar: string): string[] {
-  const fromEnv = (process.env[envVar] ?? '')
+function platformAdmins(): string[] {
+  const fromEnv = (process.env['FARM_PLATFORM_ADMIN_EMAILS'] ?? '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  return [...new Set([...named, ...fromEnv])];
+  return [...new Set([...PLATFORM_ADMINS, ...fromEnv])];
 }
 
 export type FarmTier = 'super_admin' | 'user';
@@ -45,9 +32,13 @@ export interface FarmAccess {
   email: string | null;
   /** The account's full name from Clerk; null when the account has none. */
   name: string | null;
-  /** Admins: the super admins. */
+  /** The Clerk organization active for this sign-in, which names the workspace; null when none. */
+  orgId: string | null;
+  /** The workspace in scope; null outside a scope. */
+  workspaceId: string | null;
+  /** Admins: the organization's admins, and the platform admins in any organization. */
   isSuperAdmin: boolean;
-  /** Operators, and every admin. Holding this is what opens the OS at all. */
+  /** Operators, and every admin: anyone who is a member of the active organization. Holding this is what opens the OS at all. */
   isOperator: boolean;
   /** The signed-in person's row on the staff register, matched by email; null when none. */
   staffId: string | null;
@@ -57,27 +48,44 @@ export interface FarmAccess {
   tier: FarmTier;
 }
 
+const NO_ACCESS: FarmAccess = { userId: null, email: null, name: null, orgId: null, workspaceId: null, isSuperAdmin: false, isOperator: false, staffId: null, staffRoles: [], tier: 'user' };
+
+/**
+ * Who the caller is, in the workspace in scope.
+ *
+ * Roles come from the Clerk organization (one organization per farm): `org:admin` is an admin,
+ * any other membership is an operator. The platform admins named above are admins of every
+ * organization they are a member of. An active person on the staff register whose email is
+ * the sign-in is matched to their own record, which needs a workspace in scope.
+ */
 export async function getFarmAccess(): Promise<FarmAccess> {
-  const { userId } = await auth();
-  if (!userId) {
-    return { userId: null, email: null, name: null, isSuperAdmin: false, isOperator: false, staffId: null, staffRoles: [], tier: 'user' };
-  }
+  const { userId, orgId, orgRole } = await auth();
+  if (!userId) return NO_ACCESS;
 
   const user = await currentUser();
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
 
   const metaSuper = user?.publicMetadata?.['farmSuperAdmin'] === true;
-  const emailSuper = email !== null && listFrom(NAMED_SUPER_ADMINS, 'FARM_SUPER_ADMIN_EMAILS').includes(email);
-  const isSuperAdmin = metaSuper || emailSuper;
+  const platformAdmin = email !== null && platformAdmins().includes(email);
+  const orgAdmin = orgId != null && orgRole === 'org:admin';
+  const isSuperAdmin = orgId != null && (orgAdmin || platformAdmin || metaSuper);
+  const isOperator = orgId != null;
 
-  const metaOperator = user?.publicMetadata?.['farmOperator'] === true;
-  const emailOperator = email !== null && listFrom(NAMED_OPERATORS, 'FARM_OPERATOR_EMAILS').includes(email);
-  const staff = email !== null ? await activeStaffByEmail(email) : null;
-  const isOperator = metaOperator || emailOperator || staff !== null || isSuperAdmin;
+  const workspaceId = currentWorkspaceId();
+  const staff = email !== null && workspaceId !== null ? await activeStaffByEmail(email) : null;
 
-  const name = user?.fullName?.trim() || null;
-
-  return { userId, email, name, isSuperAdmin, isOperator, staffId: staff?.id ?? null, staffRoles: staff?.roles ?? [], tier: isSuperAdmin ? 'super_admin' : 'user' };
+  return {
+    userId,
+    email,
+    name: user?.fullName ?? null,
+    orgId: orgId ?? null,
+    workspaceId,
+    isSuperAdmin,
+    isOperator,
+    staffId: staff?.id ?? null,
+    staffRoles: staff?.roles ?? [],
+    tier: isSuperAdmin ? 'super_admin' : 'user',
+  };
 }
 
 // ── Fail-closed guards (the gate every Farm write passes) ───────────────────
@@ -91,11 +99,8 @@ export async function getFarmAccess(): Promise<FarmAccess> {
  * not entitled to it — the same fail-closed contract Staffing's
  * `requireWorkspaceAccess` holds for workspace-scoped data.
  *
- * Farm is single-tenant: one farm, one `farm.*` schema, no workspace or org
- * id to verify. The tenant boundary here is the named operator and super-admin
- * lists in this file, which is why the org guards do not apply and
- * these stand in their place. `workspace-guard-coverage.test.ts` recognises them
- * for files under the `(farm)` route group.
+ * The workspace boundary is the Clerk organization plus the database's row-level
+ * security (`_lib/workspace.ts`); these guards are the role check on top of it.
  */
 
 export type FarmAccessDenial = 'not_signed_in' | 'not_super_admin' | 'not_operator';

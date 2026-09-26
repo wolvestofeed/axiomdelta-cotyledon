@@ -8,6 +8,7 @@ import '@/app/(farm)/farm/_components/farm.css';
 import { farmFontVars } from '@/app/(farm)/farm/_components/fonts';
 import { getFarmAccess } from '@/app/(farm)/farm/_lib/access';
 import { BRAND_LINE } from '@/app/(farm)/farm/_components/ui';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * The floor shell (Roadmap I5). A sibling route group to `farm/`, so
@@ -23,7 +24,11 @@ export const metadata: Metadata = {
   icons: FARM_TAB_ICONS,
 };
 
-export default async function FloorLayout({ children }: { children: React.ReactNode }) {
+export default async function FloorLayout(props: Parameters<typeof FloorLayoutInner>[0]) {
+  return withWorkspace(() => FloorLayoutInner(props));
+}
+
+async function FloorLayoutInner({ children }: { children: React.ReactNode }) {
   const access = await getFarmAccess();
 
   if (!access.userId) redirect('/sign-in');

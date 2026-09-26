@@ -89,7 +89,7 @@ describe('admin-only pages are gated on the server', () => {
       expect(operator, term).not.toContain(term);
       expect(shared, term).not.toContain(term);
     }
-    expect(src).toContain('return access.isSuperAdmin ? <AdminDashboard /> : <OperatorDashboard staffId={access.staffId} />;');
+    expect(src).toContain('return access.isSuperAdmin ? await AdminDashboard() : await OperatorDashboard({ staffId: access.staffId });');
     // The operator's own clock is read for their staff id only.
     expect(src).toContain('const mine = clock.punches.filter((p) => p.staffId === staffId);');
   });

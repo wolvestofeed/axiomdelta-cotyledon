@@ -1,17 +1,34 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { OrganizationList } from '@clerk/nextjs';
 import { getFarmAccess } from '@/app/(farm)/farm/_lib/access';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 import { LANDING_HREF, landingFor } from '@/app/(farm)/farm/_engine/front-door';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * The router (Roadmap P7): after sign-in, each person goes to their own surface by the list their email is on
- * (`_engine/front-door.ts`). Staff holding both work roles choose; anyone on no list sees the review policy.
+ * The router: after sign-in, each person goes to their own surface by their role in the farm's
+ * organization (`_engine/front-door.ts`). No organization active: choose or create a farm. Staff
+ * holding both work roles choose a surface; anyone with no role sees the review policy.
  */
 export default async function EnterPage() {
+  return withWorkspace(() => EnterPageInner());
+}
+
+async function EnterPageInner() {
   const access = await getFarmAccess();
   if (!access.userId) redirect('/farm/sign-in');
+
+  if (!access.orgId) {
+    return (
+      <div className="farm-card farm-front-card">
+        <div className="farm-card-title">Choose a farm</div>
+        <p className="farm-front-text">Each farm is an organization. Open the one you belong to, or create one for a new farm.</p>
+        <OrganizationList hidePersonal afterSelectOrganizationUrl="/farm/enter" afterCreateOrganizationUrl="/farm/enter" />
+      </div>
+    );
+  }
 
   const landing = landingFor(access);
   if (landing === 'admin' || landing === 'growRoom' || landing === 'sales') redirect(LANDING_HREF[landing]);
@@ -33,8 +50,8 @@ export default async function EnterPage() {
     <div className="farm-card farm-front-card">
       <div className="farm-card-title">Your account is under review</div>
       <p className="farm-front-text">
-        Thank you for signing in{access.email ? ` (${access.email})` : ''}. New accounts are reviewed by MicroFarm staff before they
-        are committed to production; you will be able to enter once your account is linked. Please call the farm for faster service.
+        Thank you for signing in{access.email ? ` (${access.email})` : ''}. Your account is not yet a member of this farm&rsquo;s
+        organization. An admin of the farm can add you; you will be able to enter once they do.
       </p>
     </div>
   );

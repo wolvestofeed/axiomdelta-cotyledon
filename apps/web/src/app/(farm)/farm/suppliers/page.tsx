@@ -9,6 +9,7 @@ import { nextRunNet } from '../_lib/next-run';
 import { FARM_HOME } from '../_data/farm-location';
 import type { ClientSupplier, CropPlanMatchView } from '../_engine/geo';
 import { supplierRatings, ratingFor } from '../_data/mark';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 const DISPLAY_CAP = 80;
 
@@ -22,7 +23,11 @@ function scopeList(o: { scopes: { crops: string; livestock: string; handling: st
   return s.join(', ');
 }
 
-export default async function SuppliersPage({ searchParams }: { searchParams: SP }) {
+export default async function SuppliersPage(props: Parameters<typeof SuppliersPageInner>[0]) {
+  return withWorkspace(() => SuppliersPageInner(props));
+}
+
+async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const region = (['central-tx', 'texas', 'out-of-state', 'all'].includes(sp.region ?? '')
     ? sp.region

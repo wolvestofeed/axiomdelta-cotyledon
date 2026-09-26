@@ -2,6 +2,7 @@ import { getFarmAccess } from '../_lib/access';
 import { buildPageWorkbook } from '../_lib/page-export';
 import { streamBuffer } from '../_lib/stream';
 import { pageExportSchema } from '../_engine/page-export';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,11 @@ const MAX_BODY_BYTES = 8 * 1024 * 1024;
  * gated: the reader already saw these rows, and an admin-only page never rendered
  * for an operator, so nothing here widens what a role can read.
  */
-export async function POST(req: Request): Promise<Response> {
+export async function POST(...args: Parameters<typeof POSTInner>): ReturnType<typeof POSTInner> {
+  return withWorkspace(() => POSTInner(...args));
+}
+
+async function POSTInner(req: Request): Promise<Response> {
   const access = await getFarmAccess();
   if (!access.isOperator) return new Response('Not found', { status: 404 });
   const length = Number(req.headers.get('content-length') ?? 0);

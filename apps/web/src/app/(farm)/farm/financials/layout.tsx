@@ -1,5 +1,6 @@
 import { getFarmAccess } from '../_lib/access';
 import { AdminOnlyNotice } from '../_components/AdminOnly';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Financials & Accounting are admin-only (Roadmap O5). The server pages here
@@ -7,7 +8,11 @@ import { AdminOnlyNotice } from '../_components/AdminOnly';
  * pages (Unit Economics, P&L, Capital & Financing), which read the scenario
  * store and load no server data of their own.
  */
-export default async function FinancialsLayout({ children }: { children: React.ReactNode }) {
+export default async function FinancialsLayout(props: Parameters<typeof FinancialsLayoutInner>[0]) {
+  return withWorkspace(() => FinancialsLayoutInner(props));
+}
+
+async function FinancialsLayoutInner({ children }: { children: React.ReactNode }) {
   const access = await getFarmAccess();
   if (!access.isSuperAdmin) return <AdminOnlyNotice area="Financials & Accounting" />;
   return <>{children}</>;

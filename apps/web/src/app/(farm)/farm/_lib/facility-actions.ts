@@ -7,6 +7,7 @@ import { farmFacilityLayouts } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { FACILITY_ZONES } from '../_data/facility-design';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — the floor layout, writes (Roadmap Q6). SUPER ADMIN ONLY.
@@ -55,7 +56,11 @@ const SaveInput = z.object({
   units: z.array(Unit).max(2000),
 });
 
-export async function saveFacilityLayout(input: unknown): Promise<Result<{ id: string; version: number }>> {
+export async function saveFacilityLayout(...args: Parameters<typeof saveFacilityLayoutInner>): ReturnType<typeof saveFacilityLayoutInner> {
+  return withWorkspace(() => saveFacilityLayoutInner(...args));
+}
+
+async function saveFacilityLayoutInner(input: unknown): Promise<Result<{ id: string; version: number }>> {
   const parsed = SaveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;

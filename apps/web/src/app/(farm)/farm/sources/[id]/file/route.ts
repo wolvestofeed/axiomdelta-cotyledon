@@ -2,6 +2,7 @@ import { getFarmAccess } from '../../../_lib/access';
 import { getSourceFile } from '../../../_lib/sources';
 import { isInlineViewable } from '../../../_engine/sources';
 import { streamBuffer } from '../../../_lib/stream';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Serve a registered document to a signed-in operator or admin. PDFs render inline (the
@@ -9,7 +10,11 @@ import { streamBuffer } from '../../../_lib/stream';
  * path only); everything else downloads. The `(farm)` layout does not wrap
  * route handlers, so the operator gate is enforced here.
  */
-export async function GET(
+export async function GET(...args: Parameters<typeof GETInner>): ReturnType<typeof GETInner> {
+  return withWorkspace(() => GETInner(...args));
+}
+
+async function GETInner(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {

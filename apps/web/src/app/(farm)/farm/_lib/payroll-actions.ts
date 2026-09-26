@@ -11,6 +11,7 @@ import { onStaffJoined } from './onboarding';
 import { appendPosting } from './posting-log';
 import { periodOf } from '../_engine/actuals';
 import { WORK_ROLES, clockStateOf, isWorkRole, localDate, punchRefusal, roleOfOpenShift, type PunchDoc, type PunchKind } from '../_engine/payroll';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — the time clock and the staff register, writes
@@ -62,7 +63,11 @@ const StaffInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function createStaff(input: unknown): Promise<Result<{ id: string }>> {
+export async function createStaff(...args: Parameters<typeof createStaffInner>): ReturnType<typeof createStaffInner> {
+  return withWorkspace(() => createStaffInner(...args));
+}
+
+async function createStaffInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = StaffInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -87,7 +92,11 @@ export async function createStaff(input: unknown): Promise<Result<{ id: string }
   return { ok: true, id: rows[0].id };
 }
 
-export async function updateStaff(input: unknown): Promise<Result> {
+export async function updateStaff(...args: Parameters<typeof updateStaffInner>): ReturnType<typeof updateStaffInner> {
+  return withWorkspace(() => updateStaffInner(...args));
+}
+
+async function updateStaffInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).and(StaffInput).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -113,7 +122,11 @@ export async function updateStaff(input: unknown): Promise<Result> {
 const PunchInput = z.object({ staffId: z.string().uuid(), kind: kindSchema, role: z.enum(WORK_ROLES).optional() });
 
 /** A punch on the floor, at the server's clock. The clock accepts only the next punch the person's state allows. */
-export async function punch(input: unknown): Promise<Result<{ at: string }>> {
+export async function punch(...args: Parameters<typeof punchInner>): ReturnType<typeof punchInner> {
+  return withWorkspace(() => punchInner(...args));
+}
+
+async function punchInner(input: unknown): Promise<Result<{ at: string }>> {
   const parsed = PunchInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -150,7 +163,11 @@ const ManualPunchInput = z.object({
 });
 
 /** A punch typed afterwards — a missed clock-out, a forgotten break — with its reason. On the posting trail. */
-export async function addManualPunch(input: unknown): Promise<Result<{ id: string }>> {
+export async function addManualPunch(...args: Parameters<typeof addManualPunchInner>): ReturnType<typeof addManualPunchInner> {
+  return withWorkspace(() => addManualPunchInner(...args));
+}
+
+async function addManualPunchInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = ManualPunchInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -179,7 +196,11 @@ export async function addManualPunch(input: unknown): Promise<Result<{ id: strin
 }
 
 /** Remove a punch, with the reason. Refused inside a locked period; the removal is on the trail. */
-export async function deletePunch(input: unknown): Promise<Result> {
+export async function deletePunch(...args: Parameters<typeof deletePunchInner>): ReturnType<typeof deletePunchInner> {
+  return withWorkspace(() => deletePunchInner(...args));
+}
+
+async function deletePunchInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid(), reason: z.string().trim().min(3, 'A removal states why').max(400) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

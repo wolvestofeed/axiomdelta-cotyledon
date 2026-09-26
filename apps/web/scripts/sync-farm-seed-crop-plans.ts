@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { createDb } from '../../../packages/db/src/index.js';
+import { scopedHandle } from './_workspace';
 import { seedMissingCropPlans, syncSeedCropPlans, withSeedLock } from '../src/app/(farm)/farm/_lib/seed-writes';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -25,7 +26,7 @@ loadEnv({ path: join(REPO, '.env.local') });
 async function main(): Promise<void> {
   const url = process.env['DATABASE_URL'];
   if (!url) throw new Error('DATABASE_URL is not set.');
-  const handle = createDb(url);
+  const handle = await scopedHandle();
   const db = handle.db as unknown as Parameters<typeof withSeedLock>[0];
   try {
     const added = await withSeedLock(db, 'cropPlans', (tx) => seedMissingCropPlans(tx));

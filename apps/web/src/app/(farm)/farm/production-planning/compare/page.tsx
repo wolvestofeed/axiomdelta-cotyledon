@@ -15,11 +15,16 @@ import { leanSuppliersById } from '../../_lib/supplier-links';
 import { CompareClient } from './CompareClient';
 import { CompareTabs } from './CompareTabs';
 import { CropPlanCompareClient } from './CropPlanCompareClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** Compare in two modes: Day (scheduler build plan W5) and Crop plan (agentic-assistance build plan R3). */
 export default async function ComparePage() {
+  return withWorkspace(() => ComparePageInner());
+}
+
+async function ComparePageInner() {
   const access = await getFarmAccess();
   // No signed-in user owns no forecast: the page still compares against the plan-data defaults.
   const [scenarios, library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, cycles, studies] = await Promise.all([

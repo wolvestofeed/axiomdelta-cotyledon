@@ -6,6 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 import { farmPackages, farmCropPlanPackages } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — packaging library and crop plan packaging picks, writes.
@@ -39,7 +40,11 @@ const PackagePatch = z.object({
   notes: text(2000).optional(),
 });
 
-export async function updatePackage(input: unknown): Promise<Result> {
+export async function updatePackage(...args: Parameters<typeof updatePackageInner>): ReturnType<typeof updatePackageInner> {
+  return withWorkspace(() => updatePackageInner(...args));
+}
+
+async function updatePackageInner(input: unknown): Promise<Result> {
   const parsed = PackagePatch.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -64,7 +69,11 @@ const PackageInput = z.object({
   channels: Channels.default([]),
 });
 
-export async function createPackage(input: unknown): Promise<Result<{ id: string }>> {
+export async function createPackage(...args: Parameters<typeof createPackageInner>): ReturnType<typeof createPackageInner> {
+  return withWorkspace(() => createPackageInner(...args));
+}
+
+async function createPackageInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = PackageInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -83,7 +92,11 @@ export async function createPackage(input: unknown): Promise<Result<{ id: string
 }
 
 /** Remove a package no crop plan picks. */
-export async function deletePackage(input: unknown): Promise<Result> {
+export async function deletePackage(...args: Parameters<typeof deletePackageInner>): ReturnType<typeof deletePackageInner> {
+  return withWorkspace(() => deletePackageInner(...args));
+}
+
+async function deletePackageInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -108,7 +121,11 @@ const PickInput = z.object({
 });
 
 /** Pick a package for a crop plan; picking it again sets its per-unit count. */
-export async function addCropPlanPackage(input: unknown): Promise<Result> {
+export async function addCropPlanPackage(...args: Parameters<typeof addCropPlanPackageInner>): ReturnType<typeof addCropPlanPackageInner> {
+  return withWorkspace(() => addCropPlanPackageInner(...args));
+}
+
+async function addCropPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = PickInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -125,7 +142,11 @@ export async function addCropPlanPackage(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function updateCropPlanPackage(input: unknown): Promise<Result> {
+export async function updateCropPlanPackage(...args: Parameters<typeof updateCropPlanPackageInner>): ReturnType<typeof updateCropPlanPackageInner> {
+  return withWorkspace(() => updateCropPlanPackageInner(...args));
+}
+
+async function updateCropPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid(), qtyPerUnit: z.number().gt(0, 'Per unit must be above zero').max(1000) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -138,7 +159,11 @@ export async function updateCropPlanPackage(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function removeCropPlanPackage(input: unknown): Promise<Result> {
+export async function removeCropPlanPackage(...args: Parameters<typeof removeCropPlanPackageInner>): ReturnType<typeof removeCropPlanPackageInner> {
+  return withWorkspace(() => removeCropPlanPackageInner(...args));
+}
+
+async function removeCropPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {

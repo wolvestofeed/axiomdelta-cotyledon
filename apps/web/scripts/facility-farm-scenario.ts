@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { desc, eq, sql } from 'drizzle-orm';
 import { createDb, farmScenarios, farmWorkspaceState, farmPostingLog } from '../../../packages/db/src/index.js';
+import { scopedHandle } from './_workspace';
 import { GENESIS_HASH, postingHash } from '../src/app/(farm)/farm/_engine/periods';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
   if (!url) throw new Error('DATABASE_URL is not set.');
   const actorUserId = process.env['FARM_ACTOR_USER_ID'] ?? 'script:farm-facility-scenario';
   const actorEmail = process.env['FARM_ACTOR_EMAIL'] ?? null;
-  const handle = createDb(url);
+  const handle = await scopedHandle();
   const db = handle.db;
   try {
     await db.transaction(async (tx) => {

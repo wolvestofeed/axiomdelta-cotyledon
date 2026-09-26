@@ -4,10 +4,15 @@ import { PageHeader, Card, StatusBadge } from '../../_components/ui';
 import { getSource, listFigures } from '../../_lib/sources';
 import { SOURCE_KINDS, formatBytes, isInlineViewable } from '../../_engine/sources';
 import type { StatusTag } from '../../_data/plan-data';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SourcePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SourcePage(props: Parameters<typeof SourcePageInner>[0]) {
+  return withWorkspace(() => SourcePageInner(props));
+}
+
+async function SourcePageInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const [source, figures] = await Promise.all([getSource(id), listFigures(id)]);

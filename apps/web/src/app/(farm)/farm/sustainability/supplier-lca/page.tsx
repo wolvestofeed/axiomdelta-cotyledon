@@ -9,10 +9,15 @@ import { listCropPlans } from '../../_lib/crop-plans';
 import { BOUNDARY_LABEL, type LcaBoundary } from '../../_data/lca-options';
 import { toLcaOption, type SupplierLcaRowLike } from '../../_engine/supplier-links';
 import type { StatusTag } from '../../_data/plan-data';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SupplierLcaPage() {
+  return withWorkspace(() => SupplierLcaPageInner());
+}
+
+async function SupplierLcaPageInner() {
   const [access, rows, sources, library] = await Promise.all([getFarmAccess(), listSupplierLcaRows(), listSources(), listCropPlans()]);
   // Every input across the in-service crop plans (Roadmap N9).
   const inputs = [...new Set(library.filter((r) => r.status === 'in_service').flatMap((r) => r.inputs.map((i) => i.name)))].sort();

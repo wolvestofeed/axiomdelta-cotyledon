@@ -13,6 +13,7 @@ import { getResolvedActiveInputs } from '../../_lib/scenarios';
 import { haversineMiles } from '../../_engine/geo';
 import { FARM_HOME } from '../../_data/farm-location';
 import { isAvailableInMonth, priceInForceOn } from '../../_engine/catalog';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,11 @@ export const dynamic = 'force-dynamic';
  * The certification mark's rating sits in the heading, because on this platform
  * it is the operation's leading credential rather than a column.
  */
-export default async function SupplierDetailPage({
+export default async function SupplierDetailPage(props: Parameters<typeof SupplierDetailPageInner>[0]) {
+  return withWorkspace(() => SupplierDetailPageInner(props));
+}
+
+async function SupplierDetailPageInner({
   params,
 }: {
   params: Promise<{ id: string }>;

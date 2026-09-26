@@ -18,6 +18,7 @@ import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from './acc
 import { periodOf } from '../_engine/actuals';
 import { refuseIfLocked } from './periods';
 import { appendPosting } from './posting-log';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — subscription cycles, flat plans and orders, writes. SUPER ADMIN ONLY.
@@ -87,7 +88,11 @@ async function checkCycleDays(d: z.infer<typeof CycleInput>): Promise<string | n
   return missing.length ? `Not in the crop plan library: ${missing.join(', ')}.` : null;
 }
 
-export async function createSubscriptionCycle(input: unknown): Promise<Result<{ id: string }>> {
+export async function createSubscriptionCycle(...args: Parameters<typeof createSubscriptionCycleInner>): ReturnType<typeof createSubscriptionCycleInner> {
+  return withWorkspace(() => createSubscriptionCycleInner(...args));
+}
+
+async function createSubscriptionCycleInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = CycleInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -117,7 +122,11 @@ export async function createSubscriptionCycle(input: unknown): Promise<Result<{ 
  * them. A plan not named keeps its sequence. Each plan keeps its own subscriber,
  * service, start and end.
  */
-export async function updateSubscriptionCycle(input: unknown): Promise<Result<{ applied: number }>> {
+export async function updateSubscriptionCycle(...args: Parameters<typeof updateSubscriptionCycleInner>): ReturnType<typeof updateSubscriptionCycleInner> {
+  return withWorkspace(() => updateSubscriptionCycleInner(...args));
+}
+
+async function updateSubscriptionCycleInner(input: unknown): Promise<Result<{ applied: number }>> {
   const parsed = CycleInput.extend({ id: z.string().uuid(), applyToPlanIds: z.array(z.string().uuid()).default([]) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -164,7 +173,11 @@ const AssignInput = z.object({
 });
 
 /** One-click assign: copy a saved subscription cycle onto each subscriber as its flat plan. */
-export async function assignSubscriptionCycle(input: unknown): Promise<Result<{ ids: string[] }>> {
+export async function assignSubscriptionCycle(...args: Parameters<typeof assignSubscriptionCycleInner>): ReturnType<typeof assignSubscriptionCycleInner> {
+  return withWorkspace(() => assignSubscriptionCycleInner(...args));
+}
+
+async function assignSubscriptionCycleInner(input: unknown): Promise<Result<{ ids: string[] }>> {
   const parsed = AssignInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -214,7 +227,11 @@ export async function assignSubscriptionCycle(input: unknown): Promise<Result<{ 
   return { ok: true, ids };
 }
 
-export async function deleteSubscriptionCycle(input: unknown): Promise<Result> {
+export async function deleteSubscriptionCycle(...args: Parameters<typeof deleteSubscriptionCycleInner>): ReturnType<typeof deleteSubscriptionCycleInner> {
+  return withWorkspace(() => deleteSubscriptionCycleInner(...args));
+}
+
+async function deleteSubscriptionCycleInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -260,7 +277,11 @@ async function cropPlanExists(code: string): Promise<boolean> {
 }
 
 /** Store an order: a typed forecast, or a confirmed count (from a derived forecast order or typed). */
-export async function createOrder(input: unknown): Promise<Result<{ id: string }>> {
+export async function createOrder(...args: Parameters<typeof createOrderInner>): ReturnType<typeof createOrderInner> {
+  return withWorkspace(() => createOrderInner(...args));
+}
+
+async function createOrderInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = OrderInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -311,7 +332,11 @@ const UpdateOrderInput = z.object({
 });
 
 /** Edit a stored order that has not been distributed. */
-export async function updateOrder(input: unknown): Promise<Result> {
+export async function updateOrder(...args: Parameters<typeof updateOrderInner>): ReturnType<typeof updateOrderInner> {
+  return withWorkspace(() => updateOrderInner(...args));
+}
+
+async function updateOrderInner(input: unknown): Promise<Result> {
   const parsed = UpdateOrderInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -343,7 +368,11 @@ export async function updateOrder(input: unknown): Promise<Result> {
 }
 
 /** Remove a stored order. A distributed order keeps its distribution record on Actuals. */
-export async function deleteOrder(input: unknown): Promise<Result> {
+export async function deleteOrder(...args: Parameters<typeof deleteOrderInner>): ReturnType<typeof deleteOrderInner> {
+  return withWorkspace(() => deleteOrderInner(...args));
+}
+
+async function deleteOrderInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -374,7 +403,11 @@ const DistributeInput = z.object({
  * sold post from it) and link the order to it. The order's unit count is what
  * was ordered; the record's is what was distributed.
  */
-export async function distributeOrder(input: unknown): Promise<Result<{ distributionId: string }>> {
+export async function distributeOrder(...args: Parameters<typeof distributeOrderInner>): ReturnType<typeof distributeOrderInner> {
+  return withWorkspace(() => distributeOrderInner(...args));
+}
+
+async function distributeOrderInner(input: unknown): Promise<Result<{ distributionId: string }>> {
   const parsed = DistributeInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

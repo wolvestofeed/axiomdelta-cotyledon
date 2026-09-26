@@ -78,7 +78,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
         source: 'seed',
       })),
     )
-    .onConflictDoNothing({ target: farmEquipment.key });
+    .onConflictDoNothing({ target: [farmEquipment.workspaceId, farmEquipment.key] });
   return lines.length;
 }
 
@@ -132,7 +132,7 @@ export async function seedMissingCropPlans(db: SeedDb, library: readonly CropPla
     const inserted = await db
       .insert(farmCropPlans)
       .values({ ...header, source: 'seed', effectiveFrom })
-      .onConflictDoNothing({ target: farmCropPlans.code })
+      .onConflictDoNothing({ target: [farmCropPlans.workspaceId, farmCropPlans.code] })
       .returning({ id: farmCropPlans.id });
     const id = inserted[0]?.id;
     if (!id) continue;

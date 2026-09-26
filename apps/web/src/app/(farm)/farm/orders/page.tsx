@@ -5,10 +5,15 @@ import { loadActuals } from '../_lib/actuals';
 import { finishedLotsOf } from '../_engine/actuals';
 import { loadCalendar } from '../_lib/periods';
 import { OrdersClient } from './OrdersClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OrdersPage() {
+  return withWorkspace(() => OrdersPageInner());
+}
+
+async function OrdersPageInner() {
   const [access, cycles, orders, actuals, calendar] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
 

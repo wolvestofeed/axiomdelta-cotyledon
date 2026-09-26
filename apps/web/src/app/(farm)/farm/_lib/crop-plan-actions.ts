@@ -13,6 +13,7 @@ import {
   CROP_PLAN_STATUSES,
 } from '../_engine/crop-plan-library';
 import type { CropPlanDef, InputLine, CropPlanStatus } from '../_data/plan-data';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — crop plan library writes. SUPER ADMIN ONLY.
@@ -104,7 +105,11 @@ function toCropPlan(d: z.infer<typeof CropPlanInput>): CropPlanDef {
 }
 
 /** Add a crop plan to the library. */
-export async function createCropPlan(input: unknown): Promise<Result<{ id: string; code: string }>> {
+export async function createCropPlan(...args: Parameters<typeof createCropPlanInner>): ReturnType<typeof createCropPlanInner> {
+  return withWorkspace(() => createCropPlanInner(...args));
+}
+
+async function createCropPlanInner(input: unknown): Promise<Result<{ id: string; code: string }>> {
   const parsed = CropPlanInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
   let access;
@@ -136,7 +141,11 @@ export async function createCropPlan(input: unknown): Promise<Result<{ id: strin
 const UpdateInput = CropPlanInput.extend({ id: z.string().uuid() });
 
 /** Replace a library crop plan's header and lines; bumps the version. */
-export async function updateCropPlan(input: unknown): Promise<Result<{ id: string }>> {
+export async function updateCropPlan(...args: Parameters<typeof updateCropPlanInner>): ReturnType<typeof updateCropPlanInner> {
+  return withWorkspace(() => updateCropPlanInner(...args));
+}
+
+async function updateCropPlanInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = UpdateInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
   try {
@@ -168,7 +177,11 @@ export async function updateCropPlan(input: unknown): Promise<Result<{ id: strin
 
 const StatusInput = z.object({ id: z.string().uuid(), status: z.enum(['in_service', 'planned', 'developing']) });
 
-export async function setCropPlanStatus(input: unknown): Promise<Result> {
+export async function setCropPlanStatus(...args: Parameters<typeof setCropPlanStatusInner>): ReturnType<typeof setCropPlanStatusInner> {
+  return withWorkspace(() => setCropPlanStatusInner(...args));
+}
+
+async function setCropPlanStatusInner(input: unknown): Promise<Result> {
   const parsed = StatusInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
   try {
@@ -185,7 +198,11 @@ export async function setCropPlanStatus(input: unknown): Promise<Result> {
 const DeleteInput = z.object({ id: z.string().uuid() });
 
 /** Remove a crop plan. Refused while a sowing record names its code, or if it is the last one. */
-export async function deleteCropPlan(input: unknown): Promise<Result> {
+export async function deleteCropPlan(...args: Parameters<typeof deleteCropPlanInner>): ReturnType<typeof deleteCropPlanInner> {
+  return withWorkspace(() => deleteCropPlanInner(...args));
+}
+
+async function deleteCropPlanInner(input: unknown): Promise<Result> {
   const parsed = DeleteInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
   try {

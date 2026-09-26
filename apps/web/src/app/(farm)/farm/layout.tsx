@@ -23,6 +23,7 @@ import { listAllCatalog } from './_lib/supplier-catalog';
 import { listLoans, listFixedCostLines, listLeasehold } from './_lib/finance';
 import { listTimeStudies } from './_lib/time-studies';
 import { loadCalendar } from './_lib/periods';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const metadata: Metadata = {
   title: 'MicroFarm',
@@ -30,7 +31,11 @@ export const metadata: Metadata = {
   icons: FARM_TAB_ICONS,
 };
 
-export default async function FarmLayout({ children }: { children: React.ReactNode }) {
+export default async function FarmLayout(props: Parameters<typeof FarmLayoutInner>[0]) {
+  return withWorkspace(() => FarmLayoutInner(props));
+}
+
+async function FarmLayoutInner({ children }: { children: React.ReactNode }) {
   const access = await getFarmAccess();
 
   if (!access.userId) redirect('/sign-in');
@@ -46,9 +51,8 @@ export default async function FarmLayout({ children }: { children: React.ReactNo
           <div className="farm-card mt-5!">
             <div className="farm-card-title">Access</div>
             <p className="farm-fs-md farm-c-soft leading-[1.5]">
-              This is a private preview. Your account
-              {access.email ? ` (${access.email})` : ''} is signed in but holds neither the
-              operator nor the admin role for this workspace. Access is granted per named person.
+              Your account{access.email ? ` (${access.email})` : ''} is signed in but is not a member of a farm&rsquo;s
+              organization. An admin of the farm can add you, or you can <a className="farm-link" href="/farm/enter">choose or create a farm</a>.
             </p>
           </div>
         </div>

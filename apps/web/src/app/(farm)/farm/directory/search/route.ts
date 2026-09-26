@@ -1,6 +1,7 @@
 import { getFarmAccess } from '../../_lib/access';
 import { hydrateEntityRefs, parseKinds, searchEntities } from '../../_lib/entity-directory';
 import { ENTITY_KINDS } from '../../_engine/entity-links';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * The lean directory lookup behind every picker and the top-bar search.
@@ -10,7 +11,11 @@ import { ENTITY_KINDS } from '../../_engine/entity-links';
  *
  * Operator-gated. Returns at most 25 rows per kind and never the full directory.
  */
-export async function GET(req: Request): Promise<Response> {
+export async function GET(...args: Parameters<typeof GETInner>): ReturnType<typeof GETInner> {
+  return withWorkspace(() => GETInner(...args));
+}
+
+async function GETInner(req: Request): Promise<Response> {
   const access = await getFarmAccess();
   if (!access.isOperator) return new Response('Not found', { status: 404 });
 

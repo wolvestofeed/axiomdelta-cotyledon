@@ -11,13 +11,18 @@ import { ActualsClient } from './ActualsClient';
 import { OpeningBalanceForm } from '../_components/OpeningBalanceForm';
 import { capexRollup } from '../_engine/fixed-costs';
 import { AdminOnlyNotice } from '../_components/AdminOnly';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 const fromCents = (c: number) => c / 100;
 const signed = (c: number) => (c < 0 ? `(${money(fromCents(-c), 0)})` : money(fromCents(c), 0));
 
-export default async function ActualsPage({
+export default async function ActualsPage(props: Parameters<typeof ActualsPageInner>[0]) {
+  return withWorkspace(() => ActualsPageInner(props));
+}
+
+async function ActualsPageInner({
   searchParams,
 }: {
   searchParams: Promise<{ period?: string }>;

@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { LOAN_PURPOSES, LOAN_STATUSES, FIXED_COST_STATUSES, FIXED_COST_TREATMENTS } from '../_data/finance';
 import { uniqueEquipmentKey } from '../_engine/equipment';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — loans and fixed-cost lines, writes. SUPER ADMIN ONLY.
@@ -56,7 +57,11 @@ const NewLoan = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-export async function createLoan(input: unknown): Promise<Result<{ id: string }>> {
+export async function createLoan(...args: Parameters<typeof createLoanInner>): ReturnType<typeof createLoanInner> {
+  return withWorkspace(() => createLoanInner(...args));
+}
+
+async function createLoanInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = NewLoan.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -100,7 +105,11 @@ const LoanPatch = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-export async function updateLoan(input: unknown): Promise<Result> {
+export async function updateLoan(...args: Parameters<typeof updateLoanInner>): ReturnType<typeof updateLoanInner> {
+  return withWorkspace(() => updateLoanInner(...args));
+}
+
+async function updateLoanInner(input: unknown): Promise<Result> {
   const parsed = LoanPatch.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -119,7 +128,11 @@ export async function updateLoan(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteLoan(id: unknown): Promise<Result> {
+export async function deleteLoan(...args: Parameters<typeof deleteLoanInner>): ReturnType<typeof deleteLoanInner> {
+  return withWorkspace(() => deleteLoanInner(...args));
+}
+
+async function deleteLoanInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();
@@ -144,7 +157,11 @@ const NewFixedCostLine = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-export async function createFixedCostLine(input: unknown): Promise<Result<{ id: string }>> {
+export async function createFixedCostLine(...args: Parameters<typeof createFixedCostLineInner>): ReturnType<typeof createFixedCostLineInner> {
+  return withWorkspace(() => createFixedCostLineInner(...args));
+}
+
+async function createFixedCostLineInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = NewFixedCostLine.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -190,7 +207,11 @@ const FixedCostPatch = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-export async function updateFixedCostLine(input: unknown): Promise<Result> {
+export async function updateFixedCostLine(...args: Parameters<typeof updateFixedCostLineInner>): ReturnType<typeof updateFixedCostLineInner> {
+  return withWorkspace(() => updateFixedCostLineInner(...args));
+}
+
+async function updateFixedCostLineInner(input: unknown): Promise<Result> {
   const parsed = FixedCostPatch.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -209,7 +230,11 @@ export async function updateFixedCostLine(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteFixedCostLine(id: unknown): Promise<Result> {
+export async function deleteFixedCostLine(...args: Parameters<typeof deleteFixedCostLineInner>): ReturnType<typeof deleteFixedCostLineInner> {
+  return withWorkspace(() => deleteFixedCostLineInner(...args));
+}
+
+async function deleteFixedCostLineInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();
@@ -230,7 +255,11 @@ const NewLeaseholdLine = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-export async function createLeaseholdLine(input: unknown): Promise<Result<{ id: string }>> {
+export async function createLeaseholdLine(...args: Parameters<typeof createLeaseholdLineInner>): ReturnType<typeof createLeaseholdLineInner> {
+  return withWorkspace(() => createLeaseholdLineInner(...args));
+}
+
+async function createLeaseholdLineInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = NewLeaseholdLine.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -272,7 +301,11 @@ const LeaseholdPatch = z.object({
  * Edit a leasehold line in the library. `counted: false` keeps the line on
  * record and out of the rollup — it is never a reason to delete the row.
  */
-export async function updateLeaseholdLine(input: unknown): Promise<Result> {
+export async function updateLeaseholdLine(...args: Parameters<typeof updateLeaseholdLineInner>): ReturnType<typeof updateLeaseholdLineInner> {
+  return withWorkspace(() => updateLeaseholdLineInner(...args));
+}
+
+async function updateLeaseholdLineInner(input: unknown): Promise<Result> {
   const parsed = LeaseholdPatch.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -291,7 +324,11 @@ export async function updateLeaseholdLine(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteLeaseholdLine(id: unknown): Promise<Result> {
+export async function deleteLeaseholdLine(...args: Parameters<typeof deleteLeaseholdLineInner>): ReturnType<typeof deleteLeaseholdLineInner> {
+  return withWorkspace(() => deleteLeaseholdLineInner(...args));
+}
+
+async function deleteLeaseholdLineInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();

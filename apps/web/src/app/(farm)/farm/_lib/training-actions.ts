@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from './access';
 import { listActiveStaff, listTrainingAssignments, listTrainingDocs } from './training';
 import { activeVersion, planPublish } from '../_engine/training';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — training documents, writes.
@@ -38,7 +39,11 @@ const fail = (issues: z.ZodIssue[]) => ({ ok: false as const, error: issues.map(
  * everyone re-reads it, or the people who completed the previous version carry
  * that forward. Either way the reason is on the record.
  */
-export async function publishTrainingDoc(input: unknown): Promise<Result<{ assigned: number; reason: string }>> {
+export async function publishTrainingDoc(...args: Parameters<typeof publishTrainingDocInner>): ReturnType<typeof publishTrainingDocInner> {
+  return withWorkspace(() => publishTrainingDocInner(...args));
+}
+
+async function publishTrainingDocInner(input: unknown): Promise<Result<{ assigned: number; reason: string }>> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -84,7 +89,11 @@ export async function publishTrainingDoc(input: unknown): Promise<Result<{ assig
  * choice belongs at the moment of publishing, so it stays editable until then
  * and is frozen onto the version once it goes live.
  */
-export async function setDraftRecompletion(input: unknown): Promise<Result> {
+export async function setDraftRecompletion(...args: Parameters<typeof setDraftRecompletionInner>): ReturnType<typeof setDraftRecompletionInner> {
+  return withWorkspace(() => setDraftRecompletionInner(...args));
+}
+
+async function setDraftRecompletionInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid(), requiresRecompletion: z.boolean() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -103,7 +112,11 @@ export async function setDraftRecompletion(input: unknown): Promise<Result> {
 }
 
 /** Archive the active version without replacing it: nothing is then in force. */
-export async function archiveTrainingDoc(input: unknown): Promise<Result> {
+export async function archiveTrainingDoc(...args: Parameters<typeof archiveTrainingDocInner>): ReturnType<typeof archiveTrainingDocInner> {
+  return withWorkspace(() => archiveTrainingDocInner(...args));
+}
+
+async function archiveTrainingDocInner(input: unknown): Promise<Result> {
   const parsed = z.object({ docKey: z.string().trim().min(1).max(200) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -123,7 +136,11 @@ export async function archiveTrainingDoc(input: unknown): Promise<Result> {
 }
 
 /** Discard a draft that was never published. A published version is never deleted. */
-export async function deleteTrainingDraft(input: unknown): Promise<Result> {
+export async function deleteTrainingDraft(...args: Parameters<typeof deleteTrainingDraftInner>): ReturnType<typeof deleteTrainingDraftInner> {
+  return withWorkspace(() => deleteTrainingDraftInner(...args));
+}
+
+async function deleteTrainingDraftInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -150,7 +167,11 @@ const CompleteInput = z.object({
  * only: the staff record matched to their sign-in email is the one that can be
  * completed, and an already-completed assignment keeps its first timestamp.
  */
-export async function completeTraining(input: unknown): Promise<Result> {
+export async function completeTraining(...args: Parameters<typeof completeTrainingInner>): ReturnType<typeof completeTrainingInner> {
+  return withWorkspace(() => completeTrainingInner(...args));
+}
+
+async function completeTrainingInner(input: unknown): Promise<Result> {
   const parsed = CompleteInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -189,7 +210,11 @@ export async function completeTraining(input: unknown): Promise<Result> {
  * Assignment follows the register, so this is only needed when someone joins
  * between page loads.
  */
-export async function assignActiveTraining(): Promise<Result<{ assigned: number }>> {
+export async function assignActiveTraining(...args: Parameters<typeof assignActiveTrainingInner>): ReturnType<typeof assignActiveTrainingInner> {
+  return withWorkspace(() => assignActiveTrainingInner(...args));
+}
+
+async function assignActiveTrainingInner(): Promise<Result<{ assigned: number }>> {
   try {
     await requireFarmSuperAdmin();
   } catch (e) {

@@ -11,6 +11,7 @@ import { distributedConsumption, finishedGoodsOnHand } from '../_engine/producti
 import { allLinks } from '../_lib/entity-links';
 import { hydrateEntityRefs } from '../_lib/entity-directory';
 import { entityRef, lotTrace, type LotEdge, type EntityKind } from '../_engine/entity-links';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,10 @@ export const dynamic = 'force-dynamic';
  * computed from them. The page always reads the records; a forecast cools nothing.
  */
 export default async function ProduceSafetyPage() {
+  return withWorkspace(() => ProduceSafetyPageInner());
+}
+
+async function ProduceSafetyPageInner() {
   // The trace is the recall question: a lot back to the operations that supplied
   // it, and forward to the pickup points it reached. Edges are the recorded links.
   const [rows, { inputs }, actuals, orders] = await Promise.all([allLinks(), getResolvedActiveInputs(), loadActuals(), listOrders()]);

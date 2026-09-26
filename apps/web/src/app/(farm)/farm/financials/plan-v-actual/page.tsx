@@ -9,6 +9,7 @@ import { servedCostPerUnitCents, sumMeasures, type PvaBreakdownRow, type PvaMeas
 import { MARK } from '../../_data/mark';
 import { getActiveScenario } from '../../_lib/scenarios';
 import { forecastStartOf } from '../../_engine/demand';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,7 +172,11 @@ function Breakdown({ title, months, by, nameOf }: { title: string; months: PvaMo
  * Plan v Actual (Roadmap N7): the plan of record in force at each month end against
  * the records, month or quarter. A quarter sums its months, each against its own plan.
  */
-export default async function PlanVsActualPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function PlanVsActualPage(props: Parameters<typeof PlanVsActualPageInner>[0]) {
+  return withWorkspace(() => PlanVsActualPageInner(props));
+}
+
+async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="Plan v Actual" />;
   const params = await searchParams;
   const today = new Date().toISOString().slice(0, 10);

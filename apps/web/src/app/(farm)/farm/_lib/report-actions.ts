@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { accessRefusal, requireFarmOperator } from './access';
 import { noteViewed, parseRecent, reportDef, RECENT_REPORTS_COOKIE } from '../_engine/reports';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — the reader's most recently viewed reports (Roadmap Phase E). A
@@ -12,7 +13,11 @@ import { noteViewed, parseRecent, reportDef, RECENT_REPORTS_COOKIE } from '../_e
 
 type Result = { ok: true; recent: string[] } | { ok: false; error: string };
 
-export async function noteReportViewed(id: unknown): Promise<Result> {
+export async function noteReportViewed(...args: Parameters<typeof noteReportViewedInner>): ReturnType<typeof noteReportViewedInner> {
+  return withWorkspace(() => noteReportViewedInner(...args));
+}
+
+async function noteReportViewedInner(id: unknown): Promise<Result> {
   if (typeof id !== 'string' || !reportDef(id)) return { ok: false, error: 'That report is not in the library.' };
   try {
     await requireFarmOperator();

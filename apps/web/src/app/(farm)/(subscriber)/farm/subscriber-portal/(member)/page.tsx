@@ -8,6 +8,7 @@ import { loadActuals } from '@/app/(farm)/farm/_lib/actuals';
 import { getResolvedActiveInputs } from '@/app/(farm)/farm/_lib/scenarios';
 import { invoiceBalances } from '@/app/(farm)/farm/_engine/working-capital';
 import { SUBSCRIBER_STATUS_LABELS } from '@/app/(farm)/farm/_data/subscribers';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,11 @@ export const dynamic = 'force-dynamic';
  * basic page while the portal is developed: a client login is not built, so the
  * subscriber is picked here, and nothing is gated beyond sign-in.
  */
-export default async function SubscriberPortalPage({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
+export default async function SubscriberPortalPage(props: Parameters<typeof SubscriberPortalPageInner>[0]) {
+  return withWorkspace(() => SubscriberPortalPageInner(props));
+}
+
+async function SubscriberPortalPageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
   {
     const a = await getFarmAccess();

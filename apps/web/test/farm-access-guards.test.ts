@@ -1,23 +1,18 @@
 /**
- * MicroFarm — the fail-closed contract of the Farm access guards.
+ * MicroFarm — the access guards fail closed, and roles come from the farm's organization.
  *
- * Farm is single-tenant: no workspace or org id, so Staffing's tenant guards do
- * not apply. Its boundary is the named operator and super-admin lists in
- * `(farm)/farm/_lib/access.ts`, and these guards are what enforce it. Two roles,
- * admin and operator; an admin is always an operator (Roadmap O5).
- *
- * The property under test is that a denial THROWS rather than returning a record
- * a caller could ignore — the same contract `requireWorkspaceAccess` holds for
- * workspace-scoped data. `@clerk/nextjs/server` is mocked so the logic runs
- * without Clerk or a DB.
+ * A workspace is a Clerk organization (outline §7). `org:admin` is an admin, any member is an
+ * operator, the platform admins are admins in every organization they belong to, and no
+ * organization active means no role at all. Guards throw; a returned denial cannot be ignored.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authMock, currentUserMock, staffMock } = vi.hoisted(() => ({
+const { authMock, currentUserMock, staffMock, scopeMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   currentUserMock: vi.fn(),
   staffMock: vi.fn(),
+  scopeMock: vi.fn(),
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({
@@ -30,12 +25,19 @@ vi.mock('@/app/(farm)/farm/_lib/staff-login', () => ({
   activeStaffByEmail: (email: string) => staffMock(email),
 }));
 
+// The workspace scope without a database: in scope by default.
+vi.mock('@/lib/db', () => ({
+  currentWorkspaceId: () => scopeMock(),
+}));
+
 const access = await import('@/app/(farm)/farm/_lib/access');
 const { requireFarmSuperAdmin, requireFarmOperator, FarmAccessError, accessRefusal, getFarmAccess } = access;
 
-/** A signed-in Clerk user with the given primary email and metadata. */
-function signedIn(email: string | null, publicMetadata: Record<string, unknown> = {}) {
-  authMock.mockResolvedValue({ userId: 'user_123' });
+type Org = { orgId: string; orgRole: 'org:admin' | 'org:member' } | null;
+
+/** A signed-in Clerk user with the given primary email, organization membership and metadata. */
+function signedIn(email: string | null, org: Org = { orgId: 'org_farm', orgRole: 'org:member' }, publicMetadata: Record<string, unknown> = {}) {
+  authMock.mockResolvedValue({ userId: 'user_123', orgId: org?.orgId ?? null, orgRole: org?.orgRole ?? null });
   currentUserMock.mockResolvedValue({
     primaryEmailAddress: email ? { emailAddress: email } : null,
     publicMetadata,
@@ -43,20 +45,21 @@ function signedIn(email: string | null, publicMetadata: Record<string, unknown> 
 }
 
 function signedOut() {
-  authMock.mockResolvedValue({ userId: null });
+  authMock.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
   currentUserMock.mockResolvedValue(null);
 }
 
-// An operator granted through the env list (no operator is named in access.ts), and the named admin.
-const OPERATOR_EMAIL = 'operator@example.com';
-process.env.FARM_OPERATOR_EMAILS = OPERATOR_EMAIL;
-const SUPER_ADMIN_EMAIL = 'lonewolf@wolvestofeed.com';
+const PLATFORM_ADMIN_EMAIL = 'lonewolf@wolvestofeed.com';
+const ADMIN: Org = { orgId: 'org_farm', orgRole: 'org:admin' };
+const MEMBER: Org = { orgId: 'org_farm', orgRole: 'org:member' };
 
 beforeEach(() => {
   authMock.mockReset();
   currentUserMock.mockReset();
   staffMock.mockReset();
   staffMock.mockResolvedValue(null);
+  scopeMock.mockReset();
+  scopeMock.mockReturnValue('ws-1');
 });
 
 describe('farm access guards — fail closed on every no-access path', () => {
@@ -67,65 +70,70 @@ describe('farm access guards — fail closed on every no-access path', () => {
     await expect(requireFarmSuperAdmin()).rejects.toThrow(FarmAccessError);
   });
 
-  it('a signed-in account on neither list is refused, not merely flagged', async () => {
-    signedIn('stranger@example.com');
+  it('a signed-in account with no organization active is refused, not merely flagged', async () => {
+    signedIn('stranger@example.com', null);
     await expect(requireFarmOperator()).rejects.toMatchObject({ code: 'not_operator' });
-    signedIn('stranger@example.com');
+    signedIn('stranger@example.com', null);
     await expect(requireFarmSuperAdmin()).rejects.toMatchObject({ code: 'not_super_admin' });
   });
 
-  it('a named operator passes the operator guard and is refused admin', async () => {
-    signedIn(OPERATOR_EMAIL);
-    await expect(requireFarmOperator()).resolves.toMatchObject({ userId: 'user_123', isOperator: true, isSuperAdmin: false });
-    signedIn(OPERATOR_EMAIL);
+  it('an organization member passes the operator guard and is refused admin', async () => {
+    signedIn('member@example.com', MEMBER);
+    await expect(requireFarmOperator()).resolves.toMatchObject({ userId: 'user_123', isOperator: true, isSuperAdmin: false, orgId: 'org_farm', workspaceId: 'ws-1' });
+    signedIn('member@example.com', MEMBER);
     await expect(requireFarmSuperAdmin()).rejects.toMatchObject({ code: 'not_super_admin' });
   });
 
-  it('an admin passes both, and is an operator though listed only as admin', async () => {
-    signedIn(SUPER_ADMIN_EMAIL);
+  it('an organization admin passes both, and is an operator though holding only the admin role', async () => {
+    signedIn('owner@example.com', ADMIN);
     await expect(requireFarmSuperAdmin()).resolves.toMatchObject({ tier: 'super_admin' });
-    signedIn(SUPER_ADMIN_EMAIL);
+    signedIn('owner@example.com', ADMIN);
     await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true, isSuperAdmin: true });
   });
 
-  it('an account with no email on file reaches neither list', async () => {
-    signedIn(null);
+  it('a platform admin is an admin in any organization they are a member of, and nothing outside one', async () => {
+    signedIn(PLATFORM_ADMIN_EMAIL, MEMBER);
+    await expect(requireFarmSuperAdmin()).resolves.toMatchObject({ isSuperAdmin: true, isOperator: true });
+    signedIn(PLATFORM_ADMIN_EMAIL, null);
     await expect(requireFarmOperator()).rejects.toMatchObject({ code: 'not_operator' });
   });
 
-  it('Clerk publicMetadata grants a role without a code change; the retired viewer flag grants nothing', async () => {
-    signedIn('sow@example.com', { farmOperator: true });
+  it('an account with no email on file is still an operator by membership, never an admin by name', async () => {
+    signedIn(null, MEMBER);
     await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true, isSuperAdmin: false });
-    signedIn('contractor@example.com', { farmSuperAdmin: true });
+  });
+
+  it('Clerk publicMetadata farmSuperAdmin grants admin inside an organization; the retired viewer flag grants nothing', async () => {
+    signedIn('contractor@example.com', MEMBER, { farmSuperAdmin: true });
     await expect(requireFarmSuperAdmin()).resolves.toMatchObject({ isSuperAdmin: true });
-    signedIn('reader@example.com', { farmViewer: true });
+    signedIn('reader@example.com', null, { farmViewer: true });
     await expect(requireFarmOperator()).rejects.toMatchObject({ code: 'not_operator' });
   });
 
-  it('an active person on the staff register signing in with their email is an operator matched to their record', async () => {
-    staffMock.mockImplementation(async (email: string) => (email === 'sow@example.com' ? { id: 'staff-1' } : null));
-    signedIn('sow@example.com');
-    await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true, isSuperAdmin: false, staffId: 'staff-1' });
-    signedIn('sow@example.com');
-    await expect(requireFarmSuperAdmin()).rejects.toMatchObject({ code: 'not_super_admin' });
-    signedIn('stranger@example.com');
-    await expect(requireFarmOperator()).rejects.toMatchObject({ code: 'not_operator' });
+  it('an active person on the staff register signing in with their email is matched to their record, inside a scope only', async () => {
+    staffMock.mockImplementation(async (email: string) => (email === 'sow@example.com' ? { id: 'staff-1', roles: ['operator'] } : null));
+    signedIn('sow@example.com', MEMBER);
+    await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true, isSuperAdmin: false, staffId: 'staff-1', staffRoles: ['operator'] });
+    scopeMock.mockReturnValue(null);
+    signedIn('sow@example.com', MEMBER);
+    await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true, staffId: null, workspaceId: null });
+    expect(staffMock).toHaveBeenCalledTimes(1);
   });
 
-  it('the FARM_OPERATOR_EMAILS allowlist grants the operator role without a code change', async () => {
-    const prev = process.env['FARM_OPERATOR_EMAILS'];
-    process.env['FARM_OPERATOR_EMAILS'] = 'Receiver@Example.com';
+  it('the FARM_PLATFORM_ADMIN_EMAILS list adds platform admins without a code change', async () => {
+    const prev = process.env['FARM_PLATFORM_ADMIN_EMAILS'];
+    process.env['FARM_PLATFORM_ADMIN_EMAILS'] = 'Support@Example.com';
     try {
-      signedIn('receiver@example.com');
-      await expect(requireFarmOperator()).resolves.toMatchObject({ isOperator: true });
+      signedIn('support@example.com', MEMBER);
+      await expect(requireFarmSuperAdmin()).resolves.toMatchObject({ isSuperAdmin: true });
     } finally {
-      if (prev === undefined) delete process.env['FARM_OPERATOR_EMAILS'];
-      else process.env['FARM_OPERATOR_EMAILS'] = prev;
+      if (prev === undefined) delete process.env['FARM_PLATFORM_ADMIN_EMAILS'];
+      else process.env['FARM_PLATFORM_ADMIN_EMAILS'] = prev;
     }
   });
 
   it('the guard returns an identity whose userId is non-null, so callers need no re-check', async () => {
-    signedIn(SUPER_ADMIN_EMAIL);
+    signedIn('owner@example.com', ADMIN);
     const identity = await requireFarmSuperAdmin();
     expect(identity.userId).toBe('user_123');
   });
@@ -137,20 +145,12 @@ describe('farm access guards — fail closed on every no-access path', () => {
 
 describe('farm access guards — getFarmAccess still reports without throwing', () => {
   it('the reporting form, for the read paths that branch on access', async () => {
-    signedIn('stranger@example.com');
-    const a = await getFarmAccess();
-    expect(a).toEqual({ userId: 'user_123', email: 'stranger@example.com', name: null, isSuperAdmin: false, isOperator: false, staffId: null, staffRoles: [], tier: 'user' });
+    signedIn('stranger@example.com', null);
+    await expect(getFarmAccess()).resolves.toMatchObject({ userId: 'user_123', orgId: null, isOperator: false, isSuperAdmin: false });
   });
-});
 
-describe('farm access guards — refusal conversion', () => {
-  it('turns a guard refusal into the result shape the actions return', () => {
-    expect(accessRefusal(new FarmAccessError('not_super_admin'))).toEqual({ ok: false, error: 'Super admin only.' });
+  it('accessRefusal turns a guard error into the action result shape and passes other errors through', () => {
     expect(accessRefusal(new FarmAccessError('not_operator'))).toEqual({ ok: false, error: 'Not authorized for this workspace.' });
-  });
-
-  it('does NOT swallow an unrelated error — the caller must rethrow', () => {
-    expect(accessRefusal(new Error('database is down'))).toBeNull();
-    expect(accessRefusal('not even an error')).toBeNull();
+    expect(accessRefusal(new Error('boom'))).toBeNull();
   });
 });

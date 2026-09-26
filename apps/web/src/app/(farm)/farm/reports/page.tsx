@@ -4,6 +4,7 @@ import { getFarmAccess } from '../_lib/access';
 import { buildReportLibrary } from '../_lib/reports';
 import { parseRecent, RECENT_REPORTS_COOKIE } from '../_engine/reports';
 import { ReportsClient } from './ReportsClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,10 @@ export const dynamic = 'force-dynamic';
  * operator's page never reads or sends a company financial.
  */
 export default async function ReportsPage() {
+  return withWorkspace(() => ReportsPageInner());
+}
+
+async function ReportsPageInner() {
   const [access, jar] = await Promise.all([getFarmAccess(), cookies()]);
   const library = await buildReportLibrary(access);
   const recent = parseRecent(jar.get(RECENT_REPORTS_COOKIE)?.value).filter((id) => library.reports.some((r) => r.def.id === id));

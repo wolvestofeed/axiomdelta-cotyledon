@@ -9,6 +9,7 @@ import { SUBSCRIBER_STATUS_LABELS } from '@/app/(farm)/farm/_data/subscribers';
 import { getFarmAccess } from '@/app/(farm)/farm/_lib/access';
 import { loadTimeClock } from '@/app/(farm)/farm/_lib/working-capital';
 import { TimeClockCard } from '@/app/(farm)/farm/_components/TimeClockCard';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,10 @@ const addDays = (iso: string, n: number) => {
  * sign-in while it is built.
  */
 export default async function SalesPortalPage() {
+  return withWorkspace(() => SalesPortalPageInner());
+}
+
+async function SalesPortalPageInner() {
   // Checked on the page as well as the shell: a layout gate alone is not enough (CLAUDE.md §10).
   if (!(await getFarmAccess()).isOperator) return null;
   const today = new Date().toISOString().slice(0, 10);

@@ -4,6 +4,7 @@ import { PageHeader } from '@/app/(farm)/farm/_components/ui';
 import { FlatBuilderClient, type FlatBuilderData } from './FlatBuilderClient';
 import { getResolvedActiveInputs } from '@/app/(farm)/farm/_lib/scenarios';
 import { packageUnitCost } from '@/app/(farm)/farm/_engine/packaging';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,11 @@ export const dynamic = 'force-dynamic';
  * and instructions. A basic page while the Subscriber Portal is developed: it reads the crop plan
  * and packaging libraries and prices the order, and submitting is not connected yet.
  */
-export default async function FlatBuilderPage({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
+export default async function FlatBuilderPage(props: Parameters<typeof FlatBuilderPageInner>[0]) {
+  return withWorkspace(() => FlatBuilderPageInner(props));
+}
+
+async function FlatBuilderPageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
   {
     const a = await getFarmAccess();

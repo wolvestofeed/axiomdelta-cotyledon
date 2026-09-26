@@ -6,6 +6,7 @@ import type { SustainabilityBasis } from '../_engine/sustainability-basis';
 import { loadSustainabilityRecords, postSustainabilityBasis } from './sustainability';
 import type { SustainabilityRecords } from '../_engine/sustainability-records';
 import type { FarmScenarioConfig } from '../_engine/scenario';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — the sustainability volume on the selected ledger (Roadmap N6 slice 4).
@@ -21,7 +22,11 @@ const Input = z.object({
   config: z.record(z.string(), z.unknown()).default({}),
 });
 
-export async function loadSustainabilityBasis(input: unknown): Promise<Result<{ basis: SustainabilityBasis; records: SustainabilityRecords | null }>> {
+export async function loadSustainabilityBasis(...args: Parameters<typeof loadSustainabilityBasisInner>): ReturnType<typeof loadSustainabilityBasisInner> {
+  return withWorkspace(() => loadSustainabilityBasisInner(...args));
+}
+
+async function loadSustainabilityBasisInner(input: unknown): Promise<Result<{ basis: SustainabilityBasis; records: SustainabilityRecords | null }>> {
   const parsed = Input.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'The sustainability request was not understood.' };
   try {

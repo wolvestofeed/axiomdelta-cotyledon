@@ -2,11 +2,16 @@ import { PageHeader } from '../../_components/ui';
 import { getFarmAccess } from '../../_lib/access';
 import { listTimeStudies } from '../../_lib/time-studies';
 import { ProcessClient } from './ProcessClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** The process map (scheduler build plan W3): a crop plan's route, edited step by step in the forecast. */
 export default async function ProcessPage() {
+  return withWorkspace(() => ProcessPageInner());
+}
+
+async function ProcessPageInner() {
   const [access, library] = await Promise.all([getFarmAccess(), listTimeStudies()]);
   return (
     <>

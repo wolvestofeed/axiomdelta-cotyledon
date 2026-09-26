@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import '@/app/(farm)/farm/_components/farm.css';
 import { getFarmAccess } from '@/app/(farm)/farm/_lib/access';
 import { PortalShell } from '@/app/(farm)/farm/_components/PortalShell';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * The sales shell (Roadmap P1, P1b). A sibling route group to `farm/`, like the Grow Room, so
@@ -26,7 +27,11 @@ const LINKS = [
   { href: '/farm/orders', label: 'Orders' },
 ];
 
-export default async function SalesLayout({ children }: { children: React.ReactNode }) {
+export default async function SalesLayout(props: Parameters<typeof SalesLayoutInner>[0]) {
+  return withWorkspace(() => SalesLayoutInner(props));
+}
+
+async function SalesLayoutInner({ children }: { children: React.ReactNode }) {
   const access = await getFarmAccess();
   if (!access.userId) redirect('/sign-in');
   // Internal only (Roadmap P3): an external portal account never opens the Sales shell.

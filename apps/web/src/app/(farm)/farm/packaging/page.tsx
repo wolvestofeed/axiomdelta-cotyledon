@@ -1,10 +1,15 @@
 import { PageHeader } from '../_components/ui';
 import { getFarmAccess } from '../_lib/access';
 import { PackagingClient } from './PackagingClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function PackagingPage() {
+  return withWorkspace(() => PackagingPageInner());
+}
+
+async function PackagingPageInner() {
   const access = await getFarmAccess();
   return (
     <>

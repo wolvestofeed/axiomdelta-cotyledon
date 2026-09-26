@@ -9,6 +9,7 @@ import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { leanSuppliersById } from './supplier-links';
 import { supplierOptionId } from '../_engine/supplier-links';
 import { listCropPlans } from './crop-plans';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Supplier-specific LCA options. SUPER ADMIN ONLY.
@@ -37,7 +38,11 @@ const CreateInput = z.object({
   note: z.string().trim().max(1000).optional(),
 });
 
-export async function createSupplierLcaOption(input: unknown): Promise<Result> {
+export async function createSupplierLcaOption(...args: Parameters<typeof createSupplierLcaOptionInner>): ReturnType<typeof createSupplierLcaOptionInner> {
+  return withWorkspace(() => createSupplierLcaOptionInner(...args));
+}
+
+async function createSupplierLcaOptionInner(input: unknown): Promise<Result> {
   const parsed = CreateInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -88,7 +93,11 @@ export async function createSupplierLcaOption(input: unknown): Promise<Result> {
   return { ok: true, id };
 }
 
-export async function deleteSupplierLcaOption(id: string): Promise<Result> {
+export async function deleteSupplierLcaOption(...args: Parameters<typeof deleteSupplierLcaOptionInner>): ReturnType<typeof deleteSupplierLcaOptionInner> {
+  return withWorkspace(() => deleteSupplierLcaOptionInner(...args));
+}
+
+async function deleteSupplierLcaOptionInner(id: string): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();

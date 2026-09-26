@@ -1,10 +1,15 @@
 import { PageHeader } from '../_components/ui';
 import { getFarmAccess } from '../_lib/access';
 import { EquipmentClient } from './EquipmentClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EquipmentPage() {
+  return withWorkspace(() => EquipmentPageInner());
+}
+
+async function EquipmentPageInner() {
   const access = await getFarmAccess();
   return (
     <>

@@ -4,11 +4,16 @@ import { loadActuals } from '../../_lib/actuals';
 import { loadCalendar } from '../../_lib/periods';
 import { listTimeStudies } from '../../_lib/time-studies';
 import { DayScheduleClient } from './DayScheduleClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** The day schedule (scheduler build plan W2): one operating day placed on the clock. */
 export default async function DaySchedulePage() {
+  return withWorkspace(() => DaySchedulePageInner());
+}
+
+async function DaySchedulePageInner() {
   const [cycles, orders, actuals, calendar, library] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   return (

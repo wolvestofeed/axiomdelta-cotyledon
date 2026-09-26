@@ -9,6 +9,7 @@ import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { EQUIPMENT_CATEGORIES } from '../_data/capex';
 import { FACILITY_ZONES } from '../_data/facility-design';
 import { uniqueEquipmentKey } from '../_engine/equipment';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — equipment library, writes. SUPER ADMIN ONLY.
@@ -64,7 +65,11 @@ const EquipmentPatch = z.object({
   specSheetUrl: z.string().url('The spec sheet is a URL').max(500).nullable().optional(),
 });
 
-export async function updateEquipment(input: unknown): Promise<Result> {
+export async function updateEquipment(...args: Parameters<typeof updateEquipmentInner>): ReturnType<typeof updateEquipmentInner> {
+  return withWorkspace(() => updateEquipmentInner(...args));
+}
+
+async function updateEquipmentInner(input: unknown): Promise<Result> {
   const parsed = EquipmentPatch.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -91,7 +96,11 @@ const EquipmentInput = z.object({
 });
 
 /** Add a row to the library: status –, no quantity, no cost, until someone enters them. */
-export async function createEquipment(input: unknown): Promise<Result<{ id: string }>> {
+export async function createEquipment(...args: Parameters<typeof createEquipmentInner>): ReturnType<typeof createEquipmentInner> {
+  return withWorkspace(() => createEquipmentInner(...args));
+}
+
+async function createEquipmentInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = EquipmentInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

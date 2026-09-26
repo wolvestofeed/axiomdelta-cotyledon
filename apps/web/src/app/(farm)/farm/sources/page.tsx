@@ -5,10 +5,15 @@ import { listSources } from '../_lib/sources';
 import { getFarmAccess } from '../_lib/access';
 import { SOURCE_KINDS, formatBytes } from '../_engine/sources';
 import type { StatusTag } from '../_data/plan-data';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SourcesPage() {
+  return withWorkspace(() => SourcesPageInner());
+}
+
+async function SourcesPageInner() {
   const [access, sources] = await Promise.all([getFarmAccess(), listSources()]);
   const withFile = sources.filter((s) => s.fileName);
   const figures = sources.reduce((n, s) => n + s.figureCount, 0);

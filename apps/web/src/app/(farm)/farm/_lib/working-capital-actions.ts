@@ -33,6 +33,7 @@ import {
   type BillLine,
 } from '../_engine/working-capital';
 import { isSubscriberPaymentTerms, isPaymentTerms } from '../_data/working-capital';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — working capital, writes (Roadmap Phase K).
@@ -69,7 +70,11 @@ const SupplierTermsInput = z.object({
 });
 
 /** Set a supplier's payment terms. There is no default; a supplier with none has none. */
-export async function setSupplierTerms(input: unknown): Promise<Result> {
+export async function setSupplierTerms(...args: Parameters<typeof setSupplierTermsInner>): ReturnType<typeof setSupplierTermsInner> {
+  return withWorkspace(() => setSupplierTermsInner(...args));
+}
+
+async function setSupplierTermsInner(input: unknown): Promise<Result> {
   const parsed = SupplierTermsInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -83,7 +88,7 @@ export async function setSupplierTerms(input: unknown): Promise<Result> {
     await tx
       .insert(farmSupplierTerms)
       .values({ supplierId: d.supplierId, supplierName: d.supplierName, paymentTerms: d.paymentTerms, updatedBy: access.userId })
-      .onConflictDoUpdate({ target: farmSupplierTerms.supplierId, set: { supplierName: d.supplierName, paymentTerms: d.paymentTerms, updatedBy: access.userId, updatedAt: new Date() } });
+      .onConflictDoUpdate({ target: [farmSupplierTerms.workspaceId, farmSupplierTerms.supplierId], set: { supplierName: d.supplierName, paymentTerms: d.paymentTerms, updatedBy: access.userId, updatedAt: new Date() } });
     await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'set_payment_terms', recordKind: 'supplier_terms', recordId: d.supplierId, period: periodOf(today()), detail: { supplierName: d.supplierName, paymentTerms: d.paymentTerms } });
   });
   revalidatePath('/farm', 'layout');
@@ -101,7 +106,11 @@ const OpeningInput = z.object({
 });
 
 /** Record the opening balance sheet of the actuals. One is kept; a second is refused. */
-export async function recordOpeningBalance(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordOpeningBalance(...args: Parameters<typeof recordOpeningBalanceInner>): ReturnType<typeof recordOpeningBalanceInner> {
+  return withWorkspace(() => recordOpeningBalanceInner(...args));
+}
+
+async function recordOpeningBalanceInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = OpeningInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -138,7 +147,11 @@ const RouteInput = z.object({
  * Restaurants, not yet on an invoice, is added to its subscriber's open
  * invoice for the month — opened now if there is none.
  */
-export async function completeRoute(input: unknown): Promise<Result<{ invoices: number; distributions: number; skipped: string[] }>> {
+export async function completeRoute(...args: Parameters<typeof completeRouteInner>): ReturnType<typeof completeRouteInner> {
+  return withWorkspace(() => completeRouteInner(...args));
+}
+
+async function completeRouteInner(input: unknown): Promise<Result<{ invoices: number; distributions: number; skipped: string[] }>> {
   const parsed = RouteInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -193,7 +206,11 @@ export async function completeRoute(input: unknown): Promise<Result<{ invoices: 
 const IssueInput = z.object({ invoiceId: z.string().uuid(), issuedOn: isoDate });
 
 /** Issue an open invoice with the subscriber's terms and its due date. Refused without terms on file. */
-export async function issueInvoice(input: unknown): Promise<Result<{ dueOn: string }>> {
+export async function issueInvoice(...args: Parameters<typeof issueInvoiceInner>): ReturnType<typeof issueInvoiceInner> {
+  return withWorkspace(() => issueInvoiceInner(...args));
+}
+
+async function issueInvoiceInner(input: unknown): Promise<Result<{ dueOn: string }>> {
   const parsed = IssueInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -237,7 +254,11 @@ const SubscriberPaymentInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-export async function recordSubscriberPayment(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordSubscriberPayment(...args: Parameters<typeof recordSubscriberPaymentInner>): ReturnType<typeof recordSubscriberPaymentInner> {
+  return withWorkspace(() => recordSubscriberPaymentInner(...args));
+}
+
+async function recordSubscriberPaymentInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = SubscriberPaymentInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -319,7 +340,11 @@ async function checkBill(d: z.infer<typeof SupplierBillInput>, billId: string | 
 }
 
 /** Record a supplier's bill against its receipts. A mismatched bill is recorded, flagged, and not paid until rectified. */
-export async function recordSupplierBill(input: unknown): Promise<Result<{ id: string; status: 'matched' | 'mismatched'; issues: string[] }>> {
+export async function recordSupplierBill(...args: Parameters<typeof recordSupplierBillInner>): ReturnType<typeof recordSupplierBillInner> {
+  return withWorkspace(() => recordSupplierBillInner(...args));
+}
+
+async function recordSupplierBillInner(input: unknown): Promise<Result<{ id: string; status: 'matched' | 'mismatched'; issues: string[] }>> {
   const parsed = SupplierBillInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -345,7 +370,11 @@ export async function recordSupplierBill(input: unknown): Promise<Result<{ id: s
 }
 
 /** Rectify a bill: replace its number, date, receipts and lines. Refused once a payment is applied to it. */
-export async function updateSupplierBill(input: unknown): Promise<Result<{ status: 'matched' | 'mismatched'; issues: string[] }>> {
+export async function updateSupplierBill(...args: Parameters<typeof updateSupplierBillInner>): ReturnType<typeof updateSupplierBillInner> {
+  return withWorkspace(() => updateSupplierBillInner(...args));
+}
+
+async function updateSupplierBillInner(input: unknown): Promise<Result<{ status: 'matched' | 'mismatched'; issues: string[] }>> {
   const parsed = SupplierBillInput.extend({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -389,7 +418,11 @@ const SupplierPaymentInput = z.object({
 });
 
 /** Pay supplier bills. A bill that does not match its purchase order and receipts is refused. */
-export async function recordSupplierPayment(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordSupplierPayment(...args: Parameters<typeof recordSupplierPaymentInner>): ReturnType<typeof recordSupplierPaymentInner> {
+  return withWorkspace(() => recordSupplierPaymentInner(...args));
+}
+
+async function recordSupplierPaymentInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = SupplierPaymentInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -431,7 +464,11 @@ const DeleteInput = z.object({
 });
 
 /** Remove a working-capital record. Super admin; refused inside a locked period; the removal is on the trail. */
-export async function deleteWorkingCapitalRecord(input: unknown): Promise<Result> {
+export async function deleteWorkingCapitalRecord(...args: Parameters<typeof deleteWorkingCapitalRecordInner>): ReturnType<typeof deleteWorkingCapitalRecordInner> {
+  return withWorkspace(() => deleteWorkingCapitalRecordInner(...args));
+}
+
+async function deleteWorkingCapitalRecordInner(input: unknown): Promise<Result> {
   const parsed = DeleteInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

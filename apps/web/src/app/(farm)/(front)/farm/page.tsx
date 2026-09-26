@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import icon from '@/app/(farm)/farm/_assets/farm-icon-512.png';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * `/farm` — the welcome page: the brand stacked as in the OS header — the mark,
@@ -9,6 +10,10 @@ import icon from '@/app/(farm)/farm/_assets/farm-icon-512.png';
  * button goes straight to the router; signed out, to the one sign-in.
  */
 export default async function FrontDoorPage() {
+  return withWorkspace(() => FrontDoorPageInner());
+}
+
+async function FrontDoorPageInner() {
   const { userId } = await auth();
   return (
     <div className="farm-front-welcome">

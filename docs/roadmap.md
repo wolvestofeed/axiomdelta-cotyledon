@@ -17,7 +17,7 @@ Phase status only, one line per step. The phases are defined in [`outline.md`](o
 - [x] One consolidated migration, `packages/db/drizzle/0001_farm_init.sql`
 - [x] `test/farm-vocabulary.test.ts` fails on any surviving kitchen word outside the Phase 2 allowlist (the seeded crop plan, nutrient profile, grow stages, produce-safety plan, fixtures)
 - [x] Typecheck clean; 918 tests pass
-- [ ] Workspaces: `workspaces` table, `workspace_id` on every table, Clerk organizations mapped to workspaces, `requireWorkspaceOperator()` / `requireWorkspaceAdmin()` guards, seeds per workspace (`docs/outline.md` §7)
+- [x] Workspaces: `farm.workspaces`, `workspace_id` on all 51 tables with row-level security (migration 0002), one Clerk organization per workspace, roles from the organization, every entry point in `withWorkspace()`, scripts via `FARM_WORKSPACE` (`docs/outline.md` §7)
 - [ ] Lint: three react-hooks errors carried over from the source (`OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`)
 ## Phase 2 — Growing domain  status: NOT STARTED
 ## Phase 3 — Subscriptions and distribution  status: NOT STARTED

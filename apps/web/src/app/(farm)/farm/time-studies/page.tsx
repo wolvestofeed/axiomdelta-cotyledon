@@ -2,11 +2,16 @@ import { PageHeader } from '../_components/ui';
 import { getFarmAccess } from '../_lib/access';
 import { listTimeStudies } from '../_lib/time-studies';
 import { TimeStudiesClient } from './TimeStudiesClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** Time Studies (Roadmap O2): time studies for every crop plan in the library. No wage or pay. */
 export default async function TimeStudiesPage() {
+  return withWorkspace(() => TimeStudiesPageInner());
+}
+
+async function TimeStudiesPageInner() {
   const [access, library] = await Promise.all([getFarmAccess(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   return (

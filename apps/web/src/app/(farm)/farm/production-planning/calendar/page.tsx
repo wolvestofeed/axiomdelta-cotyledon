@@ -4,11 +4,16 @@ import { loadActuals } from '../../_lib/actuals';
 import { loadCalendar } from '../../_lib/periods';
 import { listTimeStudies } from '../../_lib/time-studies';
 import { CalendarClient } from './CalendarClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** The calendar (scheduler build plan W4): the horizon month by month. */
 export default async function CalendarPage() {
+  return withWorkspace(() => CalendarPageInner());
+}
+
+async function CalendarPageInner() {
   const [cycles, orders, actuals, calendar, library] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   return (

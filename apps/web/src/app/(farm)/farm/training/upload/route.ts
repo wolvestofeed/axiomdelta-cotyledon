@@ -6,6 +6,7 @@ import { getFarmAccess } from '../../_lib/access';
 import { listTrainingDocs } from '../../_lib/training';
 import { docKeyFrom, nextVersion } from '../../_engine/training';
 import { inferMime, MAX_UPLOAD_BYTES } from '../../_engine/sources';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Upload a version of a training document. SUPER ADMIN ONLY.
@@ -18,7 +19,11 @@ import { inferMime, MAX_UPLOAD_BYTES } from '../../_engine/sources';
  * A route handler rather than a server action: server actions cap the body far
  * below a scanned training manual.
  */
-export async function POST(req: Request): Promise<Response> {
+export async function POST(...args: Parameters<typeof POSTInner>): ReturnType<typeof POSTInner> {
+  return withWorkspace(() => POSTInner(...args));
+}
+
+async function POSTInner(req: Request): Promise<Response> {
   const access = await getFarmAccess();
   if (!access.isSuperAdmin || !access.userId) {
     return Response.json({ ok: false, error: 'Super admin only.' }, { status: 403 });

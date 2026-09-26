@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { eq, sql } from 'drizzle-orm';
 import { createDb, dbUrlFromEnv, farmSources, farmSourceFigures } from '../../../packages/db/src/index.js';
+import { scopedHandle } from './_workspace';
 import { factorRegistry } from '../src/app/(farm)/farm/_data/emission-factors';
 import { groupFactorsBySource, inferMime, specSheetSources } from '../src/app/(farm)/farm/_engine/sources';
 import { REFERENCE_SOURCES } from '../src/app/(farm)/farm/_data/sources-registry';
@@ -115,7 +116,7 @@ const STORED: StoredDoc[] = [
 const SUPERSEDED: string[] = ['msu_ucs_amp_grazing_metrics.csv'];
 
 async function main(): Promise<void> {
-  const handle = createDb(dbUrlFromEnv());
+  const handle = await scopedHandle();
   const db = handle.db;
   let sources = 0;
   let figures = 0;

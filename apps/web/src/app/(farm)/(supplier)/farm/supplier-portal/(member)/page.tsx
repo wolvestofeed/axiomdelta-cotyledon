@@ -6,6 +6,7 @@ import { leanSuppliersById } from '@/app/(farm)/farm/_lib/supplier-links';
 import { supplierRatings, ratingFor } from '@/app/(farm)/farm/_data/mark';
 import { RatingPill, RatingLegend } from '@/app/(farm)/farm/_components/MarkRating';
 import { SupplierPortalForms } from './SupplierPortalForms';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,10 @@ export const dynamic = 'force-dynamic';
  * gated beyond sign-in. The catalog on file is what a submitted line sheet becomes.
  */
 export default async function SupplierPortalPage() {
+  return withWorkspace(() => SupplierPortalPageInner());
+}
+
+async function SupplierPortalPageInner() {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
   {
     const a = await getFarmAccess();

@@ -14,6 +14,7 @@ import { hydrateEntityRefs } from '../_lib/entity-directory';
 import { entityRef, type LeanEntity } from '../_engine/entity-links';
 import { finishedGoodsOnHand, unitFactorFor, type Consumption } from '../_engine/production-plan';
 import { rawStockOnHand, rawLotsByUseBy } from '../_engine/net-requirements';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,11 @@ const daysBetween = (from: string, to: string) => Math.round((Date.parse(to) - D
  * forecast's own timeline: its sowings, receipts and distributions, as of the end of
  * the month picked. Nothing on Plan is recorded, so it carries no trace or link.
  */
-export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function InventoryPage(props: Parameters<typeof InventoryPageInner>[0]) {
+  return withWorkspace(() => InventoryPageInner(props));
+}
+
+async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const [kind, access, params] = await Promise.all([getLedgerKind(), getFarmAccess(), searchParams]);
   const isPlan = kind === 'plan';
   const now = new Date().toISOString().slice(0, 10);

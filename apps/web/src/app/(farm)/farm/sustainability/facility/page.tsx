@@ -4,6 +4,7 @@ import { getFarmAccess } from '../../_lib/access';
 import { getScenarioView } from '../../_lib/scenarios';
 import { listFacilityLayouts, PLAN_DATA_KEY } from '../../_lib/facility';
 import { FacilityClient } from './FacilityClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,10 @@ export const dynamic = 'force-dynamic';
  * page is derived from it, the open forecast's phasing included.
  */
 export default async function FacilityPage() {
+  return withWorkspace(() => FacilityPageInner());
+}
+
+async function FacilityPageInner() {
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="Facility" note="The Facility Design and Build plan, the space requirement, the conformance register and the floor layout are held for the admins." />;
   const view = await getScenarioView();
   const scenarioKey = view.id ?? PLAN_DATA_KEY;

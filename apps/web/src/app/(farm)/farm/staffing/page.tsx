@@ -4,6 +4,7 @@ import { getResolvedActiveInputs } from '../_lib/scenarios';
 import { loadClosedPayrollPeriods, loadTimeClock } from '../_lib/working-capital';
 import { payrollCalendar } from '../_data/working-capital';
 import { StaffingClient } from './StaffingClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,10 @@ export const dynamic = 'force-dynamic';
  * browser. Staff notes are withheld from non-admins the same way.
  */
 export default async function StaffingPage() {
+  return withWorkspace(() => StaffingPageInner());
+}
+
+async function StaffingPageInner() {
   const access = await getFarmAccess();
   const isAdmin = access.isSuperAdmin;
   if (!isAdmin && !access.staffId) {

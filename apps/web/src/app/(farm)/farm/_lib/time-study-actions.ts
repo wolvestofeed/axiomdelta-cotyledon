@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { appendPosting } from './posting-log';
 import { insertTimeStudy } from './seed-writes';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — time studies, writes. SUPER ADMIN ONLY (Roadmap O2).
@@ -46,7 +47,11 @@ const StudyInput = z.object({
   lines: z.array(Line).min(1, 'A study has at least one task line').max(100),
 });
 
-export async function recordTimeStudy(input: unknown): Promise<Result<{ id: string }>> {
+export async function recordTimeStudy(...args: Parameters<typeof recordTimeStudyInner>): ReturnType<typeof recordTimeStudyInner> {
+  return withWorkspace(() => recordTimeStudyInner(...args));
+}
+
+async function recordTimeStudyInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = StudyInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -63,7 +68,11 @@ export async function recordTimeStudy(input: unknown): Promise<Result<{ id: stri
 }
 
 /** Adopt a study as its crop plan's labor standard. The adoption is an entry on the posting trail. */
-export async function adoptTimeStudy(input: unknown): Promise<Result> {
+export async function adoptTimeStudy(...args: Parameters<typeof adoptTimeStudyInner>): ReturnType<typeof adoptTimeStudyInner> {
+  return withWorkspace(() => adoptTimeStudyInner(...args));
+}
+
+async function adoptTimeStudyInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -97,7 +106,11 @@ export async function adoptTimeStudy(input: unknown): Promise<Result> {
 }
 
 /** Set a crop plan's re-study interval in days, or clear it with null. */
-export async function setRestudyInterval(input: unknown): Promise<Result> {
+export async function setRestudyInterval(...args: Parameters<typeof setRestudyIntervalInner>): ReturnType<typeof setRestudyIntervalInner> {
+  return withWorkspace(() => setRestudyIntervalInner(...args));
+}
+
+async function setRestudyIntervalInner(input: unknown): Promise<Result> {
   const parsed = z.object({ cropPlanId: z.string().uuid(), intervalDays: z.number().int().min(1, 'The interval is at least one day').max(3650).nullable() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;

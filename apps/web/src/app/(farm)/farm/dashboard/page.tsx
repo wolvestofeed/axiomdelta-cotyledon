@@ -38,6 +38,7 @@ import { postSustainabilityBasis } from '../_lib/sustainability';
 import { listSupplierLcaOptions } from '../_lib/supplier-lca';
 import { lcaOptions as curatedOptions } from '../_data/lca-options';
 import { factorRegistry } from '../_data/emission-factors';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 const DASHBOARD_PURPOSE = 'See today\'s plan, stock, capacity and anything that needs attention.';
 const DASHBOARD_HOW = (
@@ -55,8 +56,13 @@ const DASHBOARD_HOW = (
  * operator's page never reads or sends the financial figures.
  */
 export default async function FarmDashboard() {
+  return withWorkspace(() => FarmDashboardInner());
+}
+
+async function FarmDashboardInner() {
   const access = await getFarmAccess();
-  return access.isSuperAdmin ? <AdminDashboard /> : <OperatorDashboard staffId={access.staffId} />;
+  // Called directly, not rendered as elements, so both run inside the workspace scope.
+  return access.isSuperAdmin ? await AdminDashboard() : await OperatorDashboard({ staffId: access.staffId });
 }
 
 // ── Shared: what both dashboards read ───────────────────────────────────────

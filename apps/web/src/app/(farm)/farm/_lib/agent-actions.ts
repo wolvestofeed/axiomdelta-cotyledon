@@ -22,6 +22,7 @@ import { insertTimeStudy } from './seed-writes';
 import { parseProposal, type OpenQuestion, type CropPlanVariantProposal } from '../_engine/agent-proposal';
 import { nextCropPlanCode } from '../_engine/crop-plan-library';
 import { SUBMIT_TOOL, SYSTEM_PROMPT, buildUserMessage, contextFor } from './agent-prompt';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — agentic assistance, the two server actions (agentic-assistance
@@ -100,7 +101,11 @@ export interface InterpretResult {
 }
 
 /** Interpret the chef's instruction into a typed proposal. The engine resolves it on the client. */
-export async function interpretCropPlanInstruction(input: unknown): Promise<Result<InterpretResult>> {
+export async function interpretCropPlanInstruction(...args: Parameters<typeof interpretCropPlanInstructionInner>): ReturnType<typeof interpretCropPlanInstructionInner> {
+  return withWorkspace(() => interpretCropPlanInstructionInner(...args));
+}
+
+async function interpretCropPlanInstructionInner(input: unknown): Promise<Result<InterpretResult>> {
   const parsed = InterpretInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -179,7 +184,11 @@ const SaveInput = z.object({
 });
 
 /** Write the resolved variant to the library at Developing, with its estimated study. */
-export async function saveCropPlanVariant(input: unknown): Promise<Result<{ id: string; code: string }>> {
+export async function saveCropPlanVariant(...args: Parameters<typeof saveCropPlanVariantInner>): ReturnType<typeof saveCropPlanVariantInner> {
+  return withWorkspace(() => saveCropPlanVariantInner(...args));
+}
+
+async function saveCropPlanVariantInner(input: unknown): Promise<Result<{ id: string; code: string }>> {
   const parsed = SaveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;

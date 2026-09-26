@@ -5,6 +5,7 @@ import { farmSources } from '@mf/db';
 import { db } from '@/lib/db';
 import { getFarmAccess } from '../../_lib/access';
 import { inferMime, isSourceKind, MAX_UPLOAD_BYTES } from '../../_engine/sources';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Register a document by upload. SUPER ADMIN ONLY. Multipart body with the
@@ -13,7 +14,11 @@ import { inferMime, isSourceKind, MAX_UPLOAD_BYTES } from '../../_engine/sources
  * the route-handler ceiling are refused here with a message; larger documents
  * load through `pnpm farm:sources` from the research folder.
  */
-export async function POST(req: Request): Promise<Response> {
+export async function POST(...args: Parameters<typeof POSTInner>): ReturnType<typeof POSTInner> {
+  return withWorkspace(() => POSTInner(...args));
+}
+
+async function POSTInner(req: Request): Promise<Response> {
   const access = await getFarmAccess();
   if (!access.isSuperAdmin || !access.userId) {
     return Response.json({ ok: false, error: 'Super admin only.' }, { status: 403 });

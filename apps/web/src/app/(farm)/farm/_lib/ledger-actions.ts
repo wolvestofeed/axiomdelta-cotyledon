@@ -10,6 +10,7 @@ import { linksFrom, onePerFrom } from './entity-links';
 import { hydrateEntityRefs } from './entity-directory';
 import { entityRef } from '../_engine/entity-links';
 import { LEDGER_COOKIE, isLedgerKind, type LedgerBookView, type LedgerJournalView, type LedgerKind } from '../_engine/ledger-view';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — the ledger selector and the books behind it (Roadmap N6).
@@ -29,7 +30,11 @@ function refuse(e: unknown): { ok: false; error: string } {
 }
 
 /** Choose the ledger this person reads. A cookie: it follows the person, not the workspace. */
-export async function setLedgerKind(kind: unknown): Promise<Result<object>> {
+export async function setLedgerKind(...args: Parameters<typeof setLedgerKindInner>): ReturnType<typeof setLedgerKindInner> {
+  return withWorkspace(() => setLedgerKindInner(...args));
+}
+
+async function setLedgerKindInner(kind: unknown): Promise<Result<object>> {
   if (!isLedgerKind(kind)) return { ok: false, error: 'Choose Plan or Actual.' };
   try {
     await requireFarmOperator();
@@ -49,7 +54,11 @@ const BookInput = z.object({
 });
 
 /** The statements of the selected ledger, by month, quarter and year. Company financials: super admins. */
-export async function loadLedgerBook(input: unknown): Promise<Result<{ book: LedgerBookView }>> {
+export async function loadLedgerBook(...args: Parameters<typeof loadLedgerBookInner>): ReturnType<typeof loadLedgerBookInner> {
+  return withWorkspace(() => loadLedgerBookInner(...args));
+}
+
+async function loadLedgerBookInner(input: unknown): Promise<Result<{ book: LedgerBookView }>> {
   const parsed = BookInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'The ledger request was not understood.' };
   try {
@@ -87,7 +96,11 @@ const JournalInput = BookInput.extend({
 });
 
 /** The journal entries of the selected ledger in a date range, with the trial balance through its end. Super admins. */
-export async function loadLedgerJournal(input: unknown): Promise<Result<{ journal: LedgerJournalView }>> {
+export async function loadLedgerJournal(...args: Parameters<typeof loadLedgerJournalInner>): ReturnType<typeof loadLedgerJournalInner> {
+  return withWorkspace(() => loadLedgerJournalInner(...args));
+}
+
+async function loadLedgerJournalInner(input: unknown): Promise<Result<{ journal: LedgerJournalView }>> {
   const parsed = JournalInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'The journal request was not understood.' };
   try {

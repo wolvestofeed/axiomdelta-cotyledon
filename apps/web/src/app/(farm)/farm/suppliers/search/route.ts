@@ -1,12 +1,17 @@
 import { getFarmAccess } from '../../_lib/access';
 import { leanSuppliersById, searchLeanSuppliers } from '../../_lib/supplier-links';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Lean supplier lookup for the browser: `?q=` searches name, products and
  * type (Central Texas first); `?ids=a,b` hydrates known ids. Operator-gated;
  * returns at most 25 search results and never the full directory.
  */
-export async function GET(req: Request): Promise<Response> {
+export async function GET(...args: Parameters<typeof GETInner>): ReturnType<typeof GETInner> {
+  return withWorkspace(() => GETInner(...args));
+}
+
+async function GETInner(req: Request): Promise<Response> {
   const access = await getFarmAccess();
   if (!access.isOperator) return new Response('Not found', { status: 404 });
   const url = new URL(req.url);

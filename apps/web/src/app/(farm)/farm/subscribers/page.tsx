@@ -4,10 +4,15 @@ import { loadActuals } from '../_lib/actuals';
 import { listSubscriptionCycles, listOrders } from '../_lib/orders';
 import { pickupPoints as seedPickupPoints } from '../_data/seed-invented';
 import { SubscribersClient } from './SubscribersClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SubscribersPage() {
+  return withWorkspace(() => SubscribersPageInner());
+}
+
+async function SubscribersPageInner() {
   const [access, actuals, cycles, orders] = await Promise.all([getFarmAccess(), loadActuals(), listSubscriptionCycles(), listOrders()]);
   const today = new Date().toISOString().slice(0, 10);
 

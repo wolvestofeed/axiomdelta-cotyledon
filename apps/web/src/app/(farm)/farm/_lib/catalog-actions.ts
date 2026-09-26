@@ -16,6 +16,7 @@ import {
   PRICE_BASES,
   type PoStatus,
 } from '../_engine/catalog';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * Supplier catalogs and purchase orders. SUPER ADMIN ONLY.
@@ -58,7 +59,11 @@ const ImportInput = z.object({
 const skuKey = (sku: string | null) => (sku && sku.trim() ? `sku:${sku.trim().toLowerCase()}` : null);
 const nameKey = (item: string) => `item:${item.trim().toLowerCase()}`;
 
-export async function importSupplierCatalog(
+export async function importSupplierCatalog(...args: Parameters<typeof importSupplierCatalogInner>): ReturnType<typeof importSupplierCatalogInner> {
+  return withWorkspace(() => importSupplierCatalogInner(...args));
+}
+
+async function importSupplierCatalogInner(
   input: unknown,
 ): Promise<
   Result<{
@@ -201,7 +206,11 @@ const ApproveInput = z.object({ id: z.string().uuid(), approved: z.boolean() });
  * Approve a catalog line, or set it back to candidate. Only an approved line
  * prices the plan or a purchase order; a candidate is a quote on file.
  */
-export async function setCatalogItemApproval(input: unknown): Promise<Result> {
+export async function setCatalogItemApproval(...args: Parameters<typeof setCatalogItemApprovalInner>): ReturnType<typeof setCatalogItemApprovalInner> {
+  return withWorkspace(() => setCatalogItemApprovalInner(...args));
+}
+
+async function setCatalogItemApprovalInner(input: unknown): Promise<Result> {
   const parsed = ApproveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -240,7 +249,11 @@ const PriceInput = z.object({
  * of the first, not a rival to it, so it replaces it; an earlier date is left
  * alone, and reading any past date still gives the price that was in force then.
  */
-export async function setCatalogPrice(input: unknown): Promise<Result> {
+export async function setCatalogPrice(...args: Parameters<typeof setCatalogPriceInner>): ReturnType<typeof setCatalogPriceInner> {
+  return withWorkspace(() => setCatalogPriceInner(...args));
+}
+
+async function setCatalogPriceInner(input: unknown): Promise<Result> {
   const parsed = PriceInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -278,7 +291,11 @@ export async function setCatalogPrice(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteCatalogPrice(id: unknown): Promise<Result> {
+export async function deleteCatalogPrice(...args: Parameters<typeof deleteCatalogPriceInner>): ReturnType<typeof deleteCatalogPriceInner> {
+  return withWorkspace(() => deleteCatalogPriceInner(...args));
+}
+
+async function deleteCatalogPriceInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();
@@ -292,7 +309,11 @@ export async function deleteCatalogPrice(id: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function deleteCatalogItem(id: unknown): Promise<Result> {
+export async function deleteCatalogItem(...args: Parameters<typeof deleteCatalogItemInner>): ReturnType<typeof deleteCatalogItemInner> {
+  return withWorkspace(() => deleteCatalogItemInner(...args));
+}
+
+async function deleteCatalogItemInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();
@@ -306,7 +327,11 @@ export async function deleteCatalogItem(id: unknown): Promise<Result> {
   return { ok: true };
 }
 
-export async function clearSupplierCatalog(supplierId: unknown): Promise<Result> {
+export async function clearSupplierCatalog(...args: Parameters<typeof clearSupplierCatalogInner>): ReturnType<typeof clearSupplierCatalogInner> {
+  return withWorkspace(() => clearSupplierCatalogInner(...args));
+}
+
+async function clearSupplierCatalogInner(supplierId: unknown): Promise<Result> {
   const parsed = z.string().trim().min(1).max(120).safeParse(supplierId);
   if (!parsed.success) return { ok: false, error: 'Bad supplier.' };
   try {
@@ -354,7 +379,11 @@ const GenerateInput = z.object({
  * reuse a number. Prices are taken from the draft as passed — the point of
  * issuing a PO is that it stops moving.
  */
-export async function generatePurchaseOrders(
+export async function generatePurchaseOrders(...args: Parameters<typeof generatePurchaseOrdersInner>): ReturnType<typeof generatePurchaseOrdersInner> {
+  return withWorkspace(() => generatePurchaseOrdersInner(...args));
+}
+
+async function generatePurchaseOrdersInner(
   input: unknown,
 ): Promise<Result<{ created: { id: string; poNumber: string; supplierName: string }[] }>> {
   const parsed = GenerateInput.safeParse(input);
@@ -429,7 +458,11 @@ const StatusInput = z.object({
  * a closed order cannot be reopened, and an order cannot skip from draft to
  * received without being issued.
  */
-export async function setPurchaseOrderStatus(input: unknown): Promise<Result> {
+export async function setPurchaseOrderStatus(...args: Parameters<typeof setPurchaseOrderStatusInner>): ReturnType<typeof setPurchaseOrderStatusInner> {
+  return withWorkspace(() => setPurchaseOrderStatusInner(...args));
+}
+
+async function setPurchaseOrderStatusInner(input: unknown): Promise<Result> {
   const parsed = StatusInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Bad status change.' };
   try {
@@ -469,7 +502,11 @@ export async function setPurchaseOrderStatus(input: unknown): Promise<Result> {
 }
 
 /** Delete a draft. Only a draft — an issued order is a document, not a scratch pad. */
-export async function deletePurchaseOrder(id: unknown): Promise<Result> {
+export async function deletePurchaseOrder(...args: Parameters<typeof deletePurchaseOrderInner>): ReturnType<typeof deletePurchaseOrderInner> {
+  return withWorkspace(() => deletePurchaseOrderInner(...args));
+}
+
+async function deletePurchaseOrderInner(id: unknown): Promise<Result> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();

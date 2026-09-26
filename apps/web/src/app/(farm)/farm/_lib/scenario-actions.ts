@@ -11,6 +11,7 @@ import { appendPosting } from './posting-log';
 import { loadDefinitions } from './scenarios';
 import { listSubscriptionCycles } from './orders';
 import { periodOf } from '../_engine/actuals';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — scenario write actions.
@@ -56,7 +57,11 @@ function parseError(issues: z.ZodIssue[]): string {
 }
 
 /** Create or update a saved scenario. Never promotes to live. */
-export async function saveScenario(input: unknown): Promise<SaveResult> {
+export async function saveScenario(...args: Parameters<typeof saveScenarioInner>): ReturnType<typeof saveScenarioInner> {
+  return withWorkspace(() => saveScenarioInner(...args));
+}
+
+async function saveScenarioInner(input: unknown): Promise<SaveResult> {
   const parsed = SaveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parseError(parsed.error.issues) };
 
@@ -107,7 +112,11 @@ export async function saveScenario(input: unknown): Promise<SaveResult> {
 const ApplyInput = z.object({ scenarioId: z.string().uuid() });
 
 /** Promote a saved scenario to the live master model. Super admin only. */
-export async function applyScenario(input: unknown): Promise<OkResult> {
+export async function applyScenario(...args: Parameters<typeof applyScenarioInner>): ReturnType<typeof applyScenarioInner> {
+  return withWorkspace(() => applyScenarioInner(...args));
+}
+
+async function applyScenarioInner(input: unknown): Promise<OkResult> {
   const parsed = ApplyInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parseError(parsed.error.issues) };
 
@@ -163,7 +172,11 @@ export async function applyScenario(input: unknown): Promise<OkResult> {
 }
 
 /** Save the working draft and promote it in one step. Super admin only. */
-export async function saveAndApply(input: unknown): Promise<SaveResult> {
+export async function saveAndApply(...args: Parameters<typeof saveAndApplyInner>): ReturnType<typeof saveAndApplyInner> {
+  return withWorkspace(() => saveAndApplyInner(...args));
+}
+
+async function saveAndApplyInner(input: unknown): Promise<SaveResult> {
   try {
     await requireFarmSuperAdmin();
   } catch (e) {
@@ -188,7 +201,11 @@ const VIEW_COOKIE = 'farm_open_forecast';
  * it until `closeForecast`. The choice is a cookie — it follows the person, not
  * the workspace — so nothing here touches the plan of record.
  */
-export async function openForecast(input: unknown): Promise<OkResult> {
+export async function openForecast(...args: Parameters<typeof openForecastInner>): ReturnType<typeof openForecastInner> {
+  return withWorkspace(() => openForecastInner(...args));
+}
+
+async function openForecastInner(input: unknown): Promise<OkResult> {
   const parsed = OpenInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parseError(parsed.error.issues) };
 
@@ -223,7 +240,11 @@ export async function openForecast(input: unknown): Promise<OkResult> {
 }
 
 /** Return this person to the plan of record. */
-export async function closeForecast(): Promise<OkResult> {
+export async function closeForecast(...args: Parameters<typeof closeForecastInner>): ReturnType<typeof closeForecastInner> {
+  return withWorkspace(() => closeForecastInner(...args));
+}
+
+async function closeForecastInner(): Promise<OkResult> {
   try {
     await requireFarmOperator();
   } catch (e) {
@@ -240,7 +261,11 @@ export async function closeForecast(): Promise<OkResult> {
 const DeleteInput = z.object({ scenarioId: z.string().uuid() });
 
 /** Delete a scenario. Owner or super admin; refuses the live master. */
-export async function deleteScenario(input: unknown): Promise<OkResult> {
+export async function deleteScenario(...args: Parameters<typeof deleteScenarioInner>): ReturnType<typeof deleteScenarioInner> {
+  return withWorkspace(() => deleteScenarioInner(...args));
+}
+
+async function deleteScenarioInner(input: unknown): Promise<OkResult> {
   const parsed = DeleteInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parseError(parsed.error.issues) };
 

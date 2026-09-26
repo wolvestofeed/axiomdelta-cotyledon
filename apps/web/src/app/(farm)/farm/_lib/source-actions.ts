@@ -7,6 +7,7 @@ import { farmSources } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
 import { isSourceKind } from '../_engine/sources';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
  * MicroFarm — sources registry write actions. SUPER ADMIN ONLY.
@@ -38,7 +39,11 @@ const MetaInput = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
-export async function updateSourceMeta(input: unknown): Promise<OkResult> {
+export async function updateSourceMeta(...args: Parameters<typeof updateSourceMetaInner>): ReturnType<typeof updateSourceMetaInner> {
+  return withWorkspace(() => updateSourceMetaInner(...args));
+}
+
+async function updateSourceMetaInner(input: unknown): Promise<OkResult> {
   const parsed = MetaInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   try {
@@ -69,7 +74,11 @@ export async function updateSourceMeta(input: unknown): Promise<OkResult> {
   return { ok: true };
 }
 
-export async function deleteSource(id: string): Promise<OkResult> {
+export async function deleteSource(...args: Parameters<typeof deleteSourceInner>): ReturnType<typeof deleteSourceInner> {
+  return withWorkspace(() => deleteSourceInner(...args));
+}
+
+async function deleteSourceInner(id: string): Promise<OkResult> {
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: 'Bad id.' };
   try {
     await requireFarmSuperAdmin();

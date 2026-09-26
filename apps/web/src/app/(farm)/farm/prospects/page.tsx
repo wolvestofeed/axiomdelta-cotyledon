@@ -7,6 +7,7 @@ import { getResolvedActiveInputs } from '../_lib/scenarios';
 import { FARM_HOME } from '../_data/farm-location';
 import ProspectsCRM from '../_components/ProspectsCRM';
 import type { ClientProspect } from '../_engine/prospects-crm';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 type SP = Promise<{ segment?: string; status?: string; q?: string }>;
 
@@ -17,7 +18,11 @@ const SEGMENTS: Array<{ value: ProspectSegment | 'all'; label: string }> = [
   { value: 'private-tier2', label: 'Private — Tier 2 / Micro' },
 ];
 
-export default async function SalesPage({ searchParams }: { searchParams: SP }) {
+export default async function SalesPage(props: Parameters<typeof SalesPageInner>[0]) {
+  return withWorkspace(() => SalesPageInner(props));
+}
+
+async function SalesPageInner({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const segment = (['charter', 'private-tier1', 'private-tier2', 'all'].includes(sp.segment ?? '')
     ? sp.segment

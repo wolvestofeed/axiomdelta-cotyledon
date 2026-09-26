@@ -10,6 +10,7 @@ import {
   integer,
   jsonb,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -37,6 +38,29 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 export const farmSchema = pgSchema('farm');
 
 /**
+ * A workspace is a farm, and a farm is one Clerk organization. Every other table carries
+ * `workspace_id`, defaulted from the transaction's `app.workspace_id` setting and policed by
+ * row-level security (migration 0002). This table is the only one read outside a scope.
+ */
+export const farmWorkspaces = farmSchema.table('workspaces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clerkOrgId: text('clerk_org_id').notNull().unique(),
+  name: text('name').notNull(),
+  slug: text('slug'),
+  timeZone: text('time_zone').notNull().default('America/Chicago'),
+  stripeCustomerId: text('stripe_customer_id'),
+  plan: text('plan').notNull().default('founding'),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export type FarmWorkspaceRow = typeof farmWorkspaces.$inferSelect;
+
+/** The workspace in scope for the transaction, as the database computes it. */
+export const CURRENT_WORKSPACE = sql`farm.current_workspace_id()`;
+
+
+/**
  * A saved Farm scenario. `config` is a JSONB overlay of edited values over the
  * plan-data defaults (the `FarmScenarioConfig` shape in the Farm `_engine`);
  * every dollar is recomputed from defaults + overlay, never stored. `ownerTier`
@@ -46,6 +70,7 @@ export const farmSchema = pgSchema('farm');
 export const farmScenarios = farmSchema.table(
   'scenarios',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Operator free-text name. */
@@ -84,8 +109,9 @@ export const farmScenarios = farmSchema.table(
  * Null until the first Apply — the app falls back to plan-data defaults.
  */
 export const farmWorkspaceState = farmSchema.table('workspace_state', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
-  id: text('id').primaryKey().default('default'),
+  id: text('id').notNull().default('default'),
   // @classification: Internal
   activeScenarioId: uuid('active_scenario_id').references(
     () => farmScenarios.id,
@@ -95,7 +121,7 @@ export const farmWorkspaceState = farmSchema.table('workspace_state', {
   appliedAt: timestamp('applied_at', { withTimezone: true }),
   // @classification: Internal
   appliedBy: text('applied_by'),
-});
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.id] })]);
 
 export type FarmScenarioRow = typeof farmScenarios.$inferSelect;
 export type FarmScenarioInsert = typeof farmScenarios.$inferInsert;
@@ -118,6 +144,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const farmSources = farmSchema.table(
   'sources',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** 'study' | 'lca' | 'dataset' | 'regulation' | 'rate_schedule' | 'supplier_report' | 'other'. */
@@ -172,6 +199,7 @@ export const farmSources = farmSchema.table(
 export const farmSourceFigures = farmSchema.table(
   'source_figures',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -218,6 +246,7 @@ export type FarmSourceFigureInsert = typeof farmSourceFigures.$inferInsert;
 export const farmSupplierLcaOptions = farmSchema.table(
   'supplier_lca_options',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Compiled directory operation id. */
@@ -277,6 +306,7 @@ export type FarmSupplierLcaOptionInsert = typeof farmSupplierLcaOptions.$inferIn
 export const farmEntityLinks = farmSchema.table(
   'entity_links',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** 'lot' | 'ledger_entry' | 'role' | 'supplier' | 'pickup_point' | 'course' | 'source'. */
@@ -323,6 +353,7 @@ export type FarmEntityLinkInsert = typeof farmEntityLinks.$inferInsert;
 export const farmSupplierItems = farmSchema.table(
   'supplier_items',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Compiled directory operation id. */
@@ -392,6 +423,7 @@ export const farmSupplierItems = farmSchema.table(
 export const farmSupplierItemPrices = farmSchema.table(
   'supplier_item_prices',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -431,6 +463,7 @@ export const farmSupplierItemPrices = farmSchema.table(
 export const farmLoans = farmSchema.table(
   'loans',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Stable across a reseed, so a saved forecast's overlay still finds its row. */
@@ -467,7 +500,7 @@ export const farmLoans = farmSchema.table(
     // @classification: Internal
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('farm_loans_key_idx').on(t.key), index('farm_loans_position_idx').on(t.position)],
+  (t) => [uniqueIndex('farm_loans_key_idx').on(t.workspaceId, t.key), index('farm_loans_position_idx').on(t.position)],
 );
 
 /**
@@ -479,6 +512,7 @@ export const farmLoans = farmSchema.table(
 export const farmFixedCostLines = farmSchema.table(
   'fixed_cost_lines',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Stable across a reseed; a saved forecast's overlay keys on it. */
@@ -515,7 +549,7 @@ export const farmFixedCostLines = farmSchema.table(
     // @classification: Internal
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('farm_fixed_cost_lines_key_idx').on(t.key), index('farm_fixed_cost_lines_position_idx').on(t.position)],
+  (t) => [uniqueIndex('farm_fixed_cost_lines_key_idx').on(t.workspaceId, t.key), index('farm_fixed_cost_lines_position_idx').on(t.position)],
 );
 
 /**
@@ -529,6 +563,7 @@ export const farmFixedCostLines = farmSchema.table(
 export const farmLeaseholdLines = farmSchema.table(
   'leasehold_lines',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Stable across a reseed; a saved forecast's overlay keys on it. */
@@ -556,7 +591,7 @@ export const farmLeaseholdLines = farmSchema.table(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('farm_leasehold_lines_key_idx').on(t.key),
+    uniqueIndex('farm_leasehold_lines_key_idx').on(t.workspaceId, t.key),
     index('farm_leasehold_lines_position_idx').on(t.position),
   ],
 );
@@ -576,6 +611,7 @@ export const farmLeaseholdLines = farmSchema.table(
 export const farmTrainingDocs = farmSchema.table(
   'training_docs',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Every version of one document shares this key. */
@@ -622,7 +658,7 @@ export const farmTrainingDocs = farmSchema.table(
     // @classification: Internal
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('farm_training_docs_key_version_idx').on(t.docKey, t.version)],
+  (t) => [uniqueIndex('farm_training_docs_key_version_idx').on(t.workspaceId, t.docKey, t.version)],
 );
 
 /**
@@ -633,6 +669,7 @@ export const farmTrainingDocs = farmSchema.table(
 export const farmTrainingAssignments = farmSchema.table(
   'training_assignments',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -686,11 +723,12 @@ export type FarmSupplierItemPriceInsert = typeof farmSupplierItemPrices.$inferIn
 export const farmPurchaseOrders = farmSchema.table(
   'purchase_orders',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** AMK-PO-YYYYMMDD-NN. */
     // @classification: Internal
-    poNumber: text('po_number').notNull().unique(),
+    poNumber: text('po_number').notNull(),
     // @classification: Internal
     supplierId: text('supplier_id').notNull(),
     // @classification: Internal
@@ -729,6 +767,7 @@ export const farmPurchaseOrders = farmSchema.table(
 export const farmPurchaseOrderLines = farmSchema.table(
   'purchase_order_lines',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -782,11 +821,12 @@ export type FarmPurchaseOrderLineInsert = typeof farmPurchaseOrderLines.$inferIn
 export const farmSowingRecords = farmSchema.table(
   'sowing_records',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** Operator-visible sowing id, e.g. B-260914-01. */
     // @classification: Internal
-    sowingId: text('sowing_id').notNull().unique(),
+    sowingId: text('sowing_id').notNull(),
     // @classification: Internal
     cropPlanCode: text('crop_plan_code').notNull(),
     // @classification: Internal
@@ -835,6 +875,7 @@ export const farmSowingRecords = farmSchema.table(
 export const farmReceipts = farmSchema.table(
   'receipts',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -868,6 +909,7 @@ export const farmReceipts = farmSchema.table(
 export const farmDistributions = farmSchema.table(
   'distributions',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -922,6 +964,7 @@ export const farmDistributions = farmSchema.table(
 export const farmPeriodBills = farmSchema.table(
   'period_bills',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** YYYY-MM */
@@ -963,8 +1006,9 @@ export const farmPeriodBills = farmSchema.table(
  * admin may reopen it; both events are on the posting log (Roadmap J3).
  */
 export const farmFiscalPeriods = farmSchema.table('fiscal_periods', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
-  period: text('period').primaryKey(),
+  period: text('period').notNull(),
   /** 'open' | 'locked' */
   // @classification: Internal
   status: text('status').notNull().default('open'),
@@ -980,12 +1024,13 @@ export const farmFiscalPeriods = farmSchema.table('fiscal_periods', {
   notes: text('notes'),
   // @classification: Internal
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.period] })]);
 
 /** Dated ranges the farm does not produce or distribute: major holidays; the farm runs year-round (Roadmap J1). */
 export const farmCalendarClosures = farmSchema.table(
   'calendar_closures',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1016,6 +1061,7 @@ export const farmCalendarClosures = farmSchema.table(
 export const farmPostingLog = farmSchema.table(
   'posting_log',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     seq: bigserial('seq', { mode: 'number' }).primaryKey(),
     // @classification: Internal
@@ -1050,6 +1096,7 @@ export const farmPostingLog = farmSchema.table(
 export const farmStandardVersions = farmSchema.table(
   'standard_versions',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1090,10 +1137,11 @@ export type FarmPeriodBillInsert = typeof farmPeriodBills.$inferInsert;
 export const farmCropPlans = farmSchema.table(
   'crop_plans',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    code: text('code').notNull().unique(),
+    code: text('code').notNull(),
     // @classification: Internal
     name: text('name').notNull(),
     // @classification: Internal
@@ -1138,6 +1186,7 @@ export const farmCropPlans = farmSchema.table(
 export const farmCropPlanLines = farmSchema.table(
   'crop_plan_lines',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1169,6 +1218,7 @@ export type FarmCropPlanLineInsert = typeof farmCropPlanLines.$inferInsert;
 export const farmSubscribers = farmSchema.table(
   'subscribers',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Confidential
@@ -1219,6 +1269,7 @@ export const farmSubscribers = farmSchema.table(
 export const farmSubscriberPickupPoints = farmSchema.table(
   'subscriber_pickup_points',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1262,6 +1313,7 @@ export const farmSubscriberPickupPoints = farmSchema.table(
 export const farmSubscriberServices = farmSchema.table(
   'subscriber_services',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1294,6 +1346,7 @@ export const farmSubscriberServices = farmSchema.table(
 export const farmServiceVolumePicks = farmSchema.table(
   'service_volume_picks',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1320,6 +1373,7 @@ export const farmServiceVolumePicks = farmSchema.table(
 export const farmPickupPointCalendarRanges = farmSchema.table(
   'pickup_point_calendar_ranges',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1365,6 +1419,7 @@ export type FarmSubscriberPickupPointInsert = typeof farmSubscriberPickupPoints.
 export const farmSubscriptionCycles = farmSchema.table(
   'subscription_cycles',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** @deprecated 0071: cycles are not assigned to channels. Null on every row; dropped in N9. */
@@ -1417,6 +1472,7 @@ export const farmSubscriptionCycles = farmSchema.table(
 export const farmSubscriptionCycleDays = farmSchema.table(
   'subscription_cycle_days',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1441,6 +1497,7 @@ export const farmSubscriptionCycleDays = farmSchema.table(
 export const farmOrders = farmSchema.table(
   'orders',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1503,8 +1560,9 @@ export type FarmOrderInsert = typeof farmOrders.$inferInsert;
 
 /** Payment terms per supplier. Suppliers are a compiled directory, not a table, so terms key on its id. */
 export const farmSupplierTerms = farmSchema.table('supplier_terms', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
-  supplierId: text('supplier_id').primaryKey(),
+  supplierId: text('supplier_id').notNull(),
   // @classification: Internal
   supplierName: text('supplier_name'),
   /** 'due_on_receipt' | 'net_15' | 'net_30' | 'net_60' | 'net_90' */
@@ -1514,7 +1572,7 @@ export const farmSupplierTerms = farmSchema.table('supplier_terms', {
   updatedBy: text('updated_by'),
   // @classification: Internal
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [primaryKey({ columns: [t.workspaceId, t.supplierId] })]);
 
 /**
  * A subscriber invoice: one a month per subscriber, open while completed routes
@@ -1524,11 +1582,12 @@ export const farmSupplierTerms = farmSchema.table('supplier_terms', {
 export const farmInvoices = farmSchema.table(
   'invoices',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** AMK-INV-YYYYMMDD-NN */
     // @classification: Internal
-    invoiceNumber: text('invoice_number').notNull().unique(),
+    invoiceNumber: text('invoice_number').notNull(),
     // @classification: Internal
     subscriberId: uuid('subscriber_id')
       .notNull()
@@ -1567,6 +1626,7 @@ export const farmInvoices = farmSchema.table(
 export const farmSubscriberPayments = farmSchema.table(
   'subscriber_payments',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1600,6 +1660,7 @@ export const farmSubscriberPayments = farmSchema.table(
 export const farmSupplierBills = farmSchema.table(
   'supplier_bills',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1634,6 +1695,7 @@ export const farmSupplierBills = farmSchema.table(
 export const farmSupplierPayments = farmSchema.table(
   'supplier_payments',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1663,6 +1725,7 @@ export const farmSupplierPayments = farmSchema.table(
 
 /** The opening balance sheet of the actuals: owners' equity, the fit-out and its financing. */
 export const farmOpeningBalances = farmSchema.table('opening_balances', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
   id: uuid('id').primaryKey().defaultRandom(),
   // @classification: Internal
@@ -1683,6 +1746,7 @@ export const farmOpeningBalances = farmSchema.table('opening_balances', {
 
 /** The people on the time clock. */
 export const farmStaff = farmSchema.table('staff', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
   id: uuid('id').primaryKey().defaultRandom(),
   // @classification: Confidential
@@ -1723,6 +1787,7 @@ export const farmStaff = farmSchema.table('staff', {
 export const farmTimePunches = farmSchema.table(
   'time_punches',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1763,10 +1828,11 @@ export type FarmTimePunchRow = typeof farmTimePunches.$inferSelect;
 export const farmEquipment = farmSchema.table(
   'equipment',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    key: text('key').notNull().unique(),
+    key: text('key').notNull(),
     // @classification: Internal
     position: integer('position').notNull().default(0),
     // @classification: Internal
@@ -1869,6 +1935,7 @@ export type FarmEquipmentRow = typeof farmEquipment.$inferSelect;
 export const farmFacilityLayouts = farmSchema.table(
   'facility_layouts',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     /** The scenario id, or 'plan-data' when no plan of record is set. */
@@ -1905,6 +1972,7 @@ export type FarmFacilityLayoutRow = typeof farmFacilityLayouts.$inferSelect;
 export const farmPackages = farmSchema.table(
   'packages',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1954,6 +2022,7 @@ export const farmPackages = farmSchema.table(
 export const farmCropPlanPackages = farmSchema.table(
   'crop_plan_packages',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -1982,10 +2051,11 @@ export const farmCropPlanPackages = farmSchema.table(
 export const farmPayrollPeriods = farmSchema.table(
   'payroll_periods',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    staffingRef: text('staffing_ref').notNull().unique(),
+    staffingRef: text('staffing_ref').notNull(),
     // @classification: Internal
     periodStart: date('period_start').notNull(),
     // @classification: Internal
@@ -2019,6 +2089,7 @@ export type FarmPayrollPeriodRow = typeof farmPayrollPeriods.$inferSelect;
 export const farmTimeStudies = farmSchema.table(
   'time_studies',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -2059,6 +2130,7 @@ export const farmTimeStudies = farmSchema.table(
 export const farmTimeStudyLines = farmSchema.table(
   'time_study_lines',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -2089,6 +2161,7 @@ export const farmTimeStudyLines = farmSchema.table(
 
 /** The re-study interval per crop plan, in days (Roadmap O2, 0061). */
 export const farmTimeStudyIntervals = farmSchema.table('time_study_intervals', {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
   cropPlanId: uuid('crop_plan_id')
     .primaryKey()
@@ -2113,6 +2186,7 @@ export type FarmCropPlanPackageRow = typeof farmCropPlanPackages.$inferSelect;
 export const farmSustainabilityReadings = farmSchema.table(
   'sustainability_readings',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
@@ -2139,6 +2213,7 @@ export const farmSustainabilityReadings = farmSchema.table(
 export const farmRefrigerantService = farmSchema.table(
   'refrigerant_service',
   {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal

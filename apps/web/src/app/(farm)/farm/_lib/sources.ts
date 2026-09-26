@@ -61,7 +61,7 @@ export async function listSources(): Promise<SourceListItem[]> {
   return rows.map((r) => ({ ...r, figureCount: Number(r.figureCount) }));
 }
 
-export type SourceMeta = Omit<typeof farmSources.$inferSelect, 'fileBytes'>;
+export type SourceMeta = Omit<typeof farmSources.$inferSelect, 'fileBytes' | 'workspaceId'>;
 
 export async function getSource(id: string): Promise<SourceMeta | null> {
   const rows = await db.select(metaColumns).from(farmSources).where(eq(farmSources.id, id)).limit(1);

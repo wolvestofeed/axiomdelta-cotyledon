@@ -4,11 +4,16 @@ import { loadActuals } from '../_lib/actuals';
 import { loadCalendar } from '../_lib/periods';
 import { listTimeStudies } from '../_lib/time-studies';
 import { ScheduleClient } from './ScheduleClient';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 /** Schedule (Roadmap O3): two weeks of production staff demand, and the operating day with the blackout rack tasks. */
 export default async function SchedulePage() {
+  return withWorkspace(() => SchedulePageInner());
+}
+
+async function SchedulePageInner() {
   const [cycles, orders, actuals, calendar, library] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   return (

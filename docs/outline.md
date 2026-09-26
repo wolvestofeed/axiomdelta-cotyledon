@@ -162,7 +162,9 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 
 ## 7. Tenancy
 
-Muse is single-tenant: no workspace id, guards scoped to one account, one time zone constant. MicroFarm adds `workspace_id` to every table in the port, a `workspaces` table (name, time zone, Stripe customer for the software subscription, plan), Clerk organizations mapped to workspaces, and `requireWorkspaceOperator()` / `requireWorkspaceAdmin()` in place of the Muse guards. Seed data is written per workspace. Tenancy is done in the port (Phase 1 below), because retrofitting it later would touch every read and action twice.
+A workspace is a farm, and a farm is one Clerk organization. Roles come from the organization: `org:admin` is an admin, any member is an operator, and the platform admins named in `_lib/access.ts` are admins in every organization they belong to. External portal accounts hold neither role.
+
+Isolation is enforced in the database. Every farm table carries `workspace_id`, and row-level security keyed on the transaction setting `app.workspace_id` shows a workspace its own rows and lets it insert into no other. Every entry point (page, layout, route handler, server action) runs inside `withWorkspace()`, which resolves the signed-in organization to its workspace, opens a transaction, sets the key, and runs the entry point in an async scope that `db` reads. A query outside a scope throws; a query that forgets its workspace sees nothing. Nothing in a read or an action names the workspace by hand. A workspace is provisioned the first time its organization signs in. Scripts run against one workspace through `FARM_WORKSPACE`.
 
 ## 8. Software build phases
 

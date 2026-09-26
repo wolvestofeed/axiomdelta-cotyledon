@@ -11,10 +11,15 @@ import { formatBytes } from '../_engine/sources';
 import { linksFrom, manyPerFrom } from '../_lib/entity-links';
 import { hydrateEntityRefs } from '../_lib/entity-directory';
 import { entityRef, type LeanEntity } from '../_engine/entity-links';
+import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TrainingPage() {
+  return withWorkspace(() => TrainingPageInner());
+}
+
+async function TrainingPageInner() {
   const access = await getFarmAccess();
   // Assignment follows the register: joining it IS the assignment, so a new
   // hire's orientation list exists without anyone remembering to create it.
