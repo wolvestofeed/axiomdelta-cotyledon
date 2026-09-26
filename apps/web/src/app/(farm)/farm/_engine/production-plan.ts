@@ -29,6 +29,10 @@ import { deriveCapacity, costCropPlan, componentCosting, laborForDay, purchaseOr
 import { laborRequirement, checkStaffing, type LaborRequirement, type StaffingCheck } from './staffing';
 import type { CrewShift } from '../_data/crews';
 import type { RequirementLine } from './catalog';
+import { isGrowPlanCarrier } from './grow-plan-bridge';
+import { defaultGrowUnits } from './index';
+import type { GrowUnit } from './grow-capacity';
+import { ShelfLedger, calendarFromSowings, sowDateFor, type GrowCalendar } from './grow-calendar';
 
 type Assumptions = ResolvedInputs['assumptions'];
 type CapacityInputs = ResolvedInputs['capacityInputs'];
@@ -328,6 +332,12 @@ export function planProductionDay(input: {
    * shortfall.
    */
   lines?: number;
+  /**
+   * A grow plan's sowing is placed on a grow unit for its cycle days (`grow-calendar.ts`); the
+   * horizon passes its shelf ledger so a rack full of last week's trays takes no sowing today.
+   * Omitted, every grow plan sowing is taken as placed.
+   */
+  placeSowing?: (cropPlan: CropPlanDef, productionDate: string, trays: number) => boolean;
 }): DayPlan {
   const shrink = input.assumptions.yield.shrinkAllowance.value;
   // A crop plan's sowings cannot load before its sows finish: its first load is
@@ -360,9 +370,16 @@ export function planProductionDay(input: {
     const sowingsNeeded = cap.sowingSize > 0 ? Math.max(0, Math.ceil(net / cap.sowingSize - 1e-9)) : 0;
     const timed = cap.blackoutWindow.firstLoadBasis !== 'none';
     const loads: { loadMin: number; fits: boolean }[] = [];
+    const grow = isGrowPlanCarrier(cropPlan);
     for (let b = 0; b < sowingsNeeded; b++) {
       if (lines === 0) {
         loads.push({ loadMin: window.closeMin, fits: false });
+        continue;
+      }
+      if (grow) {
+        // A grow plan's sowing goes on a grow unit for its cycle, not on a rack for a cycle inside the day.
+        const placed = input.placeSowing ? input.placeSowing(cropPlan, input.productionDate, cap.sowingSize) : true;
+        loads.push({ loadMin: cap.blackoutWindow.startMin, fits: placed });
         continue;
       }
       let line = 0;
@@ -417,6 +434,7 @@ export function planProductionDay(input: {
 
   const purchase = mergePurchaseLines(runs.flatMap((r) => r.purchase.lines));
   const cyclesRequired = runs.reduce((s, r) => s + r.sowingsNeeded, 0);
+  const growPlaced = runs.every((r) => !isGrowPlanCarrier(input.cropPlans.find((x) => x.code === r.cropPlanCode)) || r.sowingsScheduled >= r.sowingsNeeded);
   const labor = laborRequirement(
     schedule.filter((b) => b.fits).map((b) => ({ seq: b.seq, loadMin: b.loadMin, units: b.units })),
     input.capacityInputs,
@@ -426,7 +444,7 @@ export function planProductionDay(input: {
     runs,
     cyclesRequired,
     cyclesAvailable,
-    fits: cyclesRequired <= cyclesAvailable,
+    fits: cyclesRequired <= cyclesAvailable && growPlaced,
     schedule,
     totalRequired: runs.reduce((s, r) => s + r.required, 0),
     totalProduced: runs.reduce((s, r) => s + r.produced, 0),
@@ -518,6 +536,8 @@ export interface HorizonPlan {
   byCropPlan: { cropPlanCode: string; cropPlanName: string; orderedBase: number; producedBase: number; sowings: number }[];
   /** Finished-goods lots still inside shelf life at the end of the window. */
   closingLots: FinishedLot[];
+  /** The sowings on the grow units across the window; null when the library holds no grow plan. */
+  growCalendar: GrowCalendar | null;
   totals: {
     orderedUnits: number;
     filledUnits: number;
@@ -562,17 +582,34 @@ export function planHorizon(input: {
   closures?: readonly DateRange[];
   /** Lines in service on a production date (Roadmap N4b). Omitted = one line every day. */
   linesOn?: (date: string) => number;
+  /** The grow units sowings are placed on for their cycle days. Omitted = the capacity inputs', else the seed. */
+  growUnits?: readonly GrowUnit[];
+  /** Sowings already on the shelves when the window opens (recorded sowings inside their cycle). */
+  openingSowings?: readonly { cropPlanCode: string; sowDate: string; trays: number }[];
 }): HorizonPlan {
   const weekdays = input.productionWeekdays ?? [1, 2, 3, 4, 5];
   const lots: FinishedLot[] = input.openingLots.map((l) => ({ ...l }));
   const inRange = input.book.filter((o) => o.orderDate >= input.from && o.orderDate <= input.to);
   const distributionDates = [...new Set(inRange.map((o) => o.orderDate))].sort();
+  const growUnits = input.growUnits ?? input.capacityInputs.growUnits ?? defaultGrowUnits;
+  const ledger = new ShelfLedger(growUnits);
+  for (const o of input.openingSowings ?? []) {
+    const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
+    if (cropPlan && isGrowPlanCarrier(cropPlan) && o.trays > 0) ledger.place(cropPlan, o.sowDate, o.trays, null);
+  }
+  const placeSowing = (cropPlan: CropPlanDef, productionDate: string, trays: number): boolean =>
+    isGrowPlanCarrier(cropPlan) ? ledger.place(cropPlan, productionDate, trays, null).placed : true;
 
-  // Group distribution dates by the production date that serves them.
-  const byProduction = new Map<string, string[]>();
-  for (const d of distributionDates) {
-    const p = productionDateFor(d, weekdays, input.closures);
-    byProduction.set(p, [...(byProduction.get(p) ?? []), d]);
+  // Each order is made on the production date its plan needs: a grow plan's sow date
+  // (distribution date less days to harvest, on a production day), a Phase 1-era plan's the day before.
+  const prodDateOf = (o: BookOrder): string => {
+    const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
+    return cropPlan && isGrowPlanCarrier(cropPlan) ? sowDateFor(cropPlan.plan, o.orderDate, weekdays, input.closures) : productionDateFor(o.orderDate, weekdays, input.closures);
+  };
+  const byProduction = new Map<string, BookOrder[]>();
+  for (const o of inRange) {
+    const p = prodDateOf(o);
+    byProduction.set(p, [...(byProduction.get(p) ?? []), o]);
   }
   const productionDates = [...byProduction.keys()].sort();
 
@@ -600,8 +637,8 @@ export function planHorizon(input: {
   for (const ev of events) {
     expireThrough(ev.date);
     if (ev.kind === 'produce') {
-      const served = byProduction.get(ev.key) ?? [];
-      const orders = inRange.filter((o) => served.includes(o.orderDate));
+      const orders = byProduction.get(ev.key) ?? [];
+      const served = [...new Set(orders.map((o) => o.orderDate))].sort();
       const requirements = requirementsFor(orders, input.cropPlans, input.unitFactorByChannel);
       const onHand: Record<string, number> = {};
       // Stock counts only if it is still inside shelf life on the first distribution this production serves:
@@ -611,7 +648,7 @@ export function planHorizon(input: {
         if (lot.remaining <= 0 || lot.expires < servesFrom) continue;
         onHand[lot.cropPlanCode] = (onHand[lot.cropPlanCode] ?? 0) + lot.remaining;
       }
-      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date) });
+      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date), placeSowing });
       for (const run of plan.runs) {
         if (run.produced <= 0) continue;
         lots.push({ sowingId: `plan-${ev.date}-${run.cropPlanCode}`, cropPlanCode: run.cropPlanCode, produced: ev.date, expires: isoAddDays(ev.date, input.shelfLifeDays), qtyProduced: run.produced, remaining: run.produced });
@@ -639,7 +676,7 @@ export function planHorizon(input: {
       const filledBase = byCropPlan.reduce((s, r) => s + r.filledBase, 0);
       distributionDays.push({
         date: ev.key,
-        productionDate: productionDateFor(ev.key, weekdays, input.closures),
+        productionDate: orders.map(prodDateOf).sort()[0] ?? productionDateFor(ev.key, weekdays, input.closures),
         orderedUnits: orders.reduce((s, o) => s + o.units, 0),
         orderedBase,
         filledBase,
@@ -673,6 +710,7 @@ export function planHorizon(input: {
   }
   const cyclesUsed = productionDays.reduce((s, p) => s + p.runs.reduce((a, r) => a + r.sowingsScheduled, 0), 0);
   const cyclesAvailable = productionDays.reduce((s, p) => s + p.cyclesAvailable, 0);
+  const growCalendar = input.cropPlans.some(isGrowPlanCarrier) ? calendarFromSowings({ from: input.from, to: input.to, sowings: ledger.sowings, cropPlans: input.cropPlans, units: growUnits, findings: ledger.sowings.filter((x) => !x.placed).map((x) => ({ kind: 'over-capacity' as const, cropPlanCode: x.cropPlanCode, sowDate: x.sowDate, detail: `${x.cropPlanCode}: a sowing of ${x.trays} trays on ${x.sowDate} has no room on any grow unit for its ${x.cycleDays}-day cycle.` })) }) : null;
 
   // One row per date that made, shipped, expired or held stock.
   const byDate: HorizonDay[] = [...new Set([...productionDays.map((p) => p.productionDate), ...distributionDays.map((d) => d.date), ...Object.keys(expiredOn), ...Object.keys(closingOn)])]
@@ -708,6 +746,7 @@ export function planHorizon(input: {
     byChannel,
     byCropPlan: [...cropPlanTotals.values()].sort((a, b) => b.orderedBase - a.orderedBase),
     closingLots: lots.filter((l) => l.remaining > 0),
+    growCalendar,
     totals: {
       orderedUnits: distributionDays.reduce((s, d) => s + d.orderedUnits, 0),
       filledUnits: byChannel.reduce((s, c) => s + c.filledUnits, 0),

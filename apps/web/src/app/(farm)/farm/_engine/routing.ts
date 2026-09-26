@@ -40,6 +40,7 @@ import { LOAD_TASK, PACK_CHECK_TASK, type LaborScaling, type TimeStudyDoc, type 
 import { sowingGrowUnitsFrom, isBlackoutRack, phaseOneEquipment, growUnitForProcess } from './equipment';
 import { cropPlanStage, PLAN_RANGE_POINT } from './stage';
 import { timeStudyScaffold, type ScaffoldKind } from './time-study-estimate';
+import { isGrowPlanCarrier } from './grow-plan-bridge';
 
 export type RouteStepKind = ScaffoldKind | 'other';
 
@@ -160,7 +161,7 @@ function derivedAfter(step: RouteStep, steps: readonly RouteStep[]): string[] {
     }
     return [];
   };
-  if (step.kind === 'other') {
+  if (step.kind === 'other' || step.kind === 'harvest' || step.kind === 'daily') {
     const prev = mine.filter((s) => s.seq < step.seq).pop();
     return prev ? [prev.id] : [];
   }
@@ -229,6 +230,9 @@ export function deriveRoute(input: {
   }
 
   const scaffold = timeStudyScaffold(cropPlan);
+  // A grow plan's daily lines are the calendar's, not the day's clock; its sow and harvest run at the stations, on no equipment.
+  const grow = isGrowPlanCarrier(cropPlan);
+  const routeLines = grow ? standard.lines.filter((l) => l.stream !== 'daily') : standard.lines;
   const stage = new Map(cropPlanStage(cropPlan, PLAN_RANGE_POINT).components.map((c) => [c.component, c]));
   const growUnits = sowingGrowUnitsFrom([...input.equipment]);
   const phaseOne = phaseOneEquipment(input.equipment).filter((e) => e.qty > 0);
@@ -236,7 +240,7 @@ export function deriveRoute(input: {
   const sowing = standard.sowingSize;
   const taken = new Set<string>();
 
-  const steps: RouteStep[] = standard.lines.map((line, i) => {
+  const steps: RouteStep[] = routeLines.map((line, i) => {
     const seq = i + 1;
     const s = scaffold.find((t) => line.task === t.task || (t.kind === 'sow' && line.task.startsWith(`${t.task} (`)));
     const kind: RouteStepKind = s?.kind ?? PLAN_KINDS[line.task] ?? 'other';
@@ -248,7 +252,9 @@ export function deriveRoute(input: {
 
     let resourceKey: string | null = null;
     let priorDay = false;
-    if (kind === 'sow') {
+    if (grow) {
+      // Labor at a station; the grow unit is the calendar's resource for the cycle, not the day's.
+    } else if (kind === 'sow') {
       const th = component ? stage.get(component) : undefined;
       if (component && th?.process) {
         priorDay = th.process.overnight;

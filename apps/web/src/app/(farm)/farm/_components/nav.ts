@@ -35,6 +35,7 @@ export const MODULES: NavItem[] = [
   { label: 'Day Schedule', href: '/farm/production-planning/schedule', section: 'Production', status: 'live' },
   { label: 'Compare', href: '/farm/production-planning/compare', section: 'Production', status: 'live' },
   { label: 'Calendar', href: '/farm/production-planning/calendar', section: 'Production', status: 'live' },
+  { label: 'Grow Calendar', href: '/farm/production-planning/grow-calendar', section: 'Production', status: 'live' },
   { label: 'Process', href: '/farm/production-planning/process', section: 'Production', status: 'live' },
   { label: 'Capacity', href: '/farm/capacity', section: 'Production', status: 'live' },
   { label: 'Grow Units', href: '/farm/grow-units', section: 'Production', status: 'live' },

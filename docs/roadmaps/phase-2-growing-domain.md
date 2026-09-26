@@ -1,4 +1,4 @@
-# Phase 2 — Growing domain  status: IN PROGRESS (parts 1–5 and the seed of part 9 done)
+# Phase 2 — Growing domain  status: IN PROGRESS (parts 1–6 and the seed of part 9 done)
 
 The variety as the master record and the cost basis; the grow plan with seed, medium, nutrient and light lines replacing the crop plan; the stage schedule replacing thermal processes; tray formats and grow units replacing vessels; nutrition targets replacing crediting; produce-safety control points; the science library and the glossary in the app; Vallecito data seeded. `outline.md` §4 is the domain model, §5 the engine rules, `glossary.md` the naming authority, `science-library.md` the source register.
 
@@ -47,12 +47,16 @@ Tested by `test/farm-time-studies.test.ts`, `farm-staff-demand.test.ts`, `farm-t
 - [x] Vallecito's 2023 1020 tray study (DATED) is the data: 18 minutes of growing labor and 9 of harvest per tray at one person; `growPlanTimeStudy` builds a grow plan's estimated study from it on the three streams, each daily task's total spread over the plan's cycle days, the knife harvest and the weigh left off a live tray (21 minutes a live 1020); the scaffold on the Time Study Sheet is the same
 - [ ] The watering shape by stage (mist through germination and blackout, bottom water under light) is placed by the grow calendar in part 6; the total over the cycle is the sheet's
 
-## Part 6 — Stages replace thermal
+## Part 6 — Stages replace thermal  DONE for grow plans
 
-- [ ] `_data/grow-stages.ts` and `_engine/stage.ts` replaced by `stage-schedule.ts`; `routing.ts` routes are the stage schedule per plan
-- [ ] `scheduler.ts` places sowings on grow units for `cycleDays` with the light line matched by `unitTakesPlan`
-- [ ] `production-plan.ts` `productionDateFor` becomes distribution date minus `daysToHarvest`; `forecast-timeline.ts` follows; `deriveCapacity` drops the one-day window for a grow plan
-- [ ] The Phase 1-era equipment rows leave `capex.ts`; the facility, equipment, scheduler and routing goldens are restated
+Tested by `test/farm-grow-calendar.test.ts`.
+
+- [x] `_engine/grow-calendar.ts`: `stageOn` reads the stage a tray is in on any day from the plan's stage days (soak before the sow date, then sow, germination, blackout, light, harvest window, off); `sowDateFor` is the distribution date less days to harvest, moved back to a production day; `ShelfLedger` places a sowing on a unit whose fixture delivers the plan's light line and which has room on every day of the cycle, largest unit first, and refuses one that does not fit; `calendarFromSowings` reads each day by stage, by unit, trays sown, trays in their harvest window and the waterings the daily stream owes; `planGrowCalendar` back-plans requirements
+- [x] `production-plan.ts`: each order is made on its plan's sow date (a Phase 1-era plan the day before, as before); the horizon runs one shelf ledger across the window, `planProductionDay` places a grow plan's sowing through it instead of a rack cycle inside the day, a sowing with no room is a shortfall and the day does not fit; recorded sowings inside their cycle open the window on the shelves (`openingSowings`); `HorizonPlan.growCalendar` carries the calendar; `forecast-timeline.ts` follows through the horizon
+- [x] `routing.ts`: a grow plan's route is its sow and harvest lines at the stations on no equipment, the daily lines left to the calendar; the day scheduler places it with no rack and no cooling clock
+- [x] The Grow Calendar page (`production-planning/grow-calendar`): the month by trays on the shelves, sown, in the harvest window, waterings and trays with no room; a day by stage and by unit; the sowings across the month with their unit and today's stage
+- [ ] `_data/grow-stages.ts` and `_engine/stage.ts` still serve the Phase 1-era plans through the projection; they go with the projection in part 10, when `deriveCapacity` also drops the one-day window
+- [ ] The Phase 1-era equipment rows leave `capex.ts` in part 10 with the projection; the facility, equipment, scheduler and routing goldens are restated then
 
 ## Part 7 — Nutrition targets replace crediting
 
