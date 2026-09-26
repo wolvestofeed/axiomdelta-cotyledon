@@ -239,7 +239,7 @@ describe('C5 — the audit findings of §5 are gone', () => {
 
   function existsIn(...p: string[]): boolean {
     try {
-      statSync(join(FARM, ...p));
+      statSync(at(...p));
       return true;
     } catch {
       return false;

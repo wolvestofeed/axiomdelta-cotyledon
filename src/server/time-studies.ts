@@ -29,7 +29,8 @@ async function seedMissingStudies(cropPlans: readonly LibraryCropPlan[]): Promis
     const again = new Set((await tx.select({ cropPlanId: farmTimeStudies.cropPlanId }).from(farmTimeStudies)).map((r) => r.cropPlanId));
     for (const r of cropPlans) {
       if (again.has(r.id)) continue;
-      const seed = r.code === TIME_STUDY_SEED_CROP_PLAN ? timeStudySeed : estimatedTimeStudy(r, deriveCapacity(r).sowingSize);
+      // A plan no grow unit takes yet has a sowing of zero; its estimate is written per tray until a unit lights it.
+      const seed = r.code === TIME_STUDY_SEED_CROP_PLAN ? timeStudySeed : estimatedTimeStudy(r, Math.max(1, deriveCapacity(r).sowingSize));
       await insertTimeStudy(tx, r.id, seed, 'seed');
     }
   });

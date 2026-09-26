@@ -188,7 +188,8 @@ export async function insertLoans(db: SeedDb, loans: readonly LoanDef[]): Promis
       position,
       source: 'seed',
     })),
-  );
+  )
+    .onConflictDoNothing({ target: [farmLoans.workspaceId, farmLoans.key] });
   return loans.length;
 }
 
@@ -205,7 +206,8 @@ export async function insertLeaseholdLines(db: SeedDb, lines: readonly Leasehold
       position,
       source: 'seed',
     })),
-  );
+  )
+    .onConflictDoNothing({ target: [farmLeaseholdLines.workspaceId, farmLeaseholdLines.key] });
   return lines.length;
 }
 
@@ -226,7 +228,8 @@ export async function insertFixedCostLines(db: SeedDb, lines: readonly FixedCost
       position,
       source: 'seed',
     })),
-  );
+  )
+    .onConflictDoNothing({ target: [farmFixedCostLines.workspaceId, farmFixedCostLines.key] });
   return lines.length;
 }
 

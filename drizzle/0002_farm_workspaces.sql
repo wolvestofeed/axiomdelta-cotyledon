@@ -44,6 +44,9 @@ BEGIN
     'crop_plan_packages', 'payroll_periods', 'time_studies', 'time_study_lines', 'time_study_intervals',
     'sustainability_readings', 'refrigerant_service'
   ] LOOP
+    -- Rows from before workspaces existed are the Phase 0 seed, which the app re-seeds per workspace on
+    -- first read; no workspace exists yet for them to belong to, so they go before the column arrives.
+    EXECUTE format('DELETE FROM farm.%I', t);
     EXECUTE format(
       'ALTER TABLE farm.%I ADD COLUMN IF NOT EXISTS workspace_id uuid NOT NULL DEFAULT farm.current_workspace_id() REFERENCES farm.workspaces (id) ON DELETE CASCADE',
       t);
