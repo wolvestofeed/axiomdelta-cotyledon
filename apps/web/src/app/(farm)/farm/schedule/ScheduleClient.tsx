@@ -8,7 +8,7 @@ import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '../_da
 import { TIME_STUDY_STREAM_LABELS, type TimeStudyDoc } from '../_data/time-studies';
 import { orderBook, isoAddDays, weekdayOf } from '../_engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon } from '../_engine/production-plan';
-import { staffDemand } from '../_engine/staff-demand';
+import { staffDemand , traysOnShelf, cycleDaysByCode } from '../_engine/staff-demand';
 import type { DateRange } from '../_engine/periods';
 import { useOperationsWorld } from '../_state/ledger';
 import { WorldNote } from '../_components/ledger/WorldNote';
@@ -92,7 +92,8 @@ export function ScheduleClient({
     () => horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, cropPlanName: r.cropPlanName, units: r.filledBase })) })),
     [horizon.distributionDays],
   );
-  const demand = useMemo(() => staffDemand({ from, to, days: horizon.productionDays, harvest, studies }), [from, to, horizon.productionDays, harvest, studies]);
+  const shelf = useMemo(() => traysOnShelf(horizon.productionDays, cycleDaysByCode(resolved.cropPlans), from, to), [horizon.productionDays, resolved.cropPlans, from, to]);
+  const demand = useMemo(() => staffDemand({ from, to, days: horizon.productionDays, harvest, shelf, studies }), [from, to, horizon.productionDays, harvest, shelf, studies]);
   const busiest = demand.days.reduce<(typeof demand.days)[number] | null>((m, d) => (!m || d.staffHours > m.staffHours ? d : m), null);
   const [open, setOpen] = useState<string | null>(null);
   const cropPlanName = (code: string) => resolved.cropPlans.find((r) => r.code === code)?.name ?? code;

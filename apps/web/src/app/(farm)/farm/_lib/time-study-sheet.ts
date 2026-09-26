@@ -57,7 +57,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   });
 
   const sheet = wb.addWorksheet('Time Study Sheet');
-  const header = ['Crop plan code', 'Crop plan', 'Study date', 'Observer', 'Sowing size (units)', 'Seq', 'Task', 'Stream (sowing / harvest)', 'Station (suggested)', 'CONTROL POINT', 'Staff', 'Start', 'End', 'Elapsed min', 'Labor min', 'Scales with (fixed / variable)', 'Quality (pass / hold / fail)', 'Notes', 'Reference: standard basis', 'Reference: standard labor min'];
+  const header = ['Crop plan code', 'Crop plan', 'Study date', 'Observer', 'Sowing size (units)', 'Seq', 'Task', 'Stream (sowing / daily / harvest)', 'Station (suggested)', 'CONTROL POINT', 'Staff', 'Start', 'End', 'Elapsed min', 'Labor min', 'Scales with (fixed / variable)', 'Quality (pass / hold / fail)', 'Notes', 'Reference: standard basis', 'Reference: standard labor min'];
   sheet.addRow(header).font = { bold: true };
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
   const OBSERVER_COLS = [3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 18];

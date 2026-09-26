@@ -59,7 +59,7 @@ describe('farm financials — per-phase economics', () => {
 
 describe('farm financials — amortising payments (PMT)', () => {
   it('equipment lease and leasehold amortisation match the model', () => {
-    expect(pmt(1_194_775, 0.09, 60)).toBeCloseTo(24_801.56, 1);
+    expect(pmt(1_195_833, 0.09, 60)).toBeCloseTo(24_823.53, 1);
     expect(pmt(787_000, 0.08, 84)).toBeCloseTo(12_266.35, 1);
   });
 });
@@ -67,21 +67,21 @@ describe('farm financials — amortising payments (PMT)', () => {
 describe('farm financials — capex rollup', () => {
   it('subtotals match the equipment + leasehold schedule', () => {
     const r = capexRollup();
-    expect(r.equipmentAll).toBe(1_194_775);
+    expect(r.equipmentAll).toBe(1_195_833);
     // Split into build-out phases in the equipment library seed (Roadmap N1);
     // both blackout racks on Phase 1 since 2026-09-17 (the second rack's $36,000).
-    expect(r.equipmentPhase1).toBe(625_200);
+    expect(r.equipmentPhase1).toBe(626_258);
     expect(r.equipmentPhase2Add).toBe(491_775);
     expect(r.equipmentPhase3Add).toBe(77_800);
     expect(r.leaseholdSubtotal).toBe(787_000);
-    expect(r.totalCapex).toBe(1_981_775);
-    expect(r.phase1Capex).toBe(1_412_200);
+    expect(r.totalCapex).toBe(1_982_833);
+    expect(r.phase1Capex).toBe(1_413_258);
   });
-  it('monthly financing totals ~$37,068', () => {
-    expect(Math.abs(capexRollup().totalMonthlyFinancing - 37_067.91)).toBeLessThan(2);
+  it('monthly financing totals ~$37,090', () => {
+    expect(Math.abs(capexRollup().totalMonthlyFinancing - 37_089.88)).toBeLessThan(2);
   });
-  it('fixed cost monthly ties out to ~$59,568', () => {
-    expect(Math.abs(fixedCosts().monthly - 59_567.91)).toBeLessThan(2);
+  it('fixed cost monthly ties out to ~$59,590', () => {
+    expect(Math.abs(fixedCosts().monthly - 59_589.88)).toBeLessThan(2);
   });
 });
 

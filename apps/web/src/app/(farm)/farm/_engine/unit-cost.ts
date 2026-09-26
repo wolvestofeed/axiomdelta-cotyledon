@@ -52,6 +52,10 @@ export interface CropPlanLaborStandard {
   cropPlanCode: string;
   fixedMinutesPerSowing: number;
   variableMinutesPerUnit: number;
+  /** The daily stream (outline §5 rule 3): per tray per day, once a day, over the cycle the study was timed at. */
+  dailyMinutesPerTrayDay: number;
+  dailyFixedMinutesPerDay: number;
+  cycleDays: number;
   basis: LaborBasis;
   /** The study it came from; null for a code estimate or a gap. */
   studyId: string | null;
@@ -78,6 +82,9 @@ export function laborStandardFor(
       cropPlanCode: cropPlan.code,
       fixedMinutesPerSowing: s.fixedMinutesPerSowing,
       variableMinutesPerUnit: s.variableMinutesPerUnit,
+      dailyMinutesPerTrayDay: s.dailyMinutesPerTrayDay,
+      dailyFixedMinutesPerDay: s.dailyFixedMinutesPerDay,
+      cycleDays: s.cycleDays,
       basis: 'estimated',
       studyId: null,
       studiedSowingSize: sowingSize,
@@ -85,23 +92,31 @@ export function laborStandardFor(
   }
   const standard = laborStandard(studiesForCropPlan(studies, cropPlan.code));
   if (!standard) {
-    return { cropPlanCode: cropPlan.code, fixedMinutesPerSowing: 0, variableMinutesPerUnit: 0, basis: 'none', studyId: null, studiedSowingSize: null };
+    return { cropPlanCode: cropPlan.code, fixedMinutesPerSowing: 0, variableMinutesPerUnit: 0, dailyMinutesPerTrayDay: 0, dailyFixedMinutesPerDay: 0, cycleDays: 0, basis: 'none', studyId: null, studiedSowingSize: null };
   }
   const s = summarizeStudy(standard);
   return {
     cropPlanCode: cropPlan.code,
     fixedMinutesPerSowing: s.fixedMinutesPerSowing,
     variableMinutesPerUnit: s.variableMinutesPerUnit,
+    dailyMinutesPerTrayDay: s.dailyMinutesPerTrayDay,
+    dailyFixedMinutesPerDay: s.dailyFixedMinutesPerDay,
+    cycleDays: s.cycleDays,
     basis: standard.basis === 'observed' && standard.adoptedAt ? 'observed' : 'estimated',
     studyId: standard.id,
     studiedSowingSize: standard.sowingSize,
   };
 }
 
-/** Labor minutes for one unit at a sowing size; null when labor is a gap. */
+/** The daily stream's minutes on one unit at a sowing size: per tray per day and the daily fixed share, over the cycle. */
+export function dailyMinutesPerUnit(std: Pick<CropPlanLaborStandard, 'dailyMinutesPerTrayDay' | 'dailyFixedMinutesPerDay' | 'cycleDays'>, sowingSize: number): number {
+  return ((sowingSize > 0 ? std.dailyFixedMinutesPerDay / sowingSize : 0) + std.dailyMinutesPerTrayDay) * std.cycleDays;
+}
+
+/** Labor minutes for one unit at a sowing size, on all three streams; null when labor is a gap. */
 export function laborMinutesPerUnit(std: CropPlanLaborStandard, sowingSize: number): number | null {
   if (std.basis === 'none') return null;
-  return (sowingSize > 0 ? std.fixedMinutesPerSowing / sowingSize : 0) + std.variableMinutesPerUnit;
+  return (sowingSize > 0 ? std.fixedMinutesPerSowing / sowingSize : 0) + std.variableMinutesPerUnit + dailyMinutesPerUnit(std, sowingSize);
 }
 
 /** The shape every cost function already reads: the plan-data assumptions. */
@@ -109,6 +124,7 @@ interface CostAssumptions {
   laborSplit: {
     fixedMinutesPerSowing: { value: number; status: string; unit?: string; note?: string };
     variableMinutesPerUnit: { value: number; status: string; unit?: string; note?: string };
+    dailyMinutesPerUnit?: { value: number; status: string; unit?: string; note?: string };
   };
   perUnit: { packaging: { value: number; status: string; unit?: string; note?: string } };
 }
@@ -150,6 +166,12 @@ export function assumptionsForCropPlan<A extends CostAssumptions>(shared: A, inp
   a.laborSplit.variableMinutesPerUnit.value = labor.variableMinutesPerUnit;
   a.laborSplit.variableMinutesPerUnit.status = 'DERIVED';
   a.laborSplit.variableMinutesPerUnit.note = laborNote;
+  a.laborSplit.dailyMinutesPerUnit = {
+    value: dailyMinutesPerUnit(labor, labor.studiedSowingSize ?? 0),
+    status: 'DERIVED',
+    unit: 'min/unit',
+    note: labor.cycleDays > 0 ? `The daily stream over the ${labor.cycleDays}-day cycle at the sowing studied. ${laborNote}` : `No daily stream on this standard. ${laborNote}`,
+  };
   a.perUnit.packaging.value = inputs.packagingPerUnit;
   a.perUnit.packaging.status = 'DERIVED';
   a.perUnit.packaging.note = `The packages picked for ${labor.cropPlanCode}, at the packaging library's cost.`;

@@ -34,10 +34,10 @@ const [p1, p2, p3] = req.phases;
 const close = (actual: number, expected: number, tol: number) => expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tol);
 
 describe('farm facility — the footprint seed (§5)', () => {
-  it('gives every seed row a footprint entry, 59 rows split 31 / 21 / 7 by build phase', () => {
+  it('gives every seed row a footprint entry, 63 rows split 35 / 21 / 7 by build phase', () => {
     expect(equipmentSeed.every((e) => FOOTPRINT_SEED[e.item] !== undefined)).toBe(true);
-    expect(rows.length).toBe(59);
-    expect(rows.filter((r) => r.phase === 1).length).toBe(31);
+    expect(rows.length).toBe(63);
+    expect(rows.filter((r) => r.phase === 1).length).toBe(35);
     expect(rows.filter((r) => r.phase === 2).length).toBe(21);
     expect(rows.filter((r) => r.phase === 3).length).toBe(7);
   });

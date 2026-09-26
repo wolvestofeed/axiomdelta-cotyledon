@@ -28,7 +28,6 @@ import type { InputLine, CropPlanDef } from '../_data/plan-data';
 import type { StatusTag } from '../_data/tagged';
 import type { TimeStudyDoc, TimeStudyLine, TimeStudySeed } from '../_data/time-studies';
 import { priceInForceOn, type CatalogLine } from './catalog';
-import { normalizeLines } from './crop-plan-library';
 import { laborStandard, studiesForCropPlan } from './time-studies';
 import { estimatedTimeStudy } from './time-study-estimate';
 import { FOOD_TRACEABILITY_LIST_CATEGORIES } from './traceability';
@@ -1012,7 +1011,7 @@ export function resolveProposal(proposal: CropPlanVariantProposal, ctx: ResolveC
   const own = ctx.studies === null ? null : studiesForCropPlan(ctx.studies, source.code);
   const standard = own === null ? null : laborStandard(own);
   const base: TimeStudySeed = standard
-    ? { studiedOn: standard.studiedOn, sowingSize: standard.sowingSize, observer: standard.observer, qualityResult: standard.qualityResult, qualityNotes: standard.qualityNotes, basis: standard.basis, lines: structuredClone(standard.lines) as TimeStudyLine[] }
+    ? { studiedOn: standard.studiedOn, sowingSize: standard.sowingSize, cycleDays: standard.cycleDays, observer: standard.observer, qualityResult: standard.qualityResult, qualityNotes: standard.qualityNotes, basis: standard.basis, lines: structuredClone(standard.lines) as TimeStudyLine[] }
     : estimatedTimeStudy(source, ctx.sowingSize);
   const sourceStudyBasis: ResolvedVariant['sourceStudyBasis'] = standard ? (standard.basis === 'observed' && standard.adoptedAt ? 'observed' : 'estimated') : 'built';
   const sourceStudyLines = structuredClone(base.lines) as TimeStudyLine[];
@@ -1037,7 +1036,7 @@ export function resolveProposal(proposal: CropPlanVariantProposal, ctx: ResolveC
   for (const { oldComponent, hit } of componentSwaps) {
     const fromOwn = ctx.studies === null ? null : laborStandard(studiesForCropPlan(ctx.studies, hit.cropPlan.code));
     const fromStudy: TimeStudySeed = fromOwn
-      ? { studiedOn: fromOwn.studiedOn, sowingSize: fromOwn.sowingSize, observer: fromOwn.observer, qualityResult: fromOwn.qualityResult, qualityNotes: fromOwn.qualityNotes, basis: fromOwn.basis, lines: fromOwn.lines }
+      ? { studiedOn: fromOwn.studiedOn, sowingSize: fromOwn.sowingSize, cycleDays: fromOwn.cycleDays, observer: fromOwn.observer, qualityResult: fromOwn.qualityResult, qualityNotes: fromOwn.qualityNotes, basis: fromOwn.basis, lines: fromOwn.lines }
       : estimatedTimeStudy(hit.cropPlan, ctx.sowingSize);
     const fromBasis = fromOwn ? (fromOwn.basis === 'observed' && fromOwn.adoptedAt ? 'observed standard' : 'estimated standard') : 'built estimate';
     const ratio = fromStudy.sowingSize > 0 ? base.sowingSize / fromStudy.sowingSize : 1;
@@ -1207,11 +1206,12 @@ export function resolveProposal(proposal: CropPlanVariantProposal, ctx: ResolveC
     code: `${source.code}${WORKING_CODE_SUFFIX}`,
     name: variantName,
     status: 'developing',
-    inputs: normalizeLines(lines),
+    inputs: lines.map((l) => ({ ...l, harvestedYieldPerSowing: l.seedQtyPerSowing * l.yieldToHarvest })),
   };
   const study: TimeStudySeed = {
     studiedOn: null,
     sowingSize: base.sowingSize,
+    cycleDays: base.cycleDays,
     observer: null,
     qualityResult: null,
     qualityNotes: `Estimated: ${source.code}'s ${sourceStudyBasis === 'built' ? 'built estimate' : `${sourceStudyBasis} standard`} with the instructed changes applied. Stands until an observed study is adopted.`,

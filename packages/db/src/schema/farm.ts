@@ -1165,6 +1165,14 @@ export const farmCropPlans = farmSchema.table(
     /** The unit spec block, tagged values, as the engine reads it. */
     // @classification: Internal
     spec: jsonb('spec').notNull().default({}),
+    /** The grow plan's tray format key (0003). */
+    // @classification: Internal
+    format: text('format').notNull().default('flat-1020'),
+    /** Days per stage when the plan overrides its varieties' (0003); null = the varieties' own. */
+    // @classification: Internal
+    stageDays: jsonb('stage_days'),
+    // @classification: Internal
+    note: text('note').notNull().default(''),
     /** 'seed' | 'user_built' */
     // @classification: Internal
     source: text('source').notNull().default('user_built'),
@@ -1182,7 +1190,7 @@ export const farmCropPlans = farmSchema.table(
   (t) => [index('farm_crop_plans_status_idx').on(t.status)],
 );
 
-/** One input line; `line` is the engine's InputLine document. */
+/** One grow plan line; `line` is the typed GrowPlanLine document (seed, medium, nutrient or light). */
 export const farmCropPlanLines = farmSchema.table(
   'crop_plan_lines',
   {
@@ -1859,6 +1867,13 @@ export const farmEquipment = farmSchema.table(
     critical: boolean('critical').notNull().default(false),
     // @classification: Internal
     notes: text('notes'),
+    /** A grow unit's shelves, shelf width in inches and fixture key (0003); null on equipment no tray sits on. */
+    // @classification: Internal
+    shelves: integer('shelves'),
+    // @classification: Internal
+    shelfWidthIn: doublePrecision('shelf_width_in'),
+    // @classification: Internal
+    fixtureKey: text('fixture_key'),
     /** Pounds one unit takes in one run (0065); null on equipment a sowing does not pass through. */
     // @classification: Internal
     sowingCapacityLb: doublePrecision('sowing_capacity_lb'),
@@ -2101,6 +2116,9 @@ export const farmTimeStudies = farmSchema.table(
     studiedOn: date('studied_on'),
     // @classification: Internal
     sowingSize: integer('sowing_size').notNull(),
+    /** Days a tray of the sowing studied was on its grow unit (0004): what the daily lines multiply by. */
+    // @classification: Internal
+    cycleDays: integer('cycle_days').notNull().default(0),
     // @classification: Internal
     observer: text('observer'),
     /** 'pass' | 'hold' | 'fail'; null = not recorded. */
@@ -2152,7 +2170,7 @@ export const farmTimeStudyLines = farmSchema.table(
     /** 'fixed' | 'variable' */
     // @classification: Internal
     scalesWith: text('scales_with').notNull(),
-    /** 'sowing' | 'harvest' (0066): sowing lines per sowing harvested, harvest lines per unit shipped that day. */
+    /** 'sowing' | 'daily' | 'harvest' (0004): per sowing on the sow day, per tray per day on the shelf, per unit on the distribution day. */
     // @classification: Internal
     stream: text('stream').notNull().default('sowing'),
   },

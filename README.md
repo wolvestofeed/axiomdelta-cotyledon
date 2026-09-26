@@ -15,7 +15,7 @@ pnpm db:migrate
 pnpm dev                              # http://localhost:3000 → /farm
 ```
 
-A farm is a Clerk organization. Create one in the Clerk dashboard, make yourself its admin, and sign in; the workspace is provisioned on first entry. Scripts run against one workspace: set `FARM_WORKSPACE` to its id or its Clerk organization id.
+A farm is a Clerk organization. Create one in the Clerk dashboard, make yourself its admin, and sign in; the workspace is provisioned on first entry. For local development set `FARM_DEV_BYPASS_AUTH=1` in `apps/web/.env.local`: every request is then the admin of a local workspace, Clerk is not mounted and no Clerk keys are needed. The flag is ignored in production. Scripts run against one workspace: set `FARM_WORKSPACE` to its id or its Clerk organization id.
 
 ## Check
 

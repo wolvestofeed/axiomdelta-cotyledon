@@ -24,7 +24,7 @@ import { rawStockOnHand, rawLotsByUseBy } from '../_engine/net-requirements';
 import { resolveSubscriberPickupPoints, forecastByDistributionPickupPoint } from '../_engine/demand';
 import { laborStandard, nextStudyDue, studiesForCropPlan, summarizeStudy } from '../_engine/time-studies';
 import { activeCropPlanAverages } from '../_engine/active-averages';
-import { staffDemand } from '../_engine/staff-demand';
+import { staffDemand , traysOnShelf, cycleDaysByCode } from '../_engine/staff-demand';
 import { agingReport, AGING_BUCKETS, AGING_LABELS, billBalances, dueOn, invoiceBalances, receiptValueCents, type OpenItem } from '../_engine/working-capital';
 import { periodStart, BILL_CATEGORY_LABELS } from '../_engine/actuals';
 import { servedCostPerUnitCents, sumMeasures, type PvaMeasures } from '../_engine/plan-v-actual';
@@ -770,7 +770,8 @@ const staffDemandReport: Builder = (ctx) => {
   const { horizon, horizonFrom, horizonTo, studies, selected } = ctx;
   const R = selected.inputs;
   const harvest = horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, cropPlanName: r.cropPlanName, units: r.filledBase })) }));
-  const demand = staffDemand({ from: horizonFrom, to: horizonTo, days: horizon.productionDays, harvest, studies: studies.studies });
+  const shelf = traysOnShelf(horizon.productionDays, cycleDaysByCode(R.cropPlans), horizonFrom, horizonTo);
+  const demand = staffDemand({ from: horizonFrom, to: horizonTo, days: horizon.productionDays, harvest, shelf, studies: studies.studies });
   const busiest = demand.days.reduce<(typeof demand.days)[number] | null>((m, d) => (!m || d.staffHours > m.staffHours ? d : m), null);
   const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
   const summary = table([{ label: 'Measure' }, { label: 'Value', num: true }], [

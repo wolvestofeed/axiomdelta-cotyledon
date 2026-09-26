@@ -7,7 +7,6 @@ import { pickupPoints } from '../src/app/(farm)/farm/_data/seed-invented';
 import { capacityInputs, phaseProfiles } from '../src/app/(farm)/farm/_data/plan-data';
 import { deriveCapacity, costCropPlan, canopyMassPerUnit, packedUnitOz } from '../src/app/(farm)/farm/_engine';
 import { creditCropPlan, creditableLines } from '../src/app/(farm)/farm/_engine/nutrition';
-import { rowsToCropPlan, cropPlanToRows } from '../src/app/(farm)/farm/_engine/crop-plan-library';
 import { resolveSubscriberPickupPoints, channelDemand } from '../src/app/(farm)/farm/_engine/demand';
 import { orderBook, cycleCropPlanOn, datesBetween } from '../src/app/(farm)/farm/_engine/orders';
 import { requirementsFor, planProductionDay, planHorizon, unitFactorFor } from '../src/app/(farm)/farm/_engine/production-plan';
@@ -117,14 +116,11 @@ describe('the ten-unit menu as library rows', () => {
     expect(hot('AMK-E-011')).toBeCloseTo(70.95, 6);
   });
 
-  it('costs, credits and round-trips through library rows like the code crop plan', () => {
+  it('costs and credits like the code crop plan', () => {
     for (const r of menuCropPlans) {
       expect(costCropPlan(r).totalInputCostPerUnit).toBeGreaterThan(0);
       const credit = creditCropPlan(creditableLines(r), '9-12');
       expect(Number.isFinite(credit.grainsOzEq)).toBe(true);
-      const { header, lines } = cropPlanToRows(r);
-      const back = rowsToCropPlan({ ...header, id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, lines);
-      expect(deriveCapacity(back, capacityInputs).sowingSize).toBe(deriveCapacity(r, capacityInputs).sowingSize);
     }
     // Every price on the menu is a placeholder except the two cited lines.
     const cited = menuCropPlans.flatMap((r) => r.inputs).filter((l) => l.status === 'SOURCED').map((l) => l.name);

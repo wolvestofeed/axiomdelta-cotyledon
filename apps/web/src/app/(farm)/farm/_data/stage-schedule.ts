@@ -13,6 +13,8 @@
  * the cycle, per unit on the distribution day.
  */
 
+import { tagged, type Tagged } from './tagged';
+
 export type StageKey = 'soak' | 'sow' | 'germination' | 'blackout' | 'light' | 'harvest-window' | 'packed';
 
 export type WateringMethod = 'none' | 'mist' | 'bottom' | 'rinse';
@@ -137,6 +139,18 @@ export const SPROUT_STAGES: readonly StageDef[] = [
 
 export const STAGE_BY_KEY: Readonly<Record<StageKey, StageDef>> = Object.fromEntries(STAGES.map((s) => [s.key, s])) as Record<StageKey, StageDef>;
 
+/**
+ * Liters of water one 1020 tray takes per watering, by method. The nutrient line's volume over the
+ * cycle is the sum of waterings from the stage it starts. No volume has been observed; a
+ * watering log replaces these.
+ */
+export const WATER_PER_WATERING_L: Readonly<Record<WateringMethod, Tagged>> = {
+  none: tagged(0, 'STATED', 'L', 'No watering'),
+  mist: tagged(0.1, 'PLACEHOLDER', 'L', 'A misting pass over one 1020; no volume observed'),
+  bottom: tagged(0.5, 'PLACEHOLDER', 'L', 'Bottom watering one 1020 in its solid tray; no volume observed'),
+  rinse: tagged(0.5, 'PLACEHOLDER', 'L', 'One rinse of a pint jar; no volume observed'),
+};
+
 /** Days per stage for one variety, in stage order. Stages a variety skips carry zero. */
 export type StageDays = Readonly<Record<Exclude<StageKey, 'packed'>, number>>;
 
@@ -151,11 +165,27 @@ export function daysToHarvest(days: StageDays): number {
 }
 
 /** Waterings a tray takes over its cycle, by method; the daily stream's count. */
-export function wateringsOverCycle(days: StageDays): Record<WateringMethod, number> {
+export function wateringsOverCycle(days: StageDays, stages: readonly StageDef[] = STAGES): Record<WateringMethod, number> {
   const out: Record<WateringMethod, number> = { none: 0, mist: 0, bottom: 0, rinse: 0 };
-  for (const s of STAGES) {
+  for (const s of stages) {
     if (s.key === 'packed') continue;
     out[s.watering] += s.wateringsPerDay * days[s.key];
   }
   return out;
+}
+
+/** The stages from `from` onward, in order, excluding `packed`; the span a nutrient or light line covers. */
+export function stagesFrom(from: StageKey, stages: readonly StageDef[] = STAGES): StageDef[] {
+  const i = stages.findIndex((s) => s.key === from);
+  return (i < 0 ? [] : stages.slice(i)).filter((s) => s.key !== 'packed');
+}
+
+/** Liters of water one 1020 tray takes from a stage onward: waterings per day, days, liters per watering. */
+export function waterLitersFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES): number {
+  return stagesFrom(from, stages).reduce((sum, s) => sum + s.wateringsPerDay * days[s.key as Exclude<StageKey, 'packed'>] * WATER_PER_WATERING_L[s.watering].value, 0);
+}
+
+/** Days a tray is under the lights from a stage onward. */
+export function lightDaysFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES): number {
+  return stagesFrom(from, stages).reduce((sum, s) => sum + (s.underLight ? days[s.key as Exclude<StageKey, 'packed'>] : 0), 0);
 }

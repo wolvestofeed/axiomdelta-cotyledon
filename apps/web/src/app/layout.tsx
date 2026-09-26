@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
+import { devBypass } from '@/app/(farm)/farm/_lib/dev-bypass';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,13 +8,12 @@ export const metadata: Metadata = {
   description: 'MicroFarm — the production operating system for microgreens and sprouts.',
 };
 
-/** The bare HTML shell. The route groups own their own chrome. */
+/** The bare HTML shell. The route groups own their own chrome. Under the local development bypass Clerk is not mounted. */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en" className="h-full antialiased">
-        <body className="min-h-full flex flex-col">{children}</body>
-      </html>
-    </ClerkProvider>
+  const shell = (
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col">{children}</body>
+    </html>
   );
+  return devBypass() ? shell : <ClerkProvider>{shell}</ClerkProvider>;
 }

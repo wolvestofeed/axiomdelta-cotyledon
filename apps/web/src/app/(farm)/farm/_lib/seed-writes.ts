@@ -8,9 +8,10 @@ import type { PackageSeed } from '../_data/packaging';
 import type { TimeStudySeed } from '../_data/time-studies';
 import { planSeedSubscribers, type SubscriberDef } from '../_data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, DEFAULT_WEEKDAYS, type SubscriptionCycleDef } from '../_data/subscription-cycles';
-import { seedLibrary } from '../_data/crop-plans-seed';
-import { cropPlanToRows, type LibraryCropPlan } from '../_engine/crop-plan-library';
+import { growPlanSeed } from '../_data/grow-plans-seed';
+import type { GrowPlanDef } from '../_data/grow-plan';
 import type { CropPlanDef } from '../_data/plan-data';
+import { cropPlanToRows, type LibraryCropPlan } from '../_engine/crop-plan-library';
 
 /**
  * MicroFarm — the placeholder seed, written once.
@@ -56,6 +57,9 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
         unitCostCents: Math.round(l.unitCostNew * 100),
         critical: l.critical,
         notes: l.note ?? null,
+        shelves: l.shelves ?? null,
+        shelfWidthIn: l.shelfWidthIn ?? null,
+        fixtureKey: l.fixtureKey ?? null,
         sowingCapacityLb: l.sowingCapacityLb ?? null,
         sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated',
         concurrentSowings: l.concurrentSowings ?? null,
@@ -86,7 +90,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
 export async function insertTimeStudy(db: SeedDb, cropPlanId: string, study: TimeStudySeed, source: 'seed' | 'user_built', createdBy: string | null = null): Promise<string | null> {
   const rows = await db
     .insert(farmTimeStudies)
-    .values({ cropPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, createdBy })
+    .values({ cropPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, cycleDays: study.cycleDays, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, createdBy })
     .returning({ id: farmTimeStudies.id });
   const id = rows[0]?.id ?? null;
   if (!id) return null;
@@ -121,8 +125,8 @@ export async function insertPackages(db: SeedDb, rows: readonly PackageSeed[]): 
   return rows.length;
 }
 
-/** Insert every seed crop plan whose code is not in the library. Idempotent on the code. */
-export async function seedMissingCropPlans(db: SeedDb, library: readonly CropPlanDef[] = seedLibrary, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
+/** Insert every seed grow plan whose code is not in the library. Idempotent on the code. */
+export async function seedMissingCropPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
   const codes = library.map((r) => r.code);
   const have = new Set((await db.select({ code: farmCropPlans.code }).from(farmCropPlans).where(inArray(farmCropPlans.code, codes))).map((r) => r.code));
   const added: string[] = [];
@@ -143,13 +147,12 @@ export async function seedMissingCropPlans(db: SeedDb, library: readonly CropPla
 }
 
 /**
- * Bring every crop plan still `source = 'seed'` in line with the code seed: the
- * header (channels, category, components, method, allergens, spec) and the
- * input lines. Status is left alone (it is edited in the library). A row
- * someone has edited is `user_built` and is not touched. Used by the reset
- * script only; the read path inserts and never rewrites.
+ * Bring every plan still `source = 'seed'` in line with the code seed: the header (channels,
+ * format, stage days, note) and the lines. Status is left alone (it is edited in the library). A
+ * row someone has edited is `user_built` and is not touched. Used by the reset script only; the
+ * read path inserts and never rewrites.
  */
-export async function syncSeedCropPlans(db: SeedDb, library: readonly CropPlanDef[] = seedLibrary): Promise<string[]> {
+export async function syncSeedCropPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed): Promise<string[]> {
   const rows = await db.select({ id: farmCropPlans.id, code: farmCropPlans.code, source: farmCropPlans.source, version: farmCropPlans.version }).from(farmCropPlans).where(inArray(farmCropPlans.code, library.map((r) => r.code)));
   const synced: string[] = [];
   for (const row of rows) {
@@ -159,7 +162,7 @@ export async function syncSeedCropPlans(db: SeedDb, library: readonly CropPlanDe
     const { header, lines } = cropPlanToRows(r);
     await db
       .update(farmCropPlans)
-      .set({ channels: header.channels, category: header.category, components: header.components, productionMethod: header.productionMethod, allergensPresent: header.allergensPresent, allergenFreeClaims: header.allergenFreeClaims, spec: header.spec, version: row.version + 1, effectiveFrom: new Date().toISOString().slice(0, 10), updatedAt: new Date() })
+      .set({ name: header.name, channels: header.channels, format: header.format, stageDays: header.stageDays, note: header.note, version: row.version + 1, effectiveFrom: new Date().toISOString().slice(0, 10), updatedAt: new Date() })
       .where(eq(farmCropPlans.id, row.id));
     await db.delete(farmCropPlanLines).where(eq(farmCropPlanLines.cropPlanId, row.id));
     if (lines.length > 0) await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: row.id, ...l })));

@@ -38,6 +38,7 @@ import { deriveCapacity, type CapacityInputs } from './index';
 import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, type CropPlanLaborStandard } from './unit-cost';
 import type { TimeStudyDoc } from '../_data/time-studies';
 import { sowingGrowUnitsFrom } from './equipment';
+import { growUnitsFrom } from './grow-capacity';
 import { laborRequirement, ratedDaySlots, newCrewDefaultsFor } from './staffing';
 import { seedSubscribers, type SubscriberDef } from '../_data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from './input-price';
@@ -806,6 +807,7 @@ export function resolveScenarioInputs(
   const finalCapacity = {
     ...(capacityInputs as unknown as typeof defaultCapacityInputs),
     sowingGrowUnits: sowingGrowUnitsFrom(equipment.length > 0 ? equipment : equipmentSeed),
+    growUnits: growUnitsFrom(equipment.length > 0 ? equipment : equipmentSeed),
   } as unknown as CapacityInputs;
   const sharedAssumptions = assumptions as unknown as ResolvedInputs['assumptions'];
   const cropPlanCosts: Record<string, CropPlanCostInputs> = {};

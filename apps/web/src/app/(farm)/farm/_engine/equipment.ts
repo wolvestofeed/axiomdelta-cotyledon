@@ -112,6 +112,9 @@ export interface EquipmentRowShape {
   unitCostCents: number;
   critical: boolean;
   notes: string | null;
+  shelves?: number | null;
+  shelfWidthIn?: number | null;
+  fixtureKey?: string | null;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: string | null;
   concurrentSowings?: number | null;
@@ -152,6 +155,9 @@ export function equipmentFromRow(r: EquipmentRowShape): EquipmentLine {
     unitCostNew: r.unitCostCents / 100,
     critical: r.critical,
     ...(r.notes ? { note: r.notes } : {}),
+    shelves: r.shelves ?? null,
+    shelfWidthIn: r.shelfWidthIn ?? null,
+    fixtureKey: r.fixtureKey ?? null,
     sowingCapacityLb: r.sowingCapacityLb ?? null,
     sowingCapacityBasis: isCapacityBasis(r.sowingCapacityBasis) ? r.sowingCapacityBasis : 'estimated',
     concurrentSowings: r.concurrentSowings ?? null,

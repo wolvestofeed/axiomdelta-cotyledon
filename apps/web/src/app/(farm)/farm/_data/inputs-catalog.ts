@@ -304,6 +304,9 @@ export const LIGHT_REGIMES: readonly LightRegimeDef[] = [
 
 export const DEFAULT_LIGHT_REGIME: LightRegimeKey = 'balanced';
 
+/** Sanitizer per tray: Vallecito's 2023 allocation. */
+export const SANITIZER_PER_TRAY: Tagged = tagged(0.05, 'DATED', '$', 'Vallecito 2023 time study: sanitization allocated per flat');
+
 /** Austin Energy residential rate placeholder; Vallecito paid LPEA $0.1256/kWh. */
 export const ENERGY_RATE_PER_KWH: Tagged = tagged(0.13, 'PLACEHOLDER', '$/kWh', 'Austin Energy blended residential; Vallecito paid $0.1256 at LPEA (DATED)');
 

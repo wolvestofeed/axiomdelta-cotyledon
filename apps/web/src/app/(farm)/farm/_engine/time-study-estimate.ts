@@ -35,11 +35,15 @@
 
 import type { CropPlanDef } from '../_data/plan-data';
 import { timeStudy } from '../_data/plan-data';
-import { LOAD_TASK, PACK_CHECK_TASK, PLAN_TASK_STREAMS, type LaborScaling, type TimeStudyLine, type TimeStudySeed, type TimeStudyStream } from '../_data/time-studies';
+import { LOAD_TASK, PACK_CHECK_TASK, PLAN_TASK_STREAMS, VALLECITO_1020_STUDY, type LaborScaling, type TimeStudyLine, type TimeStudySeed, type TimeStudyStream } from '../_data/time-studies';
 import { cropPlanStage, PLAN_RANGE_POINT, type ComponentStage } from './stage';
+import { planStageDays, planStages, type GrowPlanDef } from '../_data/grow-plan';
+import { cycleDays as cycleDaysOf } from '../_data/stage-schedule';
+import { TRAY_FORMAT_BY_KEY } from '../_data/tray-formats';
+import { isGrowPlanCarrier } from './grow-plan-bridge';
 
 /** What a scaffold task is, which is what the routing reads its precedence from. */
-export type ScaffoldKind = 'receiving' | 'scaling' | 'prep' | 'sow' | 'blackout' | 'turnaround' | 'cold' | 'assemble' | 'seal' | 'pack-check' | 'load';
+export type ScaffoldKind = 'receiving' | 'scaling' | 'prep' | 'sow' | 'blackout' | 'turnaround' | 'cold' | 'assemble' | 'seal' | 'pack-check' | 'load' | 'daily' | 'harvest';
 
 /** One task on the scaffold: what the observer times, and its suggested station. */
 export interface ScaffoldTask {
@@ -82,8 +86,31 @@ export function servedComponents(cropPlan: CropPlanDef): { hot: string[]; cold: 
   return { hot, cold };
 }
 
+/**
+ * The task scaffold for a grow plan: Vallecito's tray study on three streams. Sowing tasks per
+ * tray on the sow day, daily tasks per tray per day, harvest tasks per unit on the distribution
+ * day; the knife harvest and the weigh only on a cut tray, which no plan format is.
+ */
+export function growPlanScaffold(plan: GrowPlanDef): ScaffoldTask[] {
+  const cut = TRAY_FORMAT_BY_KEY[plan.format].kind === 'cut';
+  const stageKeys = new Set(planStages(plan).map((st) => st.key));
+  const tasks: Omit<ScaffoldTask, 'seq'>[] = [];
+  for (const t of VALLECITO_1020_STUDY.sowing) tasks.push({ task: t.task, station: t.station, controlPoint: t.task === 'Receiving and sorting seed' ? 'seed-sanitation' : null, scalesWith: 'variable', stream: 'sowing', component: null, kind: t.task === 'Sow trays' ? 'sow' : 'prep' });
+  for (const t of VALLECITO_1020_STUDY.daily) {
+    if (t.span === 'light' && !stageKeys.has('light')) continue;
+    if (t.span === 'blackout' && !stageKeys.has('blackout')) continue;
+    tasks.push({ task: t.task, station: t.station, controlPoint: t.task === 'Inspection and sanitization' ? 'temperature-humidity' : null, scalesWith: 'variable', stream: 'daily', component: null, kind: 'daily' });
+  }
+  for (const t of VALLECITO_1020_STUDY.harvest) {
+    if (t.cutOnly && !cut) continue;
+    tasks.push({ task: t.task, station: t.station, controlPoint: t.task === 'Packaging and labels' ? 'harvest-check' : null, scalesWith: 'variable', stream: 'harvest', component: null, kind: 'harvest' });
+  }
+  return tasks.map((t, i) => ({ seq: i + 1, ...t }));
+}
+
 /** The task scaffold for a crop plan: what a time study of it times, sowing stream then harvest stream. */
 export function timeStudyScaffold(cropPlan: CropPlanDef): ScaffoldTask[] {
+  if (isGrowPlanCarrier(cropPlan)) return growPlanScaffold(cropPlan.plan);
   const { hot, cold } = servedComponents(cropPlan);
   const tasks: Omit<ScaffoldTask, 'seq'>[] = [
     { task: 'Receiving, verification, put-away', station: 'Dock, walk-in', controlPoint: null, scalesWith: 'fixed', stream: 'sowing', component: null, kind: 'receiving' },
@@ -153,11 +180,46 @@ function sowLine(task: ScaffoldTask, stage: ComponentStage | undefined): TimeStu
 }
 
 /**
+ * A grow plan's estimated study at a sowing of `sowingTrays`: Vallecito's minutes per tray on the
+ * sowing and harvest streams times the trays; each daily task's total over its span spread evenly
+ * over the plan's cycle days as one day's minutes for the sowing. One person on every task, as
+ * the sheet has it. The watering shape by stage is placed by the grow calendar (part 6); the
+ * total over the cycle is the sheet's.
+ */
+export function growPlanTimeStudy(plan: GrowPlanDef, sowingTrays: number): TimeStudySeed {
+  const days = planStageDays(plan);
+  const cycle = cycleDaysOf(days);
+  const trays = Math.max(0, sowingTrays);
+  const perTray = (minutes: number): TimeStudyLine => ({ task: '', station: null, staff: 1, elapsedMinutes: minutes * trays, laborMinutes: minutes * trays, scalesWith: 'variable', stream: 'sowing' });
+  const lines: TimeStudyLine[] = growPlanScaffold(plan).map((t): TimeStudyLine => {
+    if (t.stream === 'daily') {
+      const src = VALLECITO_1020_STUDY.daily.find((d) => d.task === t.task)!;
+      const perDay = cycle > 0 ? src.minutes / cycle : 0;
+      return { task: t.task, station: t.station, staff: 1, elapsedMinutes: perDay * trays, laborMinutes: perDay * trays, scalesWith: 'variable', stream: 'daily' };
+    }
+    const src = t.stream === 'sowing' ? VALLECITO_1020_STUDY.sowing.find((d) => d.task === t.task)! : VALLECITO_1020_STUDY.harvest.find((d) => d.task === t.task)!;
+    return { ...perTray(src.minutes), task: t.task, station: t.station, stream: t.stream };
+  });
+  const live = TRAY_FORMAT_BY_KEY[plan.format].kind !== 'cut';
+  return {
+    studiedOn: null,
+    sowingSize: trays,
+    cycleDays: cycle,
+    observer: null,
+    qualityResult: null,
+    qualityNotes: `ESTIMATED from ${VALLECITO_1020_STUDY.source} (DATED), per 1020 tray at one person, at a ${trays}-tray sowing over a ${cycle}-day cycle: sowing lines per tray on the sow day, daily lines per tray per day with each task's total spread over the cycle, harvest lines per unit on the distribution day${live ? '; the knife harvest and the weigh are cut-tray tasks a live tray does not get' : ''}. Stands until this plan's first observed study is adopted.`,
+    basis: 'estimated',
+    lines,
+  };
+}
+
+/**
  * The estimated study for a crop plan at the sowing size it is to stand for — the
  * crop plan's derived sowing at the plan's defaults when seeded. Undated, no
  * observer, no quality result: it was not observed.
  */
 export function estimatedTimeStudy(cropPlan: CropPlanDef, sowingSize: number): TimeStudySeed {
+  if (isGrowPlanCarrier(cropPlan)) return growPlanTimeStudy(cropPlan.plan, sowingSize);
   const stage = cropPlanStage(cropPlan, PLAN_RANGE_POINT);
   const byComponent = new Map(stage.components.map((c) => [c.component, c]));
   const lines: TimeStudyLine[] = timeStudyScaffold(cropPlan).map((t): TimeStudyLine => {
@@ -178,6 +240,7 @@ export function estimatedTimeStudy(cropPlan: CropPlanDef, sowingSize: number): T
   return {
     studiedOn: null,
     sowingSize,
+    cycleDays: 0,
     observer: null,
     qualityResult: null,
     qualityNotes: `ESTIMATED — a mock estimate per step, not an observation. Built at a ${sowingSize}-unit sowing from the plan's 14-task estimate and the stage processing standards at the ${PLAN_RANGE_POINT} end of each range, on two streams: sowing lines per sowing harvested, harvest lines per unit shipped that day; PLACEHOLDER until this crop plan's first observed study is recorded.${gaps}`,

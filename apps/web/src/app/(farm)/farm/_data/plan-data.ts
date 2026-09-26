@@ -126,6 +126,8 @@ export const assumptions = {
       'min/unit',
       'The 750 variable minutes in the time study ÷ the 500-unit sowing the study was estimated at. Asserted against `timeStudy` by test — dividing by the derived 550 understated it by 9.1%.',
     ),
+    /** The daily stream (outline §5 rule 3) on one unit: per tray per day over the cycle. Zero on the bare-engine fallback; each plan's own standard writes it. */
+    dailyMinutesPerUnit: t(0, 'DERIVED', 'min/unit', 'Bare-engine fallback: no daily stream. Each plan\'s labor standard writes its own (`unit-cost.ts`).'),
   },
 } as const;
 
@@ -276,6 +278,8 @@ export interface InputLine {
    * every line under the 1/8-cup minimum and understates the unit.
    */
   component: string;
+  /** Set on a line projected from a grow plan's seed line (`_engine/grow-plan-bridge.ts`): the variety it stands for. */
+  varietyKey?: string;
 }
 
 /** Library status. Production Planning plans `in_service`; the others run singly. */

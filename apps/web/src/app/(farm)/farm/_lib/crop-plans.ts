@@ -7,14 +7,12 @@ import { withSeedLock, seedMissingCropPlans } from './seed-writes';
 import { listCropPlansWith } from './crop-plan-rows';
 
 /**
- * MicroFarm — crop plan library read layer (server-only).
+ * MicroFarm — grow plan library read layer (server-only).
  *
- * The library is the source of crop plans. Every seed crop plan whose code is not in
- * the library — the code crop plan AMK-E-001 and the ten-unit menu AMK-E-002 …
- * 011 — is inserted on read, marked `source = 'seed'`, under an advisory lock
- * and idempotent on the code, so a fresh database and one that predates the
- * menu both end up with the same library and the code constants stop being the
- * source from that moment.
+ * The library is the source of grow plans. Every seed plan whose code is not in the library — one
+ * single-variety plan per variety — is inserted on read, marked `source = 'seed'`, under an
+ * advisory lock and idempotent on the code, so a fresh database and one that predates a variety
+ * both end up with the same library and the code constants stop being the source from that moment.
  */
 
 async function seedMissing(): Promise<void> {
@@ -23,7 +21,7 @@ async function seedMissing(): Promise<void> {
   });
 }
 
-/** Every library crop plan, oldest first, seeding the library on first read. */
+/** Every library plan, oldest first, seeding the library on first read. */
 export async function listCropPlans(): Promise<LibraryCropPlan[]> {
   await seedMissing();
   return listCropPlansWith(db);

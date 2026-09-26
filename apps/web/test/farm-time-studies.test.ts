@@ -16,7 +16,7 @@ import {
 } from '@/app/(farm)/farm/_engine/time-studies';
 
 const study = (over: Partial<TimeStudyDoc> = {}): TimeStudyDoc => ({
-  id: 'x', cropPlanCode: 'AMK-E-002', studiedOn: '2027-01-10', sowingSize: 400, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'user_built', basis: 'observed',
+  id: 'x', cropPlanCode: 'AMK-E-002', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'user_built', basis: 'observed',
   lines: [
     { task: 'Load', station: 'Blackout rack', staff: 2, elapsedMinutes: 30, laborMinutes: 60, scalesWith: 'fixed', stream: 'sowing' },
     { task: 'Assemble', station: 'Line', staff: 4, elapsedMinutes: 50, laborMinutes: 200, scalesWith: 'variable', stream: 'harvest' },
@@ -111,5 +111,51 @@ describe('farm time studies — the log', () => {
     expect(s.qualityResult).toBeNull();
     expect(s.source).toBe('seed');
     expect(s.basis).toBe('estimated');
+  });
+});
+
+describe('farm time studies — the daily stream (outline §5 rule 3)', () => {
+  const three = study({
+    sowingSize: 20,
+    cycleDays: 10,
+    lines: [
+      { task: 'Sow trays', station: 'Prep station', staff: 1, elapsedMinutes: 60, laborMinutes: 60, scalesWith: 'variable', stream: 'sowing' },
+      { task: 'Watering', station: 'Grow rack', staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'variable', stream: 'daily' },
+      { task: 'Walk-through', station: 'Grow rack', staff: 1, elapsedMinutes: 5, laborMinutes: 5, scalesWith: 'fixed', stream: 'daily' },
+      { task: 'Pack', station: 'Harvest station', staff: 1, elapsedMinutes: 40, laborMinutes: 40, scalesWith: 'variable', stream: 'harvest' },
+    ],
+  });
+
+  it('a daily line is one day\'s minutes for the sowing; per tray per day over the sowing, over the cycle into the unit', () => {
+    const s = summarizeStudy(three);
+    expect(s.dailyMinutesPerTrayDay).toBeCloseTo(0.5, 9);
+    expect(s.dailyFixedMinutesPerDay).toBe(5);
+    expect(s.dailyLaborMinutes).toBe(150);
+    expect(s.dailyMinutesPerUnit).toBeCloseTo(7.5, 9);
+    expect(s.laborMinutes).toBe(60 + 40 + 150);
+    expect(s.laborMinutesPerUnit).toBeCloseTo(250 / 20, 9);
+    expect(s.variableMinutesPerUnit).toBeCloseTo(100 / 20, 9);
+    expect(s.fixedMinutesPerSowing).toBe(0);
+    expect(s.cycleDays).toBe(10);
+  });
+
+  it('a sowing of other units scales the daily stream by trays and the cycle', () => {
+    const s = summarizeStudy(three);
+    expect(laborMinutesForSowing(s, 40)).toBeCloseTo(0 + 5 * 40 + (5 + 0.5 * 40) * 10, 9);
+  });
+
+  it('a study with no daily line carries none: the two-stream arithmetic is unchanged', () => {
+    const s = summarizeStudy(study());
+    expect(s.dailyLaborMinutes).toBe(0);
+    expect(s.laborMinutes).toBe(260);
+    expect(laborMinutesForSowing(s, 400)).toBe(260);
+  });
+
+  it('rows map a daily line and the cycle days', () => {
+    const s = timeStudyFromRows('BROC-01', { id: 'r', studiedOn: null, sowingSize: 20, cycleDays: 13, observer: null, qualityResult: null, qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'seed', basis: 'estimated' }, [
+      { task: 'Watering', station: 'Grow rack', staff: 1, elapsedMinutes: 1, laborMinutes: 1, scalesWith: 'variable', stream: 'daily' },
+    ]);
+    expect(s.cycleDays).toBe(13);
+    expect(s.lines[0]!.stream).toBe('daily');
   });
 });

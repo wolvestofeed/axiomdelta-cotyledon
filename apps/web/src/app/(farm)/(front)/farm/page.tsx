@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/app/(farm)/farm/_lib/session';
 import icon from '@/app/(farm)/farm/_assets/farm-icon-512.png';
 import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
@@ -14,7 +14,7 @@ export default async function FrontDoorPage() {
 }
 
 async function FrontDoorPageInner() {
-  const { userId } = await auth();
+  const { userId } = await getSession();
   return (
     <div className="farm-front-welcome">
       <div className="farm-front-brand" aria-label="MicroFarm">

@@ -41,6 +41,10 @@ const EquipmentPatch = z.object({
   unitCostCents: z.number().int().min(0, 'Unit cost cannot be negative').max(10_000_000_000).optional(),
   critical: z.boolean().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  /** A grow unit's shelves, shelf width and fixture (outline §4); null on equipment no tray sits on. */
+  shelves: z.number().int('Shelves is a whole number').min(0).max(100).nullable().optional(),
+  shelfWidthIn: z.number().min(1, 'A shelf has a width').max(240).nullable().optional(),
+  fixtureKey: z.string().trim().max(60).nullable().optional(),
   /** Pounds one unit takes in one run — the sowing this grow unit bounds; null on equipment a sowing does not pass through. */
   sowingCapacityLb: z.number().min(0, 'Sowing capacity cannot be negative').max(1_000_000).nullable().optional(),
   sowingCapacityBasis: z.enum(['estimated', 'stated', 'observed']).optional(),

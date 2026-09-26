@@ -1,5 +1,5 @@
 import 'server-only';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from './session';
 import { eq, sql } from 'drizzle-orm';
 import { farmWorkspaces, type FarmWorkspaceRow } from '@mf/db';
 import { rootDb, workspaceScope, type Db } from '@/lib/db';
@@ -13,7 +13,8 @@ import { rootDb, workspaceScope, type Db } from '@/lib/db';
  * an async scope that `db` reads. Nested calls reuse the scope they are in.
  *
  * With no organization active there is no scope: `db` throws, and the front door sends the
- * person to choose or create a farm.
+ * person to choose or create a farm. Under the local development bypass (`dev-bypass.ts`) every
+ * request is the local admin of the local workspace.
  */
 
 /** The workspace for a Clerk organization, provisioned on first sight. */
@@ -47,7 +48,7 @@ export async function withWorkspaceId<T>(workspaceId: string, fn: () => Promise<
  */
 export async function withWorkspace<T>(fn: () => Promise<T>): Promise<T> {
   if (workspaceScope.getStore()) return fn();
-  const { userId, orgId, orgSlug } = await auth();
+  const { userId, orgId, orgSlug } = await getSession();
   if (!userId || !orgId) return fn();
   const ws = await workspaceForOrg(orgId, orgSlug);
   return withWorkspaceId(ws.id, fn);

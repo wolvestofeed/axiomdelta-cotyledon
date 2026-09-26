@@ -11,6 +11,7 @@
 import { FOOTPRINT_SEED, type FacilityZone, type FootprintBasis } from './facility-design';
 
 export const EQUIPMENT_CATEGORIES = [
+  'Grow room',
   'Hot production',
   'Prep',
   'Grow critical path',
@@ -60,6 +61,14 @@ export interface EquipmentLine extends ScheduleLine {
   status: EquipmentStatus;
   /** Null = TBD. */
   inServiceDate: string | null;
+  /**
+   * A grow unit (outline §4): growing shelves on one unit, the shelf width the tray formats are
+   * counted against, and the fixture key (`inputs-catalog.ts`) on its shelves. Null on equipment
+   * no tray sits on. Capacity in trays is derived from these (`_engine/grow-capacity.ts`).
+   */
+  shelves?: number | null;
+  shelfWidthIn?: number | null;
+  fixtureKey?: string | null;
   /**
    * Pounds of product ONE unit takes in one run — the sowing a grow unit bounds
    *.
@@ -148,6 +157,20 @@ export const SOWING_CAPACITY_SEED: Record<string, { lb: number; note: string }> 
   'Jar stand oven, full size 20-pan': { lb: 240, note: '20 full hotel pans at about 12 lb of product each.' },
   'Convection oven, double stack': { lb: 120, note: '10 sheet pans at about 12 lb of product each.' },
 };
+
+/**
+ * The grow room's Phase 1 list: Vallecito's starter rack as bought (DATED, Break-even sheet
+ * 2023): a 6-tier 24x48 shelving unit with five lit growing tiers, five Mars Hydro VG80
+ * fixtures, four clip fans and sixteen 1020 three-piece flat sets, $1,058 the rack. The sixth
+ * tier is the top of the unit and holds no tray. A jar stand for sprouts is not on the list;
+ * jars sit on a rack shelf at the format's placeholder count.
+ */
+const GROW_ROOM_SEED: readonly (ScheduleLine & { shelves?: number; shelfWidthIn?: number; fixtureKey?: string })[] = [
+  { item: 'Grow rack, 6-tier 24x48 wire shelving', category: 'Grow room', phase: 1, newUsed: 'New', qty: 1, unitCostNew: 200, critical: true, note: 'Vallecito 2023, $200. Five lit growing tiers; four 1020 flats a shelf.', shelves: 5, shelfWidthIn: 48, fixtureKey: 'mars-hydro-vg80' },
+  { item: 'LED grow light, Mars Hydro VG80', category: 'Grow room', phase: 1, newUsed: 'New', qty: 5, unitCostNew: 90, critical: true, note: 'Vallecito 2023, $450 for five; one a tier.' },
+  { item: 'Clip fan, 6 in', category: 'Grow room', phase: 1, newUsed: 'New', qty: 4, unitCostNew: 50, critical: false, note: 'Vallecito 2023, $200 for four.' },
+  { item: '1020 three-piece flat set', category: 'Grow room', phase: 1, newUsed: 'New', qty: 16, unitCostNew: 13, critical: false, note: 'Vallecito 2023, $208 for sixteen: base, mesh and blackout top.' },
+];
 
 /** The capex schedule as drawn up — what the library seeds from. Nothing reads it directly. */
 const schedule: ScheduleLine[] = [
@@ -283,8 +306,10 @@ const planned = (l: ScheduleLine, over: Partial<EquipmentLine> = {}): EquipmentL
   ...over,
 });
 
-/** The equipment library's seed: the schedule split into build-out phases. */
-export const equipmentSeed: EquipmentLine[] = schedule.flatMap((l): EquipmentLine[] => {
+/** The equipment library's seed: the grow room, then the schedule split into build-out phases. */
+export const equipmentSeed: EquipmentLine[] = [
+  ...GROW_ROOM_SEED.map(({ shelves, shelfWidthIn, fixtureKey, ...l }): EquipmentLine => planned(l, { shelves: shelves ?? null, shelfWidthIn: shelfWidthIn ?? null, fixtureKey: fixtureKey ?? null })),
+  ...schedule.flatMap((l): EquipmentLine[] => {
   if (l.phase !== 1) return [planned(l)];
   if (SECOND_LINE.has(l.item)) return [planned(l, { phase: 2 })];
   const second = { key: `${l.item} (Phase 2)`, phase: 2 as const };
@@ -297,7 +322,8 @@ export const equipmentSeed: EquipmentLine[] = schedule.flatMap((l): EquipmentLin
     ];
   }
   return [planned(l)];
-});
+  }),
+];
 
 /**
  * A leasehold-improvement line (Roadmap N1). `extended` is the figure of record

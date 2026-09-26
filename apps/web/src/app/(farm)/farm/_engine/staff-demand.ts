@@ -8,6 +8,10 @@
  *   SOWING lines, on the production day, per sowing harvested: a fixed line takes its
  *   labor minutes once per sowing, a per-unit line its labor minutes per
  *   unit studied × the units produced.
+ *   DAILY lines, on every day a tray is on its grow unit, per tray on the shelf: a
+ *   per-unit line one day's minutes per tray studied × the trays on the shelf, a fixed
+ *   line once a day per plan present (`traysOnShelf` derives the shelf from the sowings
+ *   and each plan's cycle days).
  *   HARVEST lines, on the distribution day, per unit shipped that day: a
  *   per-unit line its labor minutes per unit studied × the units
  *   shipped; a fixed line (loading the vehicle) once per distribution day — the
@@ -20,7 +24,12 @@
  */
 
 import type { TimeStudyDoc, TimeStudyStream } from '../_data/time-studies';
+import type { CropPlanDef } from '../_data/plan-data';
+import { cycleDays } from '../_data/stage-schedule';
+import { planStageDays } from '../_data/grow-plan';
 import type { CropPlanRunPlan } from './production-plan';
+import { isGrowPlanCarrier } from './grow-plan-bridge';
+import { isoAddDays } from './orders';
 import { laborStandard, studiesForCropPlan } from './time-studies';
 
 export interface DemandLine {
@@ -49,8 +58,11 @@ export interface DemandDay {
   units: number;
   /** Units shipped that day. */
   unitsShipped: number;
+  /** Trays on the grow units that day. */
+  traysOnShelf: number;
   staffHours: number;
   sowingStaffHours: number;
+  dailyStaffHours: number;
   harvestStaffHours: number;
   /** The most people any one task needs; tasks are not yet placed on the clock (Roadmap L5). */
   mostPeopleOnATask: number;
@@ -86,11 +98,48 @@ export interface HarvestDayInput {
   shipments: readonly { cropPlanCode: string; cropPlanName: string; units: number }[];
 }
 
+/** A day's trays on the grow units, per plan. */
+export interface ShelfDayInput {
+  date: string;
+  trays: readonly { cropPlanCode: string; cropPlanName: string; trays: number }[];
+}
+
+/** Each plan's cycle days, for the shelf occupancy; a Phase 1-era plan has none. */
+export function cycleDaysByCode(cropPlans: readonly CropPlanDef[]): Record<string, number> {
+  return Object.fromEntries(cropPlans.map((r) => [r.code, isGrowPlanCarrier(r) ? cycleDays(planStageDays(r.plan)) : 0]));
+}
+
+/**
+ * The trays on the grow units each day of a window, from the sowings: a sowing's trays occupy
+ * the shelf from its production date through its cycle days. Days with nothing on the shelf are
+ * absent.
+ */
+export function traysOnShelf(days: readonly DemandDayInput[], cycle: Readonly<Record<string, number>>, from: string, to: string): ShelfDayInput[] {
+  const byDate = new Map<string, Map<string, { cropPlanCode: string; cropPlanName: string; trays: number }>>();
+  for (const d of days) {
+    for (const run of d.runs) {
+      const n = cycle[run.cropPlanCode] ?? 0;
+      if (run.produced <= 0 || n <= 0) continue;
+      for (let k = 0; k < n; k += 1) {
+        const date = isoAddDays(d.productionDate, k);
+        if (date < from || date > to) continue;
+        const m = byDate.get(date) ?? new Map();
+        const row = m.get(run.cropPlanCode) ?? { cropPlanCode: run.cropPlanCode, cropPlanName: run.cropPlanName, trays: 0 };
+        row.trays += run.produced;
+        m.set(run.cropPlanCode, row);
+        byDate.set(date, m);
+      }
+    }
+  }
+  return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, m]) => ({ date, trays: [...m.values()] }));
+}
+
 export function staffDemand(input: {
   from: string;
   to: string;
   days: readonly DemandDayInput[];
   harvest?: readonly HarvestDayInput[];
+  shelf?: readonly ShelfDayInput[];
   studies: readonly TimeStudyDoc[];
 }): StaffDemand {
   const standards = new Map<string, TimeStudyDoc | null>();
@@ -109,12 +158,13 @@ export function staffDemand(input: {
     sowings: number;
     units: number;
     unitsShipped: number;
+    traysOnShelf: number;
   }
   const accs = new Map<string, Acc>();
   const accFor = (date: string): Acc => {
     let a = accs.get(date);
     if (!a) {
-      a = { byKey: new Map(), fixedHarvest: new Map(), uncovered: new Map(), estimated: new Set(), sowings: 0, units: 0, unitsShipped: 0 };
+      a = { byKey: new Map(), fixedHarvest: new Map(), uncovered: new Map(), estimated: new Set(), sowings: 0, units: 0, unitsShipped: 0, traysOnShelf: 0 };
       accs.set(date, a);
     }
     return a;
@@ -149,9 +199,27 @@ export function staffDemand(input: {
       }
       if (study.basis === 'estimated') a.estimated.add(run.cropPlanCode);
       for (const l of study.lines) {
-        if (l.stream === 'harvest') continue;
+        if (l.stream !== 'sowing') continue;
         const minutes = l.scalesWith === 'fixed' ? l.laborMinutes * run.sowingsScheduled : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * run.produced : 0;
         lineFor(a, l, run.cropPlanCode).hours += minutes / 60;
+      }
+    }
+  }
+
+  for (const d of input.shelf ?? []) {
+    if (!inWindow(d.date)) continue;
+    const on = d.trays.filter((t) => t.trays > 0);
+    if (on.length === 0) continue;
+    const a = accFor(d.date);
+    for (const t of on) {
+      a.traysOnShelf += t.trays;
+      const study = standardFor(t.cropPlanCode);
+      if (!study) continue;
+      if (study.basis === 'estimated') a.estimated.add(t.cropPlanCode);
+      for (const l of study.lines) {
+        if (l.stream !== 'daily') continue;
+        const minutes = l.scalesWith === 'fixed' ? l.laborMinutes : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * t.trays : 0;
+        lineFor(a, l, t.cropPlanCode).hours += minutes / 60;
       }
     }
   }
@@ -192,8 +260,10 @@ export function staffDemand(input: {
         sowings: a.sowings,
         units: a.units,
         unitsShipped: a.unitsShipped,
+        traysOnShelf: a.traysOnShelf,
         staffHours: lines.reduce((t, l) => t + l.hours, 0),
         sowingStaffHours: streamHours('sowing'),
+        dailyStaffHours: streamHours('daily'),
         harvestStaffHours: streamHours('harvest'),
         mostPeopleOnATask: lines.reduce((m, l) => Math.max(m, l.headcount), 0),
         lines,

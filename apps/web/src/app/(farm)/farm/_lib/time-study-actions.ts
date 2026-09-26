@@ -34,13 +34,15 @@ const Line = z.object({
   elapsedMinutes: z.number().min(0).max(10_000),
   laborMinutes: z.number().min(0).max(100_000),
   scalesWith: z.enum(['fixed', 'variable']),
-  stream: z.enum(['sowing', 'harvest']).default('sowing'),
+  stream: z.enum(['sowing', 'daily', 'harvest']).default('sowing'),
 });
 
 const StudyInput = z.object({
   cropPlanId: z.string().uuid(),
   studiedOn: isoDate,
   sowingSize: z.number().int().min(1, 'Sowing size must be at least one unit').max(100_000),
+  /** Days a tray was on its grow unit: what the daily lines multiply by. */
+  cycleDays: z.number().int().min(0).max(365).default(0),
   observer: z.string().trim().min(1, 'Name who observed the study').max(120),
   qualityResult: z.enum(['pass', 'hold', 'fail']),
   qualityNotes: z.string().trim().max(2000).nullable().default(null),

@@ -6,21 +6,18 @@ import { eq } from 'drizzle-orm';
 import { farmCropPlans, farmCropPlanLines, farmSowingRecords } from '@mf/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from './access';
-import {
-  cropPlanToRows,
-  normalizeLines,
-  specForTrayFormat,
-  CROP_PLAN_STATUSES,
-} from '../_engine/crop-plan-library';
-import type { CropPlanDef, InputLine, CropPlanStatus } from '../_data/plan-data';
+import { cropPlanToRows, CROP_PLAN_STATUSES } from '../_engine/crop-plan-library';
+import { growPlanProblems, type GrowPlanDef, type GrowPlanLine } from '../_data/grow-plan';
+import { tagged } from '../_data/tagged';
 import { withWorkspace } from '@/app/(farm)/farm/_lib/workspace';
 
 /**
- * MicroFarm — crop plan library writes. SUPER ADMIN ONLY.
+ * MicroFarm — grow plan library writes. SUPER ADMIN ONLY.
  *
- * A library crop plan is the standard a scenario's edits are measured against, so
- * it is written here, not through the forecast overlay. Saving bumps the
- * version; the lines are replaced whole (a crop plan is one document).
+ * A library plan is the standard a scenario's edits are measured against, so it is written here,
+ * not through the forecast overlay. Saving bumps the version; the lines are replaced whole (a plan
+ * is one document). A figure typed here is STATED by the editor; a null defers to the catalog or
+ * the variety record and keeps that record's tag.
  */
 
 type Result<T = unknown> = ({ ok: true } & (T extends object ? T : object)) | { ok: false; error: string };
@@ -31,140 +28,113 @@ function refuse(e: unknown): { ok: false; error: string } {
   throw e;
 }
 
-const Status = z.enum(['SOURCED', 'STATED', 'PLACEHOLDER', 'DERIVED', 'UNCONFIRMED', 'DATED']);
+const STAGE_KEYS = ['soak', 'sow', 'germination', 'blackout', 'light', 'harvest-window'] as const;
+const TYPED = 'Typed in the grow plan editor';
 
-const Nutrition = z
-  .object({
-    component: z.enum(['MMA', 'GRAINS', 'VEG', 'FRUIT', 'NONE']),
-    vegSubgroup: z.enum(['DARK_GREEN', 'RED_ORANGE', 'BEANS_PEAS_LENTILS', 'STARCHY', 'OTHER']).optional(),
-    grainGroup: z.enum(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']).optional(),
-    cupWeightG: z.number().positive().optional(),
-    unitWeightG: z.number().positive().optional(),
-    legumeElection: z.enum(['MMA', 'VEG']).optional(),
-    status: Status,
-    source: z.string().max(1000),
-  })
-  .optional();
+const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1) });
+const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.enum(['coco-coir', 'jute-mat', 'hemp-mat', 'vermiculite', 'peat-vermiculite', 'hydro-pad', 'none']), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
+const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.enum(['floragrow-npk', 'kelp', 'sulfur-supplement', 'none']), mlPerL: z.number().min(0).max(1_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
+const LightLineIn = z.object({ kind: z.literal('light'), regimeKey: z.enum(['yield', 'balanced', 'nutrition-forward', 'biofortify-far-red', 'continuous']), ppfd: z.number().min(0).max(2_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
+const LineIn = z.discriminatedUnion('kind', [SeedLineIn, MediumLineIn, NutrientLineIn, LightLineIn]);
 
-const Line = z.object({
-  name: z.string().trim().min(1, 'Every line needs a name').max(120),
-  spec: z.string().max(400).default(''),
-  seedQtyPerSowing: z.number().min(0),
-  unit: z.enum(['lb', 'each']),
-  /** 0 is authored: a line absorbed into its component (oil, a seasoning) whose mass is carried on another line. */
-  yieldToHarvest: z.number().min(0),
-  seedUnitCost: z.number().min(0),
-  packSize: z.number().positive(),
-  isHotComponent: z.boolean(),
-  unitMassOz: z.number().positive().optional(),
-  trimYield: z.number().positive().optional(),
-  blackoutYield: z.number().positive().optional(),
-  status: Status,
-  source: z.string().max(1000),
-  yieldStatus: Status,
-  yieldSource: z.string().max(1000),
-  nutrition: Nutrition,
-  component: z.string().trim().min(1).max(120),
-  /** FDA Food Traceability List category (21 CFR 1.1990) the line falls under, set per line; absent means out of scope. */
-  foodTraceabilityList: z.string().trim().min(1).max(120).optional(),
-});
+const StageDaysIn = z.object({ soak: z.number().min(0).max(30), sow: z.number().min(0).max(30), germination: z.number().min(0).max(30), blackout: z.number().min(0).max(30), light: z.number().min(0).max(60), 'harvest-window': z.number().min(0).max(30) });
 
-const CropPlanInput = z.object({
-  code: z.string().trim().regex(/^[A-Z0-9-]{3,24}$/, 'Code is upper-case letters, digits and dashes'),
+const GrowPlanInput = z.object({
+  code: z.string().trim().regex(/^[A-Z]{2,5}-\d{2,3}$/, 'The code is a variety code, a dash and a serial: BROC-01'),
   name: z.string().trim().min(1).max(160),
-  category: z.string().max(160).default(''),
   status: z.enum(['in_service', 'planned', 'developing']),
   channels: z.array(z.number().int().min(1).max(3)).default([]),
-  components: z.string().max(1000).default(''),
-  productionMethod: z.string().max(1000).default(''),
-  allergensPresent: z.string().max(400).default(''),
-  allergenFreeClaims: z.string().max(400).default(''),
-  /** The units the input quantities are written for; the production sowing is derived, never typed. */
-  sowingUnits: z.number().int().min(1, 'The quantities are written for at least one unit').max(100_000).default(100),
-  trayFormat: z.enum(['K-5', '6-8', '9-12']).default('9-12'),
-  servingGrowUnitCapacityOz: z.number().positive().default(16),
-  inputs: z.array(Line).min(1, 'A crop plan needs at least one input line'),
+  format: z.enum(['flat-1020', 'tray-7x11', 'insert-5x5', 'pint-jar']),
+  note: z.string().max(2000).default(''),
+  /** Null = the varieties' own days. */
+  stageDays: StageDaysIn.nullable().default(null),
+  lines: z.array(LineIn).min(1, 'A grow plan needs at least one line'),
 });
 
-function toCropPlan(d: z.infer<typeof CropPlanInput>): CropPlanDef {
-  const lines = normalizeLines(d.inputs as InputLine[]);
+function toGrowPlan(d: z.infer<typeof GrowPlanInput>): GrowPlanDef {
+  const lines: GrowPlanLine[] = d.lines.map((l): GrowPlanLine => {
+    switch (l.kind) {
+      case 'seed':
+        return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: tagged(l.gramsPerTray, 'STATED', 'g', TYPED), share: l.share };
+      case 'medium':
+        return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray === null ? null : tagged(l.qtyPerTray, 'STATED', 'per tray', TYPED) };
+      case 'nutrient':
+        return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerL: l.mlPerL === null ? null : tagged(l.mlPerL, 'STATED', 'ml/L', TYPED), startsAt: l.startsAt };
+      case 'light':
+        return { kind: 'light', regimeKey: l.regimeKey, ppfd: l.ppfd === null ? null : tagged(l.ppfd, 'STATED', 'µmol/m²/s', TYPED), startsAt: l.startsAt };
+    }
+  });
   return {
     code: d.code,
     name: d.name,
-    category: d.category,
-    status: d.status as CropPlanStatus,
+    status: d.status,
     channels: [...new Set(d.channels)].sort(),
-    components: d.components,
-    productionMethod: d.productionMethod,
-    allergensPresent: d.allergensPresent,
-    allergenFreeClaims: d.allergenFreeClaims,
-    sowingUnits: d.sowingUnits,
-    spec: specForTrayFormat(d.trayFormat, d.servingGrowUnitCapacityOz),
-    inputs: lines,
+    format: d.format,
+    lines,
+    stageDays: d.stageDays === null ? null : tagged(d.stageDays, 'STATED', 'days', TYPED),
+    note: d.note,
   };
 }
 
-/** Add a crop plan to the library. */
+const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join('.') || 'plan'}: ${i.message}`).join('; ');
+
+/** Add a grow plan to the library. */
 export async function createCropPlan(...args: Parameters<typeof createCropPlanInner>): ReturnType<typeof createCropPlanInner> {
   return withWorkspace(() => createCropPlanInner(...args));
 }
 
 async function createCropPlanInner(input: unknown): Promise<Result<{ id: string; code: string }>> {
-  const parsed = CropPlanInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
+  const parsed = GrowPlanInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   let access;
   try {
     access = await requireFarmSuperAdmin();
   } catch (e) {
     return refuse(e);
   }
-  const names = new Set<string>();
-  for (const l of parsed.data.inputs) {
-    if (names.has(l.name)) return { ok: false, error: `Input "${l.name}" appears twice.` };
-    names.add(l.name);
-  }
-  const existing = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, parsed.data.code)).limit(1);
-  if (existing[0]) return { ok: false, error: `Crop plan code ${parsed.data.code} is already in the library.` };
+  const plan = toGrowPlan(parsed.data);
+  const problems = growPlanProblems(plan);
+  if (problems.length) return { ok: false, error: problems.join(' ') };
+  const existing = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, plan.code)).limit(1);
+  if (existing[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
 
-  const { header, lines } = cropPlanToRows(toCropPlan(parsed.data));
+  const { header, lines } = cropPlanToRows(plan);
   const inserted = await db
     .insert(farmCropPlans)
     .values({ ...header, effectiveFrom: new Date().toISOString().slice(0, 10), createdBy: access.userId })
     .returning({ id: farmCropPlans.id });
   const id = inserted[0]?.id;
-  if (!id) return { ok: false, error: 'Failed to save the crop plan.' };
+  if (!id) return { ok: false, error: 'Failed to save the grow plan.' };
   await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: id, ...l })));
   revalidatePath('/farm', 'layout');
-  return { ok: true, id, code: parsed.data.code };
+  return { ok: true, id, code: plan.code };
 }
 
-const UpdateInput = CropPlanInput.extend({ id: z.string().uuid() });
+const UpdateInput = GrowPlanInput.extend({ id: z.string().uuid() });
 
-/** Replace a library crop plan's header and lines; bumps the version. */
+/** Replace a library plan's header and lines; bumps the version. */
 export async function updateCropPlan(...args: Parameters<typeof updateCropPlanInner>): ReturnType<typeof updateCropPlanInner> {
   return withWorkspace(() => updateCropPlanInner(...args));
 }
 
 async function updateCropPlanInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = UpdateInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
+  if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
     await requireFarmSuperAdmin();
   } catch (e) {
     return refuse(e);
   }
-  const names = new Set<string>();
-  for (const l of parsed.data.inputs) {
-    if (names.has(l.name)) return { ok: false, error: `Input "${l.name}" appears twice.` };
-    names.add(l.name);
-  }
+  const plan = toGrowPlan(parsed.data);
+  const problems = growPlanProblems(plan);
+  if (problems.length) return { ok: false, error: problems.join(' ') };
   const current = await db.select({ id: farmCropPlans.id, version: farmCropPlans.version, code: farmCropPlans.code }).from(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id)).limit(1);
-  if (!current[0]) return { ok: false, error: 'Crop plan not found.' };
-  if (current[0].code !== parsed.data.code) {
-    const clash = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, parsed.data.code)).limit(1);
-    if (clash[0]) return { ok: false, error: `Crop plan code ${parsed.data.code} is already in the library.` };
+  if (!current[0]) return { ok: false, error: 'Grow plan not found.' };
+  if (current[0].code !== plan.code) {
+    const clash = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, plan.code)).limit(1);
+    if (clash[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
   }
-  const { header, lines } = cropPlanToRows(toCropPlan(parsed.data));
+  const { header, lines } = cropPlanToRows(plan);
   await db
     .update(farmCropPlans)
     .set({ ...header, source: undefined, version: current[0].version + 1, effectiveFrom: new Date().toISOString().slice(0, 10), updatedAt: new Date() })
@@ -183,7 +153,7 @@ export async function setCropPlanStatus(...args: Parameters<typeof setCropPlanSt
 
 async function setCropPlanStatusInner(input: unknown): Promise<Result> {
   const parsed = StatusInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
+  if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
     await requireFarmSuperAdmin();
   } catch (e) {
@@ -197,25 +167,25 @@ async function setCropPlanStatusInner(input: unknown): Promise<Result> {
 
 const DeleteInput = z.object({ id: z.string().uuid() });
 
-/** Remove a crop plan. Refused while a sowing record names its code, or if it is the last one. */
+/** Remove a plan. Refused while a sowing record names its code, or if it is the last one. */
 export async function deleteCropPlan(...args: Parameters<typeof deleteCropPlanInner>): ReturnType<typeof deleteCropPlanInner> {
   return withWorkspace(() => deleteCropPlanInner(...args));
 }
 
 async function deleteCropPlanInner(input: unknown): Promise<Result> {
   const parsed = DeleteInput.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => `${i.path.join('.') || 'cropPlan'}: ${i.message}`).join('; ') };
+  if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
     await requireFarmSuperAdmin();
   } catch (e) {
     return refuse(e);
   }
   const row = await db.select({ code: farmCropPlans.code }).from(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id)).limit(1);
-  if (!row[0]) return { ok: false, error: 'Crop plan not found.' };
+  if (!row[0]) return { ok: false, error: 'Grow plan not found.' };
   const used = await db.select({ id: farmSowingRecords.id }).from(farmSowingRecords).where(eq(farmSowingRecords.cropPlanCode, row[0].code)).limit(1);
-  if (used[0]) return { ok: false, error: `Sowing records name ${row[0].code}; a crop plan with production history is not deleted.` };
+  if (used[0]) return { ok: false, error: `Sowing records name ${row[0].code}; a plan with production history is not deleted.` };
   const count = await db.select({ id: farmCropPlans.id }).from(farmCropPlans);
-  if (count.length <= 1) return { ok: false, error: 'The library keeps at least one crop plan.' };
+  if (count.length <= 1) return { ok: false, error: 'The library keeps at least one grow plan.' };
   await db.delete(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };

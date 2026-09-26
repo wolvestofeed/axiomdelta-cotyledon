@@ -58,6 +58,7 @@ describe('labor is each crop plan\'s own standard', () => {
     const observed: TimeStudyDoc = {
       id: 'obs-1',
       cropPlanCode: e002.code,
+      cycleDays: 0,
       studiedOn: '2026-09-10',
       sowingSize: 400,
       observer: 'lead',

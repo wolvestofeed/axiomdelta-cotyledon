@@ -1,5 +1,5 @@
 import 'server-only';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { getSession, getSessionUser } from './session';
 import { activeStaffByEmail } from './staff-login';
 import { currentWorkspaceId } from '@/lib/db';
 
@@ -10,7 +10,8 @@ import { currentWorkspaceId } from '@/lib/db';
  * The roles come from the Clerk organization that is the workspace (outline §7): `org:admin`
  * is an admin, any member is an operator, and the platform admins named below are admins in
  * every organization they belong to. External portal accounts hold neither role.
- * Sign-in itself is enforced by `proxy.ts`.
+ * Sign-in itself is enforced by `proxy.ts`. Under the local development bypass (`dev-bypass.ts`)
+ * every request is an admin of the local workspace.
  */
 
 const PLATFORM_ADMINS: string[] = [
@@ -59,13 +60,13 @@ const NO_ACCESS: FarmAccess = { userId: null, email: null, name: null, orgId: nu
  * the sign-in is matched to their own record, which needs a workspace in scope.
  */
 export async function getFarmAccess(): Promise<FarmAccess> {
-  const { userId, orgId, orgRole } = await auth();
+  const { userId, orgId, orgRole } = await getSession();
   if (!userId) return NO_ACCESS;
 
-  const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
+  const user = await getSessionUser();
+  const email = user.email;
 
-  const metaSuper = user?.publicMetadata?.['farmSuperAdmin'] === true;
+  const metaSuper = user.metaSuperAdmin;
   const platformAdmin = email !== null && platformAdmins().includes(email);
   const orgAdmin = orgId != null && orgRole === 'org:admin';
   const isSuperAdmin = orgId != null && (orgAdmin || platformAdmin || metaSuper);
@@ -77,7 +78,7 @@ export async function getFarmAccess(): Promise<FarmAccess> {
   return {
     userId,
     email,
-    name: user?.fullName ?? null,
+    name: user.name,
     orgId: orgId ?? null,
     workspaceId,
     isSuperAdmin,

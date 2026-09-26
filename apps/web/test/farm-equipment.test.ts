@@ -22,9 +22,9 @@ const qtyAtPhase1 = (re: RegExp) => equipmentSeed.filter((e) => e.phase === 1 &&
 describe('farm equipment — the seed', () => {
   it('keeps every dollar of the capex schedule and splits it into Phase 1, Phase 2 and Phase 3', () => {
     const r = capexRollup();
-    expect(r.equipmentAll).toBe(1_194_775);
+    expect(r.equipmentAll).toBe(1_195_833);
     // Both blackout racks are Phase 1: the second rack's $36,000 moved from Phase 2.
-    expect(r.equipmentPhase1).toBe(625_200);
+    expect(r.equipmentPhase1).toBe(626_258);
     expect(r.equipmentPhase2Add).toBe(491_775);
     expect(r.equipmentPhase3Add).toBe(77_800);
   });
@@ -62,8 +62,8 @@ describe('farm equipment — status', () => {
     const blackoutRack = equipmentSeed.find((e) => e.key === 'Blackout rack, 200 lb capacity')!;
     const lines = equipmentSeed.map((e) => (e.key === blackoutRack.key ? { ...e, status: 'no' as const } : e));
     // The one blackout rack row carries both racks, so marking it No drops both.
-    expect(withEquipment(lines).equipmentAll).toBe(1_194_775 - 2 * 36_000);
-    expect(withEquipment(lines).equipmentPhase1).toBe(625_200 - 2 * 36_000);
+    expect(withEquipment(lines).equipmentAll).toBe(1_195_833 - 2 * 36_000);
+    expect(withEquipment(lines).equipmentPhase1).toBe(626_258 - 2 * 36_000);
   });
 });
 

@@ -20,17 +20,21 @@ import { clock } from '../_data/crews';
 import { equipmentSeed } from '../_data/capex';
 import { sowingGrowUnitsFrom, isBlackoutRack, growUnitForProcess, type SowingGrowUnit } from './equipment';
 import { cropPlanStage, type CropPlanStage } from './stage';
+import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from './grow-capacity';
+import { costCarrier, isGrowPlanCarrier } from './grow-plan-bridge';
 
 type CropPlan = typeof defaultCropPlan;
 /**
- * The plant's capacity inputs. `sowingGrowUnits` is the Phase 1 equipment list's
- * grow units with their sowing capacities, read from the equipment library
- * (`resolveScenarioInputs`); absent, the code seed's Phase 1 list stands in.
+ * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
+ * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
+ * (`resolveScenarioInputs`); absent, the code seed's Phase 1 list stands in. `sowingGrowUnits`
+ * is the Phase 1-era list the stage and routing code still reads until part 6.
  */
-export type CapacityInputs = typeof defaultCapacityInputs & { sowingGrowUnits?: readonly SowingGrowUnit[] };
+export type CapacityInputs = typeof defaultCapacityInputs & { sowingGrowUnits?: readonly SowingGrowUnit[]; growUnits?: readonly GrowUnit[] };
 
 /** The Phase 1 grow units of the code seed — the fallback when no equipment library is in hand. */
 export const defaultSowingGrowUnits: readonly SowingGrowUnit[] = sowingGrowUnitsFrom(equipmentSeed);
+export const defaultGrowUnits: readonly GrowUnit[] = growUnitsFrom(equipmentSeed);
 
 /** Floor `n` down to the nearest `step` (e.g. sowing size to nearest 25). */
 export function roundDownToNearest(n: number, step: number): number {
@@ -102,6 +106,7 @@ export function costCropPlan(
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): CropPlanCosting {
+  if (isGrowPlanCarrier(cropPlan)) return costGrowCarrier(cropPlan, shrinkAllowance, unitFactor);
   const basis = cropPlan.sowingUnits;
   const lines: InputCost[] = cropPlan.inputs.map((ing) => {
     const extCostPerSowing = ing.seedQtyPerSowing * ing.seedUnitCost * unitFactor;
@@ -170,6 +175,62 @@ export function costCropPlan(
     costPerPackedOz: packedOzPerUnit > 0 ? totalInputCostPerUnit / packedOzPerUnit : 0,
     costPerHarvestedLb:
       harvestedOzPerUnit > 0 ? totalInputCostPerUnit / (harvestedOzPerUnit / OZ_PER_LB) : 0,
+    costPerSeedLb: seedOzPerUnit > 0 ? totalInputCostPerUnit / (seedOzPerUnit / OZ_PER_LB) : 0,
+  };
+}
+
+/**
+ * A grow plan costed on its four line kinds (`grow-costing.ts`), rendered in the crop plan
+ * costing's shape: one tray is the unit, the seed lines carry the weight chain (seed grams →
+ * harvest grams, packed as harvested on a live tray), and the medium, nutrient, light and
+ * consumable lines carry cost and no mass.
+ */
+function costGrowCarrier(cropPlan: CropPlan & { plan: import('../_data/grow-plan').GrowPlanDef }, shrinkAllowance: number, unitFactor: number): CropPlanCosting {
+  const g = costCarrier(cropPlan);
+  const rate = (costPerUnit: number, oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
+  const lines: InputCost[] = cropPlan.inputs.map((ing, i) => {
+    const gl = g.lines[i];
+    const costPerUnit = (gl?.costPerTray ?? 0) * unitFactor;
+    const seedOz = ing.unit === 'lb' ? ing.seedQtyPerSowing * OZ_PER_LB * unitFactor : 0;
+    const harvestedOz = ing.unit === 'lb' ? ing.harvestedYieldPerSowing * OZ_PER_LB * unitFactor : 0;
+    return {
+      ...ing,
+      extCostPerSowing: costPerUnit,
+      costPerUnit,
+      seedPerUnit: ing.seedQtyPerSowing * unitFactor,
+      seedOz,
+      sownOz: seedOz,
+      harvestedOz,
+      blackoutOz: harvestedOz,
+      packedOz: harvestedOz,
+      seedCostPerLb: ing.unit === 'lb' ? ing.seedUnitCost : rate(costPerUnit, seedOz),
+      sownCostPerLb: rate(costPerUnit, seedOz),
+      harvestedCostPerLb: rate(costPerUnit, harvestedOz),
+      costPerPackedOz: harvestedOz > 0 ? costPerUnit / harvestedOz : null,
+      trimObserved: false,
+      blackoutObserved: false,
+    };
+  });
+  const consumables = g.perTray.consumables * unitFactor;
+  const inputCostPerUnit = lines.reduce((t, l) => t + l.costPerUnit, 0) + consumables;
+  const shrinkPerUnit = inputCostPerUnit * shrinkAllowance;
+  const totalInputCostPerUnit = inputCostPerUnit + shrinkPerUnit;
+  const seedOzPerUnit = lines.reduce((t, l) => t + l.seedOz, 0);
+  const harvestedOzPerUnit = lines.reduce((t, l) => t + l.harvestedOz, 0);
+  return {
+    lines,
+    sowingUnits: 1,
+    inputCostPerSowing: inputCostPerUnit,
+    inputCostPerUnit,
+    shrinkPerUnit,
+    totalInputCostPerUnit,
+    seedOzPerUnit,
+    sownOzPerUnit: seedOzPerUnit,
+    harvestedOzPerUnit,
+    blackoutOzPerUnit: harvestedOzPerUnit,
+    packedOzPerUnit: harvestedOzPerUnit,
+    costPerPackedOz: harvestedOzPerUnit > 0 ? totalInputCostPerUnit / harvestedOzPerUnit : 0,
+    costPerHarvestedLb: harvestedOzPerUnit > 0 ? totalInputCostPerUnit / (harvestedOzPerUnit / OZ_PER_LB) : 0,
     costPerSeedLb: seedOzPerUnit > 0 ? totalInputCostPerUnit / (seedOzPerUnit / OZ_PER_LB) : 0,
   };
 }
@@ -591,6 +652,8 @@ export interface CapacityProfile {
   maxUnitsPerDay: number;
   cooling: CoolingConformance; // the blackout stage against FDA Food Code 3-501.14
   stage: CropPlanStage; // the crop plan's components against the stage processing standards
+  /** Set on a grow plan: the sowing in trays, the units that take it, the cycle and the sustained ceiling. */
+  grow?: GrowCapacity;
 }
 
 /**
@@ -651,6 +714,7 @@ export function deriveCapacity(
   cap: CapacityInputs = defaultCapacityInputs,
   unitFactor = 1,
 ): CapacityProfile {
+  if (isGrowPlanCarrier(cropPlan)) return deriveGrowProfile(cropPlan, cap, unitFactor);
   const growUnits = cap.sowingGrowUnits ?? defaultSowingGrowUnits;
   const blackoutRack = growUnits.find((v) => isBlackoutRack(v.item));
   // One rack's load: a sowing binds to one unit.
@@ -679,6 +743,39 @@ export function deriveCapacity(
     maxUnitsPerDay: sowingSize * cyclesPerDay,
     cooling: coolingConformance(cap.blackoutMinutes.value),
     stage: first.stage,
+  };
+}
+
+/**
+ * A grow plan's capacity in the crop plan profile's shape (outline §5 rule 1): the sowing is the
+ * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. The
+ * one-day figures the Phase 1-era planner and staffing still read (a load per unit inside the
+ * operating day) stand until part 6 places sowings on grow units for their cycle days; the
+ * sustained ceiling, trays across the units over the cycle, is on `grow`.
+ */
+function deriveGrowProfile(cropPlan: CropPlan & { plan: import('../_data/grow-plan').GrowPlanDef }, cap: CapacityInputs, unitFactor: number): CapacityProfile {
+  const grow = deriveGrowCapacity(cropPlan.plan, cap.growUnits ?? defaultGrowUnits);
+  const first = firstLoadAfterOpen(cropPlan);
+  const blackoutWindow = plantBlackoutWindow(cap, { minutes: 0, basis: 'stage' });
+  const cyclesPerDay = Math.min(blackoutWindow.cycles, grow.unitCount);
+  const massPerUnit = canopyMassPerUnit(cropPlan, unitFactor);
+  return {
+    lbPerCycle: (grow.sowingTrays * massPerUnit),
+    canopyMassPerUnit: massPerUnit,
+    unitsPerCycleRaw: grow.sowingTrays,
+    bounds: [],
+    binding: null,
+    sowingSize: grow.sowingTrays,
+    loadMinutes: cap.loadMinutes.value,
+    blackoutMinutes: 0,
+    unloadMinutes: cap.unloadMinutes.value,
+    occupancyMinutes: blackoutWindow.occupancyMinutes,
+    blackoutWindow,
+    cyclesPerDay,
+    maxUnitsPerDay: grow.sowingTrays * cyclesPerDay,
+    cooling: coolingConformance(0),
+    stage: first.stage,
+    grow,
   };
 }
 
@@ -747,7 +844,7 @@ export function laborForDay(
   a: typeof assumptions = assumptions,
 ): LaborResult {
   const fixedLaborHours = (sowings * a.laborSplit.fixedMinutesPerSowing.value) / 60;
-  const variableLaborHours = (units * a.laborSplit.variableMinutesPerUnit.value) / 60;
+  const variableLaborHours = (units * (a.laborSplit.variableMinutesPerUnit.value + (a.laborSplit.dailyMinutesPerUnit?.value ?? 0))) / 60;
   const totalLaborHours = fixedLaborHours + variableLaborHours;
   const directLaborCost = totalLaborHours * a.labor.blendedLoadedWage.value;
   return {
@@ -860,7 +957,8 @@ export function costPerUnit(
   const minutesPerUnit =
     laborMinutesPerUnit ??
     (sowingSize > 0 ? a.laborSplit.fixedMinutesPerSowing.value / sowingSize : 0) +
-      a.laborSplit.variableMinutesPerUnit.value;
+      a.laborSplit.variableMinutesPerUnit.value +
+      (a.laborSplit.dailyMinutesPerUnit?.value ?? 0);
   const directLabor = (minutesPerUnit / 60) * a.labor.blendedLoadedWage.value;
   const packaging = a.perUnit.packaging.value;
   return { food, directLabor, packaging, total: food + directLabor + packaging };
@@ -987,7 +1085,7 @@ export function validationWarnings(
   // 2. The time study is estimated at one sowing size and the model runs at another.
   const capacity = deriveCapacity(cropPlan, cap);
   const derived = capacity.sowingSize;
-  if (derived !== study.estimatedAtSowingSize) {
+  if (!isGrowPlanCarrier(cropPlan) && derived !== study.estimatedAtSowingSize) {
     warnings.push({
       id: 'time-study-rebasing',
       title: 'Time-study re-basing',

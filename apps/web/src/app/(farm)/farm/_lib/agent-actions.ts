@@ -199,13 +199,13 @@ async function saveCropPlanVariantInner(input: unknown): Promise<Result<{ id: st
   }
   const library = await listCropPlans();
   if (!library.some((r) => r.code === parsed.data.sourceCode)) return { ok: false, error: `Source crop plan ${parsed.data.sourceCode} is not in the library.` };
-  const code = nextCropPlanCode(library.map((r) => r.code));
+  const code = nextCropPlanCode(library.map((r) => r.code), parsed.data.sourceCode.split('-')[0] ?? 'MIX');
   const created = await createCropPlan({ ...parsed.data.cropPlan, code, status: 'developing' });
   if (!created.ok) return created;
   const studyId = await insertTimeStudy(
     db,
     created.id,
-    { studiedOn: null, sowingSize: parsed.data.study.sowingSize, observer: null, qualityResult: null, qualityNotes: parsed.data.study.qualityNotes, basis: 'estimated', lines: parsed.data.study.lines },
+    { studiedOn: null, sowingSize: parsed.data.study.sowingSize, cycleDays: 0, observer: null, qualityResult: null, qualityNotes: parsed.data.study.qualityNotes, basis: 'estimated', lines: parsed.data.study.lines },
     'user_built',
     access.email ?? access.userId,
   );

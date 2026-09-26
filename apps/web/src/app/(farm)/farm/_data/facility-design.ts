@@ -173,6 +173,10 @@ export interface FootprintSeed {
  * the walk-ins are nominal from their names. Rows without floor say why.
  */
 export const FOOTPRINT_SEED: Readonly<Record<string, FootprintSeed>> = {
+  'Grow rack, 6-tier 24x48 wire shelving': { widthIn: null, depthIn: null, basis: 'estimated', zone: null, source: 'The grow room is laid out by rack in Phase 5; no floor is counted here' },
+  'LED grow light, Mars Hydro VG80': { widthIn: null, depthIn: null, basis: 'estimated', zone: null, source: 'Mounted under a rack shelf; no incremental floor' },
+  'Clip fan, 6 in': { widthIn: null, depthIn: null, basis: 'estimated', zone: null, source: 'Clipped to a rack; no incremental floor' },
+  '1020 three-piece flat set': { widthIn: null, depthIn: null, basis: 'estimated', zone: null, source: 'Sits on a rack shelf; no incremental floor' },
   'Jar stand oven, full size 20-pan': { widthIn: 42.625, depthIn: 44, basis: 'sourced', zone: 'Hot line', underHood: true, source: 'Rational iJarStand Pro 20-full, 42-5/8 x 44 in total', manufacturer: 'Rational', model: 'iJarStand Pro 20-full', specSheetUrl: 'https://www.webstaurantstore.com/documents/specsheets/pro_20-full.pdf' },
   'Steam-jacketed tilting sprouting rack, 100 gal': { widthIn: 51, depthIn: 44, basis: 'sourced', zone: 'Hot line', underHood: true, source: 'Cleveland KEL-100-T, 51 x 44 in', manufacturer: 'Cleveland', model: 'KEL-100-T', specSheetUrl: 'https://www.clevelandrange.com/product/kel100t-electric-steam-sprouting-racks-quad-leg-tilting/' },
   'Tilting braising pan / shelf, 40 gal': { widthIn: 48, depthIn: 44, basis: 'sourced', zone: 'Hot line', underHood: true, source: 'Cleveland SGL-40-TR, 48 x 44 in', manufacturer: 'Cleveland', model: 'SGL-40-TR', specSheetUrl: 'https://www.clevelandrange.com/wp-content/uploads/2025/02/KE004046-93-SGL-30-40TR.pdf' },

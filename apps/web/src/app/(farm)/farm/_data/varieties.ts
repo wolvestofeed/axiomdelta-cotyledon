@@ -53,11 +53,14 @@ export interface MediaResponse {
 
 export interface VarietyDef {
   key: string;
+  /** The short code a grow plan's code starts with (`grow-plan.ts`): `BROC-01` is the first broccoli plan. */
+  code: string;
   name: string;
   latinName: string;
   family: VarietyFamily;
   kind: VarietyKind;
-  supplier: { name: string; sku: string | null; organic: boolean; heirloom: boolean; nonGmo: boolean; origin: string | null };
+  /** `code` is the supplier's short code on the library and on lot codes; `sku` the supplier's own item number. */
+  supplier: { name: string; code: string; sku: string | null; organic: boolean; heirloom: boolean; nonGmo: boolean; origin: string | null };
   /** The seed price per pound this record opens with; receipts replace it as the rolling cost. */
   seedPricePerLb: Tagged;
   /** Grams sown per 1020 flat, or per pint jar for a sprout. */
@@ -83,11 +86,12 @@ const sproutDays = (rinseDays: number): StageDays => ({ soak: 1, sow: 0, germina
 export const VARIETIES: readonly VarietyDef[] = [
   {
     key: 'broccoli',
+    code: 'BROC',
     name: 'Di Cicco broccoli',
     latinName: 'Brassica oleracea var. italica',
     family: 'Brassicaceae',
     kind: 'both',
-    supplier: { name: 'True Leaf Market', sku: '45262', organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: '45262', organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(20.37, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(40, 'STATED', 'g', 'Vallecito sowed 1.4 oz; the supplier rates 1 oz, On The Grow 15 to 25 g for brassicas'),
     supplierRate: '1 oz per 1020',
@@ -123,11 +127,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'radish',
+    code: 'RAD',
     name: 'Rambo purple radish',
     latinName: 'Raphanus sativus',
     family: 'Brassicaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: '19221', organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: '19221', organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(25.14, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(57, 'STATED', 'g', 'Vallecito sowed 2 oz; the supplier rates 1 oz'),
     supplierRate: '1 oz per 1020',
@@ -159,11 +164,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'sunflower',
+    code: 'SUN',
     name: 'Black oil sunflower',
     latinName: 'Helianthus annuus',
     family: 'Asteraceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: '48555', organic: false, heirloom: false, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: '48555', organic: false, heirloom: false, nonGmo: true, origin: null },
     seedPricePerLb: tagged(7.37, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(142, 'STATED', 'g', 'Vallecito sowed 5 oz; On The Grow 125 to 150 g'),
     supplierRate: '125 to 150 g per 1020 (On The Grow)',
@@ -187,11 +193,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'pea',
+    code: 'PEA',
     name: 'Speckled pea',
     latinName: 'Pisum sativum',
     family: 'Fabaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(3.26, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(227, 'STATED', 'g', 'Vallecito sowed 8 oz; the supplier rates 5 to 8 oz, On The Grow 200 to 260 g'),
     supplierRate: '5 to 8 oz per 1020',
@@ -214,11 +221,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'fenugreek',
+    code: 'FEN',
     name: 'Fenugreek',
     latinName: 'Trigonella foenum-graecum',
     family: 'Fabaceae',
     kind: 'both',
-    supplier: { name: 'True Leaf Market', sku: '16764', organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: '16764', organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(8.22, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(57, 'STATED', 'g', 'Vallecito sowed 2 oz'),
     supplierRate: '10 to 15 g per 1020 (Vallecito research)',
@@ -241,11 +249,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'borage',
+    code: 'BOR',
     name: 'Borage',
     latinName: 'Borago officinalis',
     family: 'Boraginaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: '41571', organic: false, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: '41571', organic: false, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(25.69, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(57, 'STATED', 'g', 'Vallecito sowed 2 oz'),
     supplierRate: '10 to 15 g per 1020 (Vallecito research)',
@@ -265,11 +274,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'amaranth',
+    code: 'AMA',
     name: 'Red garnet amaranth',
     latinName: 'Amaranthus tricolor',
     family: 'Amaranthaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(21.08, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(28, 'STATED', 'g', 'Vallecito sowed 1 oz; On The Grow 15 to 20 g for small seed'),
     supplierRate: '1 oz per 1020',
@@ -292,11 +302,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'red-cabbage',
+    code: 'CAB',
     name: 'Red Acre cabbage',
     latinName: 'Brassica oleracea var. capitata',
     family: 'Brassicaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(13.36, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(28, 'STATED', 'g', 'Vallecito sowed 1 oz'),
     supplierRate: '1 oz per 1020',
@@ -328,11 +339,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'chia',
+    code: 'CHIA',
     name: 'Chia',
     latinName: 'Salvia hispanica',
     family: 'Lamiaceae',
     kind: 'microgreen',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
     seedPricePerLb: tagged(10.86, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(28, 'STATED', 'g', 'Vallecito sowed 1 oz'),
     supplierRate: '1 oz per 1020',
@@ -352,11 +364,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'mung-bean',
+    code: 'MUNG',
     name: 'Mung bean',
     latinName: 'Vigna radiata',
     family: 'Fabaceae',
     kind: 'sprout',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: true, nonGmo: true, origin: null },
     seedPricePerLb: tagged(5.97, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(128, 'STATED', 'g', 'Per pint jar: Vallecito 4.5 oz seed'),
     supplierRate: '4 Tbsp per cup; 1 part seed to 2 parts sprouts',
@@ -380,11 +393,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'red-lentil',
+    code: 'LEN',
     name: 'Red lentil',
     latinName: 'Lens culinaris',
     family: 'Fabaceae',
     kind: 'sprout',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
     seedPricePerLb: tagged(5.23, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(50, 'STATED', 'g', 'Per pint jar: a quarter cup'),
     supplierRate: '1/4 cup per quart jar',
@@ -407,11 +421,12 @@ export const VARIETIES: readonly VarietyDef[] = [
   },
   {
     key: 'wheat',
+    code: 'WHT',
     name: 'Hard red winter wheat',
     latinName: 'Triticum aestivum',
     family: 'Poaceae',
     kind: 'sprout',
-    supplier: { name: 'True Leaf Market', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
+    supplier: { name: 'True Leaf Market', code: 'TLM', sku: null, organic: true, heirloom: false, nonGmo: true, origin: null },
     seedPricePerLb: tagged(5.23, 'DATED', '$/lb', TL),
     seedGramsPer1020: tagged(60, 'STATED', 'g', 'Per pint jar'),
     supplierRate: 'Tray, sack or jar; 8-hour soak',
@@ -432,6 +447,8 @@ export const VARIETIES: readonly VarietyDef[] = [
 ];
 
 export const VARIETY_BY_KEY: Readonly<Record<string, VarietyDef>> = Object.fromEntries(VARIETIES.map((v) => [v.key, v]));
+
+export const VARIETY_BY_CODE: Readonly<Record<string, VarietyDef>> = Object.fromEntries(VARIETIES.map((v) => [v.code, v]));
 
 /** Seed cost of one 1020 flat at the record's opening price. */
 export function seedCostPer1020(v: VarietyDef, pricePerLb: number = v.seedPricePerLb.value): number {

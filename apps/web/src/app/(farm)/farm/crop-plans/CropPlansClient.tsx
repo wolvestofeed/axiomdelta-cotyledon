@@ -26,6 +26,9 @@ import { inputRatings, ratingFor } from '../_data/mark';
 import { SupplierPicker } from '../_components/SupplierPicker';
 import { useLinkedSuppliers } from '../_components/useLinkedSuppliers';
 import { CropPlanPackagingCard } from './CropPlanPackagingCard';
+import { costCarrier, isGrowPlanCarrier } from '../_engine/grow-plan-bridge';
+import { LINE_KIND_LABELS } from '../_data/grow-plan';
+import { unitSku } from '../_data/tray-formats';
 
 export function CropPlansClient({ standards, today }: { standards: StandardVersionDoc[]; today: string }) {
   const { resolved, setInput, setSustainability, isSuperAdmin, library } = useScenario();
@@ -34,6 +37,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   // packaging and standards are records and edit in both worlds (Roadmap N6 slice 3).
   const { forecastEditing } = useOperationsWorld({});
   const libraryCropPlan = library.find((r) => r.code === selected.code);
+  const libraryPlan = libraryCropPlan && isGrowPlanCarrier(libraryCropPlan) ? libraryCropPlan.plan : undefined;
   const router = useRouter();
   const [editor, setEditor] = useState<'create' | 'duplicate' | 'edit' | null>(null);
   // The editor opens inside the library card; a toolbar button sits far above it, so bring it into view.
@@ -62,6 +66,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
       if (Object.keys(m).length === 0) delete d.inputSupplier;
     });
   const costing = useMemo(() => costCropPlan(selected), [selected]);
+  const growCosting = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
   const linesLinked = costing.lines.filter((l) => links[l.name]).length;
   const cap = useMemo(
     () => deriveCapacity(selected, resolved.capacityInputs),
@@ -204,12 +209,12 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
         {isSuperAdmin && (
           <PageControls group="action">
-            <button type="button" className="farm-btn ghost" onClick={() => setEditor(editor === 'create' ? null : 'create')}>Add New Crop plan</button>
+            <button type="button" className="farm-btn ghost" onClick={() => setEditor(editor === 'create' ? null : 'create')}>Add grow plan</button>
           </PageControls>
         )}
         {isSuperAdmin && (
           <div className="flex gap-2 mt-3!">
-            <button type="button" className="farm-btn primary" onClick={() => setEditor(editor === 'create' ? null : 'create')}>Add New Crop plan</button>
+            <button type="button" className="farm-btn primary" onClick={() => setEditor(editor === 'create' ? null : 'create')}>Add grow plan</button>
             {libraryCropPlan && 'id' in libraryCropPlan && (
               <button type="button" className="farm-btn" onClick={() => setEditor(editor === 'edit' ? null : 'edit')}>Edit {selected.code} in the library</button>
             )}
@@ -219,24 +224,59 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         {editor === 'create' && (
           <CropPlanEditor mode="create" library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
-        {editor === 'duplicate' && libraryCropPlan && (
-          <CropPlanEditor key={`dup-${libraryCropPlan.code}`} mode="create" cropPlan={libraryCropPlan} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
+        {editor === 'duplicate' && libraryCropPlan && libraryPlan && (
+          <CropPlanEditor key={`dup-${libraryCropPlan.code}`} mode="create" plan={libraryPlan} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
-        {editor === 'edit' && libraryCropPlan && (
-          <CropPlanEditor mode="edit" cropPlan={libraryCropPlan} cropPlanId={(libraryCropPlan as { id?: string }).id} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
+        {editor === 'edit' && libraryCropPlan && libraryPlan && (
+          <CropPlanEditor mode="edit" plan={libraryPlan} cropPlanId={(libraryCropPlan as { id?: string }).id} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
         <p className="farm-kpi-sub mt-2">
-          Production Planning plans cropPlans In Service; Planned and Developing cropPlans can be run singly. Each channel
-          is an expansion phase with its own menu; a cropPlan lists the channels it serves.
+          Production Planning plans grow plans In Service; Planned and Developing plans can be run singly. A plan lists
+          the channels it is offered on. The code of a plan is the lead variety code and a serial; a mixed tray is MIX.
         </p>
       </Card>
 
       <PageControls>
         <CropPlanSelector />
         {isSuperAdmin && libraryCropPlan && (
-          <button type="button" className="farm-btn ghost" aria-pressed={editor === 'duplicate'} onClick={() => setEditor(editor === 'duplicate' ? null : 'duplicate')}>Duplicate crop plan</button>
+          <button type="button" className="farm-btn ghost" aria-pressed={editor === 'duplicate'} onClick={() => setEditor(editor === 'duplicate' ? null : 'duplicate')}>Duplicate grow plan</button>
         )}
       </PageControls>
+      {growCosting && (
+        <Card title={`Grow plan — one ${growCosting.format.name}`}>
+          <div className="farm-scroll-x">
+            <table className="farm-table">
+              <thead><tr><th>Kind</th><th>Line</th><th className="num">Quantity</th><th>Reads from</th><th>Price</th><th className="num">Cost per tray</th></tr></thead>
+              <tbody>
+                {growCosting.lines.map((l, i) => (
+                  <tr key={i}>
+                    <td>{LINE_KIND_LABELS[l.line.kind]}</td>
+                    <td>{l.label}</td>
+                    <td className="num">{num(l.quantity, l.quantityUnit === 'g' || l.quantityUnit === 'tray-days' ? 0 : 2)} {l.quantityUnit}</td>
+                    <td className="farm-kpi-sub">{l.basis}</td>
+                    <td><StatusBadge status={l.status} /> <span className="farm-kpi-sub">{l.source}</span></td>
+                    <td className="num">{money(l.costPerTray)}</td>
+                  </tr>
+                ))}
+                <tr><td>Consumables</td><td>Tray set over its uses, sanitizer</td><td className="num">1 tray</td><td className="farm-kpi-sub">{growCosting.format.traySet}</td><td><StatusBadge status={growCosting.format.traySetCost.status} /></td><td className="num">{money(growCosting.perTray.consumables)}</td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td colSpan={5}><strong>One tray</strong> · seed {money(growCosting.perTray.seed)} · medium {money(growCosting.perTray.medium)} · nutrient {money(growCosting.perTray.nutrient)} · light {money(growCosting.perTray.light)} · consumables {money(growCosting.perTray.consumables)}</td><td className="num"><strong>{money(growCosting.perTray.total)}</strong></td></tr>
+              </tfoot>
+            </table>
+          </div>
+          <div className="farm-kpi-row mt-3!">
+            <Kpi label="Seed per tray" value={`${num(growCosting.seedGramsPerTray, 0)} g`} />
+            <Kpi label="Harvest per tray" value={`${num(growCosting.harvestGramsPerTray, 0)} g`} sub="from the variety record until a closed sowing observes it" />
+            <Kpi label="Cycle" value={`${growCosting.cycleDays} days`} sub={`${growCosting.daysToHarvest} to harvest, ${growCosting.lightDays} under light`} />
+            <Kpi label="Water per tray" value={`${num(growCosting.waterLitersPerTray, 1)} L`} sub="over the cycle, placeholder volumes" />
+            <Kpi label="Sowing" value={`${cap.grow?.sowingTrays ?? 0} trays`} sub={cap.grow?.binding ? `one ${cap.grow.binding.unit.item}` : 'no grow unit takes this plan'} />
+            <Kpi label="Ceiling" value={`${num(cap.grow?.traysPerDay ?? 0, 2)} trays/day`} sub={`${cap.grow?.totalTrays ?? 0} trays across ${cap.grow?.unitCount ?? 0} units over the cycle`} />
+            <Kpi label="Unit SKU" value={unitSku(selected.code, growCosting.format.key)} sub="the plan code and the packaged format" />
+          </div>
+        </Card>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 mt-6!">
         <div className="farm-card-title m-0!">Crop plan detail</div>
       </div>

@@ -4,11 +4,14 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TimeStudyDoc } from '@/app/(farm)/farm/_data/time-studies';
-import { staffDemand, staffDemandDocument } from '@/app/(farm)/farm/_engine/staff-demand';
+import { staffDemand, staffDemandDocument, traysOnShelf, cycleDaysByCode } from '@/app/(farm)/farm/_engine/staff-demand';
+import { growPlanSeed } from '@/app/(farm)/farm/_data/grow-plans-seed';
+import { projectCropPlan } from '@/app/(farm)/farm/_engine/grow-plan-bridge';
+import { cropPlan as kitchenPlan } from '@/app/(farm)/farm/_data/plan-data';
 import { distributedConsumption } from '@/app/(farm)/farm/_engine/production-plan';
 
 const study = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
-  id: 's', cropPlanCode: 'AMK-E-001', studiedOn: '2027-01-04', sowingSize: 500, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: '2027-01-05T09:00:00.000Z', adoptedBy: 'admin', source: 'user_built', basis: 'observed',
+  id: 's', cropPlanCode: 'AMK-E-001', studiedOn: '2027-01-04', sowingSize: 500, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: '2027-01-05T09:00:00.000Z', adoptedBy: 'admin', source: 'user_built', basis: 'observed',
   lines: [
     { task: 'Rack load', station: 'Blackout rack', staff: 2, elapsedMinutes: 25, laborMinutes: 50, scalesWith: 'fixed', stream: 'sowing' },
     { task: 'Prep', station: 'Prep bench', staff: 4, elapsedMinutes: 75, laborMinutes: 300, scalesWith: 'variable', stream: 'sowing' },
@@ -168,5 +171,55 @@ describe('farm — what distributed orders drew from finished goods', () => {
       { 1: 1.5 },
     );
     expect(c).toEqual([{ cropPlanCode: 'AMK-E-001', date: '2027-02-01', baseUnits: 144 }]);
+  });
+});
+
+describe('farm staff demand — the daily stream, from the trays on the shelves', () => {
+  const daily = study({
+    id: 'd', cropPlanCode: 'BROC-01', sowingSize: 20, cycleDays: 4,
+    lines: [
+      { task: 'Sow trays', station: 'Prep station', staff: 1, elapsedMinutes: 60, laborMinutes: 60, scalesWith: 'variable', stream: 'sowing' },
+      { task: 'Watering', station: 'Grow rack', staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'variable', stream: 'daily' },
+      { task: 'Walk-through', station: 'Grow rack', staff: 1, elapsedMinutes: 6, laborMinutes: 6, scalesWith: 'fixed', stream: 'daily' },
+    ],
+  });
+
+  it('the shelf is derived from the sowings: a sowing occupies its cycle days from the production date', () => {
+    const shelf = traysOnShelf([{ productionDate: '2027-02-01', runs: [run('BROC-01', 1, 20)] }, { productionDate: '2027-02-03', runs: [run('BROC-01', 1, 20)] }], { 'BROC-01': 4 }, '2027-02-01', '2027-02-14');
+    expect(shelf.map((d) => [d.date, d.trays[0]!.trays])).toEqual([['2027-02-01', 20], ['2027-02-02', 20], ['2027-02-03', 40], ['2027-02-04', 40], ['2027-02-05', 20], ['2027-02-06', 20]]);
+    expect(traysOnShelf([{ productionDate: '2027-01-30', runs: [run('BROC-01', 1, 20)] }], { 'BROC-01': 4 }, '2027-02-01', '2027-02-14').map((d) => d.date)).toEqual(['2027-02-01', '2027-02-02']);
+    expect(traysOnShelf([{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 500)] }], { 'AMK-E-001': 0 }, '2027-02-01', '2027-02-14')).toEqual([]);
+  });
+
+  it('cycle days come off the grow plan; a Phase 1-era plan has none', () => {
+    const lib = projectCropPlan(growPlanSeed[0]!);
+    const c = cycleDaysByCode([lib, kitchenPlan]);
+    expect(c['BROC-01']).toBe(14);
+    expect(c[kitchenPlan.code]).toBe(0);
+  });
+
+  it('a per-tray daily line counts per tray on the shelf; a fixed daily line once a day', () => {
+    const shelf = [{ date: '2027-02-02', trays: [{ cropPlanCode: 'BROC-01', cropPlanName: 'BROC-01', trays: 40 }] }];
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies: [daily], days: [], shelf });
+    const day = d.days.find((x) => x.date === '2027-02-02')!;
+    expect(day.traysOnShelf).toBe(40);
+    const watering = day.lines.find((l) => l.task === 'Watering')!;
+    expect(watering.stream).toBe('daily');
+    expect(watering.hours).toBeCloseTo((10 / 20) * 40 / 60, 9);
+    expect(day.lines.find((l) => l.task === 'Walk-through')!.hours).toBeCloseTo(6 / 60, 9);
+    expect(day.dailyStaffHours).toBeCloseTo((20 + 6) / 60, 9);
+    expect(day.sowingStaffHours).toBe(0);
+    expect(day.staffHours).toBeCloseTo(day.dailyStaffHours, 9);
+  });
+
+  it('the sow day carries the sowing stream and the daily stream of what is already on the shelf', () => {
+    const days = [{ productionDate: '2027-02-01', runs: [run('BROC-01', 1, 20)] }];
+    const shelf = traysOnShelf(days, { 'BROC-01': 4 }, '2027-02-01', '2027-02-14');
+    const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies: [daily], days, shelf });
+    expect(d.days.map((x) => x.date)).toEqual(['2027-02-01', '2027-02-02', '2027-02-03', '2027-02-04']);
+    expect(d.days[0]!.sowingStaffHours).toBeCloseTo(1, 9);
+    expect(d.days[0]!.dailyStaffHours).toBeCloseTo((10 + 6) / 60, 9);
+    expect(d.days[3]!.sowingStaffHours).toBe(0);
+    expect(d.staffHours).toBeCloseTo(1 + 4 * (16 / 60), 9);
   });
 });
