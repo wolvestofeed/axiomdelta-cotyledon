@@ -8,6 +8,8 @@ import { InlineNumber } from '@/components/InlineCells';
 import { SOWING_CAPACITY_BASIS_LABELS, EQUIPMENT_CATEGORIES, RESOURCE_SEED, type SowingCapacityBasis, type EquipmentCategory, type EquipmentStatus } from '@/data/capex';
 import { EQUIPMENT_STATUSES, EQUIPMENT_STATUS_LABELS, countsTowardCapital, equipmentLibraryOrder, filterEquipment } from '@/engine/equipment';
 import { capexRollup, extendedCost } from '@/engine/fixed-costs';
+import { traysPerUnit } from '@/engine/grow-capacity';
+import { LIGHT_FIXTURES } from '@/data/inputs-catalog';
 import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
 import { createEquipment, updateEquipment } from '@/server/equipment-actions';
@@ -19,6 +21,9 @@ interface EquipmentPatch {
   newUsed?: 'New' | 'Used';
   qty?: number;
   unitCostCents?: number;
+  shelves?: number | null;
+  shelfWidthIn?: number | null;
+  fixtureKey?: string | null;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: SowingCapacityBasis;
   concurrentSowings?: number | null;
@@ -28,8 +33,8 @@ interface EquipmentPatch {
   resourceBasis?: SowingCapacityBasis;
 }
 
-/** Columns in an open category: item, status, phase, service date, in the open forecast (Plan only), new/used, qty, unit, extended, critical, sowing lb a run, basis, then the resource attributes and their basis. */
-const COLS = 17;
+/** Columns in an open category: item, status, phase, service date, in the open forecast (Plan only), new/used, qty, unit, extended, critical, the grow-unit fields (shelves, shelf width, fixture, 1020 flats), sowing lb a run, basis, then the resource attributes and their basis. */
+const COLS = 21;
 const yesNo = (v: boolean | null | undefined) => (v === true ? 'yes' : v === false ? 'no' : '');
 const fromYesNo = (v: string): boolean | null => (v === 'yes' ? true : v === 'no' ? false : null);
 /** An estimated figure is a placeholder until someone states or observes it. */
@@ -157,6 +162,10 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
                   <th className="num">Unit (new)</th>
                   <th className="num">Extended</th>
                   <th>Critical</th>
+                  <th className="num">Shelves</th>
+                  <th className="num">Shelf in</th>
+                  <th>Fixture</th>
+                  <th className="num">1020 flats</th>
                   <th className="num">Sowing lb / run</th>
                   <th>Capacity basis</th>
                   <th className="num">Sowings at once</th>
@@ -250,6 +259,20 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
                     <td className="num">{money(extendedCost(e, fp), 0)}</td>
                     <td className={`${(e.critical ? 'farm-c-accent' : 'farm-c-faint')} ${(e.critical ? 'font-semibold!' : 'font-normal!')}`}>{e.critical ? 'Yes' : '—'}</td>
                     <td className="num">
+                      <InlineNumber value={e.shelves ?? null} step={1} nullable disabled={!rowEditable} label={`${e.item} growing shelves`} onCommit={(n) => save(e.id, { shelves: n === null || n <= 0 ? null : Math.round(n) })} />
+                      {!e.shelves && <div className="farm-c-faint farm-fs-xs">Not a grow unit</div>}
+                    </td>
+                    <td className="num">
+                      <InlineNumber value={e.shelfWidthIn ?? null} step={12} nullable disabled={!rowEditable || !e.shelves} label={`${e.item} shelf width in inches`} onCommit={(n) => save(e.id, { shelfWidthIn: n === null || n <= 0 ? null : n })} />
+                    </td>
+                    <td>
+                      <select className="farm-input farm-cell-control w-40!" value={e.fixtureKey ?? ''} disabled={!rowEditable || !e.shelves} aria-label={`${e.item} fixture`} onChange={(ev) => save(e.id, { fixtureKey: ev.target.value || null })}>
+                        <option value="">Unlit</option>
+                        {LIGHT_FIXTURES.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
+                      </select>
+                    </td>
+                    <td className="num">{e.shelves ? num(traysPerUnit({ key: e.key, item: e.item, shelves: e.shelves, shelfWidthIn: e.shelfWidthIn ?? 48, fixtureKey: e.fixtureKey ?? null, units: e.qty }, 'flat-1020')) : '—'}</td>
+                    <td className="num">
                       <InlineNumber value={e.sowingCapacityLb ?? 0} step={10} disabled={!rowEditable} label={`${e.item} sowing capacity in pounds a run`} onCommit={(n) => n !== null && save(e.id, { sowingCapacityLb: n > 0 ? n : null })} />
                       {!e.sowingCapacityLb && <div className="farm-c-faint farm-fs-xs">Not a sowing grow unit</div>}
                     </td>
@@ -308,7 +331,7 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
           </div>
         )}
         <p className="farm-kpi-sub mt-2">
-          {forecastEditing ? 'The open forecast column is that forecast’s own status and in-service date for a line; the record does not move.' : 'On Actual the list shows the record; a forecast’s own status and in-service date for a line are set on Plan.'} In a forecast, planned Phase 1 equipment counts from the forecast start unless dated, and Phase 2 and 3 count only once dated. Statuses: In service — bought and in use; Planned — planned for its build-out phase; No — considered and not selected; – — on the list, not selected and not needed. Extended cost is quantity × unit cost, with the {Math.round(fp.usedDiscount * 100)}% used-equipment factor on used lines. Every unit cost is a placeholder until quoted. Sowings at once, changeover minutes, attended run and may run unattended describe the unit as a scheduling resource: estimated open fields, a placeholder until stated or observed. Capital, depreciation and financing are on <Link className="farm-link" href="/farm/financials/capital">Capital &amp; Financing</Link>; energy and refrigerant attributes per line are on <Link className="farm-link" href="/farm/sustainability/equipment">Sustainability · Equipment</Link>.
+          {forecastEditing ? 'The open forecast column is that forecast’s own status and in-service date for a line; the record does not move.' : 'On Actual the list shows the record; a forecast’s own status and in-service date for a line are set on Plan.'} In a forecast, planned Phase 1 equipment counts from the forecast start unless dated, and Phase 2 and 3 count only once dated. Statuses: In service — bought and in use; Planned — planned for its build-out phase; No — considered and not selected; – — on the list, not selected and not needed. Extended cost is quantity × unit cost, with the {Math.round(fp.usedDiscount * 100)}% used-equipment factor on used lines. Every unit cost is a placeholder until quoted. Shelves, shelf width and fixture make a row a grow unit: a sowing is what one takes in trays of the plan\u2019s format, and a plan with a light line goes only on a unit whose fixture delivers it; the 1020 flats column is the count one unit takes. Sowings at once, changeover minutes, attended run and may run unattended describe the unit as a Phase 1-era scheduling resource: estimated open fields, a placeholder until stated or observed. Capital, depreciation and financing are on <Link className="farm-link" href="/farm/financials/capital">Capital &amp; Financing</Link>; energy and refrigerant attributes per line are on <Link className="farm-link" href="/farm/sustainability/equipment">Sustainability · Equipment</Link>.
           {!canEdit && ' Editing is limited to super admins.'}
         </p>
       </Card>
