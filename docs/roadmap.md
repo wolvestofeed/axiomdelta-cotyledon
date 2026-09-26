@@ -1,28 +1,52 @@
-# MicroFarm — Roadmap
+# MicroFarm — Master Roadmap
 
-Phase status only, one line per step. The phases are defined in [`outline.md`](outline.md) §8.
+The one outline of every roadmap. Each software phase has its own file in `roadmaps/` with its steps and status; this file lists the phases, says where each stands, and links out. Status lives in the phase files and is summarized here; open one-off items live in [`todo.md`](todo.md). The business plan and the domain model are in [`outline.md`](outline.md).
 
-## Phase 0 — Lift  status: DONE
-- [x] pnpm workspace: `apps/web`, `packages/db`, `packages/ledger`
-- [x] Route groups, engine, data, components, state copied verbatim from Muse
-- [x] The schema and its migrations; ledger package; the tests, scripts and docs
-- [x] CompTable removed: contract, signing, transport, its test, its named people; the four small helpers rewritten in `apps/web/src/lib`
-- [x] Own Clerk middleware (`src/proxy.ts`), root layout, redirect from `/` to the OS
-- [x] Typecheck clean; 918 web tests and 78 ledger tests pass; production build compiles every route
-- [ ] Runs on localhost against a new Clerk app and a new Neon database (needs the keys in `apps/web/.env.local`, then `pnpm db:migrate` and `pnpm dev`)
+Each phase ends with the app running on localhost and its tests green.
 
-## Phase 1 — Swap and tenancy  status: IN PROGRESS
-- [x] Vocabulary swap applied to identifiers, schema, copy, tests, docs and seeds (`docs/outline.md` §3); packages renamed `@mf/*`; route group `(farm)`, OS at `/farm`
-- [x] Parent portal, ERRA copy and the CompTable pieces removed; HR is Staffing, Floor is Grow Room, Customers are Subscribers, Sites are Pickup Points
-- [x] One consolidated migration, `packages/db/drizzle/0001_farm_init.sql`
-- [x] `test/farm-vocabulary.test.ts` fails on any surviving kitchen word outside the Phase 2 allowlist (the seeded crop plan, nutrient profile, grow stages, produce-safety plan, fixtures)
-- [x] Typecheck clean; the suite passes
-- [x] Workspaces: `farm.workspaces`, `workspace_id` on all 51 tables with row-level security (migration 0002), one Clerk organization per workspace, roles from the organization, every entry point in `withWorkspace()`, scripts via `FARM_WORKSPACE` (`docs/outline.md` §7)
-- [ ] Lint: three react-hooks errors carried over from the source (`OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`)
-## Phase 2 — Growing domain  status: IN PROGRESS
-- [x] Data foundations: `varieties.ts` (12 Vallecito varieties, tagged, benefits citing the library), `tray-formats.ts`, `stage-schedule.ts`, `inputs-catalog.ts` (media, nutrients, fixtures, light regimes), `science-library.ts` (75 rows, both documents mapped, 60 claims), `glossary.ts` (generated from `docs/glossary.md`); `test/farm-varieties.test.ts`
-- [ ] Grow plan replaces crop plan; costing on the four line kinds; capacity in trays and cycle days; the daily labor stream; stages replace thermal; nutrition targets replace crediting; produce-safety control points; Vallecito seeds; the Grow Plan editor, Varieties page, Glossary page and Grow Calendar; the rename — in the order `docs/next-session.md` gives
-## Phase 3 — Subscriptions and distribution  status: NOT STARTED
-## Phase 4 — Staffing  status: NOT STARTED
-## Phase 5 — Facility and sustainability  status: NOT STARTED
-## Phase 6 — Software as a product  status: NOT STARTED
+## Phases
+
+| Phase | File | Status | Target |
+|---|---|---|---|
+| 0 — Lift | [`roadmaps/phase-0-lift.md`](roadmaps/phase-0-lift.md) | DONE, except the first run against a live database | — |
+| 1 — Swap and tenancy | [`roadmaps/phase-1-swap-and-tenancy.md`](roadmaps/phase-1-swap-and-tenancy.md) | DONE | — |
+| 2 — Growing domain | [`roadmaps/phase-2-growing-domain.md`](roadmaps/phase-2-growing-domain.md) | IN PROGRESS: part 1 (data foundations) done; parts 2–10 (the engine port, seeds, UI, rename) open | November 2026 |
+| 3 — Subscriptions and distribution | [`roadmaps/phase-3-subscriptions-and-distribution.md`](roadmaps/phase-3-subscriptions-and-distribution.md) | NOT STARTED | December 2026 |
+| 4 — Staffing | [`roadmaps/phase-4-staffing.md`](roadmaps/phase-4-staffing.md) | NOT STARTED | January 2027 |
+| 5 — Facility and sustainability | [`roadmaps/phase-5-facility-and-sustainability.md`](roadmaps/phase-5-facility-and-sustainability.md) | NOT STARTED | spring 2027 for the home grow room |
+| 6 — Software as a product | [`roadmaps/phase-6-software-as-a-product.md`](roadmaps/phase-6-software-as-a-product.md) | NOT STARTED | after the wellness center's facility runs on it |
+
+## What each phase is
+
+**Phase 0 — Lift.** The pnpm workspace; the Muse route groups, schema, migrations, tests, scripts and docs copied verbatim; CompTable removed; the app boots with the kitchen words still on screen.
+
+**Phase 1 — Swap and tenancy.** The vocabulary of `outline.md` §3 applied to identifiers, schema, copy, tests, docs and seeds, with a test that fails on any surviving kitchen word; then one Clerk organization per farm, `workspace_id` on every table under row-level security, and every entry point in the workspace scope (`outline.md` §7).
+
+**Phase 2 — Growing domain.** The variety as the master record and the cost basis; the grow plan with seed, medium, nutrient and light lines replacing the crop plan; the stage schedule with the daily watering stream replacing thermal processes; tray formats and grow units replacing vessels; nutrient profiles and nutrition targets replacing crediting, every benefit citing the science library; produce-safety control points; the science library on the Sources page and the glossary in the subscriber portal; Vallecito data seeded; the Grow Calendar.
+
+**Phase 3 — Subscriptions and distribution.** Stripe recurring billing, the Subscriber Portal and Flat Builder, Pickup Points and Routes, tray returns. What the facility needs to take its first paying subscriber.
+
+**Phase 4 — Staffing.** Internal roster, wages, punches on the Grow Room clock, the schedule wired to the scheduler, pay periods closed as totals by account into the Actual ledger.
+
+**Phase 5 — Facility and sustainability.** Grow-room layout by build phase, lighting and HVAC load, water, microgreens emission factors, the "acre-feet and fuels" comparison. First for the home grow room; sized up for a commercial facility when the center decides on one.
+
+**Phase 6 — Software as a product.** Workspace onboarding, software plans and billing, marketing site, domain, deployment.
+
+## Topic build plans ported from Muse
+
+These came over with the code and describe the kitchen's builds of the scheduler, portals, facility, people, page headers and the rest. They are reference for how those modules were built, in the swapped vocabulary; each is re-based onto the growing domain in the phase that touches its module, and deleted if the module is rebuilt from the phase file instead.
+
+- [`roadmaps/agentic-assistance-roadmap.md`](roadmaps/agentic-assistance-roadmap.md)
+- [`roadmaps/facility-design-roadmap.md`](roadmaps/facility-design-roadmap.md)
+- [`roadmaps/operating-model-roadmap.md`](roadmaps/operating-model-roadmap.md)
+- [`roadmaps/page-headers-roadmap.md`](roadmaps/page-headers-roadmap.md)
+- [`roadmaps/people-roadmap.md`](roadmaps/people-roadmap.md)
+- [`roadmaps/portals-roadmap.md`](roadmaps/portals-roadmap.md)
+- [`roadmaps/portfolio-publication-roadmap.md`](roadmaps/portfolio-publication-roadmap.md)
+- [`roadmaps/scheduler-roadmap.md`](roadmaps/scheduler-roadmap.md)
+- [`roadmaps/tabbed-layout-roadmap.md`](roadmaps/tabbed-layout-roadmap.md)
+- [`roadmaps/visual-quality-roadmap.md`](roadmaps/visual-quality-roadmap.md)
+
+## How a session starts and ends
+
+Start: read `CLAUDE.md`, `outline.md`, this file, then the phase file for the phase in progress, then `todo.md`. End: run typecheck and tests, update the phase file's step status and this file's status column, move anything one-off to `todo.md`, commit with Rob's approval.

@@ -55,7 +55,7 @@ Next.js App Router + React + TypeScript, Tailwind 4, Clerk, Stripe (subscription
 ## 8. Where things live
 
 - `docs/outline.md` — the outline of record: the business and its products, decisions, vocabulary, domain model, modules, engine rules, tenancy, build phases, the practice's plan.
-- `docs/next-session.md` — where the current phase stands and what to do first, replaced at the end of every session. A new session reads it after this file and the outline.
+- `docs/roadmap.md` — the master roadmap: every phase, its status, a link to its file in `docs/roadmaps/phase-N-*.md`. `docs/todo.md` holds open one-off items. A session starts by reading this file, the outline, the master roadmap, the phase file in progress, then the to-do list; it ends by updating the phase file and the master roadmap's status.
 - `docs/glossary.md` and `docs/science-library.md` — the vocabulary and the source register; `_data/glossary.ts` and `_data/science-library.ts` carry them into the app.
 - `docs/` — every other canonical doc, one fact in one place, each linking to the others rather than restating.
 - `_inventory/` — the temporary survey of the source material (Vallecito, Wolves To Feed, Muse) made before the outline. Reference only; delete once the port has consumed it. `_inventory/raw-extracts/` is git-ignored.

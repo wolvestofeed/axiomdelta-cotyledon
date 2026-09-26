@@ -168,21 +168,7 @@ Isolation is enforced in the database. Every farm table carries `workspace_id`, 
 
 ## 8. Software build phases
 
-Each phase ends with the app running on localhost and its tests green. Dates are targets against the business phases.
-
-**Phase 0 — Lift.** Scaffold the pnpm workspace (`apps/web`, `packages/db`, `packages/ledger`). Copy the Muse route groups, schema, migrations, tests, scripts and docs verbatim. New Clerk app, new Neon database. Remove every `@ct/*` import that is not the ledger, the CompTable contract, signing, transport, the Parent portal and ERRA. Boots on localhost with kitchen words still on screen. Target: early October 2026.
-
-**Phase 1 — Swap and tenancy.** Apply §3 to identifiers, schema (one consolidated migration set, no history to preserve), copy, tests, docs, seeds. Add workspaces and the guards (§7). A test fails on any surviving kitchen word. Target: October 2026.
-
-**Phase 2 — Growing domain.** The variety record becomes the master and the cost basis; crop plan becomes grow plan with seed, medium and nutrient lines; the stage schedule with the daily watering stream replaces thermal processes; tray formats and grow units replace vessels; nutrient profiles and Nutrition Targets replace crediting, each benefit citing the science library; Produce Safety replaces Food Safety with the sprout control points; the science library is seeded into Sources and the glossary is published in the subscriber portal; Vallecito data seeded as `STATED` / `DATED` (varieties, densities, time study, costs, rack capex, nutrient matrix). Grow Calendar. Target: November 2026.
-
-**Phase 3 — Subscriptions and distribution.** Subscriptions module on Stripe, Subscriber Portal and Flat Builder, Pickup Points & Routes, tray returns. This is what the facility needs to take its first paying subscriber. Target: December 2026.
-
-**Phase 4 — Staffing.** Internal roster, wages, punches (Grow Room clock), schedule wired to the scheduler, pay periods closed as totals by account into the Actual ledger. Target: January 2027.
-
-**Phase 5 — Facility and sustainability.** Grow-room layout by build phase, lighting and HVAC load, water, microgreens emission factors, the "acre-feet and fuels" comparison. First for the home grow room; sized up for a commercial facility when the center decides on one. Target: spring 2027 for the home room.
-
-**Phase 6 — Software as a product.** Workspace onboarding, software plans and billing, marketing site, domain, deployment. Target: after the wellness center's facility is running on it.
+The phases, their status and their steps live in [`roadmap.md`](roadmap.md), the master roadmap, and one file per phase under `roadmaps/`. In one line each: 0 lift, 1 swap and tenancy, 2 growing domain, 3 subscriptions and distribution, 4 staffing, 5 facility and sustainability, 6 software as a product. Each ends with the app running on localhost and its tests green.
 
 ## 9. Repo structure
 
@@ -195,8 +181,9 @@ Micro Farm/
 │   ├── science-library.md    the source register every stated benefit cites
 │   ├── accounting-policy.md  ported, nouns swapped
 │   ├── grow-operations.md    stages, control points, produce safety (replaces culinary-operations.md)
-│   ├── roadmap.md            phase status only, one line per step
-│   └── roadmaps/             one build plan per topic, ported and swapped
+│   ├── roadmap.md            the master roadmap: every phase, its status, links to its file
+│   ├── todo.md               open one-off items that belong to no phase step
+│   └── roadmaps/             one file per phase (phase-N-*.md), plus the topic build plans ported from Muse
 ├── apps/web/                 Next.js app: (farm) OS, (grow-room), (subscriber), (supplier), (sales), (front)
 ├── packages/db/              schema + hand-written SQL migrations
 ├── packages/ledger/          ledger engine, ported
