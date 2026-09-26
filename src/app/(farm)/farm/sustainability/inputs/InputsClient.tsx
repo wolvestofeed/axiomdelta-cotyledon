@@ -1,15 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { PageHeader, Card, Kpi, StatusBadge, num, pct } from '@/components/ui';
+import { useMemo } from 'react';
+import { PageHeader, Card, Kpi, StatusBadge } from '@/components/ui';
 import { Cite } from '@/components/Cite';
 import { SectionSave } from '@/components/SectionSave';
 import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
 import { inputRatings, ratingFor } from '@/data/mark';
-import { foodFactorSource, cropPlanFoodCategoryMap } from '@/data/emission-factors';
+import { foodFactorSource } from '@/data/emission-factors';
 import { BOUNDARY_LABEL, lcaOptions as curatedOptions, type LcaOption } from '@/data/lca-options';
-import { cropPlanFoodFootprint, cropPlanFoodFootprintDual } from '@/engine/carbon';
+import { cropPlanFoodFootprintDual } from '@/engine/carbon';
 import { useSustainabilityWorld } from '@/state/sustainability';
 import { SustainabilityWorldNote } from '@/components/ledger/SustainabilityWorldNote';
 import { useScenario } from '@/state/scenario-store';
@@ -18,8 +17,6 @@ import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
 import { PageControls } from '@/components/PageControls';
 import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
 
-const BEEF = 'Ground beef, 85/15';
-
 export default function InputsClient({ supplierOptions }: { supplierOptions: LcaOption[] }) {
   const { resolved: scenario, setInputBasis, setSustainability, isSuperAdmin: superAdmin } = useScenario();
   const { cropPlan: selectedCropPlan } = useSelectedCropPlan();
@@ -27,7 +24,6 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
   const selection = resolved.sustainability.inputBasis;
   const links = resolved.sustainability.inputSupplier;
   const linked = useLinkedSuppliers(links);
-  const [beefShare, setBeefShare] = useState(1);
   const options = useMemo(() => [...curatedOptions, ...supplierOptions], [supplierOptions]);
 
   const dual = useMemo(() => cropPlanFoodFootprintDual(resolved.cropPlan, selection, undefined, undefined, options), [resolved.cropPlan, selection, options]);
@@ -35,7 +31,6 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
   const world = useSustainabilityWorld(options);
   // The LCA basis and supplier links are forecast edits: on Plan only.
   const isSuperAdmin = superAdmin && world.isPlan;
-  const cropPlanUnits = world.basis.units.filter((m) => m.cropPlanCode === selectedCropPlan.code).reduce((t, m) => t + m.units, 0);
   const setLink = (name: string, id: string | undefined) =>
     setSustainability((d) => {
       const m = (d.inputSupplier ??= {});
@@ -44,17 +39,6 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
       if (Object.keys(m).length === 0) delete d.inputSupplier;
     });
 
-  // What-if: scale the beef line's as-purchased quantity. Local to this page.
-  const cropPlan = resolved.cropPlan;
-  const whatIf = useMemo(() => {
-    const r: typeof cropPlan = {
-      ...cropPlan,
-      inputs: cropPlan.inputs.map((i) => (i.name === BEEF ? { ...i, seedQtyPerSowing: i.seedQtyPerSowing * beefShare } : i)),
-    };
-    return cropPlanFoodFootprint(r);
-  }, [cropPlan, beefShare]);
-  const baseRef = dual.referenceTotalKgPerUnit;
-
   const fmt = (n: number, dp = 3) => (n < 0 ? '−' : '') + Math.abs(n).toFixed(dp);
 
   return (
@@ -62,7 +46,7 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
       <PageHeader
         title="Inputs (Scope 3)"
         purpose="Compare each unit's food footprint on the reference and selected bases."
-        functions={['Reference basis', 'Selected basis', 'Gap', 'Per unit', 'What-if']}
+        functions={['Reference basis', 'Selected basis', 'Gap', 'Per unit']}
         connects={[
           { href: '/farm/crop-plans', dir: 'from' },
           { href: '/farm/sustainability/supplier-lca', dir: 'from' },
@@ -171,28 +155,9 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
         <RatingLegend />
         <p className="farm-kpi-sub mt-2">
           Reference factors are per kg at retail, losses included, from <Cite p={foodFactorSource} label={foodFactorSource.source.split(',')[0]} />. A cited figure at a narrower boundary is shown raw and aligned to retail; the aligned figure adds the study’s own post-slaughter stages for that product and applies its loss ratio, and is tagged derived. The basis selection and the supplier link are part of the forecast: saved with it; a super admin can set a forecast as the plan of record. A linked supplier’s own figure appears in the selector once it is recorded under Supplier LCA data.
-          {cropPlanFoodCategoryMap[BEEF]?.note ? ` ${cropPlanFoodCategoryMap[BEEF].note}` : ''}
         </p>
       </Card>
 
-      <Card title="What-if: beef quantity (reference basis)" className="mt-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <label className="farm-fs-sm flex! items-center! gap-[0.6rem]!">
-            <span className="farm-kpi-label">Beef at</span>
-            <input type="range" min={0} max={1} step={0.05} value={beefShare} onChange={(e) => setBeefShare(Number(e.target.value))} className="w-56!" />
-            <strong className="tabular-nums">{pct(beefShare, 0)}</strong>
-            <span className="farm-c-faint">of the crop plan quantity</span>
-          </label>
-        </div>
-        <div className="grid gap-3 mt-3 farm-autofit-11">
-          <Kpi value={`${whatIf.totalKgCo2ePerUnit.toFixed(2)} kg`} label="CO2e per unit at this beef quantity" />
-          <Kpi value={`${fmt(whatIf.totalKgCo2ePerUnit - baseRef, 2)} kg`} label="Change per unit" sub="Against the crop plan as written" />
-          <Kpi value={`${fmt(((whatIf.totalKgCo2ePerUnit - baseRef) * cropPlanUnits) / 1000, 1)} t`} label="Change over the period" sub={`${num(cropPlanUnits)} ${selectedCropPlan.code} units distributed`} />
-        </div>
-        <p className="farm-kpi-sub mt-2">
-          Only the beef mass moves; nothing is substituted for it. Cost effects of a cropPlan change are on <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>.
-        </p>
-      </Card>
     </>
   );
 }

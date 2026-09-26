@@ -19,7 +19,6 @@ import {
   tonMiles,
   cropPlanFoodFootprint,
   KG_PER_LB,
-  KG_PER_OZ,
   type ActivityRecord,
   type RefrigerantCircuit,
 } from '@/engine/carbon';
@@ -29,7 +28,16 @@ import {
   cropPlanFoodCategoryMap,
   type FoodFactor,
 } from '@/data/emission-factors';
-import { cropPlan } from '@/data/plan-data';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import type { LcaOption } from '@/data/lca-options';
+
+// A grow plan and a map written for these tests only: the mechanics of the food footprint, not a
+// mapping of record (the grow plan lines are mapped in Phase 5).
+const broc = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
+const seedLine = broc.inputs.find((i) => i.unit === 'lb')!;
+const testMap = { [seedLine.name]: { category: 'other-vegetables' } };
+const vegFactor = () => inputFactors.find((f) => f.category === 'other-vegetables')!;
 
 const act = (id: string, module: number, quantity: number, unit: string): ActivityRecord => ({
   id,
@@ -78,50 +86,36 @@ describe('farm carbon — factor registry integrity', () => {
     expect(by['onions-and-leeks']).toBeCloseTo(0.4997, 4);
     expect(by['sunflower-oil']).toBeCloseTo(3.5837, 4);
   });
-  it('every crop plan input has a mapping, and every mapped category resolves to a factor', () => {
-    const cats = new Set(inputFactors.map((f) => f.category));
-    for (const ing of cropPlan.inputs) {
-      const m = cropPlanFoodCategoryMap[ing.name];
-      expect(m, ing.name).toBeDefined();
-      if (m.category !== null) expect(cats.has(m.category), m.category).toBe(true);
-      if (ing.unit === 'each' && m.category !== null) {
-        expect(m.massKgPerEach).toBeGreaterThan(0);
-        expect(m.massStatus).toBeDefined();
-      }
-    }
+  it('the map of record is empty until the grow plan lines are mapped', () => {
+    expect(cropPlanFoodCategoryMap).toEqual({});
   });
 });
 
-describe('farm carbon — crop plan food footprint (AMK-E-001)', () => {
-  it('computes 4.9377 kg CO2e per unit, beef 85.1% of it, with two excluded lines', () => {
-    const r = cropPlanFoodFootprint();
-    expect(r.totalKgCo2ePerUnit).toBeCloseTo(4.937691, 5);
-    expect(r.largestLine?.name).toBe('Ground beef, 85/15');
-    expect(r.largestLine?.share).toBeCloseTo(0.851050, 5);
-    const beef = r.lines.find((l) => l.name === 'Ground beef, 85/15')!;
-    expect(beef.massKgPerUnit).toBeCloseTo(0.042524, 6);
-    expect(beef.kgCo2ePerUnit).toBeCloseTo(4.202224, 5);
-    const cheddar = r.lines.find((l) => l.name === 'Cheddar, shredded')!;
-    expect(cheddar.kgCo2ePerUnit).toBeCloseTo(0.339036, 5);
-    const excluded = r.lines.filter((l) => l.excludedReason);
-    expect(excluded.map((l) => l.name).sort()).toEqual(['Chili-cumin spice blend', 'Sea salt']);
+describe('farm carbon — food footprint mechanics on a grow plan', () => {
+  it('with no mapping every line is excluded with the reason, and the total is zero', () => {
+    const r = cropPlanFoodFootprint(broc);
+    expect(r.totalKgCo2ePerUnit).toBe(0);
+    expect(r.largestLine).toBeNull();
+    expect(r.lines.every((l) => l.excludedReason === 'No mapping to a study product.')).toBe(true);
   });
-  it('the tortilla mass is the crop plan line\'s unit mass — one constant, carrying that line\'s tag', () => {
-    const r = cropPlanFoodFootprint();
-    const line = cropPlan.inputs.find((i) => i.name === 'Corn tortilla, 6 in')!;
-    const map = cropPlanFoodCategoryMap['Corn tortilla, 6 in'];
-    expect(line.unitMassOz).toBe(0.88);
-    expect(map.massKgPerEach).toBeCloseTo(0.88 * KG_PER_OZ, 12);
-    expect(map.massStatus).toBe(line.yieldStatus);
-    const tortilla = r.lines.find((l) => l.name === 'Corn tortilla, 6 in')!;
-    expect(tortilla.massKgPerUnit).toBeCloseTo(0.88 * KG_PER_OZ, 9);
-    // The mass tag is SOURCED, so the line's tag is its factor's tag, not a placeholder mass.
-    const maize = inputFactors.find((f) => f.category === 'maize-unit')!;
-    expect(tortilla.status).toBe(maize.provenance.status);
+  it('a mapped pound line is its mass per unit times the study factor; the rest stay excluded', () => {
+    const r = cropPlanFoodFootprint(broc, inputFactors, testMap);
+    const line = r.lines.find((l) => l.name === seedLine.name)!;
+    const mass = (seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits;
+    expect(line.massKgPerUnit).toBeCloseTo(mass, 12);
+    expect(line.kgCo2ePerUnit).toBeCloseTo(mass * vegFactor().kgCo2ePerKg, 12);
+    expect(line.status).toBe('SOURCED');
+    expect(r.totalKgCo2ePerUnit).toBeCloseTo(line.kgCo2ePerUnit, 12);
+    expect(r.largestLine).toEqual({ name: seedLine.name, share: 1 });
+    expect(r.lines.filter((l) => l.excludedReason)).toHaveLength(broc.inputs.length - 1);
   });
   it('scales with the phase unit factor', () => {
-    const base = cropPlanFoodFootprint().totalKgCo2ePerUnit;
-    expect(cropPlanFoodFootprint(undefined, undefined, undefined, 1.5).totalKgCo2ePerUnit).toBeCloseTo(base * 1.5, 9);
+    const base = cropPlanFoodFootprint(broc, inputFactors, testMap).totalKgCo2ePerUnit;
+    expect(cropPlanFoodFootprint(broc, inputFactors, testMap, 1.5).totalKgCo2ePerUnit).toBeCloseTo(base * 1.5, 12);
+  });
+  it('a piece line with no mass per piece is refused, not guessed', () => {
+    const each = { ...broc, inputs: [{ ...seedLine, unit: 'each' as const }] };
+    expect(() => cropPlanFoodFootprint(each, inputFactors, testMap)).toThrow(/mass per piece missing/);
   });
 });
 
@@ -343,32 +337,24 @@ describe('farm carbon — Austin Water effluent surcharge', () => {
 
 import {
   seedMassPerUnitKg,
-  shippedMassPerUnitKg,
   annualShrinkWaste,
   outboundLogistics,
 } from '@/engine/carbon';
 import { haversineMiles } from '@/engine/geo';
-import { assumptions } from '@/data/plan-data';
-import { canopyMassPerUnit } from '@/engine';
 
 describe('farm carbon — mass per unit', () => {
-  it('as-purchased mass sums the mapped lb lines plus the tortilla unit mass', () => {
-    const lbLines = 9.375 + 6.25 + 9.375 + 15.625 + 6.25 + 1.875 + 0.1875 + 3.125 + 0.9375;
-    expect(seedMassPerUnitKg()).toBeCloseTo((lbLines * KG_PER_LB) / 100 + 0.88 * KG_PER_OZ, 9);
-  });
-  it('shipped mass is blackout hot mass plus cheese and tortilla', () => {
-    const hot = canopyMassPerUnit() * KG_PER_LB;
-    expect(shippedMassPerUnitKg()).toBeCloseTo(hot + (3.125 * KG_PER_LB) / 100 + 0.88 * KG_PER_OZ, 9);
+  it('as-purchased mass sums the mapped lines only', () => {
+    expect(seedMassPerUnitKg(broc, {})).toBe(0);
+    expect(seedMassPerUnitKg(broc, testMap)).toBeCloseTo((seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits, 12);
+    expect(seedMassPerUnitKg(broc, testMap, 1.5)).toBeCloseTo((1.5 * seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits, 12);
   });
 });
 
 describe('farm carbon — waste flows', () => {
-  it('annual shrink at 3% of as-purchased mass over full-ramp units', () => {
-    const w = annualShrinkWaste(367604, seedMassPerUnitKg(), assumptions.yield.shrinkAllowance.value);
-    expect(w.annualKg).toBeCloseTo(367604 * seedMassPerUnitKg() * 0.03, 6);
-    expect(w.annualShortTons).toBeCloseTo(w.annualKg / (2000 * KG_PER_LB), 9);
-    expect(w.annualShortTons).toBeGreaterThan(3);
-    expect(w.annualShortTons).toBeLessThan(4);
+  it('annual shrink is the units times the as-purchased mass times the allowance', () => {
+    const w = annualShrinkWaste(10000, 0.02, 0.03);
+    expect(w.annualKg).toBeCloseTo(6, 9);
+    expect(w.annualShortTons).toBeCloseTo(6 / (2000 * KG_PER_LB), 12);
   });
 });
 
@@ -405,7 +391,6 @@ describe('farm carbon — outbound logistics', () => {
 // ── Dual basis: stage split, boundary alignment, selected vs reference ──────
 
 import { alignToRetail, cropPlanFoodFootprintDual } from '@/engine/carbon';
-import { lcaOptions } from '@/data/lca-options';
 
 describe('farm carbon — food stage split', () => {
   it('every product\'s nine stages sum to its mean', () => {
@@ -430,7 +415,7 @@ describe('farm carbon — boundary alignment', () => {
     const farmGate = s.lucBurn + s.lucCStock + s.feed + s.farm;
     expect(alignToRetail(farmGate, 'farm_gate', beef)).toBeCloseTo(beef.kgCo2ePerKg, 3);
   });
-  it('White Oak −3.5 at the slaughter gate aligns to −2.73 at retail', () => {
+  it('−3.5 at the slaughter gate aligns to −2.73 at retail on the beef-herd product', () => {
     expect(alignToRetail(-3.5, 'slaughter_gate', beef)).toBeCloseTo(-2.731, 3);
   });
   it('a retail-boundary figure passes through unchanged', () => {
@@ -438,42 +423,32 @@ describe('farm carbon — boundary alignment', () => {
   });
 });
 
-describe('farm carbon — dual basis on the crop plan', () => {
+describe('farm carbon — dual basis on a grow plan', () => {
+  // A cited figure written for these tests only, at the farm gate, on the mapped seed line.
+  const option: LcaOption = { id: 'test:veg-farm-gate', input: seedLine.name, kind: 'cited_lca', label: 'Test figure', kgCo2ePerKg: 0.2, unitNote: 'per kg', boundary: 'farm_gate', provenance: { id: 'test:veg-farm-gate', source: 'Test', sourceUrl: '', version: 'test', effectiveFrom: '2026-01-01', status: 'SOURCED' } };
   it('with no selection both bases equal the reference and the gap is zero', () => {
-    const d = cropPlanFoodFootprintDual();
-    expect(d.referenceTotalKgPerUnit).toBeCloseTo(4.937691, 5);
-    expect(d.selectedTotalKgPerUnit).toBeCloseTo(4.937691, 5);
-    expect(d.gapKgPerUnit).toBeCloseTo(0, 9);
+    const d = cropPlanFoodFootprintDual(broc, {}, inputFactors, testMap, [option]);
+    const ref = cropPlanFoodFootprint(broc, inputFactors, testMap).totalKgCo2ePerUnit;
+    expect(d.referenceTotalKgPerUnit).toBeCloseTo(ref, 12);
+    expect(d.selectedTotalKgPerUnit).toBeCloseTo(ref, 12);
+    expect(d.gapKgPerUnit).toBeCloseTo(0, 12);
     expect(d.linesOnSelectedBasis).toBe(0);
-    const beef = d.lines.find((l) => l.name === 'Ground beef, 85/15')!;
-    expect(beef.options.map((o) => o.id)).toEqual(['quantis-wop-2019:beef-net', 'msu-ucs-amp-2018:beef-net']);
+    expect(d.lines.find((l) => l.name === seedLine.name)!.options.map((o) => o.id)).toEqual([option.id]);
   });
-  it('selecting White Oak for beef swaps that line to the aligned figure and keeps the reference', () => {
-    const d = cropPlanFoodFootprintDual(undefined, { 'Ground beef, 85/15': 'quantis-wop-2019:beef-net' });
-    const beef = d.lines.find((l) => l.name === 'Ground beef, 85/15')!;
-    expect(beef.reference!.kgCo2ePerUnit).toBeCloseTo(4.202224, 5);
-    expect(beef.selected!.rawKgPerKg).toBe(-3.5);
-    expect(beef.selected!.boundary).toBe('slaughter_gate');
-    expect(beef.selected!.alignedKgPerKg).toBeCloseTo(-2.731, 3);
-    expect(beef.selected!.kgCo2ePerUnit).toBeCloseTo(0.042524 * -2.73095, 4);
-    expect(beef.selected!.status).toBe('DERIVED');
-    expect(d.referenceTotalKgPerUnit).toBeCloseTo(4.937691, 5);
-    expect(d.selectedTotalKgPerUnit).toBeCloseTo(4.937691 - 4.202224 + 0.042524 * -2.73095, 3);
-    expect(d.gapKgPerUnit).toBeLessThan(0);
+  it('selecting a cited figure swaps that line to its figure aligned to retail, tagged derived, and keeps the reference', () => {
+    const d = cropPlanFoodFootprintDual(broc, { [seedLine.name]: option.id }, inputFactors, testMap, [option]);
+    const line = d.lines.find((l) => l.name === seedLine.name)!;
+    const aligned = alignToRetail(0.2, 'farm_gate', vegFactor());
+    expect(line.selected!.rawKgPerKg).toBe(0.2);
+    expect(line.selected!.alignedKgPerKg).toBeCloseTo(aligned, 12);
+    expect(line.selected!.kgCo2ePerUnit).toBeCloseTo(((seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits) * aligned, 12);
+    expect(line.selected!.provenance.status).toBe('SOURCED');
+    expect(line.selected!.status).toBe('DERIVED');
     expect(d.linesOnSelectedBasis).toBe(1);
-  });
-  it('Stanley et al. 2018 option: −6.65 per kg carcass → −9.78 per kg retail mass at the farm gate → −7.78 aligned; sourced, aligned figure derived', () => {
-    const d = cropPlanFoodFootprintDual(undefined, { 'Ground beef, 85/15': 'msu-ucs-amp-2018:beef-net' });
-    const beef = d.lines.find((l) => l.name === 'Ground beef, 85/15')!;
-    expect(beef.selected!.rawKgPerKg).toBeCloseTo(-6.65 / 0.6803, 3);
-    expect(beef.selected!.boundary).toBe('farm_gate');
-    expect(beef.selected!.alignedKgPerKg).toBeCloseTo(-7.777, 2);
-    expect(beef.selected!.provenance.status).toBe('SOURCED');
-    expect(beef.selected!.status).toBe('DERIVED');
-    expect(d.selectedTotalKgPerUnit).toBeLessThan(d.referenceTotalKgPerUnit);
+    expect(d.gapKgPerUnit).toBeCloseTo(d.selectedTotalKgPerUnit - d.referenceTotalKgPerUnit, 12);
   });
   it('an unknown option id falls back to the study mean', () => {
-    const d = cropPlanFoodFootprintDual(undefined, { 'Ground beef, 85/15': 'nope' });
+    const d = cropPlanFoodFootprintDual(broc, { [seedLine.name]: 'nope' }, inputFactors, testMap, [option]);
     expect(d.gapKgPerUnit).toBe(0);
   });
 });

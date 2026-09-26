@@ -13,8 +13,6 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - The grow-room temperature and humidity band for the temperature-and-humidity control point: readings are recorded and none is judged until the produce safety plan states the band.
 - The labor rate is the $29.28/h placeholder loaded wage until Staffing's rates arrive; a live 1020 flat carries 21 minutes on the three streams from your 2023 study.
 
-- Phase 1-era content still on live pages, waiting on your call (remove, or rebuild in its own phase): Produce Safety's control-point-2 cooling log card, its "Blackout lots with every load recorded" and "Failed stage records" KPIs and the "Coverage and the unstaffed window" card; Sustainability Inputs' "What-if: beef quantity" card and the kitchen food map in `emission-factors.ts` (the microgreens factors are Phase 5); Training's placeholder courses ("control-point-2 Two-Stage Cooling", "Allergen Changeover & Segregation", "sow-blackout Fundamentals").
-
 ## Code
 
 - The first load of a page after a restart seeds every library on first read against a cold Neon branch and can take 20 to 35 seconds; later loads take a few seconds. Trim by seeding once at workspace creation instead of on each first read.

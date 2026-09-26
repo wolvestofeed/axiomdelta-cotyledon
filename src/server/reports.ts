@@ -16,8 +16,9 @@ import { leanSuppliersById } from '@/server/supplier-links';
 import { REPORT_CATALOG, reportsFor, type ReportCell, type ReportData, type ReportDef, type ReportRow, type ReportTable } from '@/engine/reports';
 import type { ActualsBundle, DistributionDoc } from '@/engine/actuals';
 import { toSowingExecution } from '@/engine/actuals';
-import { stageLoadsOf, massBalance } from '@/engine/sowing';
-import { evaluateCcp2, CCP2_LIMITS } from '@/engine/produce-safety';
+import { massBalance } from '@/engine/sowing';
+import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
 import { rawStockOnHand, rawLotsByUseBy } from '@/engine/net-requirements';
@@ -171,24 +172,13 @@ type Builder = (ctx: Ctx) => Built | Promise<Built>;
 
 // ── Overview ────────────────────────────────────────────────────────────────
 
-function coolingLog(records: ActualsBundle, cropPlanName: (code: string) => string) {
-  return records.sowings.flatMap((b) =>
-    b.components.flatMap((c) =>
-      stageLoadsOf(c).map((t, li) => {
-        const ev = evaluateCcp2(t.t2F, t.t6F);
-        return { sowingId: b.sowingId, lot: c.outputLotCode, load: li + 1, date: b.productionDate, product: `${c.component} — ${cropPlanName(b.cropPlanCode)}`, t2: t.t2F, t6: t.t6F, pass: ev.pass, reason: ev.reason };
-      }),
-    ),
-  );
-}
-
-function blackoutLotsOwed(records: ActualsBundle, R: PostedLedger['inputs'], cropPlanName: (code: string) => string) {
-  const hotComponents = (code: string) => new Set((R.cropPlans.find((r) => r.code === code)?.inputs ?? []).filter((i) => i.isHotComponent).map((i) => i.component ?? i.name));
-  return records.sowings.flatMap((b) => {
-    const hot = hotComponents(b.cropPlanCode);
-    return b.components
-      .filter((c) => (c.blackoutLb ?? 0) > 0 && (hot.size === 0 || hot.has(c.component)))
-      .map((c) => ({ sowingId: b.sowingId, lot: c.outputLotCode, date: b.productionDate, product: `${c.component} — ${cropPlanName(b.cropPlanCode)}`, recorded: stageLoadsOf(c).length, expected: b.sowingsRun }));
+/** The closed grow sowings, each against the control points on its plan's stages. */
+function stageRecordChecks(records: ActualsBundle, R: PostedLedger['inputs']) {
+  return records.sowings.filter(isGrowSowing).flatMap((b) => {
+    const plan = R.cropPlans.find((r) => r.code === b.cropPlanCode);
+    if (!plan || !isGrowPlanCarrier(plan)) return [];
+    const checks = sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan.plan);
+    return [{ sowingId: b.sowingId, date: b.productionDate, planName: plan.name, checks, failed: checks.points.filter((p) => p.status === 'failed'), gaps: checks.points.filter((p) => p.status === 'gap') }];
   });
 }
 
@@ -198,9 +188,11 @@ const alertsRegister: Builder = (ctx) => {
   const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
   const items: { finding: string; item: string; detail: string; module: string }[] = [];
 
-  // Cold chain, always the records: a forecast cools nothing.
-  for (const r of coolingLog(records, cropPlanName).filter((x) => !x.pass)) items.push({ finding: 'Stage record failed control-point-2', item: `${r.lot} load ${r.load}`, detail: `${r.product}, ${r.date}: ${r.reason}`, module: 'Produce Safety' });
-  for (const l of blackoutLotsOwed(records, R, cropPlanName).filter((x) => x.recorded < x.expected)) items.push({ finding: 'Blackout lot with a rack load unrecorded', item: l.lot, detail: `${l.product}, ${l.date}: ${l.recorded} of ${l.expected} loads on the record`, module: 'Produce Safety' });
+  // Stage control points, always the records: a forecast records nothing.
+  for (const r of stageRecordChecks(records, R)) {
+    if (r.failed.length > 0) items.push({ finding: 'Stage record failed', item: r.sowingId, detail: `${r.planName}, sown ${r.date}: ${r.failed.map((f) => `${f.point.name} — ${f.detail}`).join('; ')}`, module: 'Produce Safety' });
+    if (r.gaps.length > 0) items.push({ finding: 'Stage record with a gap', item: r.sowingId, detail: `${r.planName}, sown ${r.date}: ${r.gaps.map((g) => g.point.name).join(', ')} not recorded`, module: 'Produce Safety' });
+  }
   const pfc = ctx.pf;
   const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.cropPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today, cropPlans: R.cropPlans });
   for (const l of recordedFinished.lots.filter((x) => x.remaining > 1e-9)) {
@@ -211,7 +203,7 @@ const alertsRegister: Builder = (ctx) => {
   for (const l of raw.filter((x) => x.daysToUseBy !== null && x.daysToUseBy < 0 && x.remaining > 1e-9)) items.push({ finding: 'Raw lot past the date on the case', item: `${l.input} · ${l.lotCode}`, detail: `use by ${l.useBy}, ${num(l.remaining, 1)} ${l.unit} remaining`, module: 'Inventory' });
 
   // The plan, on the selected world.
-  for (const d of horizon.byDate.filter((x) => !x.fits)) items.push({ finding: 'Production day that does not fit the blackout rack', item: d.date, detail: `${num(d.sowings)} sowings against ${num(d.cyclesAvailable)} cycles available`, module: 'Calendar' });
+  for (const d of horizon.byDate.filter((x) => !x.fits)) items.push({ finding: 'Production day that does not fit the grow units', item: d.date, detail: `a sowing with no room on the grow units for its cycle; ${num(d.sowings)} placed`, module: 'Calendar' });
   for (const d of horizon.byDate.filter((x) => x.expiredBase > 1e-9)) items.push({ finding: 'Stock expiring in the next two weeks', item: d.date, detail: `${num(Math.round(d.expiredBase))} base units past shelf life unconsumed`, module: 'Calendar' });
 
   // Labor standards.
@@ -579,27 +571,29 @@ const inventoryPosition: Builder = (ctx) => {
   };
 };
 
-const coolingCompliance: Builder = (ctx) => {
+const stageRecordsByMonth: Builder = (ctx) => {
   const { records, selected, today } = ctx;
-  const R = selected.inputs;
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
-  const log = coolingLog(records, cropPlanName);
-  const owed = blackoutLotsOwed(records, R, cropPlanName);
-  interface Acc { records: number; passed: number; failed: number; lots: number; lotsComplete: number }
+  const log = stageRecordChecks(records, selected.inputs);
+  interface Acc { sowings: number; complete: number; withGap: number; withFailure: number }
   const months = new Map<string, Acc>();
-  const get = (m: string) => { const a = months.get(m) ?? { records: 0, passed: 0, failed: 0, lots: 0, lotsComplete: 0 }; months.set(m, a); return a; };
-  for (const r of log) { const a = get(monthOf(r.date)); a.records += 1; if (r.pass) a.passed += 1; else a.failed += 1; }
-  for (const l of owed) { const a = get(monthOf(l.date)); a.lots += 1; if (l.recorded >= l.expected) a.lotsComplete += 1; }
-  const rows = [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([m, a]) => row([m, a.records, a.passed, a.failed, `${a.lotsComplete} / ${a.lots}`], a.failed > 0 || a.lotsComplete < a.lots ? 'over' : undefined));
-  const t = [...months.values()].reduce((s, a) => ({ records: s.records + a.records, passed: s.passed + a.passed, failed: s.failed + a.failed, lots: s.lots + a.lots, lotsComplete: s.lotsComplete + a.lotsComplete }), { records: 0, passed: 0, failed: 0, lots: 0, lotsComplete: 0 });
-  rows.push(row(['All months', t.records, t.passed, t.failed, `${t.lotsComplete} / ${t.lots}`], 'total'));
-  const detail = table([{ label: 'Date' }, { label: 'Lot' }, { label: 'Load', num: true }, { label: 'Product' }, { label: '2 h °F', num: true }, { label: '6 h °F', num: true }, { label: 'Result' }],
-    [...log].sort((a, b) => b.date.localeCompare(a.date) || a.lot.localeCompare(b.lot) || a.load - b.load).map((r) => row([r.date, r.lot, r.load, r.product, r.t2, r.t6, r.pass ? 'Pass' : `Fail — ${r.reason}`], r.pass ? undefined : 'over')));
+  const get = (m: string) => { const a = months.get(m) ?? { sowings: 0, complete: 0, withGap: 0, withFailure: 0 }; months.set(m, a); return a; };
+  for (const r of log) {
+    const a = get(monthOf(r.date));
+    a.sowings += 1;
+    if (r.checks.complete) a.complete += 1;
+    if (r.gaps.length > 0) a.withGap += 1;
+    if (r.failed.length > 0) a.withFailure += 1;
+  }
+  const rows = [...months.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([m, a]) => row([m, a.sowings, a.complete, a.withGap, a.withFailure], a.withFailure > 0 || a.withGap > 0 ? 'over' : undefined));
+  const t = [...months.values()].reduce((s, a) => ({ sowings: s.sowings + a.sowings, complete: s.complete + a.complete, withGap: s.withGap + a.withGap, withFailure: s.withFailure + a.withFailure }), { sowings: 0, complete: 0, withGap: 0, withFailure: 0 });
+  rows.push(row(['All months', t.sowings, t.complete, t.withGap, t.withFailure], 'total'));
+  const detail = table([{ label: 'Sown' }, { label: 'Sowing' }, { label: 'Plan' }, { label: 'Record' }, { label: 'Detail' }],
+    [...log].sort((a, b) => b.date.localeCompare(a.date) || a.sowingId.localeCompare(b.sowingId)).map((r) => row([r.date, r.sowingId, r.planName, r.checks.complete ? 'Complete' : r.failed.length > 0 ? 'Failed' : 'Gap', [...r.failed.map((f) => `${f.point.name}: ${f.detail}`), ...r.gaps.map((g) => `${g.point.name}: not recorded`)].join('; ') || '—'], r.checks.complete ? undefined : 'over')));
   return {
-    summary: table([{ label: 'Month' }, { label: 'Stage records', num: true }, { label: 'Passed', num: true }, { label: 'Failed', num: true }, { label: 'Blackout lots with every load recorded', num: true }], rows),
+    summary: table([{ label: 'Month' }, { label: 'Sowings closed', num: true }, { label: 'Complete', num: true }, { label: 'With a gap', num: true }, { label: 'With a failure', num: true }], rows),
     detail,
-    basis: `The closed sowing records as of ${today}. Pass or fail is computed from the readings against ${CCP2_LIMITS.startF}°F to ${CCP2_LIMITS.twoHourMaxF}°F within 2 hours and to ${CCP2_LIMITS.sixHourMaxF}°F within 6; one record per rack load.`,
-    empty: log.length === 0 && owed.length === 0 ? 'No sowing record has been closed.' : undefined,
+    basis: `The closed sowing records as of ${today}. Each sowing is checked against the control points on its plan's stages; a gap is never a pass, and a failure is computed from the record.`,
+    empty: log.length === 0 ? 'No sowing on the grow model has been closed.' : undefined,
   };
 };
 
@@ -1029,7 +1023,7 @@ const BUILDERS: Record<string, Builder> = {
   'working-capital-aging': workingCapitalAging,
   'plan-v-actual': planVActual,
   'inventory-position': inventoryPosition,
-  'cooling-compliance': coolingCompliance,
+  'stage-records': stageRecordsByMonth,
   'supply-position': supplyPosition,
   'supplier-activity': supplierActivity,
   'emissions-statement': emissionsStatement,

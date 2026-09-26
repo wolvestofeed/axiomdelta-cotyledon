@@ -339,10 +339,10 @@ export const inputFactors: FoodFactor[] = compiledFood.products.map((p) => ({
 }));
 
 /**
- * Crop plan input → study product. Keyed by `crop plan.inputs[].name`.
- * `category: null` means the input has no product in the study and is
- * excluded from the food footprint with the reason shown. Inputs bought
- * by the piece need a mass per piece; that mass carries its own status tag.
+ * Grow plan line → study product. Keyed by the line's input name. `category: null` means the line
+ * has no product in the study and is excluded from the food footprint with the reason shown. Lines
+ * bought by the piece need a mass per piece; that mass carries its own status tag. Empty until the
+ * seed, medium, nutrient and light lines are mapped (Phase 5): every line reads as not yet mapped.
  */
 export interface CropPlanFoodMapping {
   category: string | null;
@@ -351,30 +351,7 @@ export interface CropPlanFoodMapping {
   note?: string;
 }
 
-/** A 6-inch corn tortilla's mass (USDA FoodData Central, generic product, 25 g): the Phase 1-era map's one piece line. */
-const tortillaLine: { unitMassOz: number; yieldStatus: StatusTag } = { unitMassOz: 0.88, yieldStatus: 'SOURCED' };
-
-export const cropPlanFoodCategoryMap: Record<string, CropPlanFoodMapping> = {
-  'Ground beef, 85/15': { category: 'bovine-meat-beef-herd' },
-  'Pinto beans, dry': { category: 'beans-pulses' },
-  'Brown rice, long grain': { category: 'rice' },
-  'Seasonal vegetables': { category: 'other-vegetables', note: 'Squash, peppers, onion mix mapped to the study\'s "Other Vegetables".' },
-  'Tomato, crushed': { category: 'tomatoes' },
-  'Onion, yellow': { category: 'onions-and-leeks' },
-  'Garlic, peeled': { category: 'onions-and-leeks', note: 'Allium; the study has no garlic product.' },
-  'Corn tortilla, 6 in': {
-    category: 'maize-unit',
-    // The mass per piece is USDA FoodData Central's generic 6-inch corn tortilla, SOURCED.
-    // The actual product has not been weighed.
-    massKgPerEach: tortillaLine.unitMassOz * KG_PER_OZ,
-    massStatus: tortillaLine.yieldStatus,
-    note: 'Mass per 6-inch tortilla is USDA FoodData Central\'s generic product; the actual product has not been weighed.',
-  },
-  'Cheddar, shredded': { category: 'cheese' },
-  'Chili-cumin spice blend': { category: null, note: 'No spice product in the study; small mass.' },
-  'Sea salt': { category: null, note: 'Mineral, not a food LCA product in the study.' },
-  'Sunflower oil, high oleic': { category: 'sunflower-oil' },
-};
+export const cropPlanFoodCategoryMap: Record<string, CropPlanFoodMapping> = {};
 
 // ── Scope 1: refrigerant leak-repair rules (EPA AIM Act, 40 CFR 84 Subpart C)
 

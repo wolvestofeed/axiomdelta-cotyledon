@@ -69,7 +69,8 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
     expect(m.suppliersByStars).toEqual({ 1: 1, 2: 0, 3: 0 });
     expect(m.electricityKwh).toBe(1200);
     expect(m.waterGal).toBe(5000);
-    expect(m.food.referenceKg).toBeGreaterThan(0);
+    // No input is mapped to a food product until Phase 5.
+    expect(m.food.referenceKg).toBe(0);
     expect(m.food.onNamedSupplierKg).toBe(0);
   });
 

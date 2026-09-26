@@ -27,8 +27,5 @@ export const pickupPoints: PickupPoint[] = [
 
 /** Training module placeholder catalog (invented) — for the honest shell. */
 export const trainingCourses = [
-  { id: 'TRN-01', title: 'sow-blackout Fundamentals', lessons: 6, format: 'Video + assessment', audience: 'Production staff' },
-  { id: 'TRN-02', title: 'control-point-2 Two-Stage Cooling', lessons: 4, format: 'Video + assessment', audience: 'Production leads' },
-  { id: 'TRN-03', title: 'Allergen Changeover & Segregation', lessons: 3, format: 'Video', audience: 'All staff' },
   { id: 'TRN-04', title: 'Approved Supplier Verification', lessons: 5, format: 'Video + document review', audience: 'Receiving, partners' },
 ];

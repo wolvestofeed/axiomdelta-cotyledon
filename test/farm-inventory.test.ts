@@ -55,7 +55,7 @@ describe('farm inventory — restatement check', () => {
 });
 
 describe('farm inventory — full inventory from the resolved model', () => {
-  it('on defaults: food reference is the crop plan footprint × units distributed, energy and refrigerants empty, waste all landfill, freight outbound only', () => {
+  it('on defaults: food reference is the footprint × units distributed, energy and refrigerants empty, freight outbound only', () => {
     const R = resolveScenarioInputs({});
     const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
     const channel = cropPlan.channels[0];
@@ -67,9 +67,9 @@ describe('farm inventory — full inventory from the resolved model', () => {
     expect(inv.foodGapKg).toBeCloseTo(0, 6);
     expect(inv.lines.find((l) => l.category === 'combustion')!.kg).toBe(0);
     expect(inv.lines.find((l) => l.category === 'fugitive')!.kg).toBe(0);
+    // No input is mapped to a food product until Phase 5, so there is no food mass and no shrink waste from it.
     const waste = inv.lines.find((l) => l.category === 'waste')!;
-    expect(waste.kg).toBeGreaterThan(0);
-    expect(inv.postings.filter((p) => p.category.startsWith('waste:')).map((p) => p.category)).toEqual(['waste:landfill']);
+    expect(waste.kg).toBe(0);
     const freight = inv.postings.filter((p) => p.category.startsWith('freight:'));
     expect(freight.map((p) => p.category)).toEqual(['freight:outbound']);
     expect(freight[0].activityStatus).toBe('PLACEHOLDER');
@@ -85,7 +85,6 @@ describe('farm inventory — full inventory from the resolved model', () => {
       sustainability: {
         energy: { naturalGasTherms: 1000, electricityKwh: 10000, renewableShare: 0.5 },
         waste: { compostShare: 1 },
-        inputBasis: { 'Ground beef, 85/15': 'quantis-wop-2019:beef-net' },
         equipment: { 'Walk-in freezer, 10x12, with refrigeration': { refrigerant: 'R-404A', chargeLbPerUnit: 60 } },
       },
     });
@@ -99,10 +98,7 @@ describe('farm inventory — full inventory from the resolved model', () => {
     expect(inv.lines.find((l) => l.category === 'electricity-location')!.kg).toBeCloseTo(3516.018, 2);
     expect(inv.lines.find((l) => l.category === 'electricity-market')!.kg).toBeCloseTo(1758.009, 2);
     expect(inv.lines.find((l) => l.category === 'fugitive')!.kg).toBeCloseTo(4 * 0.45359237 * 3922, 3);
-    expect(inv.postings.filter((p) => p.category.startsWith('waste:')).map((p) => p.category)).toEqual(['waste:compost']);
-    expect(inv.lines.find((l) => l.category === 'waste')!.kg).toBeLessThan(0);
-    expect(inv.linesOnSelectedBasis).toBe(1);
-    expect(inv.foodSelectedKg).toBeLessThan(inv.foodReferenceKg);
+    expect(inv.linesOnSelectedBasis).toBe(0);
     expect(inv.reference.location.scope1Kg).toBeCloseTo(5311.45 + 4 * 0.45359237 * 3922, 3);
     expect(inv.reference.location.scope2Kg).toBeCloseTo(3516.018, 2);
     expect(inv.reference.market.scope2Kg).toBeCloseTo(1758.009, 2);

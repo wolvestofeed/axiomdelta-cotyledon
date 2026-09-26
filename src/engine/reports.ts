@@ -171,10 +171,10 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
     sourceHref: '/farm/inventory',
   },
   {
-    id: 'cooling-compliance',
+    id: 'stage-records',
     section: 'Inventory & Quality',
-    title: 'control-point-2 cooling compliance by month',
-    blurb: 'Stage records per rack load: passed, failed, and blackout lots with a load unrecorded, computed from the readings on the closed sowing records.',
+    title: 'Stage control point records by month',
+    blurb: 'Closed sowings per month against the control points on their plans\' stages: complete, with a gap, with a failure, computed from the stage records.',
     themes: ['compliance'],
     world: 'records',
     sourceHref: '/farm/produce-safety',

@@ -202,8 +202,7 @@ async function TrainingPageInner() {
         <p className="farm-kpi-sub mt-2">
           The training documents at the top are real: in force, assigned to everyone on the staff
           register, and acknowledged person by person above. The courses below them are placeholders
-          for the sequenced video model, which is still a port — the control-point-2 two-stage cooling course
-          maps directly onto the control-point-2 control on{' '}
+          for the sequenced video model, which is still a port; the control points a course would teach are on{' '}
           <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>. For a placeholder
           course, Audience is the catalog&apos;s own description and Assigned-to is what has actually
           been recorded against a role.

@@ -16,11 +16,7 @@ import { withWorkspace } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Compare: one day placed under two forecasts (scheduler build plan W5). The Crop plan tab, the agentic
- * variant builder (`CropPlanCompareClient.tsx`, `CompareTabs.tsx`), is off the page until the agent is
- * re-based onto grow plan lines.
- */
+/** Compare: one day placed under two forecasts (scheduler build plan W5). */
 export default async function ComparePage() {
   return withWorkspace(() => ComparePageInner());
 }

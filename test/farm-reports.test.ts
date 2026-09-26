@@ -65,7 +65,7 @@ describe('farm reports — filter and sort', () => {
 
   it('filters by lens, by text and by having data', () => {
     expect(filterReports(all, { ...EMPTY_FILTER, theme: 'loss' }).every((r) => r.def.themes.includes('loss'))).toBe(true);
-    expect(filterReports(all, { ...EMPTY_FILTER, q: 'cooling' }).map((r) => r.def.id)).toContain('cooling-compliance');
+    expect(filterReports(all, { ...EMPTY_FILTER, q: 'stage records' }).map((r) => r.def.id)).toContain('stage-records');
     expect(filterReports(all, { ...EMPTY_FILTER, withDataOnly: true }).some((r) => r.def.id === 'supplier-catalogs')).toBe(false);
     expect(filterReports(all, EMPTY_FILTER)).toHaveLength(all.length);
   });

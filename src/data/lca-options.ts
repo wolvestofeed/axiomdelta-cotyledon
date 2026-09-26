@@ -40,45 +40,8 @@ export interface LcaOption {
   provenance: FactorProvenance;
 }
 
-export const lcaOptions: LcaOption[] = [
-  {
-    id: 'quantis-wop-2019:beef-net',
-    input: 'Ground beef, 85/15',
-    kind: 'cited_lca',
-    label: 'White Oak Pastures regenerative beef (Quantis 2019)',
-    kgCo2ePerKg: -3.5,
-    unitNote: 'per kg fresh meat',
-    boundary: 'slaughter_gate',
-    provenance: {
-      id: 'quantis-wop-2019:beef-net',
-      source: 'Quantis, Carbon Footprint Evaluation of Regenerative Grazing at White Oak Pastures',
-      sourceUrl: '',
-      version: 'Results presentation, 25 February 2019',
-      effectiveFrom: '2019-02-25',
-      status: 'SOURCED',
-      note: 'Carbon only; field to slaughter for 2017; economic allocation of sequestration; not ISO-compliant or peer-reviewed at the time. One Georgia ranch, not a Central Texas measurement.',
-    },
-  },
-  {
-    id: 'msu-ucs-amp-2018:beef-net',
-    input: 'Ground beef, 85/15',
-    kind: 'cited_lca',
-    label: 'Adaptive multi-paddock grazing, Upper Midwest finishing (Stanley et al. 2018)',
-    // −6.65 kg CO2e per kg carcass weight ÷ 0.6803 kg retail per kg carcass (study-workbook beef-herd mean).
-    kgCo2ePerKg: -9.7751,
-    unitNote: '−6.65 per kg carcass weight, finishing phase only; shown per kg retail mass at 0.68 kg retail per kg carcass',
-    boundary: 'farm_gate',
-    provenance: {
-      id: 'msu-ucs-amp-2018:beef-net',
-      source: 'Stanley, Rowntree, Beede, DeLonge & Hamm (2018), Impacts of soil carbon sequestration on life cycle greenhouse gas emissions in Midwestern USA beef finishing systems, Agricultural Systems 162, 249–258',
-      sourceUrl: 'https://doi.org/10.1016/j.agsy.2018.02.003',
-      version: 'Agricultural Systems 162 (2018), open access CC BY 4.0',
-      effectiveFrom: '2018-02-13',
-      status: 'SOURCED',
-      note: 'Finishing phase only; cow-calf and backgrounding excluded. Upper Midwest, on-farm data; soil carbon 3.59 Mg C/ha/yr over four years, which the authors expect to diminish and caution against extrapolating. Carcass-to-retail conversion derived from the study workbook.',
-    },
-  },
-];
+/** Curated cited figures a line's selected basis can take, keyed by input name. None until the grow plan lines are mapped (Phase 5); a supplier's own figure is added from Supplier LCA data. */
+export const lcaOptions: LcaOption[] = [];
 
 export function optionsForInput(name: string, options: LcaOption[] = lcaOptions): LcaOption[] {
   return options.filter((o) => o.input === name);
