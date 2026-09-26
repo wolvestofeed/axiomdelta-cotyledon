@@ -6,7 +6,7 @@
  * total, and the input cost and labor cost of those units — each order priced
  * at its crop plan's unit input cost on the channel's unit and its crop plan's
  * labor standard at the crop plan's own one-line sowing (the seeded estimate until
- * an observed study is adopted). Orders are the order book: derived forecast
+ * an observed study is approved). Orders are the order book: derived forecast
  * orders with stored rows in their place.
  */
 

@@ -2125,7 +2125,7 @@ export type FarmPayrollPeriodRow = typeof farmPayrollPeriods.$inferSelect;
 
 /**
  * Time studies per crop plan (Roadmap O2, 0061): one sowing's tasks timed, with a
- * quality result. The latest adoption is the crop plan's labor standard. No wage.
+ * quality result. The average of the approved studies is the crop plan's labor standard. No wage.
  */
 export const farmTimeStudies = farmSchema.table(
   'time_studies',
@@ -2152,10 +2152,14 @@ export const farmTimeStudies = farmSchema.table(
     qualityResult: text('quality_result'),
     // @classification: Internal
     qualityNotes: text('quality_notes'),
+    /** When the study was approved; every approved study averages into the plan's standard (0013). */
     // @classification: Internal
-    adoptedAt: timestamp('adopted_at', { withTimezone: true }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
     // @classification: Internal
-    adoptedBy: text('adopted_by'),
+    approvedBy: text('approved_by'),
+    /** The water and supplements applied to the studied sowing (0013): { water: [...], supplements: [...] }. */
+    // @classification: Internal
+    consumption: jsonb('consumption').notNull().default({ water: [], supplements: [] }),
     /** 'seed' | 'user_built' */
     // @classification: Internal
     source: text('source').notNull().default('user_built'),

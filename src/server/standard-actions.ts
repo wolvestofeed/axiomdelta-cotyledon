@@ -1,28 +1,16 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { assumptionsFor } from '@/engine/scenario';
 import { z } from 'zod';
-import { farmStandardVersions } from '@/db';
-import { db } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
-import { postLedger } from '@/server/ledgers';
-import { loadStandards } from '@/server/standards';
-import { refuseIfLocked } from '@/server/periods';
-import { appendPosting } from '@/server/posting-log';
-import { nextStandardVersion, standardLabel, type StandardSnapshot } from '@/engine/standards';
+import { approveStandardVersion, type StandardApproval } from '@/server/standard-approval';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — approving a standard-cost version (Roadmap J5).
- * Super admin only. The snapshot is the crop plan as
- * resolved on the PLAN OF RECORD — not an open forecast — with the plan's cost
- * assumptions, frozen with an effective date. An effective date inside a
- * locked period is refused: it would re-cost sowings the lock protects. The
- * approval is an entry on the posting trail.
+ * MicroFarm — approving a standard-cost version (Roadmap J5) from the Grow plans page. Super admin
+ * only; the approval itself is `standard-approval.ts`, which a time study's approval also runs.
  */
 
-type Result = { ok: true; label: string } | { ok: false; error: string };
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
 
 const ApproveInput = z.object({
@@ -35,7 +23,7 @@ export async function approveStandard(...args: Parameters<typeof approveStandard
   return withWorkspace(() => approveStandardInner(...args));
 }
 
-async function approveStandardInner(input: unknown): Promise<Result> {
+async function approveStandardInner(input: unknown): Promise<StandardApproval> {
   const parsed = ApproveInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
   let access;
@@ -46,47 +34,7 @@ async function approveStandardInner(input: unknown): Promise<Result> {
     if (refused) return refused;
     throw e;
   }
-  const d = parsed.data;
-  const locked = await refuseIfLocked(d.effectiveFrom);
-  if (locked) return { ok: false, error: `${locked} An approved standard cannot take effect inside it.` };
-
-  // The plan of record posted as a Plan ledger: its crop plans and assumptions, and the
-  // absorption rate set on its own production (Roadmap N5 / N6).
-  const [planOfRecord, standards] = await Promise.all([postLedger('plan'), loadStandards()]);
-  const { inputs } = planOfRecord;
-  const { basis, label } = planOfRecord.view;
-  if (basis !== 'plan') return { ok: false, error: `The workspace is viewing the open forecast "${label ?? 'draft'}"; a standard is approved from the plan of record.` };
-  const cropPlan = inputs.cropPlans.find((r) => r.code === d.cropPlanCode);
-  if (!cropPlan) return { ok: false, error: `Crop plan ${d.cropPlanCode} is not in the library.` };
-  // Frozen: the crop plan's OWN assumptions — its labor standard and packaging —
-  // and the overhead absorption rate in force today (Roadmap N3). None of the
-  // three moves until a later version is approved.
-  const snapshot: StandardSnapshot = {
-    cropPlan,
-    assumptions: assumptionsFor(inputs, d.cropPlanCode),
-    overheadRatePerUnit: planOfRecord.ledger.absorption.ratePerUnit,
-  };
-  const version = nextStandardVersion(standards, d.cropPlanCode);
-  const who = access.email ?? access.userId;
-
-  const result = await db.transaction(async (tx): Promise<Result> => {
-    const rows = await tx
-      .insert(farmStandardVersions)
-      .values({ cropPlanCode: d.cropPlanCode, version, effectiveFrom: d.effectiveFrom, approvedBy: who, notes: d.notes, snapshot })
-      .returning({ id: farmStandardVersions.id });
-    const id = rows[0]?.id;
-    if (!id) return { ok: false, error: 'Failed to record the standard.' };
-    await appendPosting(tx, {
-      actorUserId: access.userId,
-      actorEmail: access.email,
-      action: 'approve_standard',
-      recordKind: 'standard',
-      recordId: id,
-      period: d.effectiveFrom.slice(0, 7),
-      detail: { cropPlanCode: d.cropPlanCode, version, effectiveFrom: d.effectiveFrom, notes: d.notes },
-    });
-    return { ok: true, label: standardLabel({ cropPlanCode: d.cropPlanCode, version }) };
-  });
+  const result = await approveStandardVersion(access, parsed.data);
   if (result.ok) revalidatePath('/farm', 'layout');
   return result;
 }

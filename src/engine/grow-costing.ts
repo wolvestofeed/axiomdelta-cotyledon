@@ -6,7 +6,9 @@
  *   seed        grams per tray over 453.59 × the variety's price per pound (the rolling cost from
  *               receipts once there are receipts; the record's opening price until then)
  *   medium      quantity per tray × the medium's cost per unit
- *   nutrient    ml/gal × the gallons the tray takes from the stage the line starts × cost per ml
+ *   nutrient    ml/gal × the gallons the tray takes from the stage the line starts × cost per ml;
+ *               once an approved time study measured the ml per tray, that ml, and the ounces per
+ *               watering it measured stand over the placeholder volumes
  *   light       energy and amortized fixture per tray-day on the facility's fixture × the days
  *               under light from the stage the line starts
  *   consumables the tray set over its uses, plus sanitizer, by format
@@ -97,8 +99,10 @@ export interface GrowPlanCosting {
   cycleDays: number;
   daysToHarvest: number;
   lightDays: number;
-  /** Fluid ounces of water the tray takes over its whole cycle. */
+  /** Fluid ounces of water the tray takes over its whole cycle: measured when an approved study recorded it. */
   waterOzPerTray: number;
+  /** True when the water and nutrient figures come from approved time studies. */
+  measured: boolean;
   perTray: { seed: number; medium: number; nutrient: number; light: number; consumables: number; total: number };
   /** Cost per harvested ounce at the record's yield; zero with no harvest weight. */
   costPerHarvestOz: number;
@@ -172,7 +176,22 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           lines.push({ line, label: n?.name ?? line.nutrientKey, quantity: 0, quantityUnit: 'ml', unitCost: 0, costPerTray: 0, status: 'STATED', source: 'Water only', basis: 'None' });
           break;
         }
-        const oz = waterOzFrom(line.startsAt, days, stages) * density;
+        const measuredMl = plan.measured?.mlPerTray[line.nutrientKey];
+        if (measuredMl !== undefined && plan.measured) {
+          lines.push({
+            line,
+            label: n.name,
+            quantity: measuredMl,
+            quantityUnit: 'ml',
+            unitCost: n.costPerMl.value,
+            costPerTray: measuredMl * n.costPerMl.value,
+            status: n.costPerMl.status,
+            source: n.costPerMl.note ?? '',
+            basis: `Measured: ${measuredMl.toFixed(2)} ml per tray, the average of ${plan.measured.studies} approved time ${plan.measured.studies === 1 ? 'study' : 'studies'} (${plan.measured.trays} trays)`,
+          });
+          break;
+        }
+        const oz = waterOzFrom(line.startsAt, days, stages, plan.measured?.ozPerWatering) * density;
         const mlPerGal = line.mlPerGal?.value ?? n.mlPerGal.value;
         const ml = (mlPerGal * oz) / FL_OZ_PER_GAL;
         lines.push({
@@ -184,7 +203,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           costPerTray: ml * n.costPerMl.value,
           status: n.costPerMl.status,
           source: n.costPerMl.note ?? '',
-          basis: `${mlPerGal} ml/gal × ${(oz / FL_OZ_PER_GAL).toFixed(3)} gal (${oz.toFixed(1)} fl oz) from ${line.startsAt}`,
+          basis: `${mlPerGal} ml/gal × ${(oz / FL_OZ_PER_GAL).toFixed(3)} gal (${oz.toFixed(1)} fl oz) from ${line.startsAt}${plan.measured && Object.keys(plan.measured.ozPerWatering).length ? ', at the ounces per watering approved time studies measured' : ''}`,
         });
         break;
       }
@@ -214,7 +233,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
   const consumables = traySetCostPerUnit(format) + ctx.sanitizerPerTray;
   const perTray = { seed: sum('seed'), medium: sum('medium'), nutrient: sum('nutrient'), light: sum('light'), consumables, total: 0 };
   perTray.total = perTray.seed + perTray.medium + perTray.nutrient + perTray.light + perTray.consumables;
-  const waterOz = waterOzFrom(stages[0]!.key, days, stages) * density;
+  const waterOz = plan.measured?.waterOzPerTray ?? waterOzFrom(stages[0]!.key, days, stages, plan.measured?.ozPerWatering) * density;
   return {
     code: plan.code,
     format,
@@ -227,6 +246,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
     daysToHarvest: daysToHarvest(days),
     lightDays,
     waterOzPerTray: waterOz,
+    measured: plan.measured !== undefined,
     perTray,
     costPerHarvestOz: harvestGrams > 0 ? perTray.total / (harvestGrams / GRAMS_PER_OZ) : 0,
     fixture: ctx.fixture,

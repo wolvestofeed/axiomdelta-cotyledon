@@ -168,7 +168,7 @@ describe('the horizon on grow plans', () => {
 
 describe('the route and the day for a grow plan', () => {
   it('a grow plan\'s route is its sow and harvest lines at the stations, the daily lines left to the calendar, and the day places it without a rack', () => {
-    const study = { id: 'e', cropPlanCode: 'BROC-01', adoptedAt: null, adoptedBy: null, source: 'seed' as const, ...estimatedTimeStudy(lib[0]!, 20) };
+    const study = { id: 'e', cropPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed' as const, ...estimatedTimeStudy(lib[0]!, 20) };
     const route = deriveRoute({ cropPlan: lib[0]!, standard: study, equipment: equipmentSeed });
     expect(route.findings).toEqual([]);
     expect(route.steps.every((s) => s.stream !== 'daily')).toBe(true);

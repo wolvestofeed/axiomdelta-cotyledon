@@ -189,9 +189,12 @@ export function stagesFrom(from: StageKey, stages: readonly StageDef[] = STAGES)
   return (i < 0 ? [] : stages.slice(i)).filter((s) => s.key !== 'packed');
 }
 
-/** Fluid ounces of water one 1020 tray takes from a stage onward: waterings per day, days, ounces per watering. */
-export function waterOzFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES): number {
-  return stagesFrom(from, stages).reduce((sum, s) => sum + s.wateringsPerDay * days[s.key as Exclude<StageKey, 'packed'>] * WATER_PER_WATERING_OZ[s.watering].value, 0);
+/**
+ * Fluid ounces of water one 1020 tray takes from a stage onward: waterings per day, days, ounces per
+ * watering. `perWatering` stands over the placeholder ounces by method where a measure is on file.
+ */
+export function waterOzFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES, perWatering: Partial<Record<WateringMethod, number>> = {}): number {
+  return stagesFrom(from, stages).reduce((sum, s) => sum + s.wateringsPerDay * days[s.key as Exclude<StageKey, 'packed'>] * (perWatering[s.watering] ?? WATER_PER_WATERING_OZ[s.watering].value), 0);
 }
 
 /** Days a tray is under the lights from a stage onward. */

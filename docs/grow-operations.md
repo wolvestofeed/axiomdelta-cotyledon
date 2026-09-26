@@ -88,7 +88,7 @@ A live tray takes 7 minutes on the sow day, 11 over its cycle and 3 at harvest: 
 
 ## 5. Water
 
-Watering is measured in fluid ounces; every other volume (media, nutrient strength, metered water) is in gallons. Volumes per 1020 tray (or pint jar) per watering are PLACEHOLDER until observed: a misting pass 1 fl oz, a bottom watering 14 fl oz on average, a jar rinse 16.9 fl oz. The rinse is the sprout jar's; a live tray has none. Water per tray per day is the volume per watering times the waterings that day. A nutrient line's strength is ml per gallon, and its volume over the cycle is the waterings from the stage it starts times these volumes.
+Watering is measured in fluid ounces; every other volume (media, nutrient strength, metered water) is in gallons. Volumes per 1020 tray (or pint jar) per watering are PLACEHOLDER until observed: a misting pass 1 fl oz, a bottom watering 14 fl oz on average, a jar rinse 16.9 fl oz. The rinse is the sprout jar's; a live tray has none. Water per tray per day is the volume per watering times the waterings that day. A nutrient line's strength is ml per gallon, and its volume over the cycle is the waterings from the stage it starts times these volumes. A time study records the ounces per watering by method and the supplements applied to the sowing it times; once a study is approved, the average of the plan's approved studies stands over these volumes, and a measured ml per tray over the line's strength.
 
 ## 6. Placing a sowing
 

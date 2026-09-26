@@ -24,6 +24,7 @@ import type { Tagged } from '@/data/tagged';
 import { tagged } from '@/data/tagged';
 import type { CropPlanStatus } from '@/data/plan-data';
 import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
+import type { MeasuredConsumption } from '@/data/time-studies';
 import { STAGES, SPROUT_STAGES, type StageDays, type StageKey, type StageDef } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY, densityFactorOf, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
@@ -85,6 +86,12 @@ export interface GrowPlanDef {
    * Never stored with the plan.
    */
   nutrients?: Readonly<Record<string, NutrientSolutionDef>>;
+  /**
+   * What the plan's approved time studies measured, attached where the scenario is resolved: the
+   * costing reads its ounces per watering over the placeholder volumes and its ml per tray over the
+   * nutrient line's strength. Absent until a study that recorded consumption is approved. Never stored.
+   */
+  measured?: MeasuredConsumption;
 }
 
 export const GROW_PLAN_CODE_RX = /^[A-Z]{2,5}-\d{2,3}$/;

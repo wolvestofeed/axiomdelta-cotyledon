@@ -20,7 +20,7 @@ import { withSeedLock, insertTimeStudy } from '@/server/seed-writes';
  * ESTIMATED study, `source = 'seed'`, under an advisory lock and idempotent
  * per plan: the built estimate (`estimatedTimeStudy`) at its sowing, the trays
  * one of the workspace's grow units takes. The estimate stands as the labor standard
- * until an observed study is adopted.
+ * until an observed study is approved.
  */
 
 async function seedMissingStudies(cropPlans: readonly LibraryCropPlan[]): Promise<void> {

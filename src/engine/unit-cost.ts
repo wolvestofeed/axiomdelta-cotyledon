@@ -34,9 +34,9 @@ import { cropPlanPackagingCost } from '@/engine/packaging';
 
 /**
  * Where a crop plan's labor minutes come from.
- *   observed  — an observed study adopted by an admin.
+ *   observed  — observed studies approved by an admin, averaged.
  *   estimated — the crop plan's estimated study, standing in until an observed one
- *               is adopted.
+ *               is approved.
  *   none      — no study at all: labor is a GAP, reported as one, never zero
  *               presented as a cost.
  */
@@ -102,7 +102,7 @@ export function laborStandardFor(
     dailyMinutesPerTrayDay: s.dailyMinutesPerTrayDay,
     dailyFixedMinutesPerDay: s.dailyFixedMinutesPerDay,
     cycleDays: s.cycleDays,
-    basis: standard.basis === 'observed' && standard.adoptedAt ? 'observed' : 'estimated',
+    basis: standard.basis === 'observed' && standard.approvedAt ? 'observed' : 'estimated',
     studyId: standard.id,
     studiedSowingSize: standard.sowingSize,
   };

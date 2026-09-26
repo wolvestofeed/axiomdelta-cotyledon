@@ -309,7 +309,7 @@ export function DayScheduleClient({
         {shelf && (
           <p className="farm-kpi-sub mt-2">
             On the shelves: {shelf.trays.map((t) => `${t.cropPlanCode} ${num(t.trays)} ${t.trays === 1 ? 'tray' : 'trays'}`).join(' · ')}.
-            {daily && daily.estimatedCropPlans.length > 0 ? ` On the estimated study until an observed one is adopted: ${daily.estimatedCropPlans.join(', ')}.` : ''}
+            {daily && daily.estimatedCropPlans.length > 0 ? ` On the estimated study until an observed one is approved: ${daily.estimatedCropPlans.join(', ')}.` : ''}
           </p>
         )}
         <p className="farm-kpi-sub mt-2">

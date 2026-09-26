@@ -5,7 +5,7 @@ import { deriveCapacity } from '@/engine';
 import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { timeStudyScaffold } from '@/engine/time-study-estimate';
-import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import { inStandard, laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
 import { listCropPlans } from '@/server/crop-plans';
 import { listEquipment } from '@/server/equipment';
 import { listTimeStudies } from '@/server/time-studies';
@@ -47,7 +47,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
     ['Streams', 'Sowing lines are timed against the trays sown. Daily lines are timed on one day against the trays on the shelves that day. Harvest lines are timed on a distribution day against the trays shipped that day. Write the trays beside each stream\'s lines.'],
     ['How to run a study', '1. Pick a grow plan and a sow day. 2. Write the study date, the observer and the trays actually sown on the block. 3. Time each task: the people on it, and the clock times it started and ended. Elapsed minutes are end minus start; labor minutes are the people-minutes the task took (people × elapsed where everyone worked the whole task). 4. Mark whether the task is fixed (the same time whatever the trays) or scales with trays. 5. Record the quality result (pass, hold or fail) and any notes.'],
     ['Sowing size', 'Labor minutes mean nothing without the trays they were timed at. The sowing printed on each block is what one of the workspace\'s grow units takes of the plan\'s format; write down the trays actually observed.'],
-    ['Entering the study', 'A timed sowing is entered on Time Studies in the OS, dated, with the observer and the quality result. It joins the plan\'s log and the trends; an admin adopts it as the plan\'s labor standard. This sheet is not imported.'],
+    ['Entering the study', 'A timed sowing is entered on Time Studies in the OS, dated, with the observer and the quality result. It joins the plan\'s log and the trends; an admin approves it into the plan\'s labor standard, the average of its approved studies. This sheet is not imported.'],
     ['Estimated studies', 'Every grow plan carries an estimated study until its first observed study is entered: Vallecito\'s 2023 tray study per tray, each daily task spread over the plan\'s cycle days, labelled Estimated. The "Standards on file" tab lists each plan\'s current standard and its basis; the reference minutes on each block are that standard\'s.'],
     ['Legend', 'Shaded cells are what the observer fills in. Blue text is carried from the OS. No wage or pay appears on this sheet.'],
   ];
@@ -104,7 +104,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   widths(sheet, [12, 40, 12, 16, 12, 6, 52, 12, 34, 8, 7, 8, 8, 11, 10, 16, 16, 30, 16, 14]);
 
   const standards = wb.addWorksheet('Standards on file');
-  standards.addRow(['Grow plan code', 'Grow plan', 'Standard basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Seq', 'Task', 'Stream', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'Scales with', 'Adopted on', 'Notes']).font = { bold: true };
+  standards.addRow(['Grow plan code', 'Grow plan', 'Standard basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Seq', 'Task', 'Stream', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'Scales with', 'Approved on', 'Notes']).font = { bold: true };
   standards.views = [{ state: 'frozen', ySplit: 1 }];
   for (const cropPlan of ordered) {
     const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
@@ -129,7 +129,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
         l.elapsedMinutes,
         l.laborMinutes,
         l.scalesWith,
-        standard.adoptedAt ? standard.adoptedAt.slice(0, 10) : null,
+        standard.approvedAt ? standard.approvedAt.slice(0, 10) : null,
         i === 0 ? standard.qualityNotes : null,
       ]);
     });
@@ -137,7 +137,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   widths(standards, [12, 40, 12, 12, 10, 16, 8, 6, 60, 10, 34, 7, 11, 10, 10, 12, 80]);
 
   const log = wb.addWorksheet('Studies on file');
-  log.addRow(['Grow plan code', 'Basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Labor min', 'Sowing stream min', 'Harvest stream min', 'Fixed min / sowing', 'Variable min / tray', 'Min / tray', 'Adopted on', 'Adopted by', 'Standard']).font = { bold: true };
+  log.addRow(['Grow plan code', 'Basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Labor min', 'Sowing stream min', 'Harvest stream min', 'Fixed min / sowing', 'Variable min / tray', 'Min / tray', 'Approved on', 'Approved by', 'Standard']).font = { bold: true };
   for (const cropPlan of ordered) {
     const mine = studiesForCropPlan(library.studies, cropPlan.code);
     const standard = laborStandard(mine);
@@ -156,9 +156,9 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
         sum.fixedMinutesPerSowing,
         Math.round(sum.variableMinutesPerUnit * 1000) / 1000,
         Math.round(sum.laborMinutesPerUnit * 1000) / 1000,
-        s.adoptedAt ? s.adoptedAt.slice(0, 10) : null,
-        s.adoptedBy,
-        standard?.id === s.id ? (s.adoptedAt ? 'Adopted' : 'Stands in') : s.adoptedAt ? 'Adopted earlier' : null,
+        s.approvedAt ? s.approvedAt.slice(0, 10) : null,
+        s.approvedBy,
+        s.approvedAt ? (inStandard(s, standard) ? 'Approved, in the standard' : 'Approved') : standard?.id === s.id ? 'Stands in' : null,
       ]);
     }
   }

@@ -118,8 +118,8 @@ operator's client.
       and quality result; trend lines of labor minutes per unit and fixed minutes per sowing (one
       point per dated study, hover and keyboard readout, the log as the table); the re-study
       interval; the recording form, starting from the standard.
-- [x] An admin adopts an observed study as the crop plan's labor standard (`adopt_time_study` on the
-      posting trail). Fixed and variable minutes are derived from a study's lines, never typed.
+- [x] An admin approves each observed study (`approve_time_study` on the posting trail); the labor
+      standard is the tray-weighted average of the approved studies. Fixed and variable minutes are derived from a study's lines, never typed.
 - [x] Labor cost per sowing and per day at the plan's placeholder loaded rate. No individual wage.
 - [x] Download the Time Study Sheet (`time-studies/time-study-sheet`, operator-gated, exceljs): Read
       Me, one scaffold block per crop plan with the observer's cells shaded and the standard's minutes as

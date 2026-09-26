@@ -14,7 +14,7 @@ import { planStageDays } from '@/data/grow-plan';
 
 describe('farm time-study estimate — the labor standard', () => {
   const doc = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
-    id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'user_built', basis: 'observed',
+    id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
     lines: [{ task: 'T', station: null, staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'fixed', stream: 'sowing' }],
     ...over,
   });
@@ -25,7 +25,7 @@ describe('farm time-study estimate — the labor standard', () => {
     expect(laborStandard([est])?.id).toBe('e');
     expect(laborStandard([obs, est])?.id).toBe('e');
     expect(standardIsEstimated(laborStandard([obs, est]))).toBe(true);
-    const adopted = doc({ id: 'a', adoptedAt: '2027-02-01T00:00:00.000Z' });
+    const adopted = doc({ id: 'a', approvedAt: '2027-02-01T00:00:00.000Z' });
     expect(laborStandard([obs, est, adopted])?.id).toBe('a');
     expect(standardIsEstimated(laborStandard([obs, est, adopted]))).toBe(false);
     expect(laborStandard([])).toBeNull();
@@ -70,7 +70,7 @@ describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray s
     const lib = projectCropPlan(broc);
     const e = estimatedTimeStudy(lib, 20);
     expect(e.lines.map((l) => l.task)).toEqual(growPlanTimeStudy(broc, 20).lines.map((l) => l.task));
-    const std = laborStandard([{ id: 'e', cropPlanCode: 'BROC-01', adoptedAt: null, adoptedBy: null, source: 'seed', ...e }]);
+    const std = laborStandard([{ id: 'e', cropPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed', ...e }]);
     expect(standardIsEstimated(std)).toBe(true);
   });
 });

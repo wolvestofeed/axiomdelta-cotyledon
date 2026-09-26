@@ -58,7 +58,7 @@ describe('labor is each crop plan\'s own standard', () => {
     expect(assumptionsFor(withGap, e002.code).laborSplit.fixedMinutesPerSowing.note).toContain('gap');
   });
 
-  it('an adopted observed study outranks the estimate', () => {
+  it('an approved observed study outranks the estimate', () => {
     const observed: TimeStudyDoc = {
       id: 'obs-1',
       cropPlanCode: e002.code,
@@ -68,10 +68,11 @@ describe('labor is each crop plan\'s own standard', () => {
       observer: 'lead',
       qualityResult: 'pass',
       qualityNotes: null,
-      adoptedAt: '2026-09-11T10:00:00.000Z',
-      adoptedBy: 'admin',
+      approvedAt: '2026-09-11T10:00:00.000Z',
+      approvedBy: 'admin',
       source: 'user_built',
       basis: 'observed',
+      consumption: { water: [], supplements: [] },
       lines: [
         { task: 'Load', station: null, staff: 2, elapsedMinutes: 30, laborMinutes: 60, scalesWith: 'fixed', stream: 'sowing' },
         { task: 'Unit', station: null, staff: 2, elapsedMinutes: 200, laborMinutes: 400, scalesWith: 'variable', stream: 'sowing' },

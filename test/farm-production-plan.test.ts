@@ -297,7 +297,7 @@ describe('the grow model', () => {
     expect(labor.sowings).toBe(1);
     expect(labor.units).toBe(20);
     // A stored study stands over the estimate.
-    const doc = { id: 's', cropPlanCode: 'BROC-01', adoptedAt: '2027-01-01T00:00:00Z', adoptedBy: null, source: 'user_built' as const, ...study, basis: 'observed' as const, lines: study.lines.map((l) => (l.stream === 'sowing' ? { ...l, laborMinutes: l.laborMinutes * 2 } : l)) };
+    const doc = { id: 's', cropPlanCode: 'BROC-01', approvedAt: '2027-01-01T00:00:00Z', approvedBy: null, source: 'user_built' as const, ...study, basis: 'observed' as const, lines: study.lines.map((l) => (l.stream === 'sowing' ? { ...l, laborMinutes: l.laborMinutes * 2 } : l)) };
     const withStudy = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 20)], cropPlans: G.cropPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, studies: [doc] as never });
     expect(withStudy.productionDays[0]!.labor.totalStaffHours).toBeCloseTo(labor.totalStaffHours * 2, 9);
   });

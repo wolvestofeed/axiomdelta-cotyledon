@@ -3,14 +3,14 @@
  *
  * Every plan in the library is seeded with an estimated study so it has a labor standard before
  * any sowing is timed. The estimate is Vallecito's 2023 tray study (DATED), labelled Estimated, and
- * it stands only until the plan's first observed study is adopted. The task scaffold is the
+ * it stands only until the plan's first observed study is approved. The task scaffold is the
  * sheet's, on three streams: the sowing stream per tray on the sow day, the daily stream per tray
  * per day across the cycle, the harvest stream per unit on the distribution day. A plan that is not
  * a grow plan has no scaffold and an empty estimate.
  */
 
 import type { CropPlanDef } from '@/data/plan-data';
-import { VALLECITO_1020_STUDY, type LaborScaling, type TimeStudyLine, type TimeStudySeed, type TimeStudyStream } from '@/data/time-studies';
+import { NO_CONSUMPTION, VALLECITO_1020_STUDY, type LaborScaling, type TimeStudyLine, type TimeStudySeed, type TimeStudyStream } from '@/data/time-studies';
 import { planStageDays, planStages, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays as cycleDaysOf } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
@@ -88,9 +88,10 @@ export function growPlanTimeStudy(plan: GrowPlanDef, sowingTrays: number): TimeS
     cycleDays: cycle,
     observer: null,
     qualityResult: null,
-    qualityNotes: `ESTIMATED from ${VALLECITO_1020_STUDY.source} (DATED), per 1020 tray at one person, at a ${trays}-tray sowing over a ${cycle}-day cycle: sowing lines per tray on the sow day, daily lines per tray per day with each task's total spread over the cycle, harvest lines per unit on the distribution day${live ? '; the knife harvest and the weigh are cut-tray tasks a live tray does not get' : ''}. Stands until this plan's first observed study is adopted.`,
+    qualityNotes: `ESTIMATED from ${VALLECITO_1020_STUDY.source} (DATED), per 1020 tray at one person, at a ${trays}-tray sowing over a ${cycle}-day cycle: sowing lines per tray on the sow day, daily lines per tray per day with each task's total spread over the cycle, harvest lines per unit on the distribution day${live ? '; the knife harvest and the weigh are cut-tray tasks a live tray does not get' : ''}. Stands until this plan's first observed study is approved.`,
     basis: 'estimated',
     lines,
+    consumption: NO_CONSUMPTION,
   };
 }
 
@@ -101,5 +102,5 @@ export function growPlanTimeStudy(plan: GrowPlanDef, sowingTrays: number): TimeS
  */
 export function estimatedTimeStudy(cropPlan: CropPlanDef, sowingSize: number): TimeStudySeed {
   if (isGrowPlanCarrier(cropPlan)) return growPlanTimeStudy(cropPlan.plan, sowingSize);
-  return { studiedOn: null, sowingSize, cycleDays: 0, observer: null, qualityResult: null, qualityNotes: `${cropPlan.code} is not a grow plan, so no estimate is built for it.`, basis: 'estimated', lines: [] };
+  return { studiedOn: null, sowingSize, cycleDays: 0, observer: null, qualityResult: null, qualityNotes: `${cropPlan.code} is not a grow plan, so no estimate is built for it.`, basis: 'estimated', lines: [], consumption: NO_CONSUMPTION };
 }

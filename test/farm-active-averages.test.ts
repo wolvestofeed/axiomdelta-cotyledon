@@ -15,7 +15,7 @@ import type { TimeStudyDoc } from '@/data/time-studies';
 const seedLibrary = growPlanSeed.map((p) => projectCropPlan(p));
 const capacityInputs = resolveLibrary({}, seedLibrary).capacityInputs;
 const seeded: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
-  id: `s${i}`, cropPlanCode: r.code, adoptedAt: null, adoptedBy: null, source: 'seed',
+  id: `s${i}`, cropPlanCode: r.code, approvedAt: null, approvedBy: null, source: 'seed',
   ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, capacityInputs).sowingSize)),
 }));
 

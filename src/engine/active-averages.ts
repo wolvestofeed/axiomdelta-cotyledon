@@ -3,8 +3,8 @@
  *. Pure.
  *
  * Each In Service crop plan is costed on its own sowing — one unit of each Phase 1 grow unit —
- * with its own labor standard (the adopted time study, or the seeded estimate
- * that stands in until one is adopted), then the crop plans are averaged, each
+ * with its own labor standard (the approved time studies averaged, or the seeded estimate
+ * that stands in until one is approved), then the crop plans are averaged, each
  * crop plan counting once. The figures are the seeded estimates until observed
  * studies, closed sowing records and stated capacities replace them, and the
  * row says so. No figure here belongs to one crop plan.
@@ -31,7 +31,7 @@ export interface CropPlanAverageRow {
   /** People-minutes per unit on the standard at the sowing. */
   laborMinutesPerUnit: number;
   laborCostPerUnit: number;
-  /** Whether the labor standard is an estimate or an observed, adopted study; null with no study. */
+  /** Whether the labor standard is an estimate or approved observed studies; null with no study. */
   laborBasis: 'estimated' | 'observed' | null;
 }
 

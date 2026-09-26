@@ -188,7 +188,7 @@ describe('farm scheduler — the plan library', () => {
   const R = resolveScenarioInputs({}, lib);
   const studyFor = (code: string): TimeStudyDoc => {
     const r = lib.find((x) => x.code === code)!;
-    return { id: `s-${code}`, cropPlanCode: code, adoptedAt: null, adoptedBy: null, source: 'seed', ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize) };
+    return { id: `s-${code}`, cropPlanCode: code, approvedAt: null, approvedBy: null, source: 'seed', ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize) };
   };
 
   it('labor reconciles to staff demand for the same day, from the same time studies', () => {

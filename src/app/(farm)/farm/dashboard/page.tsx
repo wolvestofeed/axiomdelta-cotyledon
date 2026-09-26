@@ -186,7 +186,7 @@ async function AdminDashboard() {
   const avg = activeCropPlanAverages(R.cropPlans, R.capacityInputs, R.assumptions, studies.studies, R.cropPlanAssumptions);
   const basisNote = avg.count === 0
     ? 'No grow plan is In Service.'
-    : `Averaged over ${num(avg.count)} active grow plan${avg.count === 1 ? '' : 's'}, each on its own sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until observed studies are adopted.`;
+    : `Averaged over ${num(avg.count)} active grow plan${avg.count === 1 ? '' : 's'}, each on its own sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until observed studies are approved.`;
   const growPlans = R.cropPlans.filter((r) => r.status === 'in_service').filter(isGrowPlanCarrier);
   const meanCycle = growPlans.length ? growPlans.reduce((t, r) => t + cycleDays(planStageDays(r.plan)), 0) / growPlans.length : 0;
 
@@ -334,7 +334,7 @@ async function AdminDashboard() {
           </table>
         </div>
         <p className="farm-fs-xs farm-c-faint mt-[0.9rem]! mr-0! mb-0! ml-0! leading-[1.4]">
-          The order book from today: forecast orders from the subscribers&rsquo; pickup points with confirmed and distributed rows in their place. Each unit is costed at its plan&rsquo;s input cost on the channel&rsquo;s unit and its plan&rsquo;s labor standard at the plan&rsquo;s own sowing &mdash; the seeded estimates until observed studies are adopted; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a crop plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
+          The order book from today: forecast orders from the subscribers&rsquo; pickup points with confirmed and distributed rows in their place. Each unit is costed at its plan&rsquo;s input cost on the channel&rsquo;s unit and its plan&rsquo;s labor standard at the plan&rsquo;s own sowing &mdash; the seeded estimates until observed studies are approved; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a crop plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
         </p>
         <div className="flex flex-wrap gap-y-[0.1rem] gap-x-3 mt-[0.8rem]! pt-[0.7rem] border-t border-t-[color:var(--farm-line)]">
           {modulesFor(true).filter((m) => m.section === 'Production').map((m) => (

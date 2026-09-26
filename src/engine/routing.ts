@@ -2,7 +2,7 @@
  * MicroFarm — the process route per grow plan (scheduler build plan §0, W0 step 3). Pure.
  *
  * A route is derived, never authored beside the study. Its steps are the sowing and harvest lines
- * of the plan's labor standard — the adopted study, or the estimate that stands in — in study
+ * of the plan's labor standard — the approved studies averaged, or the estimate that stands in — in study
  * order, each on its line's stream; the daily lines are the grow calendar's, not the day's clock.
  * A step takes:
  *   - its KIND off the time-study scaffold (prep, sow, harvest), which is what precedence reads;

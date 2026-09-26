@@ -142,7 +142,7 @@ export type PostingAction =
   | 'record_supplier_payment'
   | 'set_payment_terms'
   | 'record_punch'
-  | 'adopt_time_study'
+  | 'approve_time_study'
   | 'record_sustainability'
   | 'set_plan_of_record';
 
@@ -167,7 +167,7 @@ export const POSTING_ACTION_LABELS: Record<PostingAction, string> = {
   add_closure: 'Calendar closure added',
   remove_closure: 'Calendar closure removed',
   approve_standard: 'Standard approved',
-  adopt_time_study: 'Time study adopted as the labor standard',
+  approve_time_study: 'Time study approved into the labor standard',
 };
 
 /** The fields the hash covers. `seq` is assigned by the database and is not hashed; order is proved by `prevHash`. */

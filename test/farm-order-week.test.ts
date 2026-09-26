@@ -21,7 +21,7 @@ const onChannel = (code: string, channel: number) => ({ ...grow.find((r) => r.co
 const seedLibrary = [...grow.filter((r) => r.code !== 'PEA-01' && r.code !== 'SUN-01'), onChannel('PEA-01', 2), onChannel('SUN-01', 3)];
 const capacityInputs = resolveScenarioInputs({}, seedLibrary).capacityInputs;
 const studies: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
-  id: `s${i}`, cropPlanCode: r.code, adoptedAt: null, adoptedBy: null, source: 'seed',
+  id: `s${i}`, cropPlanCode: r.code, approvedAt: null, approvedBy: null, source: 'seed',
   ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, capacityInputs).sowingSize)),
 }));
 const pf = { 1: 1, 2: 1.5, 3: 1.5 };

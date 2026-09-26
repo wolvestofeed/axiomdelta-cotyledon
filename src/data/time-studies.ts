@@ -12,9 +12,16 @@
  * nutrient preparation, inspection, counted per tray per day across the plan's cycle days; a daily
  * line's labor minutes are one day's minutes for the sowing studied, a fixed daily line once a day.
  * The HARVEST stream is the distribution day: harvest, pack and hand-off, counted per unit shipped
- * that day, a fixed harvest line once per distribution day. One study per plan; each line is tagged.
- * The two-stream Phase 1-era studies carry zero cycle days and no daily line.
+ * that day, a fixed harvest line once per distribution day. Each line is tagged.
+ *
+ * A study also records what the studied sowing consumed while it grew: each day's waterings by
+ * method (fluid ounces per tray per watering, the waterings that day, the trays watered) and the
+ * supplements applied (ml from the Nutrients & Supplements library, the trays they went on). Every
+ * observed study is approved by an admin; a plan's labor standard and its measured water and
+ * supplements are the average of its approved studies, weighted by the trays each studied.
  */
+
+import type { StageKey, WateringMethod } from '@/data/stage-schedule';
 
 
 export const QUALITY_RESULTS = ['pass', 'hold', 'fail'] as const;
@@ -60,12 +67,60 @@ export interface TimeStudyDoc {
   observer: string | null;
   qualityResult: QualityResult | null;
   qualityNotes: string | null;
-  /** ISO timestamp of the adoption; the latest adoption is the crop plan's labor standard. */
-  adoptedAt: string | null;
-  adoptedBy: string | null;
+  /** ISO timestamp of the approval; every approved study averages into the plan's standard. */
+  approvedAt: string | null;
+  approvedBy: string | null;
   source: 'seed' | 'user_built';
   basis: TimeStudyBasis;
   lines: TimeStudyLine[];
+  consumption: StudyConsumption;
+  /** On the plan's standard when two or more studies are approved: the ids averaged into it. Never stored. */
+  averageOf?: string[];
+}
+
+/** One day's waterings by one method: fluid ounces per tray per watering, times the waterings, on the trays watered. */
+export interface WaterEntry {
+  day: string;
+  stage: StageKey;
+  method: Exclude<WateringMethod, 'none'>;
+  ozPerWatering: number;
+  waterings: number;
+  trays: number;
+}
+
+/** A supplement applied: ml in all, on the trays it went on. `nutrientKey` names a Nutrients & Supplements row. */
+export interface SupplementEntry {
+  day: string;
+  stage: StageKey;
+  nutrientKey: string;
+  ml: number;
+  trays: number;
+}
+
+export interface StudyConsumption {
+  water: WaterEntry[];
+  supplements: SupplementEntry[];
+}
+
+export const NO_CONSUMPTION: StudyConsumption = { water: [], supplements: [] };
+
+/**
+ * What a plan's approved studies measured, averaged over the studies that recorded any water or
+ * supplement, weighted by the trays each studied. The costing reads it over the placeholder
+ * watering volumes and the nutrient line's strength.
+ */
+export interface MeasuredConsumption {
+  /** Approved studies that recorded consumption, and the trays they studied. */
+  studies: number;
+  trays: number;
+  /** Fluid ounces per tray per watering, by method, over every watering recorded. */
+  ozPerWatering: Partial<Record<Exclude<WateringMethod, 'none'>, number>>;
+  /** Fluid ounces per tray over the cycle; null when no study recorded water. */
+  waterOzPerTray: number | null;
+  /** Milliliters per tray over the cycle, by Nutrients & Supplements key. */
+  mlPerTray: Record<string, number>;
+  /** The latest approval among them, ISO date. */
+  approvedThrough: string;
 }
 
 export interface TimeStudyLibrary {
@@ -76,7 +131,7 @@ export interface TimeStudyLibrary {
   cropPlanIds: Record<string, string>;
 }
 
-export type TimeStudySeed = Pick<TimeStudyDoc, 'studiedOn' | 'sowingSize' | 'cycleDays' | 'observer' | 'qualityResult' | 'qualityNotes' | 'basis' | 'lines'>;
+export type TimeStudySeed = Pick<TimeStudyDoc, 'studiedOn' | 'sowingSize' | 'cycleDays' | 'observer' | 'qualityResult' | 'qualityNotes' | 'basis' | 'lines' | 'consumption'>;
 
 /** The stage span a daily task covers on Vallecito's sheet; `cycle` is every day the tray is on the shelf. */
 export type DailySpan = 'germination' | 'blackout' | 'light' | 'cycle';

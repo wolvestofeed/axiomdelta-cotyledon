@@ -169,6 +169,9 @@ current conditions.
   costed at the live library and the period says so. An effective date inside a locked
   period is refused. Editing the library or the plan changes what the next approval
   freezes; it never moves a standard already in force.
+- Approving a time study approves a version effective that day, so the plan's standard moves to
+  the new average of its approved studies (labor, and the water and supplements measured) for
+  sowings from that day; a sowing sown before it keeps the version it was sown at.
 - Revision interval: `assumptions.standardCost.revisionIntervalMonths`.
 - **Disposition.** Net variance above
   `assumptions.standardCost.varianceProrationThreshold` (5% of standard cost of

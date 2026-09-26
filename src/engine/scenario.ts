@@ -37,7 +37,8 @@ import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, ty
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { measuredConsumption, studiesForCropPlan } from '@/engine/time-studies';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
@@ -569,7 +570,11 @@ export function resolveScenarioInputs(
   const inputPrices: Record<string, ResolvedInputPrice> = {};
   const source = library.length > 0 ? library : seedCropPlans;
   const cropPlans: CropPlanDef[] = source.map((r) => {
-    const rec = structuredClone(r) as CropPlanDef;
+    // What the plan's approved time studies measured stands over the placeholder watering volumes
+    // and the nutrient strength; the plan is projected again so its lines carry the measured cost.
+    const measured = timeStudies && isGrowPlanCarrier(r) ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
+    const base = measured && isGrowPlanCarrier(r) ? { ...r, ...projectCropPlan({ ...r.plan, measured }) } : r;
+    const rec = structuredClone(base) as CropPlanDef;
     for (const ing of rec.inputs) {
       const supplierId = inputSupplier[ing.name] ?? null;
       const priced = resolveInputPrice({

@@ -2,7 +2,7 @@
  * MicroFarm — production staff demand (Roadmap O3). Pure.
  *
  * The days of a window, each staffed from every crop plan's labor standard — the
- * adopted time study, or the crop plan's estimated study until one is adopted
+ * approved time studies averaged, or the crop plan's estimated study until one is approved
  * (`laborStandard`) — on the two streams (scheduler build plan §0):
  *
  *   SOWING lines, on the production day, per sowing harvested: a fixed line takes its
@@ -69,7 +69,7 @@ export interface DemandDay {
   lines: DemandLine[];
   /** Crop plans with sowings or shipments and no time study at all: no demand is counted for them. */
   uncovered: UncoveredRun[];
-  /** Crop plans staffed from their estimated study — no observed study adopted yet. */
+  /** Crop plans staffed from their estimated study — no observed study approved yet. */
   estimatedCropPlans: string[];
 }
 

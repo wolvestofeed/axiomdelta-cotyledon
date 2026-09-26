@@ -361,13 +361,13 @@ const laborStandards: Builder = (ctx) => {
   return {
     summary: table([{ label: 'Measure' }, { label: 'Crop plans', num: true }], [
       row(['Crop plans in the library', R.cropPlans.length]),
-      row(['On an observed, adopted study', observed]),
+      row(['On approved observed studies', observed]),
       row(['On the estimated study that stands in', estimated]),
       row(['With no study', none], none > 0 ? 'over' : undefined),
       row(['Past the re-study date', pastDue], pastDue > 0 ? 'over' : undefined),
     ]),
     detail: table([{ label: 'Crop plan' }, { label: 'Status' }, { label: 'Standard' }, { label: 'Labor min / unit', num: true }, { label: 'Fixed min / sowing', num: true }, { label: 'Variable min / unit', num: true }, { label: 'Most people on a task', num: true }, { label: 'Last studied' }, { label: 'Next due' }, { label: 'Days to due', num: true }], detail),
-    basis: `Each crop plan's labor standard from the time-study library as of ${today}: the adopted observed study, or the estimated study until one is adopted.`,
+    basis: `Each crop plan's labor standard from the time-study library as of ${today}: the average of its approved observed studies, or the estimated study until one is approved.`,
   };
 };
 

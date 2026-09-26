@@ -30,7 +30,7 @@ async function SchedulePageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>Each scheduled sowing is staffed from its labor standard: the adopted time study, or its estimated study until one is adopted.</li>
+            <li>Each scheduled sowing is staffed from its labor standard: the average of its approved time studies, or its estimated study until one is approved.</li>
             <li>Demand is shown as people and staff-hours by task and station per day.</li>
             <li>An admin adjusts and publishes the schedule in Staffing, and the published schedule returns every two weeks.</li>
             <li>No shift pattern or staff count has been decided.</li>

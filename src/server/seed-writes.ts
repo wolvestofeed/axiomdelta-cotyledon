@@ -89,7 +89,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
 export async function insertTimeStudy(db: SeedDb, cropPlanId: string, study: TimeStudySeed, source: 'seed' | 'user_built', createdBy: string | null = null): Promise<string | null> {
   const rows = await db
     .insert(farmTimeStudies)
-    .values({ cropPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, cycleDays: study.cycleDays, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, createdBy })
+    .values({ cropPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, cycleDays: study.cycleDays, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, consumption: study.consumption, createdBy })
     .returning({ id: farmTimeStudies.id });
   const id = rows[0]?.id ?? null;
   if (!id) return null;

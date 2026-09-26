@@ -12,6 +12,12 @@ import { OpeningBalanceForm } from '@/components/OpeningBalanceForm';
 import { capexRollup } from '@/engine/fixed-costs';
 import { AdminOnlyNotice } from '@/components/AdminOnly';
 import { withWorkspace } from '@/server/workspace';
+import { listCropPlans } from '@/server/crop-plans';
+import { listTimeStudies } from '@/server/time-studies';
+import { listNutrients } from '@/server/nutrients';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { measuredRows } from '@/engine/measured-consumption';
+import { MeasuredConsumptionCard } from '@/app/(farm)/farm/actuals/MeasuredConsumptionCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +36,19 @@ async function ActualsPageInner({
   if (!(await getFarmAccess()).isSuperAdmin) return <AdminOnlyNotice area="Actuals" />;
   // Actuals is where facts are recorded: it always reads the Actual ledger, with the Plan
   // ledger's own month beside it (Roadmap N6) — not a twelfth of a year.
-  const [actual, plan, access, calendar, trail, params] = await Promise.all([
+  const [actual, plan, access, calendar, trail, params, library, studyLibrary, nutrients] = await Promise.all([
     postLedger('actual'),
     postLedger('plan'),
     getFarmAccess(),
     loadCalendar(),
     loadPostingLog(),
     searchParams,
+    listCropPlans(),
+    listTimeStudies(),
+    listNutrients(),
   ]);
+  const measured = measuredRows(library.filter(isGrowPlanCarrier).map((c) => c.plan), studyLibrary.studies);
+  const nutrientNames = Object.fromEntries(nutrients.map((n) => [n.key, n.name]));
   const { inputs, bundle } = actual;
   const label = actual.view.label;
   const basis = actual.view.basis;
@@ -75,7 +86,7 @@ async function ActualsPageInner({
       <PageHeader
         title="Actuals"
         purpose="Record period bills and watch the period's records post to the statements."
-        functions={['Units produced', 'Units distributed', 'Statement of income', 'Posting trail', 'Records']}
+        functions={['Units produced and distributed', 'Statement of income', 'Posting trail', 'Records', 'Measured on approved time studies']}
         connects={[
           { href: '/farm/procurement', dir: 'from' },
           { href: '/farm/production-planning', dir: 'from' },
@@ -87,6 +98,7 @@ async function ActualsPageInner({
             <li>Each event is recorded where it happens: receipts on Procurement, sowing closes on Production Planning, distributions on Orders. Only period bills are recorded here.</li>
             <li>Records post to the statements through the same chain the forecast uses.</li>
             <li>A period with records shows what happened. A period without shows nothing here and the forecast on the other pages.</li>
+            <li>What the approved time studies measured (labor, water and supplements per tray) is listed per grow plan beside what the plan was costed at before them.</li>
           </ul>
         }
         status="live"
@@ -233,6 +245,8 @@ async function ActualsPageInner({
         }}
         channels={inputs.phases.map((ph) => ({ phase: ph.phase, market: ph.market, priceCents: Math.round(ph.pricePerUnit * 100) }))}
       />
+
+      <MeasuredConsumptionCard rows={measured} names={nutrientNames} />
 
       <p className="farm-kpi-sub mt-4">
         A locked period refuses every posting dated inside it; a super admin can reopen it, and both events are entries on the posting trail. Fiscal periods are calendar months; the fiscal year is the calendar year.

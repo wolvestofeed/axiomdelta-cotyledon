@@ -107,7 +107,7 @@ export const assumptions = {
     ),
   },
   // Roadmap N3 (2026-09-16): NOT the cost basis of any crop plan. The resolver
-  // writes each crop plan's OWN labor standard over these — from its adopted study,
+  // writes each crop plan's OWN labor standard over these — from its approved studies,
   // else its estimated study — and every page reads the crop plan's. These values
   // survive only as the fallback for an engine call made without the resolver
   // (a bare `costPerUnit()` in a test), and retire in N9 with the other

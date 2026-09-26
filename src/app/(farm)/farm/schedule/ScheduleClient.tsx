@@ -109,13 +109,13 @@ export function ScheduleClient({
       </div>
       {demand.uncoveredCropPlans.length > 0 && (
         <p className="farm-kpi-sub mt-2">
-          Sowings or shipments of {demand.uncoveredCropPlans.map((c) => `${c} ${cropPlanName(c)}`).join(', ')} are in the window with no time study at all, so no staff demand is counted for them. A study is adopted on <Link className="farm-link" href="/farm/time-studies">Time Studies</Link>.
+          Sowings or shipments of {demand.uncoveredCropPlans.map((c) => `${c} ${cropPlanName(c)}`).join(', ')} are in the window with no time study at all, so no staff demand is counted for them. A study is recorded and approved on <Link className="farm-link" href="/farm/time-studies">Time Studies</Link>.
         </p>
       )}
 
       {demand.estimatedCropPlans.length > 0 && (
         <p className="farm-kpi-sub mt-2">
-          {demand.estimatedCropPlans.map((c) => `${c} ${cropPlanName(c)}`).join(', ')} {demand.estimatedCropPlans.length === 1 ? 'is' : 'are'} staffed from an estimated time study: no observed study has been adopted yet. The estimate stands until one is recorded and adopted on <Link className="farm-link" href="/farm/time-studies">Time Studies</Link>.
+          {demand.estimatedCropPlans.map((c) => `${c} ${cropPlanName(c)}`).join(', ')} {demand.estimatedCropPlans.length === 1 ? 'is' : 'are'} staffed from an estimated time study: no observed study has been approved yet. The estimate stands until one is recorded and approved on <Link className="farm-link" href="/farm/time-studies">Time Studies</Link>.
         </p>
       )}
 

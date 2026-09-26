@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import {
-  adoptedStudy,
+  approvedStudies,
   laborMinutesForSowing,
   nextStudyDue,
   studiesForCropPlan,
@@ -15,7 +15,7 @@ import {
 } from '@/engine/time-studies';
 
 const study = (over: Partial<TimeStudyDoc> = {}): TimeStudyDoc => ({
-  id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'user_built', basis: 'observed',
+  id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
   lines: [
     { task: 'Load', station: 'Blackout rack', staff: 2, elapsedMinutes: 30, laborMinutes: 60, scalesWith: 'fixed', stream: 'sowing' },
     { task: 'Assemble', station: 'Line', staff: 4, elapsedMinutes: 50, laborMinutes: 200, scalesWith: 'variable', stream: 'harvest' },
@@ -41,10 +41,10 @@ describe('farm time studies — a study', () => {
 
 describe('farm time studies — the log', () => {
   const log = [
-    study({ id: 'a', studiedOn: '2027-01-10', adoptedAt: '2027-01-11T10:00:00.000Z' }),
+    study({ id: 'a', studiedOn: '2027-01-10', approvedAt: '2027-01-11T10:00:00.000Z' }),
     study({ id: 'b', studiedOn: '2027-03-02' }),
     study({ id: 'c', studiedOn: null }),
-    study({ id: 'd', studiedOn: '2027-02-05', adoptedAt: '2027-02-06T10:00:00.000Z' }),
+    study({ id: 'd', studiedOn: '2027-02-05', approvedAt: '2027-02-06T10:00:00.000Z' }),
     study({ id: 'e', cropPlanCode: 'PEA-01', studiedOn: '2027-04-01' }),
   ];
 
@@ -52,9 +52,10 @@ describe('farm time studies — the log', () => {
     expect(studiesForCropPlan(log, 'BROC-01').map((s) => s.id)).toEqual(['b', 'd', 'a', 'c']);
   });
 
-  it('the labor standard is the most recent adoption, not the most recent study', () => {
-    expect(adoptedStudy(studiesForCropPlan(log, 'BROC-01'))?.id).toBe('d');
-    expect(adoptedStudy([study()])).toBeNull();
+  it('only approved observed studies are in the standard, oldest approval first', () => {
+    expect(approvedStudies(studiesForCropPlan(log, 'BROC-01')).map((s) => s.id)).toEqual(['a', 'd']);
+    expect(approvedStudies([study()])).toEqual([]);
+    expect(approvedStudies([study({ basis: 'estimated', approvedAt: '2027-01-11T10:00:00.000Z' })])).toEqual([]);
   });
 
   it('trends plot dated studies only, oldest first', () => {
@@ -70,7 +71,7 @@ describe('farm time studies — the log', () => {
   });
 
   it('reads rows: an unknown quality result is not recorded, a date object becomes ISO', () => {
-    const s = timeStudyFromRows('BROC-01', { id: 'r', studiedOn: new Date('2027-01-05T00:00:00Z'), sowingSize: 500, observer: null, qualityResult: 'maybe', qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'seed', basis: 'estimated' }, [
+    const s = timeStudyFromRows('BROC-01', { id: 'r', studiedOn: new Date('2027-01-05T00:00:00Z'), sowingSize: 500, observer: null, qualityResult: 'maybe', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'seed', basis: 'estimated' }, [
       { task: 'T', station: null, staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'fixed', stream: 'harvest' },
       { task: 'U', station: null, staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'fixed', stream: 'unknown' },
     ]);
@@ -120,7 +121,7 @@ describe('farm time studies — the daily stream (outline §5 rule 3)', () => {
   });
 
   it('rows map a daily line and the cycle days', () => {
-    const s = timeStudyFromRows('BROC-01', { id: 'r', studiedOn: null, sowingSize: 20, cycleDays: 13, observer: null, qualityResult: null, qualityNotes: null, adoptedAt: null, adoptedBy: null, source: 'seed', basis: 'estimated' }, [
+    const s = timeStudyFromRows('BROC-01', { id: 'r', studiedOn: null, sowingSize: 20, cycleDays: 13, observer: null, qualityResult: null, qualityNotes: null, approvedAt: null, approvedBy: null, source: 'seed', basis: 'estimated' }, [
       { task: 'Watering', station: 'Grow rack', staff: 1, elapsedMinutes: 1, laborMinutes: 1, scalesWith: 'variable', stream: 'daily' },
     ]);
     expect(s.cycleDays).toBe(13);
