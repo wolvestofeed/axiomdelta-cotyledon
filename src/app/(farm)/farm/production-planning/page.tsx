@@ -4,6 +4,7 @@ import { listSubscriptionCycles, listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listPurchaseOrders } from '@/server/supplier-catalog';
 import { loadCalendar } from '@/server/periods';
+import { listTimeStudies } from '@/server/time-studies';
 import { ProductionPlanningClient } from '@/app/(farm)/farm/production-planning/ProductionPlanningClient';
 import { withWorkspace } from '@/server/workspace';
 
@@ -14,7 +15,7 @@ export default async function ProductionPlanningPage() {
 }
 
 async function ProductionPlanningPageInner() {
-  const [access, cycles, orders, actuals, pos, calendar] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar()]);
+  const [access, cycles, orders, actuals, pos, calendar, studyLibrary] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -53,6 +54,7 @@ async function ProductionPlanningPageInner() {
         rawSowings={actuals.sowings}
         standards={actuals.standards ?? []}
         purchaseOrders={pos.map((po) => ({ id: po.id, poNumber: po.poNumber, status: po.status, orderedFor: po.orderedFor, supplierId: po.supplierId, supplierName: po.supplierName, lines: po.lines.map((l) => ({ input: l.input, qty: l.qty, unit: l.unit })) }))}
+        studies={studyLibrary.studies}
         today={today}
       />
     </>

@@ -748,16 +748,19 @@ export function deriveCapacity(
 
 /**
  * A grow plan's capacity in the crop plan profile's shape (outline §5 rule 1): the sowing is the
- * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. The
- * one-day figures the Phase 1-era planner and staffing still read (a load per unit inside the
- * operating day) stand until part 6 places sowings on grow units for their cycle days; the
- * sustained ceiling, trays across the units over the cycle, is on `grow`.
+ * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. No rack
+ * minutes enter it: the day is the operating day, and each grow unit that takes the plan can
+ * start one sowing in it, so the sowings a day are the units. The sustained ceiling, trays across
+ * the units over the cycle, is on `grow`; the horizon's shelf ledger holds each sowing for its cycle.
  */
 function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan').GrowPlanDef }, cap: CapacityInputs, unitFactor: number): CapacityProfile {
   const grow = deriveGrowCapacity(cropPlan.plan, cap.growUnits ?? defaultGrowUnits);
   const first = firstLoadAfterOpen(cropPlan);
-  const blackoutWindow = plantBlackoutWindow(cap, { minutes: 0, basis: 'stage' });
-  const cyclesPerDay = Math.min(blackoutWindow.cycles, grow.unitCount);
+  const openMin = cap.operatingOpenMin.value;
+  const closeMin = cap.operatingCloseMin.value;
+  const day = Math.max(0, closeMin - openMin);
+  const blackoutWindow: BlackoutWindow = { openMin, closeMin, firstLoadAfterOpenMin: 0, firstLoadBasis: 'stage', startMin: openMin, endMin: closeMin, minutes: day, occupancyMinutes: day, cycles: grow.unitCount, loadBeforeCloseExtraCycle: false };
+  const cyclesPerDay = grow.unitCount;
   const massPerUnit = canopyMassPerUnit(cropPlan, unitFactor);
   return {
     lbPerCycle: (grow.sowingTrays * massPerUnit),
@@ -766,9 +769,9 @@ function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan
     bounds: [],
     binding: null,
     sowingSize: grow.sowingTrays,
-    loadMinutes: cap.loadMinutes.value,
+    loadMinutes: 0,
     blackoutMinutes: 0,
-    unloadMinutes: cap.unloadMinutes.value,
+    unloadMinutes: 0,
     occupancyMinutes: blackoutWindow.occupancyMinutes,
     blackoutWindow,
     cyclesPerDay,

@@ -26,7 +26,10 @@ import type { ResolvedInputs } from '@/engine/scenario';
 import type { BookOrder } from '@/engine/orders';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
 import { deriveCapacity, costCropPlan, componentCosting, laborForDay, purchaseOrderForRun, type PurchaseOrderLine, type CapacityProfile } from '@/engine';
-import { laborRequirement, checkStaffing, type LaborRequirement, type StaffingCheck } from '@/engine/staffing';
+import { laborRequirement, checkStaffing, withUnplacedTasks, type LaborRequirement, type StaffingCheck, type UnplacedTask } from '@/engine/staffing';
+import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
+import { estimatedTimeStudy } from '@/engine/time-study-estimate';
+import type { TimeStudyDoc } from '@/data/time-studies';
 import type { CrewShift } from '@/data/crews';
 import type { RequirementLine } from '@/engine/catalog';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
@@ -345,6 +348,11 @@ export function planProductionDay(input: {
    * Omitted, every grow plan sowing is taken as placed.
    */
   placeSowing?: (cropPlan: CropPlanDef, productionDate: string, trays: number) => boolean;
+  /**
+   * The time studies a grow plan's sowing-stream labor is read from (its labor standard); a plan
+   * with none runs on its estimated study. Omitted, every grow plan runs on its estimate.
+   */
+  studies?: readonly TimeStudyDoc[];
 }): DayPlan {
   const shrink = input.assumptions.yield.shrinkAllowance.value;
   // A crop plan's sowings cannot load before its sows finish: its first load is
@@ -442,10 +450,15 @@ export function planProductionDay(input: {
   const purchase = mergePurchaseLines(runs.flatMap((r) => r.purchase.lines));
   const cyclesRequired = runs.reduce((s, r) => s + r.sowingsNeeded, 0);
   const growPlaced = runs.every((r) => !isGrowPlanCarrier(input.cropPlans.find((x) => x.code === r.cropPlanCode)) || r.sowingsScheduled >= r.sowingsNeeded);
-  const labor = laborRequirement(
-    schedule.filter((b) => b.fits).map((b) => ({ seq: b.seq, loadMin: b.loadMin, units: b.units })),
+  // The rack's load and unload are placed only for Phase 1-era sowings. A grow sowing has no rack:
+  // its day is its own plan's sowing-stream lines, not yet placed on the clock (the Day Schedule places them).
+  const growCodes = new Set(runs.filter((r) => isGrowPlanCarrier(input.cropPlans.find((x) => x.code === r.cropPlanCode))).map((r) => r.cropPlanCode));
+  const rackLabor = laborRequirement(
+    schedule.filter((b) => b.fits && !growCodes.has(b.cropPlanCode)).map((b) => ({ seq: b.seq, loadMin: b.loadMin, units: b.units })),
     input.capacityInputs,
   );
+  const growRuns = runs.filter((r) => growCodes.has(r.cropPlanCode) && r.sowingsScheduled > 0);
+  const labor = growRuns.length === 0 ? rackLabor : withUnplacedTasks(rackLabor, growRuns.flatMap((r) => growSowingTasks(input.cropPlans.find((x) => x.code === r.cropPlanCode)!, r, input.studies ?? [])), growRuns.reduce((s, r) => s + r.sowingsScheduled, 0), growRuns.reduce((s, r) => s + r.produced, 0));
   return {
     productionDate: input.productionDate,
     runs,
@@ -467,6 +480,24 @@ export function planProductionDay(input: {
     labor,
     staffing: checkStaffing(labor, input.crews ?? [], dayCapacity, input.capacityInputs),
   };
+}
+
+/**
+ * A grow run's sowing-stream lines from its plan's labor standard, scaled to the run: a fixed line
+ * once per sowing, a per-tray line on the study's own sowing size times the trays sown.
+ */
+function growSowingTasks(cropPlan: CropPlanDef, run: Pick<CropPlanRunPlan, 'sowingsScheduled' | 'produced' | 'sowingSize'>, studies: readonly TimeStudyDoc[]): UnplacedTask[] {
+  const study = laborStandard(studiesForCropPlan(studies, cropPlan.code)) ?? estimatedTimeStudy(cropPlan, run.sowingSize);
+  return study.lines
+    .filter((l) => l.stream === 'sowing')
+    .map((l) => ({
+      task: l.task,
+      station: l.station ?? '—',
+      staff: l.staff,
+      controlPoint: null,
+      scalesWith: l.scalesWith,
+      laborMinutes: l.scalesWith === 'fixed' ? l.laborMinutes * run.sowingsScheduled : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * run.produced : 0,
+    }));
 }
 
 // ── Distribution date → production date ─────────────────────────────────────────
@@ -593,6 +624,8 @@ export function planHorizon(input: {
   growUnits?: readonly GrowUnit[];
   /** Sowings already on the shelves when the window opens (recorded sowings inside their cycle). */
   openingSowings?: readonly { cropPlanCode: string; sowDate: string; trays: number }[];
+  /** The time studies a grow plan's sowing-stream labor is read from; passed through to each day. */
+  studies?: readonly TimeStudyDoc[];
 }): HorizonPlan {
   const weekdays = input.productionWeekdays ?? [1, 2, 3, 4, 5];
   const lots: FinishedLot[] = input.openingLots.map((l) => ({ ...l }));
@@ -659,7 +692,7 @@ export function planHorizon(input: {
         if (lot.remaining <= 0 || lot.produced > ev.date || lot.expires < servesFrom) continue;
         onHand[lot.cropPlanCode] = (onHand[lot.cropPlanCode] ?? 0) + lot.remaining;
       }
-      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date), placeSowing: placeSowingFor(servesFrom) });
+      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, lines: input.linesOn?.(ev.date), placeSowing: placeSowingFor(servesFrom), studies: input.studies });
       for (const run of plan.runs) {
         if (run.produced <= 0) continue;
         // A grow sowing is stock from its first harvest day, and its shelf life counts from there.

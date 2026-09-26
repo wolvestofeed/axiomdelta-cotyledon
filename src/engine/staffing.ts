@@ -202,6 +202,26 @@ export function laborRequirement(
   };
 }
 
+/**
+ * A requirement with more tasks not yet placed on the clock: a grow sowing's own sowing-stream
+ * lines, which have no rack to place them on. Same task at the same station is one row.
+ */
+export function withUnplacedTasks(req: LaborRequirement, tasks: readonly UnplacedTask[], sowings: number, units: number): LaborRequirement {
+  const byKey = new Map(req.unplaced.map((t) => [`${t.task}|${t.station}`, { ...t }]));
+  for (const t of tasks) {
+    if (t.laborMinutes <= 0) continue;
+    const key = `${t.task}|${t.station}`;
+    const row = byKey.get(key);
+    if (row) {
+      row.laborMinutes += t.laborMinutes;
+      row.staff = Math.max(row.staff, t.staff);
+    } else byKey.set(key, { ...t });
+  }
+  const unplaced = [...byKey.values()];
+  const unplacedStaffHours = unplaced.reduce((s, t) => s + t.laborMinutes, 0) / 60;
+  return { ...req, sowings: req.sowings + sowings, units: req.units + units, unplaced, unplacedStaffHours, totalStaffHours: req.placedStaffHours + unplacedStaffHours };
+}
+
 // ── Crews checked against the requirement ──────────────────────────────────
 
 export interface StaffedSpan {
@@ -352,7 +372,7 @@ export function checkStaffing(
       atMin: null,
       required: req.totalStaffHours,
       scheduled: crewStaffHours,
-      detail: `The proposed crews are ${hours(crewStaffHours)}; the plan requires ${hours(req.totalStaffHours)} — ${hours(req.placedStaffHours)} placed at the rack and ${hours(req.unplacedStaffHours)} for tasks not yet placed on the clock.`,
+      detail: `The proposed crews are ${hours(crewStaffHours)}; the plan requires ${hours(req.totalStaffHours)}${req.placedStaffHours > 0 ? ` — ${hours(req.placedStaffHours)} placed at the rack and ${hours(req.unplacedStaffHours)} for tasks not yet placed on the clock` : ', none of it placed on the clock yet'}.`,
     });
   }
 

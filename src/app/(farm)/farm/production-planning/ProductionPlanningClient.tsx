@@ -1,5 +1,6 @@
 'use client';
 
+import type { TimeStudyDoc } from '@/data/time-studies';
 import { PageControls } from '@/components/PageControls';
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -70,6 +71,7 @@ export function ProductionPlanningClient({
   rawSowings: recordedRawSowings,
   standards,
   purchaseOrders: recordedPurchaseOrders,
+  studies,
   today,
 }: {
   canEdit: boolean;
@@ -89,6 +91,8 @@ export function ProductionPlanningClient({
   /** Approved standard-cost versions (Roadmap J5); the close prefills from the one in force on the production date. */
   standards: StandardVersionDoc[];
   purchaseOrders: PoLike[];
+  /** The time studies a grow plan's sow-day labor is read from. */
+  studies: TimeStudyDoc[];
   today: string;
 }) {
   const { resolved, library } = useScenario();
@@ -233,6 +237,7 @@ export function ProductionPlanningClient({
         ? planHorizon({
             closures,
             crews: resolved.crews,
+            studies,
             from: dayDate,
             to: dayDate,
             book: dayBook,
@@ -248,7 +253,7 @@ export function ProductionPlanningClient({
             channels: channels.map((c) => c.phase),
           })
         : null,
-    [growLibrary, closures, resolved.crews, dayDate, dayBook, resolved.cropPlans, resolved.capacityInputs, A, resolved.cropPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels],
+    [growLibrary, closures, resolved.crews, dayDate, dayBook, resolved.cropPlans, resolved.capacityInputs, A, resolved.cropPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels, studies],
   );
   const dayRuns = useMemo(() => (dayHorizon?.productionDays ?? []).flatMap((p) => p.runs.map((r) => ({ ...r, sowDate: p.productionDate }))), [dayHorizon]);
   const daySowings = useMemo(() => (dayHorizon?.growCalendar?.sowings ?? []).filter((s) => s.distributionDate === dayDate).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.cropPlanCode.localeCompare(b.cropPlanCode)), [dayHorizon, dayDate]);
@@ -283,6 +288,7 @@ export function ProductionPlanningClient({
       planHorizon({
         closures,
         crews: resolved.crews,
+        studies,
         from: hFrom,
         to: hTo,
         book: hBook,
@@ -297,7 +303,7 @@ export function ProductionPlanningClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: channels.map((c) => c.phase),
       }),
-    [closures, hFrom, hTo, hBook, resolved.cropPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.cropPlanAssumptions],
+    [closures, hFrom, hTo, hBook, resolved.cropPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.cropPlanAssumptions, studies],
   );
   const hStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: hFrom }), [receipts, rawSowings, hFrom]);
   const hNet = useMemo(
@@ -661,7 +667,7 @@ export function ProductionPlanningClient({
                   {dayHorizon.productionDays.map((p) => (
                     <div key={p.productionDate} className="mt-3">
                       <div className="farm-kpi-sub mb-1">{dateLabel(p.productionDate)}</div>
-                      <StaffingPanel labor={p.labor} staffing={p.staffing} crews={resolved.crews} />
+                      <StaffingPanel labor={p.labor} staffing={p.staffing} crews={resolved.crews} grow />
                     </div>
                   ))}
                 </>

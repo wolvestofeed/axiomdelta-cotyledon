@@ -40,6 +40,7 @@ import type { TimeStudyDoc } from '@/data/time-studies';
 import { sowingGrowUnitsFrom } from '@/engine/equipment';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, ratedDaySlots, newCrewDefaultsFor } from '@/engine/staffing';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price';
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
@@ -664,7 +665,8 @@ export function resolveScenarioInputs(
   const crewOverlay = config.crews ?? {};
   const crews: CrewShift[] = [];
   const typedCapacity = capacityInputs as unknown as ResolvedInputs['capacityInputs'];
-  const addDefaults = newCrewDefaultsFor(laborRequirement(ratedDaySlots(deriveCapacity(cropPlan, typedCapacity)), typedCapacity));
+  // A grow plan has no rack to load: a new crew spans the operating day at one person until a placed task needs more.
+  const addDefaults = newCrewDefaultsFor(laborRequirement(isGrowPlanCarrier(cropPlan) ? [] : ratedDaySlots(deriveCapacity(cropPlan, typedCapacity)), typedCapacity));
   for (const seed of defaultCrews) {
     const o = crewOverlay[seed.id];
     if (o?.removed) continue;

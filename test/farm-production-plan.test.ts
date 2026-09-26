@@ -21,6 +21,7 @@ import { VARIETY_BY_KEY } from '@/data/varieties';
 import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { sowDateFor } from '@/engine/grow-calendar';
 import type { GrowUnit } from '@/engine/grow-capacity';
+import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import type { BookOrder } from '@/engine/orders';
 
 const MON = '2026-09-14';
@@ -408,6 +409,33 @@ describe('the grow model', () => {
     expect(harvested.unmatchedByCropPlan['BROC-01']).toBe(20);
   });
 
+  it('grow capacity reads no rack minutes: the sowings a day are the grow units that take the plan', () => {
+    const broc = plan('BROC-01');
+    const cap = deriveCapacity(broc, G.capacityInputs, 1);
+    expect(cap.cyclesPerDay).toBe(cap.grow!.unitCount);
+    expect([cap.loadMinutes, cap.blackoutMinutes, cap.unloadMinutes]).toEqual([0, 0, 0]);
+    expect(cap.blackoutWindow).toMatchObject({ startMin: G.capacityInputs.operatingOpenMin.value, endMin: G.capacityInputs.operatingCloseMin.value, cycles: cap.grow!.unitCount, loadBeforeCloseExtraCycle: false });
+    const slower = { ...G.capacityInputs, loadMinutes: { ...G.capacityInputs.loadMinutes, value: 600 }, unloadMinutes: { ...G.capacityInputs.unloadMinutes, value: 600 } };
+    expect(deriveCapacity(broc, slower, 1)).toEqual(cap);
+  });
+
+  it('a grow sow day\'s labor is the plan\'s own sowing stream: no rack task and no Phase 1-era study task', () => {
+    const h = horizon([order(DIST, 'BROC-01', 20)]);
+    const labor = h.productionDays[0]!.labor;
+    expect(labor.placed).toEqual([]);
+    expect(labor.chills).toEqual([]);
+    const study = estimatedTimeStudy(plan('BROC-01'), 20);
+    const sowingLines = study.lines.filter((l) => l.stream === 'sowing');
+    expect(labor.unplaced.map((t) => t.task).sort()).toEqual(sowingLines.map((l) => l.task).sort());
+    expect(labor.totalStaffHours).toBeCloseTo(sowingLines.reduce((t, l) => t + l.laborMinutes, 0) / 60, 9);
+    expect(labor.sowings).toBe(1);
+    expect(labor.units).toBe(20);
+    // A stored study stands over the estimate.
+    const doc = { id: 's', cropPlanCode: 'BROC-01', adoptedAt: '2027-01-01T00:00:00Z', adoptedBy: null, source: 'user_built' as const, ...study, basis: 'observed' as const, lines: study.lines.map((l) => (l.stream === 'sowing' ? { ...l, laborMinutes: l.laborMinutes * 2 } : l)) };
+    const withStudy = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 20)], cropPlans: G.cropPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, studies: [doc] as never });
+    expect(withStudy.productionDays[0]!.labor.totalStaffHours).toBeCloseTo(labor.totalStaffHours * 2, 9);
+  });
+
   it('a mixed library makes a Phase 1-era plan the day before and a grow plan on its sow date', () => {
     const M = resolveScenarioInputs({}, [seed, ...lib]);
     const h = horizon([order(DIST, 'BROC-01', 20), order(DIST, seed.code, 100)], M);
@@ -417,6 +445,9 @@ describe('the grow model', () => {
       [productionDateFor(DIST), [seed.code]],
     ]);
     expect(h.productionDays.every((p) => p.fits)).toBe(true);
+    // The rack's load and unload are placed for the Phase 1-era sowing only.
+    expect(h.productionDays[0]!.labor.placed).toEqual([]);
+    expect(h.productionDays[1]!.labor.placed.length).toBeGreaterThan(0);
     expect(h.growCalendar!.sowings).toHaveLength(1);
     expect(h.growCalendar!.sowings[0]!.cropPlanCode).toBe('BROC-01');
     expect(h.distributionDays[0]!.productionDate).toBe(sowDate);

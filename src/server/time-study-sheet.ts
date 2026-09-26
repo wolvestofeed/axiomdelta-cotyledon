@@ -1,11 +1,13 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
-import { timeStudy } from '@/data/plan-data';
-import { PLAN_TASK_STREAMS, TIME_STUDY_BASIS_LABELS, QUALITY_RESULT_LABELS } from '@/data/time-studies';
+import { TIME_STUDY_BASIS_LABELS, QUALITY_RESULT_LABELS } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
+import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { timeStudyScaffold } from '@/engine/time-study-estimate';
 import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
 import { listCropPlans } from '@/server/crop-plans';
+import { listEquipment } from '@/server/equipment';
 import { listTimeStudies } from '@/server/time-studies';
 
 /**
@@ -29,7 +31,8 @@ function widths(ws: ExcelJS.Worksheet, w: number[]): void {
 }
 
 export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: string | null): Promise<{ buffer: Buffer; fileName: string }> {
-  const [cropPlans, library] = await Promise.all([listCropPlans(), listTimeStudies()]);
+  const [cropPlans, library, equipment] = await Promise.all([listCropPlans(), listTimeStudies(), listEquipment()]);
+  const growUnits = growUnitsFrom(equipment);
   const ordered = [...cropPlans].sort((a, b) => (a.code === firstCropPlanCode ? -1 : b.code === firstCropPlanCode ? 1 : 0));
 
   const wb = new ExcelJS.Workbook();
@@ -64,7 +67,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   for (const cropPlan of ordered) {
     const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
     const scaffold = timeStudyScaffold(cropPlan);
-    const sowing = deriveCapacity(cropPlan).sowingSize;
+    const sowing = isGrowPlanCarrier(cropPlan) ? deriveGrowCapacity(cropPlan.plan, growUnits).sowingTrays : deriveCapacity(cropPlan).sowingSize;
     const refLines = standard && standard.lines.length === scaffold.length ? standard.lines : null;
     scaffold.forEach((t, i) => {
       const ref = refLines?.[i];
@@ -160,16 +163,6 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
     }
   }
   widths(log, [12, 10, 12, 10, 16, 8, 10, 12, 12, 12, 12, 10, 12, 24, 14]);
-
-  const tasks = wb.addWorksheet('Plan task library');
-  tasks.addRow(['Seq', 'Task', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'CONTROL POINT', 'Scales with', 'Stream', 'On the studies as']).font = { bold: true };
-  timeStudy.tasks.forEach((t, i) => {
-    const s = PLAN_TASK_STREAMS[t.task];
-    tasks.addRow([i + 1, t.task, t.station, t.staff, t.elapsedMin, t.laborMinutes, t.controlPoint, t.scalesWith, s?.stream ?? null, s?.task ?? t.task]);
-  });
-  tasks.addRow([]);
-  tasks.addRow([null, `The plan's 14-task estimate for AMK-E-001 at a ${timeStudy.estimatedAtSowingSize}-unit sowing. An estimate, not an observation: it is what the estimated studies were built from. There is no second blackout and no cold-hold task; those two lines' minutes carry to the temperature check at pack and the vehicle load.`]);
-  widths(tasks, [6, 44, 28, 7, 11, 10, 8, 10, 10, 44]);
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   return { buffer, fileName: `farm-time-study-sheet-${asOf}.xlsx` };
