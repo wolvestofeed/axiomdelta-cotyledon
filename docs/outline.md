@@ -42,10 +42,10 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 |---|---|---|
 | Muse Kitchen · Impact OS, Muse, the OS | MicroFarm | Origin may be cited in docs only |
 | kitchen, commissary | farm, grow room | |
-| recipe | crop plan | One per variety, or a blend of varieties |
+| recipe | grow plan | One per variety, or a mixed tray of varieties. Phase 1 code says `cropPlan`; Phase 2 renames it |
 | recipe code | crop code | |
-| ingredient line | input line | Seed, medium, nutrient, water |
-| component (served) | variety | The unit of sowing, lot coding and nutrient profiling inside a blend |
+| ingredient line | seed line, medium line, nutrient line, light line | Phase 1 code says `input`; Phase 2 splits it. Water is a stage, never a line |
+| component (served) | variety | The unit of sowing, lot coding and nutrient profiling inside a mixed tray |
 | portion, meal | unit | A unit is a flat, tray, insert, jar or cut ounce; the format is a property of the crop plan |
 | batchPortions | batchUnits | |
 | batch | sowing | A sowing record is one sow of one crop plan = one lot |
@@ -69,7 +69,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 | school lunches, corporate catering, ghost kitchen | subscriptions, restaurants, retail & wholesale | The three channels, added in that order |
 | menu cycle | subscription cycle | |
 | meal plan | flat plan | A subscriber's standing composition |
-| meal pattern, crediting, grade group | nutrient profile, nutrition targets | See §4 |
+| meal pattern, crediting, grade group | nutrient profile, nutrition targets, tray format | See §4 |
 | Floor | Grow Room | Operator surface |
 | Sites & Delivery | Pickup Points & Routes | |
 | Customer Portal, Order Builder | Subscriber Portal, Flat Builder | |
@@ -87,31 +87,41 @@ Words that must not survive the swap anywhere but this table: recipe, portion, m
 
 ## 4. Domain model
 
-**Variety.** Seed variety with its supplier item, seeding density per tray format, soak / weight / blackout / light days, expected yield, and its nutrient profile (the Vallecito Nutrients Master, ~70 nutrients × significant / moderate / low). Vallecito's 13 varieties seed the library.
+**Variety.** The master record and the costing basis. Seed source and supplier, organic and heirloom status, origin, rolling cost per pound from receipts, observed yield per pound by tray format from closed sowings, soak and stage days, and the nutrient profile: compounds, nutrients and stated benefits, each citing a row of [`science-library.md`](science-library.md). Vallecito's 13 varieties seed the library.
 
-**Tray format.** 1020 flat, 7x11 large tray, 5x5 insert, pint jar, cut ounce. A crop plan names its format; a format names its grow-unit footprint (four 1020s per 48" shelf, per On The Grow).
+**Tray format.** 1020 flat, 7x11 large tray, 5x5 insert, pint jar, cut ounce. A format names its dimensions, its grow-unit footprint (four 1020s per 48-inch shelf), and each variety's seeding density in grams.
 
-**Crop plan.** One variety or a blend. Input lines (seed, medium, nutrient), batchUnits, format, channels it serves, and the stage schedule. A blend carries a per-variety split so each variety is its own lot and nutrient contribution.
+**Grow plan.** How a variety, or a mixed tray, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
+- **Seed line**: a variety, its grams per tray, and its share of a mixed tray. Costed at the variety's rolling cost per pound. The only line that carries provenance and nutrition.
+- **Medium line**: coconut coir, jute fiber, hemp mat, vermiculite, or a hydroponic pad, with quantity per tray. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
+- **Nutrient line**: a nutrient solution, its concentration, and the stage it starts. Costed at concentration times water volume times price.
+- **Light line**: the light spec for the light stage: spectrum (fixture or wavelength mix), photoperiod in hours per day, intensity as PPFD at canopy or fixture height, and the stage it starts. Costed as fixture watts times hours times the energy rate, per tray per day, plus the fixture's amortized cost. Varieties are grown under different spectra and configurations, and light changes nutrient content (science library rows 2, 8), so light belongs to the plan.
 
-**Grow stages.** Soak → sow → weighted germination → blackout → light → harvest window → packed. Each stage has days, a control point where one exists (seed sanitation before soak; spent-water test for sprouts; temperature and humidity during germination and light), and a stage record. This replaces Muse's thermal model end to end.
+A single-variety flat is a grow plan with one seed line. A mixed tray is a grow plan with two or more, composed to a nutrition target. Tray sets, labels, inserts and sanitizer are consumables costed per tray by format, not lines. Watering is never a line; it is a stage. A light line is a requirement the scheduler matches against grow units: a sowing is placed only on a shelf whose fixture meets the plan's spectrum and intensity.
 
-**Grow unit.** Shelf, rack, sprouting rack, jar stand, with capacity in units per format, lighting watts, and a build phase. A sowing is what one grow unit takes; a second unit is a parallel stream.
+**Stage schedule.** The process of a grow plan: soak → sow and weight → germination → blackout → light → harvest window → packed. Each stage carries its days, its watering method, a control point where one exists, and a labor basis. Watering repeats daily and changes shape across the cycle: misting from above through germination and blackout, bottom watering once roots reach through the perforated tray under light. A nutrient line names the stage it starts, and the watering step at that stage reads it. The schedule is what the grow calendar, the time study and the scheduler run on.
 
-**Sowing.** The batch. One crop plan, one sow day, one lot per variety, rack loads, stage records, mass balance (seed issued + water gain − stage loss − scrap = packed), crew hours. Only a closed sowing posts journals.
+**Control point.** A check recorded on a stage: seed sanitation before soak, spent-water test for sprouts, temperature and humidity through germination and light. Replaces the kitchen's thermal critical control points.
 
-**Subscriber.** A customer with pickup points, a cadence (bi-weekly or monthly), payment terms via Stripe, nutrition targets, and a flat plan (standing composition of crop plans and formats). Restaurants and retail/wholesale customers are the same object on a different channel without nutrition targets.
+**Grow unit.** Shelf, rack, sprouting rack, jar stand, with capacity in trays per format, its fixture (spectrum, watts, PPFD map at tray height), and a build phase. A sowing is what one grow unit takes; a second unit is a parallel stream. Vallecito's Mars Hydro PPFD map is the first fixture record.
 
-**Nutrition targets.** Per subscriber: named targets (iron, protein, sulforaphane, vitamin K, folate, omega-3, fiber, …). The Flat Builder scores a flat plan against the targets from the variety nutrient profiles. This is the replacement for meal-pattern crediting and the reason the facility exists.
+**Sowing.** The batch. One grow plan, one sow day, one lot per variety, grow-unit loads, stage records, mass balance (seed issued + water gain − stage loss − scrap = packed), crew hours. Only a closed sowing posts journals. A sowing's output is a count of units in its format; there is no second billable count.
 
-**Order.** From a subscription cycle, derived on read until confirmed; confirmed and distributed orders are rows. Distribution is pickup or delivery on a distribution day; live flats carry a tray-return expectation.
+**Subscriber.** A customer with pickup points, a cadence (bi-weekly or monthly), payment terms via Stripe, nutrition targets, and a flat plan (standing composition of grow plans and formats). Restaurants and retail/wholesale customers are the same object on a different channel without nutrition targets.
+
+**Nutrition targets.** Per subscriber: named targets (iron, protein, sulforaphane, vitamin C, folate, omega-3, fiber, …). The Flat Builder scores a flat plan against the targets from the variety nutrient profiles, and every benefit it shows cites its source row. This is the reason the facility exists.
+
+**Order.** From a subscription cycle, derived on read until confirmed; confirmed and distributed orders are rows. Distribution is pickup or delivery on a distribution day; live trays carry a tray-return expectation.
+
+**Science library and glossary.** [`science-library.md`](science-library.md) is the source register, seeded into the Sources module; [`glossary.md`](glossary.md) is the vocabulary in three tiers, published for subscribers and staff in tiers 1 and 2. A variety's benefits link to glossary entries, which link to sources.
 
 **Workspace.** A farm. Every table carries a workspace id. The wellness center's facility is one row.
 
 ## 5. Engine rules (ported, restated for growing)
 
 1. **A sowing is derived from grow-unit capacity, never typed.** One shelf or rack bounds the units of a format; a second grow unit is a parallel stream the production plan places as its own sowing.
-2. **The sowing is the costing basis.** Seed and medium at the derived sowing → yield chain (seed → sown → harvested → packed) → unit cost. Cost to serve adds harvest labor, packaging and distribution, never storage.
-3. **Labor is fixed per sowing plus variable per unit, on two streams.** Prep, sow and daily watering count per sowing on the sowing stream; harvest, pack and hand-off count per unit on the harvest stream on the distribution day. Time studies per crop plan; estimated until observed. Vallecito's 27-minute 1020 study is the first seed.
+2. **The sowing is the costing basis, and the grow plan's lines are the cost.** Seed at rolling cost per pound times grams sown, medium at price per tray, nutrients at concentration times volume, light at watts times hours times the energy rate per tray per day, over observed yield per pound by format, plus consumables and labor at the derived sowing → unit cost. Cost to serve adds harvest labor, packaging and distribution, never storage.
+3. **Labor is fixed per sowing, plus variable per tray per day, plus variable per unit, on three streams.** Soak, sow and weight count per sowing on the sowing stream; misting, bottom watering and inspection count per tray per day on the daily stream across the stage schedule; harvest, pack and hand-off count per unit on the harvest stream on the distribution day. The daily stream is what a two-week living crop adds to the kitchen's model. Time studies per grow plan; estimated until observed. Vallecito's 27-minute 1020 study, with its one-to-three minutes of daily watering per flat, is the first seed.
 4. **Whole sowings only.** Overshoot is inventory inside the harvest window and waste after it; live flats not distributed become cut product, then waste.
 5. **Every dollar is computed from tagged reference data.** Provenance tags on every figure.
 6. **Only the harvest record posts journals.** Plan ledger and Actual ledger are separate worlds. A sowing that does not mass-balance does not close. One sow = one lot per variety.
@@ -162,7 +172,7 @@ Each phase ends with the app running on localhost and its tests green. Dates are
 
 **Phase 1 — Swap and tenancy.** Apply §3 to identifiers, schema (one consolidated migration set, no history to preserve), copy, tests, docs, seeds. Add workspaces and the guards (§7). A test fails on any surviving kitchen word. Target: October 2026.
 
-**Phase 2 — Growing domain.** Grow stages replace thermal processes; tray formats and grow units replace vessels; variety library, nutrient profiles and Nutrition Targets replace crediting; Produce Safety replaces Food Safety; Vallecito data seeded as `STATED` / `DATED` (varieties, densities, time study, costs, rack capex, nutrient matrix). Grow Calendar. Target: November 2026.
+**Phase 2 — Growing domain.** The variety record becomes the master and the cost basis; crop plan becomes grow plan with seed, medium and nutrient lines; the stage schedule with the daily watering stream replaces thermal processes; tray formats and grow units replace vessels; nutrient profiles and Nutrition Targets replace crediting, each benefit citing the science library; Produce Safety replaces Food Safety with the sprout control points; the science library is seeded into Sources and the glossary is published in the subscriber portal; Vallecito data seeded as `STATED` / `DATED` (varieties, densities, time study, costs, rack capex, nutrient matrix). Grow Calendar. Target: November 2026.
 
 **Phase 3 — Subscriptions and distribution.** Subscriptions module on Stripe, Subscriber Portal and Flat Builder, Pickup Points & Routes, tray returns. This is what the facility needs to take its first paying subscriber. Target: December 2026.
 
@@ -179,6 +189,8 @@ Micro Farm/
 ├── CLAUDE.md                 rules
 ├── docs/
 │   ├── outline.md            this document
+│   ├── glossary.md           the vocabulary in three tiers; Phase 2's naming authority
+│   ├── science-library.md    the source register every stated benefit cites
 │   ├── accounting-policy.md  ported, nouns swapped
 │   ├── grow-operations.md    stages, control points, produce safety (replaces culinary-operations.md)
 │   ├── roadmap.md            phase status only, one line per step

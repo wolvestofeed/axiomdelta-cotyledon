@@ -1,5 +1,7 @@
 # MicroFarm
 
+Repo: [wolvestofeed/axiomdeltamicrofarm](https://github.com/wolvestofeed/axiomdeltamicrofarm).
+
 The production operating system for microgreens and sprouts farms, and the back end of Axiom Delta Wellness Center's live-nutrition subscription program. Plan of record: [`docs/outline.md`](docs/outline.md). Rules: [`CLAUDE.md`](CLAUDE.md).
 
 ## Run locally
