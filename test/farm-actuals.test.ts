@@ -169,7 +169,7 @@ describe('actuals — posting a period', () => {
     const dlv = posted.entries.find((e) => e.id.startsWith('DLV-'))!;
     const cogs = dlv.lines.find((l) => l.accountCode === '5010')!.debitCents;
     expect(cogs).toBe(Math.round(sowingSize * p.standardCostPerUnitCents));
-    expect(dlv.lines.find((l) => l.accountCode === '4010')!.creditCents).toBe(sowingSize * 1000);
+    expect(dlv.lines.find((l) => l.accountCode === '4010')!.creditCents).toBe(sowingSize * 2000);
     // Everything produced was distributed, so finished goods is flat.
     expect(net(posted.entries, '1450')).toBe(0);
     expect(net(posted.entries, '1430')).toBe(0);
@@ -242,7 +242,7 @@ describe('actuals — posting a period', () => {
 
   it('a retail distribution carries the marketplace commission', () => {
     const retail = postActuals({ ...bundle, distributions: [distributionDoc(100, 3)] });
-    expect(net(retail.entries, '7910')).toBe(Math.round(100 * 1600 * 0.25));
+    expect(net(retail.entries, '7910')).toBe(Math.round(100 * 2500 * 0.25));
   });
 
   it('an empty bundle posts nothing', () => {
@@ -266,7 +266,7 @@ describe('actuals — the Actual ledger by period (Roadmap N6)', () => {
   it('classifies the period income statement and balances', () => {
     expect(ledger.balanced).toBe(true);
     expect(s.balanced && s.cashFlowTies).toBe(true);
-    expect(s.incomeStatement.revenueCents).toBe(sowingSize * 1000);
+    expect(s.incomeStatement.revenueCents).toBe(sowingSize * 2000);
     expect(s.incomeStatement.manufacturingVariances.some((r) => r.code === '5110')).toBe(true);
   });
 
@@ -276,8 +276,8 @@ describe('actuals — the Actual ledger by period (Roadmap N6)', () => {
     expect(bs.totalAssetsCents).toBe(bs.totalLiabilitiesCents + bs.totalEquityCents);
     expect(s.cashFlow.closingCashCents).toBe(-450_000);
     // Receivables stay open — nothing recorded a collection.
-    expect(bs.currentAssets.find((r) => r.code === '1300')?.cents).toBe(sowingSize * 1000);
-    expect(periodWorkingCapital(ledger.entries, PERIOD, 0, false).receivableCents).toBe(sowingSize * 1000);
+    expect(bs.currentAssets.find((r) => r.code === '1300')?.cents).toBe(sowingSize * 2000);
+    expect(periodWorkingCapital(ledger.entries, PERIOD, 0, false).receivableCents).toBe(sowingSize * 2000);
   });
 
   it('with nothing on record every figure is zero for the period named', () => {

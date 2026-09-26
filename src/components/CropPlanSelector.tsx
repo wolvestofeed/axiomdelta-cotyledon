@@ -37,7 +37,7 @@ export function useSelectedCropPlan(): {
   return { cropPlan, code: cropPlan.code, setCode, cropPlans: resolved.cropPlans };
 }
 
-export function CropPlanSelector({ label = 'Crop plan' }: { label?: string }) {
+export function CropPlanSelector({ label = 'Grow plan' }: { label?: string }) {
   const { code, setCode, cropPlans } = useSelectedCropPlan();
   return (
     <label className="farm-kpi-sub inline-flex! items-center! gap-2!">

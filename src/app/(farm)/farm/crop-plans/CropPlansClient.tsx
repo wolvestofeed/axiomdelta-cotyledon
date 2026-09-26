@@ -27,7 +27,8 @@ import { SupplierPicker } from '@/components/SupplierPicker';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
 import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
 import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
-import { LINE_KIND_LABELS, leadVariety } from '@/data/grow-plan';
+import { LINE_KIND_LABELS, leadVariety, planStageDays, planStages } from '@/data/grow-plan';
+import { CONTROL_POINT_BY_ID } from '@/data/produce-safety';
 import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { unitSku } from '@/data/tray-formats';
 
@@ -68,7 +69,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
     });
   const costing = useMemo(() => costCropPlan(selected), [selected]);
   const growCosting = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
-  const leadVarietyOf = isGrowPlanCarrier(selected) ? leadVariety(selected.plan) : undefined;
+  const growPlan = isGrowPlanCarrier(selected) ? selected.plan : null;
+  const leadVarietyOf = growPlan ? leadVariety(growPlan) : undefined;
   const planTargets = useMemo(() => (isGrowPlanCarrier(selected) ? targetsOfPlan(selected.plan) : []), [selected]);
   const linesLinked = costing.lines.filter((l) => links[l.name]).length;
   const cap = useMemo(
@@ -143,9 +145,9 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   return (
     <>
       <PageHeader
-        title="Crop plans"
-        purpose="Pick a crop plan to see its cost per unit, sowing size and unit spec."
-        functions={['Crop plan library', 'Unit input cost', 'Sowing costing', 'Unit spec', 'Standard in force']}
+        title="Grow plans"
+        purpose="Pick a grow plan to see its cost per tray, its sowing and its stage schedule."
+        functions={['Library', 'Grow plan lines', 'Sowing costing', 'Stage schedule', 'Nutrient profile']}
         connects={[
           { href: '/farm/grow-units', dir: 'from' },
           { href: '/farm/packaging', dir: 'from' },
@@ -153,25 +155,26 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         ]}
         howItWorks={
           <ul>
-            <li>Every crop plan that can be costed, credited, sowing-sized or planned is a library row with a status.</li>
-            <li>The code crop plan is the seed, not the source.</li>
-            <li>Editing an input&rsquo;s SEED cost, quantity or yield here is a forecast edit measured against the library. Edit crop plan changes the library.</li>
+            <li>Every plan that can be costed, sowing-sized or planned is a library row with a status: one seed line per variety, or a mixed tray, with its medium, nutrient and light lines.</li>
+            <li>The twelve seed plans are built from the variety records; the library is the source from first read.</li>
+            <li>Editing a seed price here is a forecast edit measured against the library. Edit in the library changes the plan.</li>
             <li>The standard a sowing is costed at changes only when a super admin approves a version with an effective date.</li>
           </ul>
         }
         status="live"
       />
 
-      <Card title="Crop plan library">
+      <Card title="Library">
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>
-              <tr><th>Code</th><th>Crop plan</th><th>Status</th><th>Channels</th><th className="num">Input cost / unit</th><th className="num">Packed oz</th><th className="num">Sowing</th><th className="num">Sow to blackout rack</th><th /></tr>
+              <tr><th>Code</th><th>Plan</th><th>Status</th><th>Channels</th><th className="num">Input cost / tray</th><th className="num">Harvest g</th><th className="num">Sowing</th><th className="num">Cycle</th><th /></tr>
             </thead>
             <tbody>
               {pageRows.map((r) => {
                 const c = costCropPlan(r, resolved.assumptions.yield.shrinkAllowance.value);
                 const k = deriveCapacity(r, resolved.capacityInputs);
+                const g = isGrowPlanCarrier(r) ? costCarrier(r) : null;
                 const lib = library.find((x) => x.code === r.code) as (typeof library)[number] & { id?: string } | undefined;
                 const isSel = r.code === selected.code;
                 return (
@@ -187,9 +190,9 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
                     </td>
                     <td>{r.channels.length === 0 ? '—' : r.channels.map((ph) => resolved.phases.find((p) => p.phase === ph)?.market ?? `Channel ${ph}`).join(', ')}</td>
                     <td className="num">{money(c.totalInputCostPerUnit)}</td>
-                    <td className="num">{c.packedOzPerUnit.toFixed(2)}</td>
-                    <td className="num">{num(k.sowingSize)}</td>
-                    <td className="num">{k.stage.sowToBlackoutMinutes === null ? '—' : `${k.stage.sowToBlackoutMinutes} min`}{k.stage.gaps.length > 0 && <div className="farm-c-faint farm-fs-2xs">{k.stage.gaps.length} gap{k.stage.gaps.length === 1 ? '' : 's'}</div>}</td>
+                    <td className="num">{g ? num(g.harvestGramsPerTray, 0) : c.packedOzPerUnit.toFixed(2)}</td>
+                    <td className="num">{num(k.sowingSize)}{k.grow && k.grow.sowingTrays === 0 && <div className="farm-c-faint farm-fs-2xs">no unit lights it</div>}</td>
+                    <td className="num">{k.grow ? `${num(k.grow.cycleDays)} d` : k.stage.sowToBlackoutMinutes === null ? '—' : `${k.stage.sowToBlackoutMinutes} min`}</td>
                     <td className="num">{isSel ? <span className="farm-kpi-sub">selected</span> : <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setCode(r.code)}>Select</button>}</td>
                   </tr>
                 );
@@ -199,7 +202,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 mt-[0.6rem]!">
           <span className="farm-kpi-sub">
-            {resolved.cropPlans.length === 0 ? 'No crop plans.' : `Crop plans ${current * pageSize + 1}–${Math.min(resolved.cropPlans.length, (current + 1) * pageSize)} of ${resolved.cropPlans.length}`}
+            {resolved.cropPlans.length === 0 ? 'No plans.' : `Plans ${current * pageSize + 1}–${Math.min(resolved.cropPlans.length, (current + 1) * pageSize)} of ${resolved.cropPlans.length}`}
           </span>
           <span className="inline-flex gap-[0.4rem] items-center">
             <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setPage(0)} disabled={current === 0}>First</button>
@@ -297,6 +300,18 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
       </Card>
 
+      {growCosting && cap.grow ? (
+        <div className="grid gap-3 mt-4 farm-autofit-11">
+          <Kpi value={money(growCosting.perTray.total)} label="Input cost per tray" sub={`seed ${money(growCosting.perTray.seed)} · medium ${money(growCosting.perTray.medium)} · nutrient ${money(growCosting.perTray.nutrient)} · light ${money(growCosting.perTray.light)} · consumables ${money(growCosting.perTray.consumables)}`} />
+          <Kpi value={`${num(cap.grow.sowingTrays)} trays`} label="Sowing — what one grow unit takes" sub={cap.grow.binding ? `one ${cap.grow.binding.unit.item.toLowerCase()}` : 'no grow unit takes this plan'} />
+          <Kpi value={money(serve.costToServe)} label="Cost to serve" sub={`inputs ${money(serve.food)} · labor ${money(serve.directLabor)} · packaging ${money(serve.packaging)} · distribution ${money(serve.distribution)}`} />
+          <Kpi value={`${num(growCosting.harvestGramsPerTray, 0)} g`} label="Harvest per tray" sub={`${num(growCosting.seedGramsPerTray, 0)} g sown · from the variety record until a closed sowing observes it`} />
+          <Kpi value={money(growCosting.costPerHarvestOz, 4)} label="Input cost per harvested ounce" sub={`${money(growCosting.perTray.total / Math.max(1e-9, growCosting.harvestGramsPerTray / 453.59237))} a pound`} />
+          <Kpi value={`${num(cap.grow.cycleDays)} days`} label="Cycle on the shelf" sub={`${num(cap.grow.daysToHarvest)} to the first harvest day · ${num(growCosting.lightDays)} under light`} />
+          <Kpi value={num(cap.grow.traysPerDay, 2)} label="Sustained ceiling, trays a day" sub={`${num(cap.grow.totalTrays)} trays across ${num(cap.grow.unitCount)} units over the cycle`} />
+          <Kpi value={unitSku(selected.code, growCosting.format.key)} label="Unit SKU" sub="the plan code and the packaged format" />
+        </div>
+      ) : (
       <div className="grid gap-3 mt-4 farm-autofit-11">
         <Kpi value={money(costing.totalInputCostPerUnit)} label="Unit input cost" sub="Sowing cost over the sowing's units, with the shrink allowance" />
         <Kpi value={num(cap.sowingSize)} label="Sowing — one unit of each grow unit" sub={cap.binding ? `Bound by the ${cap.binding.growUnit.item.toLowerCase()}${cap.binding.component ? ` on ${cap.binding.component.toLowerCase()}` : ''} (${SOWING_CAPACITY_BASIS_LABELS[cap.binding.growUnit.basis].toLowerCase()} capacity)` : `${mass.toFixed(4)} lb canopy mass/unit`} />
@@ -311,7 +326,53 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           sub={cap.blackoutWindow.firstLoadBasis === 'none' ? 'No sow time on file' : `First load ${clock(cap.blackoutWindow.startMin)} with growing from ${clock(cap.blackoutWindow.openMin)}${cap.stage.gaps.length ? ` · ${cap.stage.gaps.length} gap${cap.stage.gaps.length === 1 ? '' : 's'}` : ''}`}
         />
       </div>
+      )}
 
+      {growCosting && cap.grow && growPlan ? (
+        <>
+          <Card title="Sowing costing → yield → costing down to the unit" className="mt-4">
+            <div className="farm-scroll-x">
+              <table className="farm-table">
+                <tbody>
+                  <tr><td>The sowing</td><td className="num">{num(cap.grow.sowingTrays)} trays</td><td className="farm-c-faint farm-fs-xs">What one grow unit takes of the {growCosting.format.name}{cap.grow.binding ? `: the ${cap.grow.binding.unit.item.toLowerCase()}` : ''}. Every line is written per tray; the sowing is trays × the tray.</td></tr>
+                  <tr><td>Sowing cost — the four line kinds and consumables</td><td className="num">{money(growCosting.perTray.total * cap.grow.sowingTrays)}</td><td className="farm-c-faint farm-fs-xs">{money(growCosting.perTray.total)} a tray × {num(cap.grow.sowingTrays)}: seed {money(growCosting.perTray.seed)}, medium {money(growCosting.perTray.medium)}, nutrient {money(growCosting.perTray.nutrient)}, light {money(growCosting.perTray.light)}, consumables {money(growCosting.perTray.consumables)}.</td></tr>
+                  <tr><td>Yield — harvest over seed</td><td className="num">{num(growCosting.yieldToHarvest, 2)}×</td><td className="farm-c-faint farm-fs-xs">{num(growCosting.seedGramsPerTray, 0)} g sown → {num(growCosting.harvestGramsPerTray, 0)} g harvested a tray; a live tray packs what it harvests. Measured on the sowing record when one is closed; the record figure until then.</td></tr>
+                  <tr><td>Shrink allowance ({(sowing.shrinkAllowance * 100).toFixed(0)}%)</td><td className="num">{money(sowing.sowingInputCostWithShrink - sowing.sowingInputCost)}</td><td className="farm-c-faint farm-fs-xs">Trays sown and never distributed.</td></tr>
+                  <tr className="total"><td>Unit input cost — one tray</td><td className="num">{money(sowing.unitInputCost, 4)}</td><td className="farm-c-faint farm-fs-xs">With the shrink allowance.</td></tr>
+                  <tr><td>+ labor on the three streams</td><td className="num">{money(serve.directLabor, 4)}</td><td className="farm-c-faint farm-fs-xs">Sow day, every day on the shelf, harvest day: {num(selectedAssumptions.laborSplit.fixedMinutesPerSowing.value / Math.max(1, cap.grow.sowingTrays) + selectedAssumptions.laborSplit.variableMinutesPerUnit.value + (selectedAssumptions.laborSplit.dailyMinutesPerUnit?.value ?? 0), 1)} minutes a tray at the {money(selectedAssumptions.labor.blendedLoadedWage.value)}/h placeholder rate.</td></tr>
+                  <tr><td>+ packaging</td><td className="num">{money(serve.packaging, 4)}</td><td className="farm-c-faint farm-fs-xs">Per tray.</td></tr>
+                  <tr><td>+ distribution to the pickup points</td><td className="num">{money(serve.distribution, 4)}</td><td className="farm-c-faint farm-fs-xs">Per tray. Storage is a fixed cost and is not in the cost to serve.</td></tr>
+                  <tr className="total"><td>Cost to serve</td><td className="num">{money(serve.costToServe, 4)}</td><td className="farm-c-faint farm-fs-xs">The cost of a unit the ledger carries is inputs, labor and packaging ({money(serve.total, 4)}); distribution is a selling cost there.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card title="Stage schedule" className="mt-4">
+            <div className="farm-scroll-x">
+              <table className="farm-table">
+                <thead><tr><th>Stage</th><th className="num">Days</th><th>Watering</th><th>Control point</th><th>What happens</th></tr></thead>
+                <tbody>
+                  {planStages(growPlan).filter((st) => st.key !== 'packed').map((st) => {
+                    const d = planStageDays(growPlan)[st.key as keyof ReturnType<typeof planStageDays>];
+                    return (
+                      <tr key={st.key} className={d === 0 ? 'farm-c-faint' : ''}>
+                        <td>{st.name}</td>
+                        <td className="num">{num(d)}</td>
+                        <td>{st.watering === 'none' ? '—' : `${st.watering}, ${st.wateringsPerDay} a day`}{st.underLight ? ' · under light' : ''}</td>
+                        <td>{st.controlPoint ? CONTROL_POINT_BY_ID[st.controlPoint].name : '—'}</td>
+                        <td className="farm-c-soft">{st.action}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="farm-kpi-sub mt-2">The days are the varieties&rsquo; ({leadVarietyOf?.stageDays.note ?? ''}) unless the plan overrides them; a mixed tray runs on the slowest variety at each stage. A nutrient line names the stage it enters the water; the light line the stage the lights come on. The control points are on <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>.</p>
+          </Card>
+        </>
+      ) : (
+        <>
       <Card title="Sowing costing → yield → costing down to the unit" className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table">
@@ -359,6 +420,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           The cooling clock starts the moment a sow ends: the product is poured into 2-inch hotel pans and loaded (25 minutes). The components start staggered, longest first, so they finish together and fill one blackoutRack sowing; the cropPlan&rsquo;s time to the blackoutRack is its longest component sow{cap.stage.longestComponent ? ` — ${cap.stage.longestComponent}` : ''}, read at the high end of each stated range. A component with no sow time on file is a gap and is not filled in. Source: the farm&rsquo;s stage processing standards (2026-09-14).
         </p>
       </Card>
+        </>
+      )}
 
 
       {growCosting && leadVarietyOf && (
@@ -498,6 +561,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         cropPlanChannels={selected.channels ?? []}
       />
 
+      {!growCosting && (
+        <>
       <Card title={`Input lines — the ${num(sowing.sowingUnits)}-unit sowing`} className="mt-4">
         <div className="mb-3!">
           {forecastEditing ? <SectionSave sections={['inputs', 'sustainability']} title="the crop plan" /> : <p className="farm-kpi-sub">The open forecast&rsquo;s input lines, read-only on Actual. They are edited on Plan.</p>}
@@ -657,6 +722,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           </table>
         </div>
       </Card>
+        </>
+      )}
 
       <Card title={`Standard in force — ${selected.code}`} className="mt-4">
         {stdMsg && <div className={`farm-scenariobar-msg ${stdMsg.kind} mb-[0.6rem]!`} role="status">{stdMsg.text}</div>}

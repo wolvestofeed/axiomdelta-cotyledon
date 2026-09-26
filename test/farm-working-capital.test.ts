@@ -158,7 +158,7 @@ describe('K1 — a completed route adds its distributions to the monthly invoice
     const g1 = r.groups.find((g) => g.subscriberId === C1)!;
     expect(g1.distributionIds).toEqual(['d1', 'd2']);
     expect(g1.period).toBe('2027-02');
-    expect(g1.amountCents).toBe(2_000_00);
+    expect(g1.amountCents).toBe(4_000_00);
     expect(r.skipped.map((s) => s.distributionId)).toEqual(['d5']);
   });
 
@@ -170,8 +170,8 @@ describe('K1 — a completed route adds its distributions to the monthly invoice
     const inv: InvoiceDoc = { id: 'i1', invoiceNumber: 'AMK-INV-20270203-01', subscriberId: C1, subscriberName: 'Test Subscriber #1', period: '2027-02', status: 'issued', openedOn: '2027-02-03', paymentTerms: 'net_30', issuedOn: '2027-02-28', dueOn: '2027-03-30', issuedBy: null, notes: null };
     const on = [distribution('d1', '2027-02-03', 1, C1, 100, 'i1'), distribution('d7', '2027-02-04', 1, C1, 50, 'i1')];
     const [b] = invoiceBalances([inv], on, [{ id: 'p', subscriberId: C1, subscriberName: 'x', receivedOn: '2027-03-15', amountCents: 60_000, method: null, reference: null, applications: [{ documentId: 'i1', amountCents: 60_000 }], notes: null }]);
-    expect(b!.amountCents).toBe(150_000);
-    expect(b!.openCents).toBe(90_000);
+    expect(b!.amountCents).toBe(300_000);
+    expect(b!.openCents).toBe(240_000);
     expect(b!.lastDistributedOn).toBe('2027-02-04');
   });
 });
@@ -338,10 +338,10 @@ describe('Phase K — actuals', () => {
 
   it('invoiced distributions go to receivables, retail and wholesale to processor clearing; a payment collects', () => {
     const { wc } = monthOf(base, '2027-02');
-    expect(wc.receivableCents).toBe(sowingSize * 1000);
-    expect(wc.processorClearingCents).toBe(Math.round(10 * 1600 * 0.75));
+    expect(wc.receivableCents).toBe(sowingSize * 2000);
+    expect(wc.processorClearingCents).toBe(Math.round(10 * 2500 * 0.75));
     expect(wc.daysToCollect).toBeCloseTo(28, 6);
-    const paid = monthOf({ ...base, subscriberPayments: [{ id: 'cp', subscriberId: C1, subscriberName: 'x', receivedOn: '2027-02-25', amountCents: sowingSize * 1000, method: null, reference: null, applications: [{ documentId: 'i1', amountCents: sowingSize * 1000 }], notes: null }] }, '2027-02');
+    const paid = monthOf({ ...base, subscriberPayments: [{ id: 'cp', subscriberId: C1, subscriberName: 'x', receivedOn: '2027-02-25', amountCents: sowingSize * 2000, method: null, reference: null, applications: [{ documentId: 'i1', amountCents: sowingSize * 2000 }], notes: null }] }, '2027-02');
     expect(paid.wc.receivableCents).toBe(0);
     expect(paid.ledger.balanced).toBe(true);
   });

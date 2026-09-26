@@ -906,9 +906,10 @@ export interface PhaseRow {
 // Restaurants and the retail and wholesale stay defined as channels — their
 // prices, units and menus — with no planned volume until they are booked.
 export const phases: readonly PhaseRow[] = [
-  { phase: 1, market: 'Subscriptions', character: 'Weekday AM peak, ~180 days, Aug–May', pricePerUnit: 10, unitsPerDay: 1000, operatingDays: 180 },
-  { phase: 2, market: 'Restaurants', character: 'Weekday midday, year-round', pricePerUnit: 15, unitsPerDay: 0, operatingDays: 250 },
-  { phase: 3, market: 'Retail and wholesale', character: 'Evenings, weekends, summer', pricePerUnit: 16, unitsPerDay: 0, operatingDays: 333 },
+  // Prices per 1020 flat: Vallecito's $20 subscription and $25 retail (DATED, 2023); the restaurant price is a PLACEHOLDER until quoted.
+  { phase: 1, market: 'Subscriptions', character: 'Bi-weekly and monthly flats, pickup or route', pricePerUnit: 20, unitsPerDay: 1000, operatingDays: 180 },
+  { phase: 2, market: 'Restaurants', character: 'Weekly cut and live trays, year-round', pricePerUnit: 15, unitsPerDay: 0, operatingDays: 250 },
+  { phase: 3, market: 'Retail and wholesale', character: 'Retail corner and wholesale accounts', pricePerUnit: 25, unitsPerDay: 0, operatingDays: 333 },
 ];
 
 // Per-phase cost & unit profile. Same crop plan across all three phases for
