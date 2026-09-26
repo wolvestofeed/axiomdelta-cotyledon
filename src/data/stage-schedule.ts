@@ -144,16 +144,20 @@ export const SPROUT_STAGES: readonly StageDef[] = [
 
 export const STAGE_BY_KEY: Readonly<Record<StageKey, StageDef>> = Object.fromEntries(STAGES.map((s) => [s.key, s])) as Record<StageKey, StageDef>;
 
+/** Fluid ounces in a US gallon. Watering is in fluid ounces; every other volume is in gallons. */
+export const FL_OZ_PER_GAL = 128;
+
 /**
- * Liters of water one 1020 tray takes per watering, by method. The nutrient line's volume over the
- * cycle is the sum of waterings from the stage it starts. No volume has been observed; a
- * watering log replaces these.
+ * Fluid ounces of water one 1020 tray takes per watering, by method. Water per tray per day is
+ * this times the waterings that day; the nutrient line's volume over the cycle is the sum of
+ * waterings from the stage it starts. The rinse is the pint jar's, on a sprout plan only; a
+ * live tray has none.
  */
-export const WATER_PER_WATERING_L: Readonly<Record<WateringMethod, Tagged>> = {
-  none: tagged(0, 'STATED', 'L', 'No watering'),
-  mist: tagged(0.1, 'PLACEHOLDER', 'L', 'A misting pass over one 1020; no volume observed'),
-  bottom: tagged(0.5, 'PLACEHOLDER', 'L', 'Bottom watering one 1020 in its solid tray; no volume observed'),
-  rinse: tagged(0.5, 'PLACEHOLDER', 'L', 'One rinse of a pint jar; no volume observed'),
+export const WATER_PER_WATERING_OZ: Readonly<Record<WateringMethod, Tagged>> = {
+  none: tagged(0, 'STATED', 'fl oz', 'No watering'),
+  mist: tagged(1, 'PLACEHOLDER', 'fl oz', 'A misting pass over one 1020; no volume observed'),
+  bottom: tagged(14, 'PLACEHOLDER', 'fl oz', 'Bottom watering one 1020 in its solid tray, an average; no volume observed'),
+  rinse: tagged(16.9, 'PLACEHOLDER', 'fl oz', 'One rinse of a pint jar; no volume observed'),
 };
 
 /** Days per stage for one variety, in stage order. Stages a variety skips carry zero. */
@@ -185,9 +189,9 @@ export function stagesFrom(from: StageKey, stages: readonly StageDef[] = STAGES)
   return (i < 0 ? [] : stages.slice(i)).filter((s) => s.key !== 'packed');
 }
 
-/** Liters of water one 1020 tray takes from a stage onward: waterings per day, days, liters per watering. */
-export function waterLitersFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES): number {
-  return stagesFrom(from, stages).reduce((sum, s) => sum + s.wateringsPerDay * days[s.key as Exclude<StageKey, 'packed'>] * WATER_PER_WATERING_L[s.watering].value, 0);
+/** Fluid ounces of water one 1020 tray takes from a stage onward: waterings per day, days, ounces per watering. */
+export function waterOzFrom(from: StageKey, days: StageDays, stages: readonly StageDef[] = STAGES): number {
+  return stagesFrom(from, stages).reduce((sum, s) => sum + s.wateringsPerDay * days[s.key as Exclude<StageKey, 'packed'>] * WATER_PER_WATERING_OZ[s.watering].value, 0);
 }
 
 /** Days a tray is under the lights from a stage onward. */

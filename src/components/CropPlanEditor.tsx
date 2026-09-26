@@ -28,7 +28,7 @@ import { money, num } from '@/components/ui';
 /** The editor's working copy: plain numbers, null where a line defers to the catalog. */
 interface DraftSeed { kind: 'seed'; varietyKey: string; gramsPerTray: number; share: number }
 interface DraftMedium { kind: 'medium'; mediumKey: MediumKey; qtyPerTray: number | null }
-interface DraftNutrient { kind: 'nutrient'; nutrientKey: NutrientKey; mlPerL: number | null; startsAt: StageKey }
+interface DraftNutrient { kind: 'nutrient'; nutrientKey: NutrientKey; mlPerGal: number | null; startsAt: StageKey }
 interface DraftLight { kind: 'light'; regimeKey: LightRegimeKey; ppfd: number | null; startsAt: StageKey }
 type DraftLine = DraftSeed | DraftMedium | DraftNutrient | DraftLight;
 
@@ -49,7 +49,7 @@ function toDraftLine(l: GrowPlanLine): DraftLine {
     case 'medium':
       return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray?.value ?? null };
     case 'nutrient':
-      return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerL: l.mlPerL?.value ?? null, startsAt: l.startsAt };
+      return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerGal: l.mlPerGal?.value ?? null, startsAt: l.startsAt };
     case 'light':
       return { kind: 'light', regimeKey: l.regimeKey, ppfd: l.ppfd?.value ?? null, startsAt: l.startsAt };
   }
@@ -74,7 +74,7 @@ function toPlan(d: Draft): GrowPlanDef {
         case 'medium':
           return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray === null ? null : tagged(l.qtyPerTray, 'STATED', 'per tray', EDITOR) };
         case 'nutrient':
-          return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerL: l.mlPerL === null ? null : tagged(l.mlPerL, 'STATED', 'ml/L', EDITOR), startsAt: l.startsAt };
+          return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerGal: l.mlPerGal === null ? null : tagged(l.mlPerGal, 'STATED', 'ml/gal', EDITOR), startsAt: l.startsAt };
         case 'light':
           return { kind: 'light', regimeKey: l.regimeKey, ppfd: l.ppfd === null ? null : tagged(l.ppfd, 'STATED', 'µmol/m²/s', EDITOR), startsAt: l.startsAt };
       }
@@ -109,7 +109,7 @@ export function CropPlanEditor({
     const first = VARIETIES[0]!;
     const base: Draft = plan
       ? { code: plan.code, name: plan.name, status: plan.status, channels: [...plan.channels], format: plan.format, note: plan.note, lines: plan.lines.map(toDraftLine) }
-      : { code: '', name: first.name, status: 'developing', channels: [1], format: 'flat-1020', note: '', lines: [toDraftLine(seedLineFor(first, 'flat-1020')), { kind: 'medium', mediumKey: first.media.defaultMedium, qtyPerTray: null }, { kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerL: null, startsAt: 'light' }, { kind: 'light', regimeKey: first.light.defaultRegime, ppfd: null, startsAt: 'light' }] };
+      : { code: '', name: first.name, status: 'developing', channels: [1], format: 'flat-1020', note: '', lines: [toDraftLine(seedLineFor(first, 'flat-1020')), { kind: 'medium', mediumKey: first.media.defaultMedium, qtyPerTray: null }, { kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' }, { kind: 'light', regimeKey: first.light.defaultRegime, ppfd: null, startsAt: 'light' }] };
     if (mode === 'edit') return base;
     const prefix = codePrefixFor(toPlan(base));
     return { ...base, code: nextCropPlanCode(codes, prefix), name: plan ? `${plan.name} (copy)` : base.name, status: 'developing' };
@@ -205,7 +205,7 @@ export function CropPlanEditor({
         <span className="farm-card-title m-0!">Lines — one {TRAY_FORMAT_BY_KEY[d.format].name}</span>
         <button type="button" className="farm-btn" onClick={() => { const v = VARIETIES.find((x) => !d.lines.some((l) => l.kind === 'seed' && l.varietyKey === x.key)) ?? VARIETIES[0]!; const share = 1 / (d.lines.filter((l) => l.kind === 'seed').length + 1); setD((x) => recode({ ...x, lines: [...x.lines.map((l) => (l.kind === 'seed' ? { ...l, share } : l)), toDraftLine(seedLineFor(v, x.format, share))] })); }}>+ seed line</button>
         {!isSprout && !d.lines.some((l) => l.kind === 'medium') && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'medium', mediumKey: leadVariety?.media.defaultMedium ?? 'coco-coir', qtyPerTray: null })}>+ medium line</button>}
-        {!isSprout && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerL: null, startsAt: 'light' })}>+ nutrient line</button>}
+        {!isSprout && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' })}>+ nutrient line</button>}
         {!isSprout && !d.lines.some((l) => l.kind === 'light') && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'light', regimeKey: leadVariety?.light.defaultRegime ?? 'balanced', ppfd: null, startsAt: 'light' })}>+ light line</button>}
       </div>
       <div className="farm-scroll-x">
@@ -249,7 +249,7 @@ export function CropPlanEditor({
                       </span>
                     )}
                     {l.kind === 'medium' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="catalog" value={l.qtyPerTray ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftMedium), qtyPerTray: numOrNull(e.target.value) }))} /> {GROWING_MEDIA.find((m) => m.key === l.mediumKey)?.unit ?? ''}</span>}
-                    {l.kind === 'nutrient' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="catalog" value={l.mlPerL ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftNutrient), mlPerL: numOrNull(e.target.value) }))} /> ml/L</span>}
+                    {l.kind === 'nutrient' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="catalog" value={l.mlPerGal ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftNutrient), mlPerGal: numOrNull(e.target.value) }))} /> ml/gal</span>}
                     {l.kind === 'light' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={5} placeholder="regime" value={l.ppfd ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftLight), ppfd: numOrNull(e.target.value) }))} /> µmol</span>}
                   </td>
                   <td>

@@ -215,7 +215,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
             <Kpi label="Seed per tray" value={`${num(growCosting.seedGramsPerTray, 0)} g`} />
             <Kpi label="Harvest per tray" value={`${num(growCosting.harvestGramsPerTray, 0)} g`} sub="from the variety record until a closed sowing observes it" />
             <Kpi label="Cycle" value={`${growCosting.cycleDays} days`} sub={`${growCosting.daysToHarvest} to harvest, ${growCosting.lightDays} under light`} />
-            <Kpi label="Water per tray" value={`${num(growCosting.waterLitersPerTray, 1)} L`} sub="over the cycle, placeholder volumes" />
+            <Kpi label="Water per tray" value={`${num(growCosting.waterOzPerTray, 0)} fl oz`} sub="over the cycle, placeholder volumes" />
             <Kpi label="Sowing" value={`${cap.grow?.sowingTrays ?? 0} trays`} sub={cap.grow?.binding ? `one ${cap.grow.binding.unit.item}` : 'no grow unit takes this plan'} />
             <Kpi label="Ceiling" value={`${num(cap.grow?.traysPerDay ?? 0, 2)} trays/day`} sub={`${cap.grow?.totalTrays ?? 0} trays across ${cap.grow?.unitCount ?? 0} units over the cycle`} />
             <Kpi label="Unit SKU" value={unitSku(selected.code, growCosting.format.key)} sub="the plan code and the packaged format" />

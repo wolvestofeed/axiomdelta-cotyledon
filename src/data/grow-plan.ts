@@ -51,8 +51,8 @@ export interface MediumLine {
 export interface NutrientLine {
   kind: 'nutrient';
   nutrientKey: NutrientKey;
-  /** Milliliters of concentrate per liter; null = the catalog's default strength. */
-  mlPerL: Tagged | null;
+  /** Milliliters of concentrate per gallon; null = the catalog's default strength. */
+  mlPerGal: Tagged | null;
   /** The stage the solution enters the water. */
   startsAt: StageKey;
 }
@@ -146,7 +146,7 @@ export function singleVarietyPlan(variety: VarietyDef, format: TrayFormatKey = v
   const lines: GrowPlanLine[] = [seedLineFor(variety, format)];
   if (!sprout) {
     lines.push({ kind: 'medium', mediumKey: variety.media.defaultMedium, qtyPerTray: null });
-    lines.push({ kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerL: null, startsAt: 'light' });
+    lines.push({ kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' });
     lines.push({ kind: 'light', regimeKey: variety.light.defaultRegime, ppfd: null, startsAt: 'light' });
   }
   return {

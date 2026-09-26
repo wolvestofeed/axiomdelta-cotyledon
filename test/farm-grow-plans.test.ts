@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { VARIETIES, VARIETY_BY_KEY, VARIETY_BY_CODE } from '@/data/varieties';
 import { TRAY_FORMAT_BY_KEY, PLAN_FORMATS, densityFactorOf, traySetCostPerUnit, unitSku } from '@/data/tray-formats';
 import { MEDIUM_BY_KEY, NUTRIENT_BY_KEY, REGIME_BY_KEY, LIGHT_FIXTURES, FIXTURE_BY_KEY, SANITIZER_PER_TRAY, lightCostPerTrayDay } from '@/data/inputs-catalog';
-import { WATER_PER_WATERING_L, STAGES, SPROUT_STAGES, lightDaysFrom, waterLitersFrom, cycleDays, stagesFrom } from '@/data/stage-schedule';
+import { FL_OZ_PER_GAL, WATER_PER_WATERING_OZ, STAGES, SPROUT_STAGES, lightDaysFrom, waterOzFrom, cycleDays, stagesFrom } from '@/data/stage-schedule';
 import {
   GROW_PLAN_CODE_RX,
   codePrefixFor,
@@ -139,16 +139,17 @@ describe('costing on the four line kinds', () => {
     expect(on7x11.lines[1]!.quantity).toBeCloseTo(m.qtyPer1020.value * TRAY_FORMAT_BY_KEY['tray-7x11'].densityFactor.value, 9);
   });
 
-  it('nutrient: ml per liter over the liters the tray takes from the stage the line starts', () => {
+  it('nutrient: ml per gallon over the gallons the tray takes from the stage the line starts', () => {
     const n = NUTRIENT_BY_KEY['floragrow-npk'];
     const days = planStageDays(broccoli());
-    const liters = waterLitersFrom('light', days);
-    const expectedL = stagesFrom('light').reduce((t, s) => t + s.wateringsPerDay * days[s.key as 'light' | 'harvest-window'] * WATER_PER_WATERING_L[s.watering].value, 0);
-    expect(liters).toBeCloseTo(expectedL, 9);
+    const oz = waterOzFrom('light', days);
+    const expectedOz = stagesFrom('light').reduce((t, s) => t + s.wateringsPerDay * days[s.key as 'light' | 'harvest-window'] * WATER_PER_WATERING_OZ[s.watering].value, 0);
+    expect(oz).toBeCloseTo(expectedOz, 9);
+    const gal = oz / FL_OZ_PER_GAL;
     const line = c.lines[2]!;
-    expect(line.quantity).toBeCloseTo(n.mlPerL.value * liters, 9);
-    expect(line.costPerTray).toBeCloseTo(n.mlPerL.value * liters * n.costPerMl.value, 9);
-    const typed = costGrowPlan({ ...broccoli(), lines: broccoli().lines.map((l) => (l.kind === 'nutrient' ? { ...l, mlPerL: { value: 2 * n.mlPerL.value, status: 'STATED' as const } } : l)) });
+    expect(line.quantity).toBeCloseTo(n.mlPerGal.value * gal, 9);
+    expect(line.costPerTray).toBeCloseTo(n.mlPerGal.value * gal * n.costPerMl.value, 9);
+    const typed = costGrowPlan({ ...broccoli(), lines: broccoli().lines.map((l) => (l.kind === 'nutrient' ? { ...l, mlPerGal: { value: 2 * n.mlPerGal.value, status: 'STATED' as const } } : l)) });
     expect(typed.lines[2]!.costPerTray).toBeCloseTo(2 * line.costPerTray, 9);
   });
 

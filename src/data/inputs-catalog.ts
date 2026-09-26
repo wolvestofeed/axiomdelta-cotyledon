@@ -2,7 +2,7 @@
  * MicroFarm — growing media, nutrient solutions, light fixtures and light regimes (outline §4).
  *
  * The three non-seed line kinds of a grow plan. A medium is costed per tray, a nutrient per
- * liter of water at a concentration, and light per tray per day of the light stage. Seed is
+ * gallon of water at a concentration, and light per tray per day of the light stage. Seed is
  * the fourth kind and lives on the variety (`varieties.ts`).
  *
  * Light is a regime, not a fixture pick (science library, document B): a red-to-blue ratio, a
@@ -27,7 +27,7 @@ export interface GrowingMediumDef {
   form: 'loose' | 'mat' | 'none';
   /** How much one 1020 tray takes; mats are one per tray. Scaled by the format's density factor. */
   qtyPer1020: Tagged;
-  unit: 'L' | 'each' | 'none';
+  unit: 'gal' | 'each' | 'none';
   costPerUnit: Tagged;
   /** Physicochemical traits the science library records, where it does. */
   traits: { ph?: string; porosity?: string; note: string };
@@ -40,9 +40,9 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     key: 'coco-coir',
     name: 'Coconut coir (cocopeat)',
     form: 'loose',
-    qtyPer1020: tagged(2.5, 'PLACEHOLDER', 'L', 'About one inch of expanded coir in a 1020; no fill volume observed'),
-    unit: 'L',
-    costPerUnit: tagged(23.19 / 70, 'DATED', '$/L', 'Mother Earth 5 kg compressed coco bale, $23.19, expands to about 70 L (Vallecito, Jan 2024)'),
+    qtyPer1020: tagged(0.66, 'PLACEHOLDER', 'gal', 'About one inch of expanded coir in a 1020; no fill volume observed'),
+    unit: 'gal',
+    costPerUnit: tagged(23.19 / 18.5, 'DATED', '$/gal', 'Mother Earth 5 kg compressed coco bale, $23.19, expands to about 18.5 gal (Vallecito, Jan 2024)'),
     traits: { ph: '5.5 to 7.0', porosity: '90 to 95%', note: 'High cation exchange capacity, low bulk density, naturally antifungal; more fresh and dry weight than field soil mixes. The default medium.' },
     rows: [65],
   },
@@ -70,9 +70,9 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     key: 'vermiculite',
     name: 'Vermiculite',
     form: 'loose',
-    qtyPer1020: tagged(2.5, 'PLACEHOLDER', 'L', 'About one inch in a 1020'),
-    unit: 'L',
-    costPerUnit: tagged(0.6, 'PLACEHOLDER', '$/L', 'No receipt yet'),
+    qtyPer1020: tagged(0.66, 'PLACEHOLDER', 'gal', 'About one inch in a 1020'),
+    unit: 'gal',
+    costPerUnit: tagged(2.27, 'PLACEHOLDER', '$/gal', 'No receipt yet'),
     traits: { note: 'Hydrous phyllosilicate, sterile, aerating. Raised antioxidants in basil with jute; blends with peat prevent damping-off.' },
     rows: [8, 2],
   },
@@ -80,9 +80,9 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     key: 'peat-vermiculite',
     name: 'Peat and vermiculite blend',
     form: 'loose',
-    qtyPer1020: tagged(2.5, 'PLACEHOLDER', 'L', ''),
-    unit: 'L',
-    costPerUnit: tagged(0.5, 'PLACEHOLDER', '$/L', 'No receipt yet'),
+    qtyPer1020: tagged(0.66, 'PLACEHOLDER', 'gal', ''),
+    unit: 'gal',
+    costPerUnit: tagged(1.89, 'PLACEHOLDER', '$/gal', 'No receipt yet'),
     traits: { note: 'Moisture retention from peat, aeration from vermiculite. Peat extraction is the sustainability cost the alternatives avoid.' },
     rows: [2, 8],
   },
@@ -115,8 +115,8 @@ export type NutrientKey = 'floragrow-npk' | 'kelp' | 'sulfur-supplement' | 'none
 export interface NutrientSolutionDef {
   key: NutrientKey;
   name: string;
-  /** Milliliters of concentrate per liter of water at the default strength. */
-  mlPerL: Tagged;
+  /** Milliliters of concentrate per gallon of water at the default strength. */
+  mlPerGal: Tagged;
   costPerMl: Tagged;
   /** Target solution strength and acidity for hydroponic plans; null where the solution is not managed to a target. */
   ecTarget: Tagged | null;
@@ -130,7 +130,7 @@ export const NUTRIENT_SOLUTIONS: readonly NutrientSolutionDef[] = [
   {
     key: 'floragrow-npk',
     name: 'FloraGrow NPK',
-    mlPerL: tagged(2.5, 'PLACEHOLDER', 'ml/L', 'Label mid-strength; no per-variety strength observed'),
+    mlPerGal: tagged(9.5, 'PLACEHOLDER', 'ml/gal', 'Label mid-strength; no per-variety strength observed'),
     costPerMl: tagged(175 / 3785, 'DATED', '$/ml', 'Vallecito capex line: FloraGrow NPK $175 per gallon set (2023)'),
     ecTarget: tagged(1.2, 'PLACEHOLDER', 'mS/cm', ''),
     phTarget: tagged(6.0, 'PLACEHOLDER', 'pH', ''),
@@ -140,7 +140,7 @@ export const NUTRIENT_SOLUTIONS: readonly NutrientSolutionDef[] = [
   {
     key: 'kelp',
     name: 'Liquid kelp',
-    mlPerL: tagged(2, 'PLACEHOLDER', 'ml/L', ''),
+    mlPerGal: tagged(7.6, 'PLACEHOLDER', 'ml/gal', ''),
     costPerMl: tagged(0.03, 'PLACEHOLDER', '$/ml', 'No receipt yet'),
     ecTarget: null,
     phTarget: null,
@@ -150,7 +150,7 @@ export const NUTRIENT_SOLUTIONS: readonly NutrientSolutionDef[] = [
   {
     key: 'sulfur-supplement',
     name: 'Sulfur supplement (brassicas)',
-    mlPerL: tagged(1, 'PLACEHOLDER', 'ml/L', 'No rate observed'),
+    mlPerGal: tagged(3.8, 'PLACEHOLDER', 'ml/gal', 'No rate observed'),
     costPerMl: tagged(0.02, 'PLACEHOLDER', '$/ml', 'No receipt yet'),
     ecTarget: tagged(1.4, 'PLACEHOLDER', 'mS/cm', ''),
     phTarget: tagged(6.0, 'PLACEHOLDER', 'pH', ''),
@@ -160,7 +160,7 @@ export const NUTRIENT_SOLUTIONS: readonly NutrientSolutionDef[] = [
   {
     key: 'none',
     name: 'Water only',
-    mlPerL: tagged(0, 'STATED', 'ml/L', ''),
+    mlPerGal: tagged(0, 'STATED', 'ml/gal', ''),
     costPerMl: tagged(0, 'STATED', '$/ml', ''),
     ecTarget: null,
     phTarget: null,

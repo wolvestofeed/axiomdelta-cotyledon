@@ -33,7 +33,7 @@ const TYPED = 'Typed in the grow plan editor';
 
 const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1) });
 const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.enum(['coco-coir', 'jute-mat', 'hemp-mat', 'vermiculite', 'peat-vermiculite', 'hydro-pad', 'none']), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
-const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.enum(['floragrow-npk', 'kelp', 'sulfur-supplement', 'none']), mlPerL: z.number().min(0).max(1_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
+const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.enum(['floragrow-npk', 'kelp', 'sulfur-supplement', 'none']), mlPerGal: z.number().min(0).max(4_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LightLineIn = z.object({ kind: z.literal('light'), regimeKey: z.enum(['yield', 'balanced', 'nutrition-forward', 'biofortify-far-red', 'continuous']), ppfd: z.number().min(0).max(2_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LineIn = z.discriminatedUnion('kind', [SeedLineIn, MediumLineIn, NutrientLineIn, LightLineIn]);
 
@@ -59,7 +59,7 @@ function toGrowPlan(d: z.infer<typeof GrowPlanInput>): GrowPlanDef {
       case 'medium':
         return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray === null ? null : tagged(l.qtyPerTray, 'STATED', 'per tray', TYPED) };
       case 'nutrient':
-        return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerL: l.mlPerL === null ? null : tagged(l.mlPerL, 'STATED', 'ml/L', TYPED), startsAt: l.startsAt };
+        return { kind: 'nutrient', nutrientKey: l.nutrientKey, mlPerGal: l.mlPerGal === null ? null : tagged(l.mlPerGal, 'STATED', 'ml/gal', TYPED), startsAt: l.startsAt };
       case 'light':
         return { kind: 'light', regimeKey: l.regimeKey, ppfd: l.ppfd === null ? null : tagged(l.ppfd, 'STATED', 'µmol/m²/s', TYPED), startsAt: l.startsAt };
     }

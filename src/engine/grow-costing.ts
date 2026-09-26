@@ -6,7 +6,7 @@
  *   seed        grams per tray over 453.59 × the variety's price per pound (the rolling cost from
  *               receipts once there are receipts; the record's opening price until then)
  *   medium      quantity per tray × the medium's cost per unit
- *   nutrient    ml/L × the liters the tray takes from the stage the line starts × cost per ml
+ *   nutrient    ml/gal × the gallons the tray takes from the stage the line starts × cost per ml
  *   light       energy and amortized fixture per tray-day on the facility's fixture × the days
  *               under light from the stage the line starts
  *   consumables the tray set over its uses, plus sanitizer, by format
@@ -34,7 +34,7 @@ import {
   type LightRegimeDef,
   type NutrientSolutionDef,
 } from '@/data/inputs-catalog';
-import { cycleDays, daysToHarvest, lightDaysFrom, waterLitersFrom, type StageDays } from '@/data/stage-schedule';
+import { cycleDays, daysToHarvest, lightDaysFrom, FL_OZ_PER_GAL, waterOzFrom, type StageDays } from '@/data/stage-schedule';
 import { GRAMS_PER_OZ, GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import { leadVariety, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
@@ -97,8 +97,8 @@ export interface GrowPlanCosting {
   cycleDays: number;
   daysToHarvest: number;
   lightDays: number;
-  /** Liters the tray takes over its whole cycle. */
-  waterLitersPerTray: number;
+  /** Fluid ounces of water the tray takes over its whole cycle. */
+  waterOzPerTray: number;
   perTray: { seed: number; medium: number; nutrient: number; light: number; consumables: number; total: number };
   /** Cost per harvested ounce at the record's yield; zero with no harvest weight. */
   costPerHarvestOz: number;
@@ -172,9 +172,9 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           lines.push({ line, label: n?.name ?? line.nutrientKey, quantity: 0, quantityUnit: 'ml', unitCost: 0, costPerTray: 0, status: 'STATED', source: 'Water only', basis: 'None' });
           break;
         }
-        const liters = waterLitersFrom(line.startsAt, days, stages) * density;
-        const mlPerL = line.mlPerL?.value ?? n.mlPerL.value;
-        const ml = mlPerL * liters;
+        const oz = waterOzFrom(line.startsAt, days, stages) * density;
+        const mlPerGal = line.mlPerGal?.value ?? n.mlPerGal.value;
+        const ml = (mlPerGal * oz) / FL_OZ_PER_GAL;
         lines.push({
           line,
           label: n.name,
@@ -184,7 +184,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           costPerTray: ml * n.costPerMl.value,
           status: n.costPerMl.status,
           source: n.costPerMl.note ?? '',
-          basis: `${mlPerL} ml/L × ${liters.toFixed(2)} L from ${line.startsAt}`,
+          basis: `${mlPerGal} ml/gal × ${(oz / FL_OZ_PER_GAL).toFixed(3)} gal (${oz.toFixed(1)} fl oz) from ${line.startsAt}`,
         });
         break;
       }
@@ -214,7 +214,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
   const consumables = traySetCostPerUnit(format) + ctx.sanitizerPerTray;
   const perTray = { seed: sum('seed'), medium: sum('medium'), nutrient: sum('nutrient'), light: sum('light'), consumables, total: 0 };
   perTray.total = perTray.seed + perTray.medium + perTray.nutrient + perTray.light + perTray.consumables;
-  const waterLiters = waterLitersFrom(stages[0]!.key, days, stages) * density;
+  const waterOz = waterOzFrom(stages[0]!.key, days, stages) * density;
   return {
     code: plan.code,
     format,
@@ -226,7 +226,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
     cycleDays: cycleDays(days),
     daysToHarvest: daysToHarvest(days),
     lightDays,
-    waterLitersPerTray: waterLiters,
+    waterOzPerTray: waterOz,
     perTray,
     costPerHarvestOz: harvestGrams > 0 ? perTray.total / (harvestGrams / GRAMS_PER_OZ) : 0,
     fixture: ctx.fixture,
