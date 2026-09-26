@@ -17,7 +17,6 @@
  * added to the unit cost outside this module, never inside it.
  */
 
-import { OZ_PER_LB, GRAMS_PER_OZ } from '@/data/nutrient-profile';
 import type { StatusTag } from '@/data/tagged';
 import {
   DEFAULT_LIGHT_REGIME,
@@ -36,11 +35,11 @@ import {
   type NutrientSolutionDef,
 } from '@/data/inputs-catalog';
 import { cycleDays, daysToHarvest, lightDaysFrom, waterLitersFrom, type StageDays } from '@/data/stage-schedule';
-import { TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
+import { GRAMS_PER_OZ, GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import { leadVariety, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 
-export const GRAMS_PER_LB = GRAMS_PER_OZ * OZ_PER_LB;
+export { GRAMS_PER_LB };
 
 /** The reference data a plan is costed against. Defaults are the catalogs and the facility's first fixture. */
 export interface GrowCostContext {

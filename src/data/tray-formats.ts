@@ -10,6 +10,10 @@
 
 import { tagged, type Tagged } from '@/data/tagged';
 
+export const GRAMS_PER_OZ = 28.349523125;
+export const OZ_PER_LB = 16;
+export const GRAMS_PER_LB = GRAMS_PER_OZ * OZ_PER_LB;
+
 export type TrayFormatKey = 'flat-1020' | 'tray-7x11' | 'insert-5x5' | 'pint-jar' | 'cut-oz';
 
 export type UnitKind = 'live' | 'sprout' | 'cut';

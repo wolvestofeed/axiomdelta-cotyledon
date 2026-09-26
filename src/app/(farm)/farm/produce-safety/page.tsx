@@ -3,7 +3,9 @@ import { PageHeader, Card, Kpi, Notice } from '@/components/ui';
 import { controlPoints } from '@/data/plan-data';
 import { clock } from '@/data/crews';
 import { getResolvedActiveInputs } from '@/server/scenarios';
-import { CCP2_LIMITS, evaluateCcp2 } from '@/engine/produce-safety';
+import { CCP2_LIMITS, evaluateCcp2, controlPointsForPlan, STAGE_CONTROL_POINTS } from '@/engine/produce-safety';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { StatusBadge } from '@/components/ui';
 import { stageLoadsOf } from '@/engine/sowing';
 import { loadActuals } from '@/server/actuals';
 import { listOrders } from '@/server/orders';
@@ -73,7 +75,7 @@ async function ProduceSafetyPageInner() {
       <PageHeader
         title="Produce Safety"
         purpose="Log critical control points and cooling, and trace any lot both ways."
-        functions={['Critical control points', 'control-point-2 cooling log', 'Trace', 'Coverage']}
+        functions={['Stage control points', 'Cooling log', 'Trace', 'Coverage']}
         connects={[
           { href: '/farm/production-planning', dir: 'from' },
           { href: '/farm/inventory', dir: 'both' },
@@ -89,13 +91,49 @@ async function ProduceSafetyPageInner() {
       />
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={controlPoints.length} label="Critical control points" sub="control-point-1 through control-point-5" />
+        <Kpi value={STAGE_CONTROL_POINTS.length} label="Stage control points" sub="seed sanitation, spent-water test, temperature and humidity, harvest check" />
+        <Kpi value={controlPoints.length} label="Phase 1-era critical control points" sub="on the cooling log until the sowing record is re-based" />
         <Kpi value={`${completeLots} / ${blackoutLots.length}`} label="Blackout lots with every load recorded" sub={missingRecord.length === 0 ? 'Every rack load of every blackout component' : `${missingRecord.length} lot(s) with a load unrecorded`} />
         <Kpi value={failed.length} label="Failed stage records" sub="Computed from the readings, one per rack load" />
         <Kpi value={`${tracedBack} / ${coolingLog.length}`} label="Records traceable to a supplier" sub="Recorded at receiving" />
       </div>
 
-      <Card title="Critical control points" className="mt-4">
+      <Card title="Stage control points" className="mt-4">
+        <div className="farm-scroll-x">
+          <table className="farm-table">
+            <thead>
+              <tr><th>Control point</th><th>Stages</th><th>Applies to</th><th>Hazard</th><th>Critical limit</th><th>Monitoring</th><th>Corrective action</th><th>Record</th></tr>
+            </thead>
+            <tbody>
+              {STAGE_CONTROL_POINTS.map((c) => (
+                <tr key={c.id}>
+                  <td className="font-medium!">{c.name}</td>
+                  <td className="farm-c-soft">{c.stages.join(', ')}</td>
+                  <td className="farm-c-soft">{c.appliesTo === 'all' ? 'every plan' : c.appliesTo === 'sprout' ? 'jar plans' : 'tray plans'}</td>
+                  <td className="farm-c-soft max-w-56!">{c.hazard}</td>
+                  <td className="max-w-72!"><StatusBadge status={c.criticalLimit.status} title={c.criticalLimit.note} /> <span className="farm-c-soft">{c.criticalLimit.value}</span></td>
+                  <td className="farm-c-soft max-w-56!">{c.monitoring}</td>
+                  <td className="farm-c-soft max-w-56!">{c.correctiveAction}</td>
+                  <td className="farm-c-soft">{c.record}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="farm-scroll-x mt-3!">
+          <table className="farm-table compact">
+            <thead><tr><th>Plan</th><th>Format</th><th>Control points on its stages</th></tr></thead>
+            <tbody>
+              {inputs.cropPlans.filter(isGrowPlanCarrier).map((r) => (
+                <tr key={r.code}><td>{r.code} · {r.name}</td><td>{r.plan.format}</td><td>{controlPointsForPlan(r.plan).map((c) => c.name).join(', ')}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="farm-kpi-sub mt-2">The sprout limits rest on 21 CFR Part 112 Subpart M, registered on Sources. The grow-room temperature and humidity band is the operator&rsquo;s to state in the produce safety plan; until then readings are recorded and none is judged.</p>
+      </Card>
+
+      <Card title="Phase 1-era critical control points" className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>

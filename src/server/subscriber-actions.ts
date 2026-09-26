@@ -7,6 +7,10 @@ import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, fa
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
+import { TARGET_BY_KEY } from '@/data/nutrition-targets';
+
+/** Only keys the catalog knows are stored, once each. */
+const knownTargets = (keys: readonly string[]): string[] => [...new Set(keys)].filter((k) => k in TARGET_BY_KEY);
 
 /**
  * MicroFarm — subscribers and pickup points, writes. SUPER ADMIN ONLY.
@@ -39,6 +43,8 @@ const SubscriberInput = z.object({
   contractEnd: isoDate.nullable().default(null),
   prospectId: z.string().max(120).nullable().default(null),
   notes: z.string().max(2000).nullable().default(null),
+  /** Keys from the nutrition target catalog; unknown keys are dropped. */
+  nutritionTargets: z.array(z.string().max(60)).max(50).default([]),
 });
 
 export async function createSubscriber(...args: Parameters<typeof createSubscriberInner>): ReturnType<typeof createSubscriberInner> {
@@ -54,7 +60,7 @@ async function createSubscriberInner(input: unknown): Promise<Result<{ id: strin
   } catch (e) {
     return refuse(e);
   }
-  const inserted = await db.insert(farmSubscribers).values({ ...parsed.data, createdBy: access.userId }).returning({ id: farmSubscribers.id });
+  const inserted = await db.insert(farmSubscribers).values({ ...parsed.data, nutritionTargets: knownTargets(parsed.data.nutritionTargets), createdBy: access.userId }).returning({ id: farmSubscribers.id });
   if (!inserted[0]) return { ok: false, error: 'Failed to save the subscriber.' };
   revalidatePath('/farm', 'layout');
   return { ok: true, id: inserted[0].id };
@@ -73,7 +79,7 @@ async function updateSubscriberInner(input: unknown): Promise<Result> {
     return refuse(e);
   }
   const { id, ...rest } = parsed.data;
-  await db.update(farmSubscribers).set({ ...rest, source: 'user_built', updatedAt: new Date() }).where(eq(farmSubscribers.id, id));
+  await db.update(farmSubscribers).set({ ...rest, nutritionTargets: knownTargets(rest.nutritionTargets), source: 'user_built', updatedAt: new Date() }).where(eq(farmSubscribers.id, id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }

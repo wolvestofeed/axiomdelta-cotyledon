@@ -152,7 +152,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     media: { defaultMedium: 'coco-coir', notes: [{ text: 'Soilless media gave Sango radish superior shoot height and width.', rows: [66] }] },
     profile: {
       compounds: ['anthocyanins', 'glucosinolates', 'lutein', 'beta-carotene'],
-      nutrients: ['vitamin A', 'vitamin B', 'vitamin C', 'vitamin E', 'vitamin K', 'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'amino acids'],
+      nutrients: ['vitamin A', 'B vitamins', 'vitamin C', 'vitamin E', 'vitamin K', 'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'amino acids'],
       benefits: [
         { statement: 'Purple radish carries anthocyanins, the pigment that is also an antioxidant.', evidence: 'human', rows: [9] },
         { statement: 'Sango radish accumulates lutein and beta-carotene, the carotenoids of eye health.', evidence: 'human', rows: [15] },
@@ -182,7 +182,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     media: { defaultMedium: 'coco-coir', notes: [{ text: 'Soil-based media such as coir preferred by the supplier.', rows: [59] }] },
     profile: {
       compounds: ['fumaric acid', 'phenolic acids'],
-      nutrients: ['calcium', 'potassium', 'protein', 'iron', 'phosphorus', 'magnesium', 'vitamin A', 'vitamin C', 'B complex', 'vitamin E'],
+      nutrients: ['calcium', 'potassium', 'protein', 'iron', 'phosphorus', 'magnesium', 'vitamin A', 'vitamin C', 'B vitamins', 'vitamin E'],
       benefits: [
         { statement: 'Sunflower accumulates the most calcium of a six-species panel and 67.55 mg vitamin C per 100 g.', evidence: 'human', rows: [14] },
         { statement: 'Fumaric acid peaks in sunflower among the organic acids.', evidence: 'human', rows: [14] },
@@ -267,7 +267,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     media: { defaultMedium: 'coco-coir', notes: [] },
     profile: {
       compounds: ['gamma-linolenic acid'],
-      nutrients: ['vitamin C', 'vitamin B', 'vitamin K', 'folate', 'fiber', 'iron', 'calcium', 'magnesium'],
+      nutrients: ['vitamin C', 'B vitamins', 'vitamin K', 'folate', 'fiber', 'iron', 'calcium', 'magnesium'],
       benefits: [{ statement: 'Vitamins B, C and K, folic acid and fiber.', evidence: 'supplier', rows: [59] }],
       glossary: ['essential-fatty-acid'],
     },
@@ -356,7 +356,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [] },
     media: { defaultMedium: 'jute-mat', notes: [{ text: 'A mat suits a gelling seed sown on the surface.', rows: [] }] },
     profile: {
-      compounds: ['omega-3 fatty acids', 'antioxidants'],
+      compounds: ['omega-3', 'antioxidants'],
       nutrients: ['omega-3', 'fiber', 'protein', 'calcium', 'iron', 'magnesium'],
       benefits: [{ statement: 'Omega oils, antioxidants, amino acids and protein.', evidence: 'supplier', rows: [59] }],
       glossary: ['essential-fatty-acid', 'dietary-fiber'],
@@ -381,7 +381,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [{ text: 'Sprouts grow in the dark; no light line.', rows: [] }] },
     media: { defaultMedium: 'none', notes: [] },
     profile: {
-      compounds: ['dietary fiber', 'flavonoids'],
+      compounds: ['fiber', 'flavonoids'],
       nutrients: ['protein', 'calcium', 'iron', 'vitamin C', 'potassium', 'phosphorus', 'magnesium', 'zinc', 'B vitamins'],
       benefits: [
         { statement: 'Mung bean microgreens hold more vitamin C than mung bean sprouts and about twice the fiber, with more calcium, magnesium, iron and zinc.', evidence: 'human', rows: [10] },
@@ -439,7 +439,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     media: { defaultMedium: 'none', notes: [] },
     profile: {
       compounds: [],
-      nutrients: ['vitamin B', 'vitamin C', 'vitamin K', 'folate', 'fiber'],
+      nutrients: ['B vitamins', 'vitamin C', 'vitamin K', 'folate', 'fiber'],
       benefits: [{ statement: 'Vitamins B, C and K, folic acid and fiber.', evidence: 'supplier', rows: [59] }],
       glossary: ['sprout', 'dietary-fiber'],
     },

@@ -27,7 +27,8 @@ import { SupplierPicker } from '@/components/SupplierPicker';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
 import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
 import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
-import { LINE_KIND_LABELS } from '@/data/grow-plan';
+import { LINE_KIND_LABELS, leadVariety } from '@/data/grow-plan';
+import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { unitSku } from '@/data/tray-formats';
 
 export function CropPlansClient({ standards, today }: { standards: StandardVersionDoc[]; today: string }) {
@@ -67,6 +68,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
     });
   const costing = useMemo(() => costCropPlan(selected), [selected]);
   const growCosting = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
+  const leadVarietyOf = isGrowPlanCarrier(selected) ? leadVariety(selected.plan) : undefined;
+  const planTargets = useMemo(() => (isGrowPlanCarrier(selected) ? targetsOfPlan(selected.plan) : []), [selected]);
   const linesLinked = costing.lines.filter((l) => links[l.name]).length;
   const cap = useMemo(
     () => deriveCapacity(selected, resolved.capacityInputs),
@@ -358,6 +361,29 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
       </Card>
 
 
+      {growCosting && leadVarietyOf && (
+        <Card title={`Nutrient profile — ${leadVarietyOf.name}`} className="mt-4">
+          <p className="farm-kpi-sub mb-2">What the variety record states, each benefit citing its rows of the science library. The targets this plan carries are what the Flat Builder reads it against.</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <div className="farm-kpi-sub">Compounds</div>
+              <div>{leadVarietyOf.profile.compounds.join(', ') || '—'}</div>
+              <div className="farm-kpi-sub mt-2!">Nutrients</div>
+              <div>{leadVarietyOf.profile.nutrients.join(', ') || '—'}</div>
+              <div className="farm-kpi-sub mt-2!">Targets carried</div>
+              <div>{planTargets.map((t) => t.name).join(', ') || '—'}</div>
+            </div>
+            <div>
+              <div className="farm-kpi-sub">Stated benefits</div>
+              <ul className="list-disc pl-5">
+                {leadVarietyOf.profile.benefits.map((b, i) => <li key={i}>{b.statement} <span className="farm-kpi-sub">({b.evidence}; rows {b.rows.join(', ')})</span></li>)}
+                {leadVarietyOf.profile.benefits.length === 0 && <li className="farm-kpi-sub">No stated benefit on file.</li>}
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+      {!growCosting && (
       <Card title="Unit spec — what the packed weight is anchored to" className="mt-4">
         <p className="text-sm farm-c-soft mb-3!">
           The packed weight is not a preference. It is the weight that distributes this
@@ -465,6 +491,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
       </Card>
 
+      )}
       <CropPlanPackagingCard
         cropPlanCode={selected.code}
         cropPlanId={(libraryCropPlan as { id?: string } | undefined)?.id}

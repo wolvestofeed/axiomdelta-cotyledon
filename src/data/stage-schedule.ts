@@ -134,6 +134,11 @@ export const SPROUT_STAGES: readonly StageDef[] = [
     occupiesGrowUnit: true,
     underLight: false,
   },
+  {
+    ...STAGES[5]!,
+    action: 'Sprouts at full length, drained on the stand. A jar is distributed in this window once its spent-water test is negative.',
+    watering: 'rinse',
+  },
   STAGES[6]!,
 ];
 

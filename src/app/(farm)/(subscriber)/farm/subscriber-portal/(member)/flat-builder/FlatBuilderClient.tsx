@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, money, num } from '@/components/ui';
+import { VARIETY_BY_KEY } from '@/data/varieties';
+import { benefitsFor, TARGET_BY_KEY } from '@/data/nutrition-targets';
 
 /** The major food allergens a client flags; a note covers anything else. */
 const ALLERGENS = ['Milk', 'Egg', 'Wheat / gluten', 'Soy', 'Peanut', 'Tree nut', 'Fish', 'Shellfish', 'Sesame'] as const;
@@ -14,8 +16,9 @@ interface Line {
 
 /** What the Flat Builder reads — the plan of record's definitions, loaded on the server (the portal shell has no scenario store). */
 export interface FlatBuilderData {
-  subscribers: { id: string; name: string; channel: number; pricePerUnitCents: number | null; pickupPoints: { id: string; name: string }[] }[];
-  cropPlans: { code: string; name: string; channels: number[] }[];
+  subscribers: { id: string; name: string; channel: number; pricePerUnitCents: number | null; nutritionTargets: string[]; pickupPoints: { id: string; name: string }[] }[];
+  cropPlans: { code: string; name: string; channels: number[]; varieties: string[] }[];
+  targets: { key: string; name: string; kind: 'nutrient' | 'compound'; varieties: string[] }[];
   channels: { phase: number; market: string; pricePerUnit: number }[];
   packages: { id: string; name: string; channels: number[]; material: string | null; endOfUse: string | null; unitCost: number | null }[];
 }
@@ -29,6 +32,7 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
   const cropPlans = useMemo(() => data.cropPlans.filter((r) => r.channels.includes(channel)), [data.cropPlans, channel]);
   const packages = useMemo(() => data.packages.filter((p) => p.channels.includes(channel)), [data.packages, channel]);
 
+  const [targets, setTargets] = useState<string[]>(subscriber?.nutritionTargets ?? []);
   const [serviceDate, setServiceDate] = useState('');
   const [arrival, setArrival] = useState('');
   const [headcount, setHeadcount] = useState('');
@@ -49,13 +53,28 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
   const pkg = packages.find((p) => p.id === packageId) ?? null;
   const pkgCost = pkg?.unitCost ?? null;
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  const coverage = useMemo(() => {
+    const onFlat = new Map<string, string[]>();
+    for (const l of lines) {
+      const plan = data.cropPlans.find((r) => r.code === l.cropPlanCode);
+      for (const v of plan?.varieties ?? []) onFlat.set(v, [...new Set([...(onFlat.get(v) ?? []), plan!.code])]);
+    }
+    return targets.map((key) => {
+      const t = data.targets.find((x) => x.key === key);
+      if (!t) return null;
+      const by = t.varieties.filter((v) => onFlat.has(v)).map((v) => ({ variety: VARIETY_BY_KEY[v]!, planCodes: onFlat.get(v)!, benefits: TARGET_BY_KEY[key] ? benefitsFor(VARIETY_BY_KEY[v]!, TARGET_BY_KEY[key]!) : [] }));
+      const carriedBy = data.cropPlans.filter((r) => !lines.some((l) => l.cropPlanCode === r.code) && r.varieties.some((v) => t.varieties.includes(v)));
+      return { target: t, covered: by.length > 0, by, carriedBy };
+    }).filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [lines, targets, data.cropPlans, data.targets]);
+  const covered = coverage.filter((c) => c.covered).length;
 
   return (
     <>
       <Card title="Client and date of service">
         <div className="flex flex-wrap gap-3 items-end">
           <label className="farm-kpi-sub">Subscriber<br />
-            <select className="farm-select" value={subscriberId} onChange={(e) => { setSubscriberId(e.target.value); setLines([]); setPackageId(''); setPickupPointId(''); }}>
+            <select className="farm-select" value={subscriberId} onChange={(e) => { setSubscriberId(e.target.value); setLines([]); setPackageId(''); setPickupPointId(''); setTargets(clients.find((c) => c.id === e.target.value)?.nutritionTargets ?? []); }}>
               {clients.length === 0 && <option value="">No corporate or restaurant subscriber on file</option>}
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -67,9 +86,9 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
         {subscriber && <p className="farm-kpi-sub mt-2">{channelRow?.market ?? `Channel ${channel}`} · {money(pricePerUnit)} a unit, the {priceBasis}. <Link className="farm-link" href={`/farm/subscriber-portal?subscriber=${subscriber.id}`}>Order history and invoices</Link></p>}
       </Card>
 
-      <Card title="Crop plans and quantities" className="mt-4">
+      <Card title="Flats and quantities" className="mt-4">
         {cropPlans.length === 0 ? (
-          <p className="farm-kpi-sub">No in-service crop plan is offered on this channel. Please call the farm to discuss the menu.</p>
+          <p className="farm-kpi-sub">No in-service grow plan is offered on this channel.</p>
         ) : (
           <>
             {lines.map((l, i) => (
@@ -82,7 +101,38 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
                 <button type="button" className="farm-btn" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}>Remove</button>
               </div>
             ))}
-            <button type="button" className="farm-btn" onClick={() => setLines((ls) => [...ls, { cropPlanCode: cropPlans[0].code, qty: 0 }])}>Add a crop plan</button>
+            <button type="button" className="farm-btn" onClick={() => setLines((ls) => [...ls, { cropPlanCode: cropPlans[0].code, qty: 0 }])}>Add a flat</button>
+          </>
+        )}
+      </Card>
+
+      <Card title="Nutrition targets" className="mt-4">
+        <p className="farm-kpi-sub mb-2">The nutrients and compounds the varieties carry. Pick yours; each is read against the flats above, and every benefit shown cites its row of the science library.</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-[0.4rem] mb-3!">
+          {data.targets.map((t) => (
+            <label key={t.key} className="farm-kpi-sub inline-flex! gap-[0.3rem]! items-center!">
+              <input type="checkbox" checked={targets.includes(t.key)} onChange={(e) => setTargets((s) => (e.target.checked ? [...s, t.key] : s.filter((k) => k !== t.key)))} />{t.name}
+            </label>
+          ))}
+        </div>
+        {targets.length > 0 && (
+          <>
+            <p className="farm-kpi-sub mb-2">{covered} of {targets.length} named targets carried by the flats chosen.</p>
+            <div className="farm-scroll-x">
+              <table className="farm-table compact">
+                <thead><tr><th>Target</th><th>Carried by</th><th>What the library states</th><th>Also carried by</th></tr></thead>
+                <tbody>
+                  {coverage.map((c) => (
+                    <tr key={c.target.key} className={c.covered ? '' : 'farm-c-accent'}>
+                      <td>{c.target.name}</td>
+                      <td>{c.covered ? c.by.map((b) => `${b.variety.name} (${b.planCodes.join(', ')})`).join('; ') : 'nothing on the flat'}</td>
+                      <td className="farm-kpi-sub">{c.by.flatMap((b) => b.benefits).map((b, i) => <div key={i}>{b.statement} (rows {b.rows.join(', ')})</div>)}</td>
+                      <td className="farm-kpi-sub">{c.carriedBy.map((r) => `${r.code} ${r.name}`).join('; ') || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
       </Card>
@@ -142,6 +192,7 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
             <tr><td>Date of service</td><td className="num">{serviceDate || '—'}{arrival ? ` at ${arrival}` : ''}</td></tr>
             <tr><td>Headcount</td><td className="num">{headcount || '—'}</td></tr>
             <tr><td>Units</td><td className="num">{num(units)}</td></tr>
+            <tr><td>Nutrition targets carried</td><td className="num">{targets.length ? `${covered} of ${targets.length}` : '—'}</td></tr>
             <tr><td>Allergens flagged</td><td className="num">{allergens.size === 0 ? 'none' : [...allergens].join(', ')}</td></tr>
             <tr className="total"><td>Units at {money(pricePerUnit)}</td><td className="num">{money(units * pricePerUnit)}</td></tr>
           </tbody>

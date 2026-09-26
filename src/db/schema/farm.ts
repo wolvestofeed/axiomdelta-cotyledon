@@ -1260,6 +1260,9 @@ export const farmSubscribers = farmSchema.table(
     ratingRatedOn: date('rating_rated_on'),
     // @classification: Internal
     notes: text('notes'),
+    /** Named nutrition targets (0007): keys from src/data/nutrition-targets.ts. */
+    // @classification: Confidential
+    nutritionTargets: jsonb('nutrition_targets').notNull().default([]),
     /** 'seed' | 'user_built' */
     // @classification: Internal
     source: text('source').notNull().default('user_built'),

@@ -197,8 +197,8 @@ export function roundDownToEighthCup(cups: number): number {
 
 // ── Unit helpers ────────────────────────────────────────────────────────────
 
-export const GRAMS_PER_OZ = 28.349523125;
-export const OZ_PER_LB = 16;
+import { GRAMS_PER_OZ, OZ_PER_LB } from '@/data/tray-formats';
+export { GRAMS_PER_OZ, OZ_PER_LB };
 
 export const ozToGrams = (oz: number) => oz * GRAMS_PER_OZ;
 export const gramsToOz = (g: number) => g / GRAMS_PER_OZ;

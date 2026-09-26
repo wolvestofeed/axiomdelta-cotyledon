@@ -10,7 +10,7 @@ Each phase ends with the app running on localhost and its tests green.
 |---|---|---|---|
 | 0 — Lift | [`roadmaps/phase-0-lift.md`](roadmaps/phase-0-lift.md) | DONE, except the first run against a live database | — |
 | 1 — Swap and tenancy | [`roadmaps/phase-1-swap-and-tenancy.md`](roadmaps/phase-1-swap-and-tenancy.md) | DONE | — |
-| 2 — Growing domain | [`roadmaps/phase-2-growing-domain.md`](roadmaps/phase-2-growing-domain.md) | IN PROGRESS: parts 1–6 (data, the grow plan, costing on four line kinds, capacity in trays, the daily labor stream, the grow calendar) and the seed of part 9 done; parts 7, 8 and 10 (nutrition targets, produce safety, the rename) open | November 2026 |
+| 2 — Growing domain | [`roadmaps/phase-2-growing-domain.md`](roadmaps/phase-2-growing-domain.md) | IN PROGRESS: parts 1–8 (data, the grow plan, costing on four line kinds, capacity in trays, the daily labor stream, the grow calendar, nutrition targets, the stage control points) and the seed of part 9 done; part 10 (the rename, the projection out, the pages) open | November 2026 |
 | 3 — Subscriptions and distribution | [`roadmaps/phase-3-subscriptions-and-distribution.md`](roadmaps/phase-3-subscriptions-and-distribution.md) | NOT STARTED | December 2026 |
 | 4 — Staffing | [`roadmaps/phase-4-staffing.md`](roadmaps/phase-4-staffing.md) | NOT STARTED | January 2027 |
 | 5 — Facility and sustainability | [`roadmaps/phase-5-facility-and-sustainability.md`](roadmaps/phase-5-facility-and-sustainability.md) | NOT STARTED | spring 2027 for the home grow room |

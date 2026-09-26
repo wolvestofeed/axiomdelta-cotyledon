@@ -86,6 +86,7 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
     contractEnd: iso(r.contractEnd),
     prospectId: r.prospectId,
     notes: r.notes,
+    nutritionTargets: Array.isArray(r.nutritionTargets) ? (r.nutritionTargets as unknown[]).filter((k): k is string => typeof k === 'string') : [],
     source: r.source === 'seed' ? 'seed' : 'user_built',
     rating: subscriberRating(r.ratingStatus, r.ratingStars, r.ratingRatedOn),
     pickupPoints: (bySubscriber.get(r.id) ?? []).map((s) => ({
