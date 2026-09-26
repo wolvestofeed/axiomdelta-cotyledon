@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { PageHeader, Card, Kpi } from '@/components/ui';
 import { getResolvedActiveInputs } from '@/server/scenarios';
 import { controlPointsForPlan, STAGE_CONTROL_POINTS } from '@/engine/produce-safety';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
 import { CheckPill, num } from '@/components/ui';
 import { StatusBadge } from '@/components/ui';
@@ -37,7 +36,7 @@ async function ProduceSafetyPageInner() {
     .filter(isGrowSowing)
     .map((b) => {
       const plan = inputs.cropPlans.find((r) => r.code === b.cropPlanCode);
-      return plan && isGrowPlanCarrier(plan) ? { b, checks: sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan.plan) } : null;
+      return plan ? { b, checks: sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan) } : null;
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort((a, b) => b.b.productionDate.localeCompare(a.b.productionDate));
@@ -110,8 +109,8 @@ async function ProduceSafetyPageInner() {
           <table className="farm-table compact">
             <thead><tr><th>Plan</th><th>Format</th><th>Control points on its stages</th></tr></thead>
             <tbody>
-              {inputs.cropPlans.filter(isGrowPlanCarrier).map((r) => (
-                <tr key={r.code}><td>{r.code} · {r.name}</td><td>{r.plan.format}</td><td>{controlPointsForPlan(r.plan).map((c) => c.name).join(', ')}</td></tr>
+              {inputs.cropPlans.map((r) => (
+                <tr key={r.code}><td>{r.code} · {r.name}</td><td>{r.format}</td><td>{controlPointsForPlan(r).map((c) => c.name).join(', ')}</td></tr>
               ))}
             </tbody>
           </table>

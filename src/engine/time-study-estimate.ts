@@ -9,12 +9,10 @@
  * a grow plan has no scaffold and an empty estimate.
  */
 
-import type { CropPlanDef } from '@/data/plan-data';
 import { NO_CONSUMPTION, VALLECITO_1020_STUDY, type LaborScaling, type TimeStudyLine, type TimeStudySeed, type TimeStudyStream } from '@/data/time-studies';
 import { planStageDays, planStages, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays as cycleDaysOf } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 /** What a scaffold task is, which is what the routing reads its precedence from. */
 export type ScaffoldKind = 'prep' | 'sow' | 'daily' | 'harvest';
@@ -32,9 +30,9 @@ export interface ScaffoldTask {
   kind: ScaffoldKind;
 }
 
-/** The task scaffold for a plan: what a time study of it times. A plan that is not a grow plan has none. */
-export function timeStudyScaffold(cropPlan: CropPlanDef): ScaffoldTask[] {
-  return isGrowPlanCarrier(cropPlan) ? growPlanScaffold(cropPlan.plan) : [];
+/** The task scaffold for a plan: what a time study of it times. */
+export function timeStudyScaffold(plan: GrowPlanDef): ScaffoldTask[] {
+  return growPlanScaffold(plan);
 }
 
 /**
@@ -96,11 +94,9 @@ export function growPlanTimeStudy(plan: GrowPlanDef, sowingTrays: number): TimeS
 }
 
 /**
- * The estimated study for a plan at the sowing it is to stand for: the grow plan's, from
- * Vallecito's tray study. Undated, no observer, no quality result: it was not observed. A plan that
- * is not a grow plan gets an empty estimate that says so.
+ * The estimated study for a plan at the sowing it is to stand for, from Vallecito's tray study.
+ * Undated, no observer, no quality result: it was not observed.
  */
-export function estimatedTimeStudy(cropPlan: CropPlanDef, sowingSize: number): TimeStudySeed {
-  if (isGrowPlanCarrier(cropPlan)) return growPlanTimeStudy(cropPlan.plan, sowingSize);
-  return { studiedOn: null, sowingSize, cycleDays: 0, observer: null, qualityResult: null, qualityNotes: `${cropPlan.code} is not a grow plan, so no estimate is built for it.`, basis: 'estimated', lines: [], consumption: NO_CONSUMPTION };
+export function estimatedTimeStudy(plan: GrowPlanDef, sowingSize: number): TimeStudySeed {
+  return growPlanTimeStudy(plan, sowingSize);
 }

@@ -6,7 +6,6 @@ import { PageHeader, Card, Kpi, StatusBadge, num } from '@/components/ui';
 import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
 import { deriveGrowCapacity, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { defaultGrowUnits } from '@/engine';
 import { costCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
@@ -41,10 +40,10 @@ export default function CapacityPage() {
   const C = resolved.capacityInputs;
   const D = DEFAULTS.capacityInputs;
   const units: readonly GrowUnit[] = C.growUnits ?? defaultGrowUnits;
-  const plan: GrowPlanDef | null = isGrowPlanCarrier(selected) ? selected.plan : null;
+  const plan: GrowPlanDef | null = selected;
 
   const cap = useMemo(() => (plan ? deriveGrowCapacity(plan, units) : null), [plan, units]);
-  const costing = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
+  const costing = useMemo(() => costCarrier(selected), [selected]);
   const days = plan ? planStageDays(plan) : null;
   const light = plan ? lightLine(plan) : undefined;
   const regime = light ? REGIME_BY_KEY[light.regimeKey] : null;
@@ -53,9 +52,9 @@ export default function CapacityPage() {
 
   const byPlan = useMemo(
     () =>
-      resolved.cropPlans.filter(isGrowPlanCarrier).map((r) => {
-        const c = deriveGrowCapacity(r.plan, units);
-        return { code: r.code, name: r.name, status: r.status, format: TRAY_FORMAT_BY_KEY[r.plan.format].name, sku: unitSku(r.code, r.plan.format), sowing: c.sowingTrays, unitCount: c.unitCount, totalTrays: c.totalTrays, cycle: c.cycleDays, toHarvest: c.daysToHarvest, perDay: c.traysPerDay, binding: c.binding?.unit.item ?? null };
+      resolved.cropPlans.map((r) => {
+        const c = deriveGrowCapacity(r, units);
+        return { code: r.code, name: r.name, status: r.status, format: TRAY_FORMAT_BY_KEY[r.format].name, sku: unitSku(r.code, r.format), sowing: c.sowingTrays, unitCount: c.unitCount, totalTrays: c.totalTrays, cycle: c.cycleDays, toHarvest: c.daysToHarvest, perDay: c.traysPerDay, binding: c.binding?.unit.item ?? null };
       }),
     [resolved.cropPlans, units],
   );

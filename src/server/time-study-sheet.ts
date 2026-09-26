@@ -1,9 +1,7 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
 import { TIME_STUDY_BASIS_LABELS, QUALITY_RESULT_LABELS } from '@/data/time-studies';
-import { deriveCapacity } from '@/engine';
 import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { timeStudyScaffold } from '@/engine/time-study-estimate';
 import { inStandard, laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
 import { listCropPlans } from '@/server/crop-plans';
@@ -67,7 +65,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   for (const cropPlan of ordered) {
     const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
     const scaffold = timeStudyScaffold(cropPlan);
-    const sowing = isGrowPlanCarrier(cropPlan) ? deriveGrowCapacity(cropPlan.plan, growUnits).sowingTrays : deriveCapacity(cropPlan).sowingSize;
+    const sowing = deriveGrowCapacity(cropPlan, growUnits).sowingTrays;
     const refLines = standard && standard.lines.length === scaffold.length ? standard.lines : null;
     scaffold.forEach((t, i) => {
       const ref = refLines?.[i];

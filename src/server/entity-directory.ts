@@ -2,7 +2,7 @@ import 'server-only';
 import { supplierOperations } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
 import { listCropPlans } from '@/server/crop-plans';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { listEquipment } from '@/server/equipment';
 import type { EquipmentLine } from '@/data/capex';
 import { EQUIPMENT_STATUS_LABELS } from '@/engine/equipment';
@@ -72,7 +72,7 @@ function prospectToEntity(s: (typeof prospectRecords)[number]): LeanEntity {
   };
 }
 
-function cropPlanToEntity(r: CropPlanDef): LeanEntity {
+function cropPlanToEntity(r: GrowPlanCarrier): LeanEntity {
   return {
     kind: 'cropPlan',
     id: r.code,

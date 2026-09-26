@@ -11,7 +11,6 @@ import { TrendChart } from '@/components/TrendChart';
 import { deriveCapacity } from '@/engine';
 import { QUALITY_RESULTS, QUALITY_RESULT_LABELS, TIME_STUDY_BASIS_LABELS, TIME_STUDY_STREAMS, TIME_STUDY_STREAM_LABELS, type QualityResult, type SupplementEntry, type TimeStudyDoc, type TimeStudyLibrary, type TimeStudyLine, type TimeStudyStream, type WaterEntry } from '@/data/time-studies';
 import { inStandard, laborMinutesForSowing, laborStandard, nextStudyDue, standardIsEstimated, studiesForCropPlan, studySupplementMl, studyTrend, studyWaterOz, summarizeStudy, wateringDays } from '@/engine/time-studies';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { planStageDays, planStages } from '@/data/grow-plan';
 import { STAGE_BY_KEY, STAGES, type StageKey } from '@/data/stage-schedule';
 import { WATER_ONLY_KEY } from '@/data/inputs-catalog';
@@ -98,7 +97,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
   const onEstimate = standardIsEstimated(standard);
   const approvedCount = studies.filter((s) => s.basis === 'observed' && s.approvedAt).length;
   const basis = standard ?? studies[0] ?? null;
-  const growPlan = isGrowPlanCarrier(cropPlan) ? cropPlan.plan : null;
+  const growPlan = cropPlan;
   const planStageList = growPlan ? planStages(growPlan) : STAGES;
 
   const selected = studies.find((s) => s.id === selectedId) ?? basis;

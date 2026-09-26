@@ -23,12 +23,11 @@
 
 import type { EquipmentLine } from '@/data/capex';
 import { RESOURCE_SEED } from '@/data/capex';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import { tagged, type Tagged } from '@/data/tagged';
 import type { LaborScaling, TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
 import { phaseOneEquipment } from '@/engine/equipment';
 import { timeStudyScaffold, type ScaffoldKind } from '@/engine/time-study-estimate';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export type RouteStepKind = ScaffoldKind | 'other';
 
@@ -60,7 +59,7 @@ export interface RouteStep {
   edited: boolean;
 }
 
-export type RouteFindingKind = 'no-study' | 'not-a-grow-plan' | 'unclassified-line' | 'unknown-resource' | 'unknown-predecessor' | 'cycle';
+export type RouteFindingKind = 'no-study' | 'unclassified-line' | 'unknown-resource' | 'unknown-predecessor' | 'cycle';
 
 export interface RouteFinding {
   kind: RouteFindingKind;
@@ -156,7 +155,7 @@ export function routeDepths(steps: readonly Pick<RouteStep, 'id' | 'seq' | 'stre
 
 /** A crop plan's route off its labor standard, its stage map and the Phase 1 equipment list, with the scenario's step edits. */
 export function deriveRoute(input: {
-  cropPlan: CropPlanDef;
+  cropPlan: GrowPlanDef;
   standard: TimeStudyDoc | null;
   equipment: readonly EquipmentLine[];
   /** The scenario's edits for this crop plan, keyed by step id (`routeOverlayFor`). */
@@ -169,10 +168,6 @@ export function deriveRoute(input: {
     return { cropPlanCode: cropPlan.code, studyId: null, basis: null, sowingSize: 0, steps: [], order: [], findings };
   }
 
-  if (!isGrowPlanCarrier(cropPlan)) {
-    findings.push({ kind: 'not-a-grow-plan', stepId: null, detail: `${cropPlan.code} is not a grow plan, so it has no route.` });
-    return { cropPlanCode: cropPlan.code, studyId: standard.id, basis: standard.basis, sowingSize: standard.sowingSize, steps: [], order: [], findings };
-  }
   const scaffold = timeStudyScaffold(cropPlan);
   // A grow plan's daily lines are the calendar's, not the day's clock; its sow and harvest run at the stations, on no equipment.
   const routeLines = standard.lines.filter((l) => l.stream !== 'daily');

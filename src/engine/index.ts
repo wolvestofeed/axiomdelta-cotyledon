@@ -9,12 +9,12 @@
  *   - production runs in whole sowings only
  */
 
-import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine, type CropPlanDef } from '@/data/plan-data';
+import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine } from '@/data/plan-data';
 import { equipmentSeed } from '@/data/capex';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
-import { costCarrier, isGrowPlanCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
-type CropPlan = CropPlanDef;
+type CropPlan = GrowPlanCarrier;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
  * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
@@ -95,77 +95,7 @@ export function costCropPlan(
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): CropPlanCosting {
-  if (isGrowPlanCarrier(cropPlan)) return costGrowCarrier(cropPlan, shrinkAllowance, unitFactor);
-  const basis = cropPlan.sowingUnits;
-  const lines: InputCost[] = cropPlan.inputs.map((ing) => {
-    const extCostPerSowing = ing.seedQtyPerSowing * ing.seedUnitCost * unitFactor;
-    const costPerUnit = extCostPerSowing / basis;
-
-    const trimYield = ing.trimYield ?? 1;
-    const blackoutYield = ing.blackoutYield ?? 1;
-
-    let seedOz: number;
-    let harvestedOz: number;
-    if (ing.unit === 'each') {
-      const mass = ing.unitMassOz ?? 0;
-      seedOz = (ing.seedQtyPerSowing / basis) * mass * unitFactor;
-      harvestedOz = (ing.harvestedYieldPerSowing / basis) * mass * unitFactor;
-    } else {
-      seedOz = (ing.seedQtyPerSowing / basis) * OZ_PER_LB * unitFactor;
-      harvestedOz = (ing.harvestedYieldPerSowing / basis) * OZ_PER_LB * unitFactor;
-    }
-    const sownOz = seedOz * trimYield;
-    const blackoutOz = ing.isHotComponent ? harvestedOz * blackoutYield : harvestedOz;
-    const packedOz = ing.isHotComponent ? blackoutOz : harvestedOz;
-
-    const rate = (oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
-
-    return {
-      ...ing,
-      extCostPerSowing,
-      costPerUnit,
-      seedPerUnit: (ing.seedQtyPerSowing / basis) * unitFactor,
-      seedOz,
-      sownOz,
-      harvestedOz,
-      blackoutOz,
-      packedOz,
-      seedCostPerLb: ing.unit === 'lb' ? ing.seedUnitCost : rate(seedOz),
-      sownCostPerLb: rate(sownOz),
-      harvestedCostPerLb: rate(harvestedOz),
-      costPerPackedOz: packedOz > 0 ? costPerUnit / packedOz : null,
-      trimObserved: ing.trimYield !== undefined,
-      blackoutObserved: ing.blackoutYield !== undefined,
-    };
-  });
-
-  const inputCostPerSowing = lines.reduce((s, l) => s + l.extCostPerSowing, 0);
-  const inputCostPerUnit = inputCostPerSowing / basis;
-  const shrinkPerUnit = inputCostPerUnit * shrinkAllowance;
-  const totalInputCostPerUnit = inputCostPerUnit + shrinkPerUnit;
-
-  const sumOz = (pick: (l: InputCost) => number) => lines.reduce((s, l) => s + pick(l), 0);
-  const seedOzPerUnit = sumOz((l) => l.seedOz);
-  const harvestedOzPerUnit = sumOz((l) => l.harvestedOz);
-  const packedOzPerUnit = sumOz((l) => l.packedOz);
-
-  return {
-    lines,
-    sowingUnits: basis,
-    inputCostPerSowing,
-    inputCostPerUnit,
-    shrinkPerUnit,
-    totalInputCostPerUnit,
-    seedOzPerUnit,
-    sownOzPerUnit: sumOz((l) => l.sownOz),
-    harvestedOzPerUnit,
-    blackoutOzPerUnit: sumOz((l) => (l.isHotComponent ? l.blackoutOz : 0)),
-    packedOzPerUnit,
-    costPerPackedOz: packedOzPerUnit > 0 ? totalInputCostPerUnit / packedOzPerUnit : 0,
-    costPerHarvestedLb:
-      harvestedOzPerUnit > 0 ? totalInputCostPerUnit / (harvestedOzPerUnit / OZ_PER_LB) : 0,
-    costPerSeedLb: seedOzPerUnit > 0 ? totalInputCostPerUnit / (seedOzPerUnit / OZ_PER_LB) : 0,
-  };
+  return costGrowCarrier(cropPlan, shrinkAllowance, unitFactor);
 }
 
 /**
@@ -456,9 +386,7 @@ export function deriveCapacity(
   cap: CapacityInputs = defaultCapacityInputs,
   unitFactor = 1,
 ): CapacityProfile {
-  if (isGrowPlanCarrier(cropPlan)) return deriveGrowProfile(cropPlan, cap, unitFactor);
-  // A plan that is not a grow plan takes no grow unit: a sowing of zero.
-  return { canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor), unitsPerCycleRaw: 0, sowingSize: 0, cyclesPerDay: 0, maxUnitsPerDay: 0 };
+  return deriveGrowProfile(cropPlan, cap, unitFactor);
 }
 
 /**
@@ -468,8 +396,8 @@ export function deriveCapacity(
  * sustained ceiling, trays across the units over the cycle, is on `grow`; the horizon's shelf
  * ledger holds each sowing for its cycle.
  */
-function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan').GrowPlanDef }, cap: CapacityInputs, unitFactor: number): CapacityProfile {
-  const grow = deriveGrowCapacity(cropPlan.plan, cap.growUnits ?? defaultGrowUnits);
+function deriveGrowProfile(cropPlan: CropPlan, cap: CapacityInputs, unitFactor: number): CapacityProfile {
+  const grow = deriveGrowCapacity(cropPlan, cap.growUnits ?? defaultGrowUnits);
   return {
     canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor),
     unitsPerCycleRaw: grow.sowingTrays,

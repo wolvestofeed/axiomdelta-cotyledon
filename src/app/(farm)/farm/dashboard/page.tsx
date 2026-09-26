@@ -39,7 +39,6 @@ import { lcaOptions as curatedOptions } from '@/data/lca-options';
 import { factorRegistry } from '@/data/emission-factors';
 import { withWorkspace } from '@/server/workspace';
 import { STAGE_CONTROL_POINTS } from '@/data/produce-safety';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { planStageDays } from '@/data/grow-plan';
 import { cycleDays } from '@/data/stage-schedule';
 
@@ -187,8 +186,8 @@ async function AdminDashboard() {
   const basisNote = avg.count === 0
     ? 'No grow plan is In Service.'
     : `Averaged over ${num(avg.count)} active grow plan${avg.count === 1 ? '' : 's'}, each on its own sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until observed studies are approved.`;
-  const growPlans = R.cropPlans.filter((r) => r.status === 'in_service').filter(isGrowPlanCarrier);
-  const meanCycle = growPlans.length ? growPlans.reduce((t, r) => t + cycleDays(planStageDays(r.plan)), 0) / growPlans.length : 0;
+  const growPlans = R.cropPlans.filter((r) => r.status === 'in_service');
+  const meanCycle = growPlans.length ? growPlans.reduce((t, r) => t + cycleDays(planStageDays(r)), 0) / growPlans.length : 0;
 
   // ── Alerts (Roadmap K2): supplier bills that do not match their purchase
   //    order and receipts are flagged here and held from payment.

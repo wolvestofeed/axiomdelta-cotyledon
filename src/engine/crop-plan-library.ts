@@ -9,7 +9,7 @@
 
 import type { NutrientSolutionDef } from '@/data/inputs-catalog';
 import { nutrientsForPlan } from '@/engine/nutrients';
-import type { CropPlanDef, CropPlanStatus } from '@/data/plan-data';
+import type { CropPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
 import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
@@ -135,6 +135,6 @@ export function nextCropPlanCode(existing: readonly string[], prefix: string): s
 export const isGrowPlanCode = (code: string): boolean => GROW_PLAN_CODE_RX.test(code);
 
 /** The plan that stands for the facility where one is needed: the first In Service, else the first. */
-export function referenceCropPlan<T extends CropPlanDef>(library: readonly T[]): T | undefined {
+export function referenceCropPlan<T extends GrowPlanCarrier>(library: readonly T[]): T | undefined {
   return library.find((r) => r.status === 'in_service') ?? library[0];
 }

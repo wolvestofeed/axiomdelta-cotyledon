@@ -16,7 +16,7 @@ import { useRouter } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
 import { assumptionsFor } from '@/engine/scenario';
 import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
-import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier } from '@/engine/grow-plan-bridge';
 import { LINE_KIND_LABELS, leadVariety, planStageDays, planStages } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID } from '@/data/produce-safety';
 import { targetsOfPlan } from '@/engine/nutrition-targets';
@@ -26,7 +26,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   const { resolved, isSuperAdmin, library } = useScenario();
   const { cropPlan: selected, setCode } = useSelectedCropPlan();
   const libraryCropPlan = library.find((r) => r.code === selected.code);
-  const libraryPlan = libraryCropPlan && isGrowPlanCarrier(libraryCropPlan) ? libraryCropPlan.plan : undefined;
+  const libraryPlan = libraryCropPlan;
   const router = useRouter();
   const [editor, setEditor] = useState<'create' | 'duplicate' | 'edit' | null>(null);
   // The editor opens inside the library card; a toolbar button sits far above it, so bring it into view.
@@ -43,10 +43,10 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   const current = Math.min(page, pageCount - 1);
   const pageRows = resolved.cropPlans.slice(current * pageSize, current * pageSize + pageSize);
 
-  const growCosting = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
-  const growPlan = isGrowPlanCarrier(selected) ? selected.plan : null;
+  const growCosting = useMemo(() => costCarrier(selected), [selected]);
+  const growPlan = selected;
   const leadVarietyOf = growPlan ? leadVariety(growPlan) : undefined;
-  const planTargets = useMemo(() => (isGrowPlanCarrier(selected) ? targetsOfPlan(selected.plan) : []), [selected]);
+  const planTargets = useMemo(() => targetsOfPlan(selected), [selected]);
   const cap = useMemo(
     () => deriveCapacity(selected, resolved.capacityInputs),
     [selected, resolved.capacityInputs],
@@ -114,7 +114,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
               {pageRows.map((r) => {
                 const c = costCropPlan(r, resolved.assumptions.yield.shrinkAllowance.value);
                 const k = deriveCapacity(r, resolved.capacityInputs);
-                const g = isGrowPlanCarrier(r) ? costCarrier(r) : null;
+                const g = costCarrier(r);
                 const lib = library.find((x) => x.code === r.code) as (typeof library)[number] & { id?: string } | undefined;
                 const isSel = r.code === selected.code;
                 return (

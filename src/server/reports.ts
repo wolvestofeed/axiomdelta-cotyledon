@@ -18,7 +18,6 @@ import type { ActualsBundle, DistributionDoc } from '@/engine/actuals';
 import { toSowingExecution } from '@/engine/actuals';
 import { massBalance } from '@/engine/sowing';
 import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
 import { rawStockOnHand, rawLotsByUseBy } from '@/engine/net-requirements';
@@ -176,8 +175,8 @@ type Builder = (ctx: Ctx) => Built | Promise<Built>;
 function stageRecordChecks(records: ActualsBundle, R: PostedLedger['inputs']) {
   return records.sowings.filter(isGrowSowing).flatMap((b) => {
     const plan = R.cropPlans.find((r) => r.code === b.cropPlanCode);
-    if (!plan || !isGrowPlanCarrier(plan)) return [];
-    const checks = sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan.plan);
+    if (!plan) return [];
+    const checks = sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan);
     return [{ sowingId: b.sowingId, date: b.productionDate, planName: plan.name, checks, failed: checks.points.filter((p) => p.status === 'failed'), gaps: checks.points.filter((p) => p.status === 'gap') }];
   });
 }

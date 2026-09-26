@@ -24,11 +24,10 @@
  */
 
 import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import type { CropPlanRunPlan } from '@/engine/production-plan';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { isoAddDays } from '@/engine/orders';
 import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
 
@@ -104,9 +103,9 @@ export interface ShelfDayInput {
   trays: readonly { cropPlanCode: string; cropPlanName: string; trays: number }[];
 }
 
-/** Each plan's cycle days, for the shelf occupancy; a Phase 1-era plan has none. */
-export function cycleDaysByCode(cropPlans: readonly CropPlanDef[]): Record<string, number> {
-  return Object.fromEntries(cropPlans.map((r) => [r.code, isGrowPlanCarrier(r) ? cycleDays(planStageDays(r.plan)) : 0]));
+/** Each plan's cycle days, for the shelf occupancy. */
+export function cycleDaysByCode(cropPlans: readonly GrowPlanDef[]): Record<string, number> {
+  return Object.fromEntries(cropPlans.map((r) => [r.code, cycleDays(planStageDays(r))]));
 }
 
 /**

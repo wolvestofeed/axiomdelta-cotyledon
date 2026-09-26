@@ -11,7 +11,6 @@ import { isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
 import { stageOn, type CalendarSowing } from '@/engine/grow-calendar';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { useScenario } from '@/state/scenario-store';
@@ -90,7 +89,7 @@ export function GrowCalendarClient({
         .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
         .filter((b) => {
           const r = resolved.cropPlans.find((x) => x.code === b.cropPlanCode);
-          return r && isGrowPlanCarrier(r) && stageOn(r.plan, b.sowDate, today).stage !== 'off';
+          return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off';
         }),
     [sowings, resolved.cropPlans, today],
   );
@@ -145,7 +144,7 @@ export function GrowCalendarClient({
   const sowingsShown = useMemo(() => (cal?.sowings ?? []).filter((s) => s.harvestTo >= `${month}-01` && s.sowDate <= last).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.cropPlanCode.localeCompare(b.cropPlanCode)), [cal, month, last]);
   const planOf = (s: CalendarSowing) => {
     const r = resolved.cropPlans.find((x) => x.code === s.cropPlanCode);
-    return r && isGrowPlanCarrier(r) ? r.plan : null;
+    return r ?? null;
   };
 
   return (

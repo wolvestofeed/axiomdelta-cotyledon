@@ -11,7 +11,6 @@ import { SCIENCE_SOURCE_BY_ROW } from '@/data/science-library';
 import { costPerMlFrom, deleteRefusal, nutrientKeyFor } from '@/engine/nutrients';
 import { listCropPlans } from '@/server/crop-plans';
 import { withWorkspace } from '@/server/workspace';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 /**
  * MicroFarm — the Nutrients & Supplements library, writes. SUPER ADMIN ONLY.
@@ -145,7 +144,7 @@ async function deleteNutrientInner(input: unknown): Promise<Result> {
   }
   const row = await db.select({ key: farmNutrients.key }).from(farmNutrients).where(eq(farmNutrients.id, parsed.data.id)).limit(1);
   if (!row[0]) return { ok: false, error: 'That row no longer exists.' };
-  const plans = (await listCropPlans()).filter(isGrowPlanCarrier).map((c) => c.plan);
+  const plans = await listCropPlans();
   const refusal = deleteRefusal(row[0].key, plans);
   if (refusal) return { ok: false, error: refusal };
   await db.delete(farmNutrients).where(eq(farmNutrients.id, parsed.data.id));

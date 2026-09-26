@@ -21,7 +21,6 @@
 import {
   assumptions as defaultAssumptions,
   capacityInputs as defaultCapacityInputs,
-  type CropPlanDef,
   phases as defaultPhases,
   phaseProfiles as defaultPhaseProfiles,
 } from '@/data/plan-data';

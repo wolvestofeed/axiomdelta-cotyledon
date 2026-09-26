@@ -6,10 +6,7 @@ import { describe, it, expect } from 'vitest';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { staffDemand, staffDemandDocument, traysOnShelf, cycleDaysByCode } from '@/engine/staff-demand';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
-import type { CropPlanDef } from '@/data/plan-data';
 /** A plan that is not a grow plan: the carrier without the grow plan it was projected from. */
-const offGrow = (() => { const { plan: _plan, ...rest } = projectCropPlan(growPlanSeed[0]!); void _plan; return { ...rest, code: 'NONE-01' } as CropPlanDef; })();
 
 import { distributedConsumption } from '@/engine/production-plan';
 
@@ -194,11 +191,9 @@ describe('farm staff demand — the daily stream, from the trays on the shelves'
     expect(traysOnShelf([{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 500)] }], { 'AMK-E-001': 0 }, '2027-02-01', '2027-02-14')).toEqual([]);
   });
 
-  it('cycle days come off the grow plan; a Phase 1-era plan has none', () => {
-    const lib = projectCropPlan(growPlanSeed[0]!);
-    const c = cycleDaysByCode([lib, offGrow]);
+  it('cycle days come off the grow plan', () => {
+    const c = cycleDaysByCode([growPlanSeed[0]!]);
     expect(c['BROC-01']).toBe(14);
-    expect(c[offGrow.code]).toBe(0);
   });
 
   it('a per-tray daily line counts per tray on the shelf; a fixed daily line once a day', () => {

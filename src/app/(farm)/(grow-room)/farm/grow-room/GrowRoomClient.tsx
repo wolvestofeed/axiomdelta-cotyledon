@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Card, CheckPill, num } from '@/components/ui';
 import { ReceiveForm, type ReceiveInput, type ReceivePo } from '@/components/ReceiveForm';
 import { GrowSowingCloseForm } from '@/components/GrowSowingCloseForm';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { isGrowSowing } from '@/engine/sowing-record';
 import { defaultGrowUnits } from '@/engine';
 import { ShipForm, type ShipOrder } from '@/components/ShipForm';
@@ -146,7 +145,7 @@ export function GrowRoomClient({
     const openingSowings = sowings
       .filter((b) => b.goodUnits > 0)
       .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
-      .filter((b) => { const r = inputs.cropPlans.find((x) => x.code === b.cropPlanCode); return r && isGrowPlanCarrier(r) && stageOn(r.plan, b.sowDate, today).stage !== 'off'; });
+      .filter((b) => { const r = inputs.cropPlans.find((x) => x.code === b.cropPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; });
     const h = planHorizon({ from: today, to, book: bookFor(today, to), cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: A, cropPlanAssumptions: inputs.cropPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
     return h.growCalendar.sowings.filter((x) => x.sowDate === today && x.distributionDate !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,8 +234,8 @@ export function GrowRoomClient({
         )}
         {closing && closingPrefill && (
           <div className="mt-3">
-            {closingCropPlan && isGrowPlanCarrier(closingCropPlan) && isGrowSowing(closingPrefill) && (
-              <GrowSowingCloseForm prefill={closingPrefill} plan={closingCropPlan.plan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingCropPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+            {closingCropPlan && isGrowSowing(closingPrefill) && (
+              <GrowSowingCloseForm prefill={closingPrefill} plan={closingCropPlan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingCropPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
             )}
           </div>
         )}

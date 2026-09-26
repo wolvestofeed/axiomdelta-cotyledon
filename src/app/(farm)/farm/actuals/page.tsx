@@ -15,7 +15,6 @@ import { withWorkspace } from '@/server/workspace';
 import { listCropPlans } from '@/server/crop-plans';
 import { listTimeStudies } from '@/server/time-studies';
 import { listNutrients } from '@/server/nutrients';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { measuredRows } from '@/engine/measured-consumption';
 import { MeasuredConsumptionCard } from '@/app/(farm)/farm/actuals/MeasuredConsumptionCard';
 
@@ -47,7 +46,7 @@ async function ActualsPageInner({
     listTimeStudies(),
     listNutrients(),
   ]);
-  const measured = measuredRows(library.filter(isGrowPlanCarrier).map((c) => c.plan), studyLibrary.studies);
+  const measured = measuredRows(library, studyLibrary.studies);
   const nutrientNames = Object.fromEntries(nutrients.map((n) => [n.key, n.name]));
   const { inputs, bundle } = actual;
   const label = actual.view.label;

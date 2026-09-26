@@ -3,9 +3,7 @@ import { asc, inArray } from 'drizzle-orm';
 import { farmTimeStudies, farmTimeStudyIntervals, farmTimeStudyLines } from '@/db';
 import { db } from '@/lib/db';
 import type { TimeStudyLibrary } from '@/data/time-studies';
-import { deriveCapacity } from '@/engine';
 import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { LibraryCropPlan } from '@/engine/crop-plan-library';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { timeStudyFromRows } from '@/engine/time-studies';
@@ -33,7 +31,7 @@ async function seedMissingStudies(cropPlans: readonly LibraryCropPlan[]): Promis
     for (const r of cropPlans) {
       if (again.has(r.id)) continue;
       // A plan no grow unit takes yet has a sowing of zero; its estimate is written per tray until a unit lights it.
-      const sowing = isGrowPlanCarrier(r) ? deriveGrowCapacity(r.plan, growUnits).sowingTrays : deriveCapacity(r).sowingSize;
+      const sowing = deriveGrowCapacity(r, growUnits).sowingTrays;
       const seed = estimatedTimeStudy(r, Math.max(1, sowing));
       await insertTimeStudy(tx, r.id, seed, 'seed');
     }

@@ -9,7 +9,6 @@ import { VARIETY_BY_KEY } from '@/data/varieties';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import { equipmentSeed } from '@/data/capex';
-import type { CropPlanDef } from '@/data/plan-data';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { ShelfLedger, calendarFromSowings, daysFrom, leadDaysFor, planGrowCalendar, sowDateFor, stageOn } from '@/engine/grow-calendar';
@@ -24,7 +23,6 @@ const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
 const mung = growPlanSeed.find((p) => p.code === 'MUNG-01')!;
 const lib = growPlanSeed.map((p) => projectCropPlan(p));
 /** A plan that is not a grow plan: the carrier without the grow plan it was projected from. */
-const offGrow = (() => { const { plan: _plan, ...rest } = projectCropPlan(growPlanSeed[0]!); void _plan; return { ...rest, code: 'NONE-01' } as CropPlanDef; })();
 
 const units = growUnitsFrom(equipmentSeed);
 const brocDays = VARIETY_BY_KEY['broccoli']!.stageDays.value;
@@ -59,7 +57,6 @@ describe('the sow date for a distribution date', () => {
     expect([1, 2, 3, 4, 5]).toContain(new Date(`${d}T00:00:00Z`).getUTCDay());
     expect(sowDateFor(broc, '2027-03-22', [0, 1, 2, 3, 4, 5, 6])).toBe(new Date(Date.UTC(2027, 2, 22 - lead)).toISOString().slice(0, 10));
     expect(leadDaysFor(lib[0])).toBe(lead);
-    expect(leadDaysFor(offGrow)).toBe(1);
     expect(leadDaysFor(undefined)).toBe(1);
   });
 
@@ -119,9 +116,9 @@ describe('the calendar from requirements', () => {
     expect(calendarFromSowings({ from: '2027-03-01', to: '2027-03-02', sowings: [], cropPlans: lib, units }).days).toHaveLength(2);
   });
 
-  it('a plan that is not a grow plan is reported, not placed', () => {
-    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', cropPlanCode: offGrow.code, baseUnits: 100 }], cropPlans: [offGrow], units });
-    expect(cal.findings[0]!.kind).toBe('not-a-grow-plan');
+  it('a code not in the library is reported, not placed', () => {
+    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', cropPlanCode: 'NONE-01', baseUnits: 100 }], cropPlans: lib, units });
+    expect(cal.findings[0]!.kind).toBe('not-in-library');
     expect(cal.sowings).toHaveLength(0);
   });
 });

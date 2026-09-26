@@ -11,7 +11,7 @@ import type { BookOrder } from '@/engine/orders';
 import type { CapacityInputs } from '@/engine';
 import { planHorizon, type FinishedLot } from '@/engine/production-plan';
 import type { DateRange } from '@/engine/periods';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { ResolvedInputs } from '@/engine/scenario';
 
 type Assumptions = ResolvedInputs['assumptions'];
@@ -37,7 +37,7 @@ export function dashboardToday(input: {
   /** Days ahead the book is read. */
   windowDays?: number;
   book: readonly BookOrder[];
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   cropPlanAssumptions?: Readonly<Record<string, Assumptions>>;

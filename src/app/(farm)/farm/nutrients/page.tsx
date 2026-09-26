@@ -2,7 +2,6 @@ import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
 import { listNutrients } from '@/server/nutrients';
 import { listCropPlans } from '@/server/crop-plans';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { plansNaming } from '@/engine/nutrients';
 import { NutrientsClient } from '@/app/(farm)/farm/nutrients/NutrientsClient';
 import { withWorkspace } from '@/server/workspace';
@@ -16,7 +15,7 @@ export default async function NutrientsPage() {
 
 async function NutrientsPageInner() {
   const [access, nutrients, library] = await Promise.all([getFarmAccess(), listNutrients(), listCropPlans()]);
-  const plans = library.filter(isGrowPlanCarrier).map((c) => c.plan);
+  const plans = library;
   const namedBy = Object.fromEntries(nutrients.map((n) => [n.key, plansNaming(n.key, plans)]));
   return (
     <>

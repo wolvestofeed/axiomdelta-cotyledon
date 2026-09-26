@@ -77,14 +77,14 @@ import {
   ACC_FOOD_SALES,
 } from '@/data/coa-farm';
 import { laborForDay, type OverheadAbsorption } from '@/engine';
-import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { costCarrier, isGrowPlanCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { lineLabel } from '@/data/grow-plan';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { splitLoadedLaborCents } from '@/engine/comp';
-import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
+import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import { FARM_HOME } from '@/data/farm-location';
 import {
   massBalance,
@@ -254,7 +254,7 @@ export interface ProductionLedgerOptions {
 export function productionSowingLedger(
   sowing: SowingExecution,
   opts: ProductionLedgerOptions,
-  cropPlan: CropPlanDef,
+  cropPlan: GrowPlanCarrier,
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;

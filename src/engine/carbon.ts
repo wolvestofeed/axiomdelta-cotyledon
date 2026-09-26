@@ -34,7 +34,7 @@ import {
   KG_PER_LB,
   KG_PER_OZ,
 } from '@/data/emission-factors';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { lcaOptions as defaultLcaOptions, type LcaOption, type LcaBoundary } from '@/data/lca-options';
 import type { EnergyActivity, WaterActivity, EquipmentAttrs, ServiceAdd } from '@/engine/scenario';
 import { canopyMassPerUnit } from '@/engine';
@@ -278,7 +278,7 @@ const STATUS_RANK: Record<FactorProvenance['status'], number> = {
 
 // ── Scope 3: the crop plan's food footprint per unit ────────────────────────
 
-type CropPlan = CropPlanDef;
+type CropPlan = GrowPlanCarrier;
 
 export interface CropPlanFoodLine {
   name: string;

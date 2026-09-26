@@ -14,7 +14,6 @@ import { CONTROL_POINT_BY_ID } from '@/data/produce-safety';
 import { cycleDays, daysToHarvest, type StageDays } from '@/data/stage-schedule';
 import { unitWordsFor } from '@/data/tray-formats';
 import { deriveCapacity } from '@/engine';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { deriveRoute, routeDepths, routeOverlayFor, stepDuration, stepLaborMinutes, type RouteStep, type RouteStepOverlay } from '@/engine/routing';
 import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
 import { useScenario } from '@/state/scenario-store';
@@ -47,7 +46,7 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
   const unitName = (key: string | null) => (key ? resolved.resources.find((r) => r.key === key)?.item ?? key : null);
 
   // A grow plan's cycle on its grow unit, day by day from the sow date, and the daily stream every tray takes.
-  const growPlan = isGrowPlanCarrier(cropPlan) ? cropPlan.plan : null;
+  const growPlan = cropPlan;
   const u = unitWordsFor(growPlan?.format ?? 'flat-1020');
   const stageDays = useMemo(() => (growPlan ? planStageDays(growPlan) : null), [growPlan]);
   const stageRows = useMemo(() => {

@@ -13,7 +13,7 @@
  * its distribution record.
  */
 
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export type SubscriptionCycleStatus = 'active' | 'inactive';
 export type OrderStatus = 'forecast' | 'confirmed' | 'distributed';
@@ -119,7 +119,7 @@ const cycleShape = (id: string, name: string, startDate: string, codes: readonly
  * channels, five days of the first in-service plan offered there, Monday to Friday, anchored to the
  * Monday of the week the library is first read. A channel group with no plan in service has none.
  */
-export function seedSubscriptionCycles(library: readonly CropPlanDef[], today: string): SubscriptionCycleDef[] {
+export function seedSubscriptionCycles(library: readonly GrowPlanCarrier[], today: string): SubscriptionCycleDef[] {
   const firstOn = (channels: readonly number[]) => library.find((r) => r.status === 'in_service' && channels.some((c) => r.channels.includes(c)));
   const start = mondayOf(today);
   const groups = [

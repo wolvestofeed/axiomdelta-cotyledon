@@ -10,7 +10,7 @@ import { channelCropPlanEconomics, phaseEconomics } from '@/engine/phase';
 import { assumptionsFor } from '@/engine/scenario';
 import { useLedgerBook, useStatementPeriod } from '@/state/ledger';
 import { LedgerStatus, PeriodPicker, dollars, signed } from '@/components/ledger/LedgerParts';
-import { costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { costCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
@@ -71,7 +71,7 @@ export default function UnitEconomicsPage() {
   // unit-size change moves input cost with nothing on the page to read it
   // against.
   const chain = useMemo(() => costCropPlan(resolved.cropPlan), [resolved.cropPlan]);
-  const grow = useMemo(() => (isGrowPlanCarrier(resolved.cropPlan) ? costCarrier(resolved.cropPlan) : null), [resolved.cropPlan]);
+  const grow = useMemo(() => costCarrier(resolved.cropPlan), [resolved.cropPlan]);
 
   const buildUp = [
     {

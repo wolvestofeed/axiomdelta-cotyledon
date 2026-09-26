@@ -11,11 +11,9 @@
  * sown, what is in its harvest window, and the waterings the daily stream owes.
  */
 
-import type { CropPlanDef } from '@/data/plan-data';
 import { planStageDays, planStages, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays as cycleDaysOf, daysToHarvest as daysToHarvestOf, type StageKey, type WateringMethod } from '@/data/stage-schedule';
 import { deriveGrowCapacity, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
 import { isClosed, type DateRange } from '@/engine/periods';
 
@@ -77,17 +75,17 @@ export function sowDateFor(plan: GrowPlanDef, distributionDate: string, weekdays
   return latest;
 }
 
-/** The lead days a plan needs before a distribution date; a Phase 1-era plan is made the day before. */
-export function leadDaysFor(cropPlan: CropPlanDef | undefined): number {
-  return cropPlan && isGrowPlanCarrier(cropPlan) ? daysToHarvestOf(planStageDays(cropPlan.plan)) : 1;
+/** The lead days a plan needs before a distribution date; a code not in the library is made the day before. */
+export function leadDaysFor(cropPlan: GrowPlanDef | undefined): number {
+  return cropPlan ? daysToHarvestOf(planStageDays(cropPlan)) : 1;
 }
 
 /**
- * The date a sowing's trays become finished goods: a grow plan's first day in the harvest window
- * (the sow date plus days to harvest), a Phase 1-era plan's production date. Shelf life counts from it.
+ * The date a sowing's trays become finished goods: the first day in the harvest window (the sow date
+ * plus days to harvest); a code not in the library, its production date. Shelf life counts from it.
  */
-export function stockDateFor(cropPlan: CropPlanDef | undefined, productionDate: string): string {
-  return cropPlan && isGrowPlanCarrier(cropPlan) ? isoAddDays(productionDate, daysToHarvestOf(planStageDays(cropPlan.plan))) : productionDate;
+export function stockDateFor(cropPlan: GrowPlanDef | undefined, productionDate: string): string {
+  return cropPlan ? isoAddDays(productionDate, daysToHarvestOf(planStageDays(cropPlan))) : productionDate;
 }
 
 export interface CalendarSowing {
@@ -137,16 +135,15 @@ export class ShelfLedger {
   }
 
   /** Place one sowing; returns it, placed or not. */
-  place(cropPlan: CropPlanDef & { plan: GrowPlanDef }, sowDate: string, trays: number, distributionDate: string | null = null): CalendarSowing {
-    const plan = cropPlan.plan;
+  place(plan: GrowPlanDef, sowDate: string, trays: number, distributionDate: string | null = null): CalendarSowing {
     const days = planStageDays(plan);
     const cycle = cycleDaysOf(days);
     const window = days['harvest-window'];
     const harvestFrom = isoAddDays(sowDate, daysToHarvestOf(days));
     const sowing: CalendarSowing = {
-      id: `${cropPlan.code}@${sowDate}#${++this.seq}`,
-      cropPlanCode: cropPlan.code,
-      cropPlanName: cropPlan.name,
+      id: `${plan.code}@${sowDate}#${++this.seq}`,
+      cropPlanCode: plan.code,
+      cropPlanName: plan.name,
       sowDate,
       harvestFrom,
       harvestTo: isoAddDays(harvestFrom, Math.max(0, window - 1)),
@@ -203,7 +200,7 @@ export interface CalendarDay {
 }
 
 export interface CalendarFinding {
-  kind: 'no-unit' | 'over-capacity' | 'sow-before-window' | 'not-a-grow-plan';
+  kind: 'no-unit' | 'over-capacity' | 'sow-before-window' | 'not-in-library';
   cropPlanCode: string;
   sowDate: string | null;
   detail: string;
@@ -220,8 +217,8 @@ export interface GrowCalendar {
 }
 
 /** The calendar over a window from placed and unplaced sowings. */
-export function calendarFromSowings(input: { from: string; to: string; sowings: readonly CalendarSowing[]; cropPlans: readonly CropPlanDef[]; units: readonly GrowUnit[]; findings?: readonly CalendarFinding[] }): GrowCalendar {
-  const plans = new Map(input.cropPlans.filter(isGrowPlanCarrier).map((r) => [r.code, r.plan]));
+export function calendarFromSowings(input: { from: string; to: string; sowings: readonly CalendarSowing[]; cropPlans: readonly GrowPlanDef[]; units: readonly GrowUnit[]; findings?: readonly CalendarFinding[] }): GrowCalendar {
+  const plans = new Map(input.cropPlans.map((r) => [r.code, r]));
   const days: CalendarDay[] = [];
   const used = new Map<string, number>();
   const available = new Map<string, number>();
@@ -294,23 +291,23 @@ export interface CalendarRequirement {
  * Back-plan requirements onto the shelves: each requirement's sowings on its sow date, whole
  * sowings of what one unit takes, placed oldest distribution date first.
  */
-export function planGrowCalendar(input: { from: string; to: string; requirements: readonly CalendarRequirement[]; cropPlans: readonly CropPlanDef[]; units: readonly GrowUnit[]; weekdays?: readonly number[]; closures?: readonly DateRange[] }): GrowCalendar {
+export function planGrowCalendar(input: { from: string; to: string; requirements: readonly CalendarRequirement[]; cropPlans: readonly GrowPlanDef[]; units: readonly GrowUnit[]; weekdays?: readonly number[]; closures?: readonly DateRange[] }): GrowCalendar {
   const ledger = new ShelfLedger(input.units);
   const findings: CalendarFinding[] = [];
   const reqs = [...input.requirements].sort((a, b) => a.distributionDate.localeCompare(b.distributionDate) || a.cropPlanCode.localeCompare(b.cropPlanCode));
   for (const r of reqs) {
     if (r.baseUnits <= 0) continue;
     const cropPlan = input.cropPlans.find((x) => x.code === r.cropPlanCode);
-    if (!cropPlan || !isGrowPlanCarrier(cropPlan)) {
-      findings.push({ kind: 'not-a-grow-plan', cropPlanCode: r.cropPlanCode, sowDate: null, detail: `${r.cropPlanCode} is not a grow plan in the library; the calendar does not place it.` });
+    if (!cropPlan) {
+      findings.push({ kind: 'not-in-library', cropPlanCode: r.cropPlanCode, sowDate: null, detail: `${r.cropPlanCode} is not a grow plan in the library; the calendar does not place it.` });
       continue;
     }
-    const cap = deriveGrowCapacity(cropPlan.plan, input.units);
+    const cap = deriveGrowCapacity(cropPlan, input.units);
     if (cap.sowingTrays <= 0) {
       findings.push({ kind: 'no-unit', cropPlanCode: r.cropPlanCode, sowDate: null, detail: `${r.cropPlanCode}: no grow unit takes this plan (its light line needs a fixture none carries, or no unit has shelves).` });
       continue;
     }
-    const sowDate = sowDateFor(cropPlan.plan, r.distributionDate, input.weekdays, input.closures);
+    const sowDate = sowDateFor(cropPlan, r.distributionDate, input.weekdays, input.closures);
     if (sowDate < input.from) findings.push({ kind: 'sow-before-window', cropPlanCode: r.cropPlanCode, sowDate, detail: `${r.cropPlanCode} for ${r.distributionDate} sows on ${sowDate}, before the window starts.` });
     const n = Math.ceil(r.baseUnits / cap.sowingTrays - 1e-9);
     for (let i = 0; i < n; i += 1) {

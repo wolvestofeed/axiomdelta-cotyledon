@@ -15,7 +15,7 @@ import type { MixFoodFootprint, SustainabilityBasis } from '@/engine/sustainabil
 import { expiredMassKg, mixShrinkKg } from '@/engine/sustainability-basis';
 import { distributionRevenueCents } from '@/engine/working-capital';
 import type { MarkRating } from '@/data/mark';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export interface PvaOrder {
   orderDate: string;
@@ -43,7 +43,7 @@ export interface PvaSideInput {
   energy: EnergyActivity;
   waterGal: number;
   shrinkAllowance: number;
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   /** The subscribers this side serves in the month, with the rating MicroFarm assigned. */
   subscribers: readonly { id: string; name: string; rating: MarkRating }[];
   /** The suppliers on this side's receipts in the month, with their ratings. */

@@ -6,7 +6,6 @@ import { getResolvedActiveInputs } from '@/server/scenarios';
 import { packageUnitCost } from '@/engine/packaging';
 import { withWorkspace } from '@/server/workspace';
 import { NUTRITION_TARGETS } from '@/data/nutrition-targets';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { planVarieties } from '@/data/grow-plan';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +32,7 @@ async function FlatBuilderPageInner({ searchParams }: { searchParams: Promise<{ 
       .filter((c) => c.status !== 'inactive')
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((c) => ({ id: c.id, name: c.name, channel: c.channel, pricePerUnitCents: c.pricePerUnitCents, nutritionTargets: c.nutritionTargets ?? [], pickupPoints: c.pickupPoints.map((s) => ({ id: s.id, name: s.name })) })),
-    cropPlans: inputs.cropPlans.filter((r) => r.status === 'in_service').map((r) => ({ code: r.code, name: r.name, channels: r.channels ?? [], varieties: isGrowPlanCarrier(r) ? planVarieties(r.plan).map((v) => v.key) : [] })),
+    cropPlans: inputs.cropPlans.filter((r) => r.status === 'in_service').map((r) => ({ code: r.code, name: r.name, channels: r.channels ?? [], varieties: planVarieties(r).map((v) => v.key) })),
     targets: NUTRITION_TARGETS.map((t) => ({ key: t.key, name: t.name, kind: t.kind, varieties: t.varieties })),
     channels: inputs.phases.map((p) => ({ phase: p.phase, market: p.market, pricePerUnit: p.pricePerUnit })),
     packages: inputs.packaging.packages.map((p) => ({ id: p.id, name: p.name, channels: p.channels, material: p.material, endOfUse: p.endOfUse, unitCost: packageUnitCost(p, inputs.packaging.supplierItems).cost })),

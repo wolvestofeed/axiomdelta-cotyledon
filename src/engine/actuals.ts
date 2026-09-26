@@ -10,7 +10,7 @@
  * and prices.
  */
 
-import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
+import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import type { SowingExecution, SowingIssue, VarietyLot } from '@/engine/sowing';
 import { libraryLabel, type StandardVersionDoc } from '@/engine/standards';
 import type { PaymentTerms } from '@/data/working-capital';
@@ -18,9 +18,9 @@ import type { InvoiceDoc, SubscriberPaymentDoc, SupplierBillDoc, SupplierPayment
 import type { StaffDoc, PunchDoc, ClosedPayrollPeriodDoc } from '@/engine/payroll';
 import type { TrayFormatKey } from '@/data/tray-formats';
 import { growSowingPrefill, type StageRecords } from '@/engine/sowing-record';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
-type CropPlan = CropPlanDef;
+type CropPlan = GrowPlanCarrier;
 
 // ── Documents ───────────────────────────────────────────────────────────────
 
@@ -420,8 +420,7 @@ export function sowingIdFor(productionDate: string, sequence: number): string {
 /**
  * A sowing record prefilled at standard for a sow date, so the capture form starts from the
  * plan's own grams and the operator types only what differed (`growSowingPrefill`). Every lot
- * code starts as "not recorded"; the record is not closed until someone signs it. A plan that
- * is not a grow plan has no lots to prefill, and a record with no lot does not close.
+ * code starts as "not recorded"; the record is not closed until someone signs it.
  */
 export function standardSowingRecordPrefill(
   productionDate: string,
@@ -433,24 +432,7 @@ export function standardSowingRecordPrefill(
   standardVersion: string = libraryLabel(cropPlan.code),
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> {
   const sowingId = sowingIdFor(productionDate, sequence);
-  if (isGrowPlanCarrier(cropPlan)) return growSowingPrefill(cropPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
-  return {
-    sowingId,
-    cropPlanCode: cropPlan.code,
-    productionDate,
-    standardVersion,
-    plannedUnits: units,
-    goodUnits: units,
-    sowingsRun: 1,
-    servingsProduced: null,
-    lots: [],
-    issues: [],
-    crew: [],
-    actualLaborHours: null,
-    actualLaborRate: null,
-    closedBy: null,
-    notes: null,
-  };
+  return growSowingPrefill(cropPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
 }
 
 // ── Receipts against the standard ───────────────────────────────────────────

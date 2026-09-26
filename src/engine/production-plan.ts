@@ -21,7 +21,7 @@
  */
 
 import { isClosed, type DateRange } from '@/engine/periods';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { ResolvedInputs } from '@/engine/scenario';
 import type { BookOrder } from '@/engine/orders';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
@@ -32,7 +32,6 @@ import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { CrewShift } from '@/data/crews';
 import type { RequirementLine } from '@/engine/catalog';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { defaultGrowUnits } from '@/engine';
 import type { GrowUnit } from '@/engine/grow-capacity';
 import { ShelfLedger, calendarFromSowings, sowDateFor, stockDateFor, type GrowCalendar } from '@/engine/grow-calendar';
@@ -70,7 +69,7 @@ export interface CropPlanRequirement {
  * crop plan is served on a channel it is not authored for (the code crop plan on
  * Phase 2, say) — the legacy scaling until every channel has its own crop plans.
  */
-export function unitFactorFor(cropPlan: CropPlanDef | undefined, channel: number, unitFactorByChannel: Record<number, number>): number {
+export function unitFactorFor(cropPlan: GrowPlanCarrier | undefined, channel: number, unitFactorByChannel: Record<number, number>): number {
   if (cropPlan && cropPlan.channels.includes(channel)) return 1;
   return unitFactorByChannel[channel] ?? 1;
 }
@@ -78,7 +77,7 @@ export function unitFactorFor(cropPlan: CropPlanDef | undefined, channel: number
 /** The crop plans a set of orders needs, in base units, largest first. */
 export function requirementsFor(
   orders: readonly BookOrder[],
-  cropPlans: readonly CropPlanDef[],
+  cropPlans: readonly GrowPlanCarrier[],
   unitFactorByChannel: Record<number, number>,
 ): CropPlanRequirement[] {
   const byCode = new Map<string, CropPlanRequirement>();
@@ -142,7 +141,7 @@ export interface OnHand {
 export function distributedConsumption(
   orders: readonly { status: string; distributionId: string | null; cropPlanCode: string; channel: number; orderDate: string; units: number }[],
   distributions: readonly { id: string; distributedOn: string; units: number }[],
-  cropPlans: readonly CropPlanDef[],
+  cropPlans: readonly GrowPlanCarrier[],
   unitFactorByChannel: Record<number, number>,
 ): Consumption[] {
   const byId = new Map(distributions.map((d) => [d.id, d]));
@@ -181,7 +180,7 @@ export function finishedGoodsOnHand(input: {
   shelfLifeDays: number;
   asOf: string;
   /** The library the records' plans are read from, for each lot's stock date. */
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
 }): OnHand {
   const lots: FinishedLot[] = input.sowings
     .map((b) => {
@@ -305,7 +304,7 @@ export function planProductionDay(input: {
   productionDate: string;
   requirements: readonly CropPlanRequirement[];
   onHand: Record<string, number>;
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   /**
@@ -320,7 +319,7 @@ export function planProductionDay(input: {
    * its shelf ledger so a unit full of last week's trays takes no sowing today. Omitted, every
    * sowing is taken as placed.
    */
-  placeSowing?: (cropPlan: CropPlanDef, productionDate: string, trays: number) => boolean;
+  placeSowing?: (cropPlan: GrowPlanCarrier, productionDate: string, trays: number) => boolean;
   /**
    * The time studies a plan's sowing-stream labor is read from (its labor standard); a plan with
    * none runs on its estimated study. Omitted, every plan runs on its estimate.
@@ -333,7 +332,7 @@ export function planProductionDay(input: {
       const cropPlan = input.cropPlans.find((r) => r.code === req.cropPlanCode);
       return cropPlan ? { req, cropPlan, cap: deriveCapacity(cropPlan, input.capacityInputs, 1) } : null;
     })
-    .filter((p): p is { req: CropPlanRequirement; cropPlan: CropPlanDef; cap: CapacityProfile } => p !== null);
+    .filter((p): p is { req: CropPlanRequirement; cropPlan: GrowPlanCarrier; cap: CapacityProfile } => p !== null);
   const runs: CropPlanRunPlan[] = [];
 
   for (const { req, cropPlan, cap } of planned) {
@@ -399,7 +398,7 @@ export function planProductionDay(input: {
  * A grow run's sowing-stream lines from its plan's labor standard, scaled to the run: a fixed line
  * once per sowing, a per-tray line on the study's own sowing size times the trays sown.
  */
-function growSowingTasks(cropPlan: CropPlanDef, run: Pick<CropPlanRunPlan, 'sowingsScheduled' | 'produced' | 'sowingSize'>, studies: readonly TimeStudyDoc[]): UnplacedTask[] {
+function growSowingTasks(cropPlan: GrowPlanCarrier, run: Pick<CropPlanRunPlan, 'sowingsScheduled' | 'produced' | 'sowingSize'>, studies: readonly TimeStudyDoc[]): UnplacedTask[] {
   const study = laborStandard(studiesForCropPlan(studies, cropPlan.code)) ?? estimatedTimeStudy(cropPlan, run.sowingSize);
   return study.lines
     .filter((l) => l.stream === 'sowing')
@@ -517,7 +516,7 @@ export function planHorizon(input: {
   from: string;
   to: string;
   book: readonly BookOrder[];
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   unitFactorByChannel: Record<number, number>;
@@ -546,17 +545,17 @@ export function planHorizon(input: {
   const ledger = new ShelfLedger(growUnits);
   for (const o of input.openingSowings ?? []) {
     const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
-    if (cropPlan && isGrowPlanCarrier(cropPlan) && o.trays > 0) ledger.place(cropPlan, o.sowDate, o.trays, null);
+    if (cropPlan && o.trays > 0) ledger.place(cropPlan, o.sowDate, o.trays, null);
   }
   // A placed sowing carries the first distribution date it serves, so a day page can list its own sowings.
-  const placeSowingFor = (servesFrom: string) => (cropPlan: CropPlanDef, productionDate: string, trays: number): boolean =>
-    isGrowPlanCarrier(cropPlan) ? ledger.place(cropPlan, productionDate, trays, servesFrom).placed : true;
+  const placeSowingFor = (servesFrom: string) => (cropPlan: GrowPlanCarrier, productionDate: string, trays: number): boolean =>
+    ledger.place(cropPlan, productionDate, trays, servesFrom).placed;
 
   // Each order is made on the production date its plan needs: a grow plan's sow date
   // (distribution date less days to harvest, on a production day), a plan not in the library's the day before.
   const prodDateOf = (o: BookOrder): string => {
     const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
-    return cropPlan && isGrowPlanCarrier(cropPlan) ? sowDateFor(cropPlan.plan, o.orderDate, weekdays, input.closures) : productionDateFor(o.orderDate, weekdays, input.closures);
+    return cropPlan ? sowDateFor(cropPlan, o.orderDate, weekdays, input.closures) : productionDateFor(o.orderDate, weekdays, input.closures);
   };
   const byProduction = new Map<string, BookOrder[]>();
   for (const o of inRange) {
@@ -763,7 +762,7 @@ export interface SingleRun {
 }
 
 export function singleCropPlanRun(input: {
-  cropPlan: CropPlanDef;
+  cropPlan: GrowPlanCarrier;
   units: number;
   unitFactor: number;
   premiumFactor: number;

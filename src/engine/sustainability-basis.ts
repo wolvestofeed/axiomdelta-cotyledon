@@ -24,7 +24,7 @@ import {
 } from '@/engine/carbon';
 import { inputFactors, cropPlanFoodCategoryMap } from '@/data/emission-factors';
 import type { LcaOption } from '@/data/lca-options';
-import type { CropPlanDef } from '@/data/plan-data';
+import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export interface UnitsByCropPlan {
   /** Null when the distribution named no crop plan. */
@@ -70,7 +70,7 @@ export function sustainabilityBasis(input: {
   from: string;
   to: string;
   shelfLifeDays: number;
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   unitFactorByChannel: Record<number, number>;
 }): SustainabilityBasis {
   const { bundle, from, to } = input;
@@ -187,7 +187,7 @@ export interface MixFoodFootprint {
  */
 export function mixFoodFootprint(input: {
   basis: SustainabilityBasis;
-  cropPlans: readonly CropPlanDef[];
+  cropPlans: readonly GrowPlanCarrier[];
   unitFactorByChannel: Record<number, number>;
   selection?: Record<string, string>;
   options?: LcaOption[];
@@ -242,7 +242,7 @@ export function mixFoodFootprint(input: {
 // ── Mass: shrink, past shelf life, inbound and outbound ─────────────────────
 
 /** Shrink mass over the window: each crop plan's good units × its as-purchased mass per unit × the shrink allowance. */
-export function mixShrinkKg(basis: SustainabilityBasis, cropPlans: readonly CropPlanDef[], shrinkAllowance: number): { kg: number; seedKg: number; units: number } {
+export function mixShrinkKg(basis: SustainabilityBasis, cropPlans: readonly GrowPlanCarrier[], shrinkAllowance: number): { kg: number; seedKg: number; units: number } {
   let seedKg = 0;
   let units = 0;
   for (const [code, qty] of Object.entries(basis.producedByCropPlan)) {
@@ -255,7 +255,7 @@ export function mixShrinkKg(basis: SustainabilityBasis, cropPlans: readonly Crop
 }
 
 /** Finished units past shelf life unshipped, as shipped mass. */
-export function expiredMassKg(basis: SustainabilityBasis, cropPlans: readonly CropPlanDef[]): { units: number; kg: number } {
+export function expiredMassKg(basis: SustainabilityBasis, cropPlans: readonly GrowPlanCarrier[]): { units: number; kg: number } {
   let units = 0;
   let kg = 0;
   for (const [code, qty] of Object.entries(basis.expiredByCropPlan)) {
@@ -277,7 +277,7 @@ export function receivedMassKg(basis: SustainabilityBasis): { input: string; mas
 }
 
 /** Shipped mass per distributed unit over the window, unit-weighted across the crop plans served. */
-export function mixShippedMassPerUnitKg(basis: SustainabilityBasis, cropPlans: readonly CropPlanDef[], unitFactorByChannel: Record<number, number>): number {
+export function mixShippedMassPerUnitKg(basis: SustainabilityBasis, cropPlans: readonly GrowPlanCarrier[], unitFactorByChannel: Record<number, number>): number {
   let kg = 0;
   let units = 0;
   for (const m of basis.units) {

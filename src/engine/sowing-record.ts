@@ -93,7 +93,7 @@ export function growSowingPrefill(
   shrinkAllowance: number,
   varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY,
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> & GrowSowingFields {
-  const plan = carrier.plan;
+  const plan: GrowPlanDef = carrier;
   const costing = costCarrier(carrier);
   const sprout = TRAY_FORMAT_BY_KEY[plan.format].kind === 'sprout';
   const issues: SowingIssue[] = costing.lines
