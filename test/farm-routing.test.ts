@@ -4,7 +4,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { equipmentSeed } from '@/data/capex';
+import { equipmentSeed as seed } from '@/data/capex';
+
+// The commercial list selected, as a commercial forecast would: the units the routing can run on.
+const equipmentSeed = seed.map((e) => (e.setting === 'commercial' ? { ...e, status: 'planned' as const } : e));
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
@@ -96,20 +99,22 @@ describe('farm routing — precedence depth, the process map\'s columns', () => 
 });
 
 describe('farm routing — the units as resources', () => {
-  it('tags the library’s estimate a placeholder; the blackout rack has no changeover between sowings', () => {
+  it('tags the library’s estimate a placeholder; only selected Phase 1 units are resources', () => {
     const rs = routeResources(equipmentSeed);
-    const blackoutRack = rs.find((r) => r.key === 'Blackout rack, 200 lb capacity')!;
-    expect(blackoutRack.concurrentSowings).toMatchObject({ value: 1, status: 'PLACEHOLDER' });
-    expect(blackoutRack.changeoverMinutes).toMatchObject({ value: 0, status: 'PLACEHOLDER' });
-    expect(blackoutRack.attendedRun.value).toBe(false);
+    const sealer = rs.find((r) => r.key === 'Tray sealer, semi-automatic')!;
+    expect(sealer.concurrentSowings).toMatchObject({ value: 1, status: 'PLACEHOLDER' });
+    expect(sealer.changeoverMinutes).toMatchObject({ value: 0, status: 'PLACEHOLDER' });
+    expect(sealer.attendedRun.value).toBe(true);
     expect(rs.every((r) => equipmentSeed.find((e) => e.key === r.key)!.phase === 1)).toBe(true);
+    // The commercial list as seeded is unselected: no resource until a forecast selects one.
+    expect(routeResources(seed)).toEqual([]);
   });
 
   it('a stated library value is STATED; a scenario edit is STATED and wins', () => {
     const stated = equipmentSeed.map((e) => (e.key === 'Tray sealer, semi-automatic' ? { ...e, resourceBasis: 'stated' as const } : e));
-    const rs = routeResources(stated, { 'Blackout rack, 200 lb capacity': { changeoverMinutes: 5 } });
+    const rs = routeResources(stated, { 'Walk-in cooler, 12x20, with refrigeration': { changeoverMinutes: 5 } });
     expect(rs.find((r) => r.key === 'Tray sealer, semi-automatic')!.concurrentSowings.status).toBe('STATED');
-    expect(rs.find((r) => r.key === 'Blackout rack, 200 lb capacity')!.changeoverMinutes).toMatchObject({ value: 5, status: 'STATED' });
+    expect(rs.find((r) => r.key === 'Walk-in cooler, 12x20, with refrigeration')!.changeoverMinutes).toMatchObject({ value: 5, status: 'STATED' });
   });
 });
 
@@ -132,7 +137,7 @@ describe('farm scenario — the scheduler’s sections', () => {
   });
 
   it('resolves the resources off the equipment, with the scenario’s edits', () => {
-    const r = resolveScenarioInputs({ resources: { [aResource]: { concurrentSowings: 2 } } });
+    const r = resolveScenarioInputs({ forecast: { equipment: { [aResource]: { status: 'planned' } } }, resources: { [aResource]: { concurrentSowings: 2 } } });
     expect(r.resources.find((x) => x.key === aResource)!.concurrentSowings).toMatchObject({ value: 2, status: 'STATED' });
   });
 

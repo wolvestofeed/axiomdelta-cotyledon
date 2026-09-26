@@ -64,12 +64,12 @@ export interface SowingGrowUnit {
 }
 
 /**
- * The Phase 1 equipment list: rows on build phase 1 that are not marked "no".
- * Planned build-outs (phases 2 and 3) never count toward capacity or the sowing
- *.
+ * The Phase 1 equipment list: rows on build phase 1 that are in service or planned. A row
+ * marked No or left unselected, and a planned build-out (phases 2 and 3), never counts toward
+ * capacity or the sowing.
  */
 export function phaseOneEquipment<T extends Pick<EquipmentLine, 'phase' | 'status'>>(lines: readonly T[]): T[] {
-  return lines.filter((l) => l.phase === 1 && l.status !== 'no');
+  return lines.filter((l) => l.phase === 1 && countsTowardCapital(l.status));
 }
 
 /** The grow units on the Phase 1 list that carry a sowing capacity. */
@@ -104,6 +104,7 @@ export interface EquipmentRowShape {
   key: string;
   item: string;
   category: string;
+  setting: string;
   buildPhase: number;
   status: string;
   inServiceDate: string | Date | null;
@@ -147,6 +148,7 @@ export function equipmentFromRow(r: EquipmentRowShape): EquipmentLine {
     key: r.key,
     item: r.item,
     category: (EQUIPMENT_CATEGORIES as readonly string[]).includes(r.category) ? (r.category as EquipmentCategory) : 'Storage, smallwares, instruments',
+    setting: r.setting === 'home' ? 'home' : 'commercial',
     phase,
     status: isEquipmentStatus(r.status) ? r.status : 'unset',
     inServiceDate: date,

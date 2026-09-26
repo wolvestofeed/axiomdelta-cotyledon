@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, Kpi, StatusBadge, money, num } from '@/components/ui';
 import { InlineNumber } from '@/components/InlineCells';
-import { SOWING_CAPACITY_BASIS_LABELS, EQUIPMENT_CATEGORIES, RESOURCE_SEED, type SowingCapacityBasis, type EquipmentCategory, type EquipmentStatus } from '@/data/capex';
+import { SOWING_CAPACITY_BASIS_LABELS, EQUIPMENT_CATEGORIES, EQUIPMENT_SETTING_LABELS, RESOURCE_SEED, type SowingCapacityBasis, type EquipmentCategory, type EquipmentSetting, type EquipmentStatus } from '@/data/capex';
 import { EQUIPMENT_STATUSES, EQUIPMENT_STATUS_LABELS, countsTowardCapital, equipmentLibraryOrder, filterEquipment } from '@/engine/equipment';
-import { capexRollup, extendedCost } from '@/engine/fixed-costs';
+import { extendedCost } from '@/engine/fixed-costs';
 import { traysPerUnit } from '@/engine/grow-capacity';
 import { LIGHT_FIXTURES } from '@/data/inputs-catalog';
 import { useScenario } from '@/state/scenario-store';
@@ -40,7 +40,8 @@ const fromYesNo = (v: string): boolean | null => (v === 'yes' ? true : v === 'no
 /** An estimated figure is a placeholder until someone states or observes it. */
 const basisTag = (b: SowingCapacityBasis | undefined) => (b === 'stated' || b === 'observed' ? 'STATED' : 'PLACEHOLDER');
 
-export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
+/** The equipment library for one setting: the home grow room's list, or a commercial facility's. */
+export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; setting: EquipmentSetting }) {
   const { resolved, setForecast } = useScenario();
   // The master list edits in both worlds; the open forecast's column is on Plan only (Roadmap N6 slice 3).
   const { forecastEditing } = useOperationsWorld({});
@@ -67,8 +68,11 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
   const [draft, setDraft] = useState<{ item: string; category: EquipmentCategory; buildPhase: number }>({ item: '', category: EQUIPMENT_CATEGORIES[0], buildPhase: 1 });
 
   const fp = resolved.equipmentPurchase;
-  const lines = resolved.equipment;
-  const roll = useMemo(() => capexRollup(resolved), [resolved]);
+  const lines = useMemo(() => resolved.equipment.filter((l) => l.setting === setting), [resolved.equipment, setting]);
+  // What the open forecast counts: its own status for a line where it sets one.
+  const counted = lines.filter((l) => countsTowardCapital(dated.get(l.key)?.status ?? l.status));
+  const carried = (phase?: 1 | 2 | 3) => counted.filter((l) => phase === undefined || l.phase === phase).reduce((s, l) => s + extendedCost(l, fp), 0);
+  const noPrice = lines.filter((l) => l.qty > 0 && l.unitCostNew <= 0).length;
   const rows = useMemo(() => equipmentLibraryOrder(filterEquipment(lines, shown)), [lines, shown]);
   // One category open at a time; all collapsed by default.
   const [open, setOpen] = useState<EquipmentCategory | null>(null);
@@ -104,7 +108,7 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
   const add = () => {
     if (!draft.item.trim()) return;
     start(async () => {
-      const r = await createEquipment(draft);
+      const r = await createEquipment({ ...draft, setting });
       if (!r.ok) setError(r.error);
       else {
         setError(null);
@@ -119,15 +123,20 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={money(roll.equipmentAll, 0)} label="Equipment carried in capital" sub="In service + planned, all phases" />
+        <Kpi value={money(carried(), 0)} label="Carried in capital" sub={`${num(counted.length)} of ${num(lines.length)} ${EQUIPMENT_SETTING_LABELS[setting].toLowerCase()} rows in the open forecast`} />
         <Kpi value={money(inService, 0)} label="In service" sub={`${num(count('in_service'))} rows`} />
-        <Kpi value={money(roll.equipmentPhase1, 0)} label="Phase 1" sub="In service + planned" />
-        <Kpi value={money(roll.equipmentPhase2Add, 0)} label="Phase 2" sub="In service + planned" />
-        <Kpi value={money(roll.equipmentPhase3Add, 0)} label="Phase 3" sub="In service + planned" />
+        {setting === 'commercial' ? (
+          <>
+            <Kpi value={money(carried(1), 0)} label="Phase 1" sub="Counted in the open forecast" />
+            <Kpi value={money(carried(2) + carried(3), 0)} label="Phases 2 and 3" sub="Counted in the open forecast" />
+          </>
+        ) : (
+          <Kpi value={num(noPrice)} label="Rows with no price" sub="Quantity entered, unit cost not stated" />
+        )}
         <Kpi value={num(noQty)} label="Rows with no quantity" sub="Listed last" />
       </div>
 
-      <Card title="Equipment library" className="mt-4">
+      <Card title={setting === 'home' ? 'Home equipment' : 'Commercial equipment'} className="mt-4">
         <div className="flex flex-wrap gap-[0.4rem] items-center mb-3!">
           <span className="farm-kpi-sub mr-1!">Show</span>
           {EQUIPMENT_STATUSES.map((s) => {
@@ -331,7 +340,7 @@ export function EquipmentClient({ canEdit }: { canEdit: boolean }) {
           </div>
         )}
         <p className="farm-kpi-sub mt-2">
-          {forecastEditing ? 'The open forecast column is that forecast’s own status and in-service date for a line; the record does not move.' : 'On Actual the list shows the record; a forecast’s own status and in-service date for a line are set on Plan.'} In a forecast, planned Phase 1 equipment counts from the forecast start unless dated, and Phase 2 and 3 count only once dated. Statuses: In service — bought and in use; Planned — planned for its build-out phase; No — considered and not selected; – — on the list, not selected and not needed. Extended cost is quantity × unit cost, with the {Math.round(fp.usedDiscount * 100)}% used-equipment factor on used lines. Every unit cost is a placeholder until quoted. Shelves, shelf width and fixture make a row a grow unit: a sowing is what one takes in trays of the plan\u2019s format, and a plan with a light line goes only on a unit whose fixture delivers it; the 1020 flats column is the count one unit takes. Sowings at once, changeover minutes, attended run and may run unattended describe the unit as a Phase 1-era scheduling resource: estimated open fields, a placeholder until stated or observed. Capital, depreciation and financing are on <Link className="farm-link" href="/farm/financials/capital">Capital &amp; Financing</Link>; energy and refrigerant attributes per line are on <Link className="farm-link" href="/farm/sustainability/equipment">Sustainability · Equipment</Link>.
+          {forecastEditing ? 'The open forecast column is that forecast’s own status and in-service date for a line; the record does not move.' : 'On Actual the list shows the record; a forecast’s own status and in-service date for a line are set on Plan.'} {setting === 'commercial' ? 'A commercial row is on the list and counts toward nothing until a forecast selects it: set its status in the open forecast. ' : ''}In a forecast, planned Phase 1 equipment counts from the forecast start unless dated, and Phase 2 and 3 count only once dated. Statuses: In service — bought and in use; Planned — planned for its build-out phase; No — considered and not selected; – — on the list, not selected. Extended cost is quantity × unit cost, with the {Math.round(fp.usedDiscount * 100)}% used-equipment factor on used lines. Shelves, shelf width and fixture make a row a grow unit: a sowing is what one takes in trays of the plan\u2019s format, and a plan with a light line goes only on a unit whose fixture delivers it; the 1020 flats column is the count one unit takes. Sowings at once, changeover minutes, attended run and may run unattended describe a unit the Day Schedule can place work on. Capital, depreciation and financing are on <Link className="farm-link" href="/farm/financials/capital">Capital &amp; Financing</Link>; energy and refrigerant attributes per line are on <Link className="farm-link" href="/farm/sustainability/equipment">Sustainability · Equipment</Link>.
           {!canEdit && ' Editing is limited to super admins.'}
         </p>
       </Card>

@@ -131,13 +131,8 @@ export const assumptions = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
-// Facility & the capacity constraint chain (sowing size is DERIVED from this)
+// The operating day and the production calendar
 // ─────────────────────────────────────────────────────────────────────────
-
-export const facility = {
-  sizeSqFt: t(5000, 'STATED', 'sq ft', 'Leased raw shell, Austin'),
-  leaseTermYears: t(7, 'STATED', 'years'),
-} as const;
 
 export const capacityInputs = {
   // The OPERATING DAY is how the business chooses to run the facility, not who is

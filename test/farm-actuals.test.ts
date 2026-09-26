@@ -137,7 +137,9 @@ describe('actuals — documents and periods', () => {
 });
 
 describe('actuals — posting a period', () => {
-  const posted = postActuals(bundle);
+  // A commercial forecast with its rent and utilities stated: the overhead the bills are measured against.
+  const RC = resolveScenarioInputs({ capex: { fixedCostLines: { lease: { monthlyAmountCents: 12_000_00 }, utilities: { monthlyAmountCents: 4_500_00 } } } });
+  const posted = postActuals(bundle, RC);
   const p = posted.periods[0];
 
   it('balances and posts one period', () => {
@@ -206,7 +208,7 @@ describe('actuals — posting a period', () => {
   });
 
   it('J2: overhead incurred is the accrued budget plus depreciation, whatever the bills say', () => {
-    const budget = manufacturingOverheadBudget();
+    const budget = manufacturingOverheadBudget(RC);
     const expected = Math.round((budget.lease / 12) * 100) + Math.round((budget.utilities / 12) * 100) + Math.round((budget.depreciation / 12) * 100);
     expect(p.overhead.incurredCents).toBe(expected);
     expect(p.overhead.budgetCents).toBe(Math.round((budget.lease / 12) * 100) + Math.round((budget.utilities / 12) * 100));
@@ -221,7 +223,7 @@ describe('actuals — posting a period', () => {
   });
 
   it('J2: a bill above budget is a spending variance charge, trued against the accrual', () => {
-    const over = postActuals({ ...bundle, bills: [billDoc('lease', 1_300_000), billDoc('utilities', 450_000)] });
+    const over = postActuals({ ...bundle, bills: [billDoc('lease', 1_300_000), billDoc('utilities', 450_000)] }, RC);
     const q = over.periods[0]!;
     expect(q.overhead.spendingVarianceCents).toBe(100_000);
     expect(net(over.entries, '5150')).toBe(100_000);
@@ -231,7 +233,7 @@ describe('actuals — posting a period', () => {
   });
 
   it('J2: a category with no bill stays accrued as a liability, with a note, and no variance', () => {
-    const missing = postActuals({ ...bundle, bills: [billDoc('lease', 1_200_000)] });
+    const missing = postActuals({ ...bundle, bills: [billDoc('lease', 1_200_000)] }, RC);
     const q = missing.periods[0]!;
     expect(q.overhead.accruedUnbilledCents).toBe(450_000);
     expect(q.overhead.spendingVarianceCents).toBe(0);

@@ -523,6 +523,9 @@ export const farmFixedCostLines = farmSchema.table(
     /** The operator's own grouping: 'lease' | 'utilities' | 'admin' | other. */
     // @classification: Internal
     category: text('category').notNull().default('other'),
+    /** 'home' | 'commercial' (0010). */
+    // @classification: Internal
+    setting: text('setting').notNull().default('commercial'),
     /** 'manufacturing_overhead' | 'general_admin'. */
     // @classification: Internal
     treatment: text('treatment').notNull().default('general_admin'),
@@ -1867,6 +1870,9 @@ export const farmEquipment = farmSchema.table(
     item: text('item').notNull(),
     // @classification: Internal
     category: text('category').notNull(),
+    /** 'home' | 'commercial': the home grow room, or a rented commercial facility (0010). */
+    // @classification: Internal
+    setting: text('setting').notNull().default('commercial'),
     /** Build-out phase, 1–3. */
     // @classification: Internal
     buildPhase: integer('build_phase').notNull().default(1),

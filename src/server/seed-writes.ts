@@ -1,9 +1,7 @@
 import { eq, inArray, ne, sql } from 'drizzle-orm';
 import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmCropPlans, farmCropPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle } from '@/db';
 import type { EquipmentLine, LeaseholdLine } from '@/data/capex';
-import { seedLoans, equipmentPurchase, type FixedCostLineDef, type LoanDef } from '@/data/finance';
-import { leaseholdSeed } from '@/data/capex';
-import { countsTowardCapital } from '@/engine/equipment';
+import { seedLoans, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { PackageSeed } from '@/data/packaging';
 import type { TimeStudySeed } from '@/data/time-studies';
 import { planSeedSubscribers, type SubscriberDef } from '@/data/subscribers';
@@ -49,6 +47,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
         position,
         item: l.item,
         category: l.category,
+        setting: l.setting,
         buildPhase: l.phase,
         status: l.status,
         inServiceDate: l.inServiceDate,
@@ -219,6 +218,7 @@ export async function insertFixedCostLines(db: SeedDb, lines: readonly FixedCost
       key: l.key,
       label: l.label,
       category: l.category,
+      setting: l.setting,
       treatment: l.treatment,
       status: l.status,
       monthlyAmountCents: l.monthlyAmountCents,
@@ -233,18 +233,9 @@ export async function insertFixedCostLines(db: SeedDb, lines: readonly FixedCost
   return lines.length;
 }
 
-/**
- * The loan seed, with each principal read from the LIVE equipment library and
- * the leasehold schedule — so the seeded figure matches what Capital &
- * Financing showed on the day it ran. It does not track either afterwards; the
- * schedule is reported beside the principal instead (Roadmap N1).
- */
-export function dbSeedLoans(equipment: readonly EquipmentLine[]): LoanDef[] {
-  const equipmentTotal = equipment
-    .filter((l) => countsTowardCapital(l.status))
-    .reduce((s, l) => s + l.qty * l.unitCostNew * (l.newUsed === 'Used' ? equipmentPurchase.usedDiscount : 1), 0);
-  const leasehold = leaseholdSeed.filter((l) => l.counted).reduce((s, l) => s + l.extended, 0);
-  return seedLoans({ equipmentCents: Math.round(equipmentTotal * 100), leaseholdCents: Math.round(leasehold * 100) });
+/** The loan seed: none (`seedLoans`). */
+export function dbSeedLoans(): LoanDef[] {
+  return seedLoans();
 }
 
 export async function insertSubscribers(db: SeedDb, subscribers: readonly SubscriberDef[]): Promise<number> {
@@ -388,4 +379,57 @@ export async function deleteSeedRows(db: SeedDb): Promise<{ subscribers: number;
   const c = await db.delete(farmSubscribers).where(eq(farmSubscribers.source, 'seed')).returning({ id: farmSubscribers.id });
   const y = await db.delete(farmSubscriptionCycles).where(eq(farmSubscriptionCycles.source, 'seed')).returning({ id: farmSubscriptionCycles.id });
   return { subscribers: c.length, cycles: y.length };
+}
+
+/**
+ * Bring a workspace's seed rows in line with the code seed for the home and commercial setup:
+ * equipment and fixed-cost lines still `source = 'seed'` take the seed's values, seed rows the
+ * seed no longer carries are removed (the retired build-out and loans with them), and seed rows
+ * a workspace lacks are added. A row edited in the app is user-built and untouched, except that
+ * a Grow room row is a home row wherever it came from.
+ */
+export async function syncSetupSeed(db: SeedDb, equipment: readonly EquipmentLine[], fixedCosts: readonly FixedCostLineDef[]): Promise<{ equipmentRemoved: number; equipmentUpdated: number; fixedRemoved: number; fixedUpdated: number; leaseholdRemoved: number; loansRemoved: number }> {
+  const keys = new Set(equipment.map((l) => l.key));
+  const seedRows = await db.select({ id: farmEquipment.id, key: farmEquipment.key }).from(farmEquipment).where(eq(farmEquipment.source, 'seed'));
+  const retired = seedRows.filter((r) => !keys.has(r.key));
+  if (retired.length) await db.delete(farmEquipment).where(inArray(farmEquipment.id, retired.map((r) => r.id)));
+  let equipmentUpdated = 0;
+  for (const r of seedRows.filter((x) => keys.has(x.key))) {
+    const position = equipment.findIndex((l) => l.key === r.key);
+    const l = equipment[position]!;
+    await db
+      .update(farmEquipment)
+      .set({
+        position, item: l.item, category: l.category, setting: l.setting, buildPhase: l.phase, status: l.status, inServiceDate: l.inServiceDate, newUsed: l.newUsed, qty: l.qty,
+        unitCostCents: Math.round(l.unitCostNew * 100), critical: l.critical, notes: l.note ?? null, shelves: l.shelves ?? null, shelfWidthIn: l.shelfWidthIn ?? null, fixtureKey: l.fixtureKey ?? null,
+        sowingCapacityLb: l.sowingCapacityLb ?? null, sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated', concurrentSowings: l.concurrentSowings ?? null, changeoverMinutes: l.changeoverMinutes ?? null,
+        attendedRun: l.attendedRun ?? null, mayRunUnattended: l.mayRunUnattended ?? null, resourceBasis: l.resourceBasis ?? 'estimated',
+      })
+      .where(eq(farmEquipment.id, r.id));
+    equipmentUpdated += 1;
+  }
+  await insertEquipment(db, equipment);
+  await db.update(farmEquipment).set({ setting: 'home' }).where(eq(farmEquipment.category, 'Grow room'));
+
+  const fixedKeys = new Set(fixedCosts.map((l) => l.key));
+  const fixedRows = await db.select({ id: farmFixedCostLines.id, key: farmFixedCostLines.key }).from(farmFixedCostLines).where(eq(farmFixedCostLines.source, 'seed'));
+  const fixedRetired = fixedRows.filter((r) => !fixedKeys.has(r.key));
+  if (fixedRetired.length) await db.delete(farmFixedCostLines).where(inArray(farmFixedCostLines.id, fixedRetired.map((r) => r.id)));
+  let fixedUpdated = 0;
+  for (const r of fixedRows.filter((x) => fixedKeys.has(x.key))) {
+    const position = fixedCosts.findIndex((l) => l.key === r.key);
+    const l = fixedCosts[position]!;
+    await db
+      .update(farmFixedCostLines)
+      .set({ position, label: l.label, category: l.category, setting: l.setting, treatment: l.treatment, status: l.status, monthlyAmountCents: l.monthlyAmountCents, startDate: l.startDate, endDate: l.endDate, notes: l.notes })
+      .where(eq(farmFixedCostLines.id, r.id));
+    fixedUpdated += 1;
+  }
+  const have = new Set((await db.select({ key: farmFixedCostLines.key }).from(farmFixedCostLines)).map((r) => r.key));
+  const missing = fixedCosts.filter((l) => !have.has(l.key));
+  if (missing.length) await insertFixedCostLines(db, missing);
+
+  const leasehold = await db.delete(farmLeaseholdLines).where(eq(farmLeaseholdLines.source, 'seed')).returning({ id: farmLeaseholdLines.id });
+  const loans = await db.delete(farmLoans).where(eq(farmLoans.source, 'seed')).returning({ id: farmLoans.id });
+  return { equipmentRemoved: retired.length, equipmentUpdated, fixedRemoved: fixedRetired.length, fixedUpdated, leaseholdRemoved: leasehold.length, loansRemoved: loans.length };
 }

@@ -9,7 +9,6 @@ import { SectionSave } from '@/components/SectionSave';
 import { SourceLink, useDocumentSources } from '@/components/SourceLink';
 import { docKey, evidenceCoverage } from '@/engine/entity-links';
 import { combustionFactors, gridFactorERCT, gwpAR5 } from '@/data/emission-factors';
-import { facility } from '@/data/plan-data';
 import { energyInventory, normalize } from '@/engine/carbon';
 import { ENERGY_DEFAULTS, type EnergyActivity } from '@/engine/scenario';
 import { READING_METRICS } from '@/engine/sustainability-records';
@@ -40,7 +39,7 @@ export default function EnergyPage() {
   );
   const inv = useMemo(() => energyInventory(e), [e]);
   const units = world.basis.totalUnits;
-  const nLoc = normalize(inv.location.totalKg, { units, sqFt: facility.sizeSqFt.value });
+  const nLoc = normalize(inv.location.totalKg, { units, sqFt: resolved.facilitySqFt ?? undefined });
   const fuels = Object.values(combustionFactors);
 
   const set = (key: keyof EnergyActivity, value: number) =>

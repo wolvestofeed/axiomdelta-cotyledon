@@ -101,8 +101,9 @@ rate per unit = budgeted annual fixed manufacturing overhead
               ÷ NORMAL CAPACITY in units
 ```
 
-**What is in the budget.** Only MANUFACTURING overhead: the facility lease, its
-utilities, and straight-line depreciation of the equipment and leasehold
+**What is in the budget.** Only MANUFACTURING overhead: for a home grow room, the grow
+room's share of the household electricity; for a rented commercial facility, its rent and
+utilities; and straight-line depreciation of the equipment and any build-out
 (ASC 330-10-30-1 — costs of bringing product to its condition and location).
 Admin, insurance, software and licenses are general and administrative expense and
 debt service is financing; ASC 330-10-30-8 keeps both in the period. The engine

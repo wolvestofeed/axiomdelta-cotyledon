@@ -21,6 +21,7 @@
     "farm:input-factors": "python3 scripts/generate-farm-input-factors.py",
     "farm:sources": "tsx scripts/seed-farm-sources.ts",
     "farm:reseed": "tsx scripts/reseed-farm-placeholders.ts",
+    "farm:sync-setup": "tsx scripts/sync-farm-setup.ts",
     "farm:sync-crop-plans": "tsx scripts/sync-farm-seed-crop-plans.ts",
     "farm:training": "tsx scripts/import-farm-training.ts",
     "farm:facility-scenario": "tsx scripts/facility-farm-scenario.ts",

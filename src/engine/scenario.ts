@@ -279,6 +279,8 @@ export interface CapexOverlay {
    */
   financeParams?: Partial<{
     usedDiscount: number;
+    /** A rented commercial facility's floor area, sq ft; absent = no facility (a home grow room). */
+    facilitySqFt: number;
     /** @deprecated Legacy: mapped onto the equipment loan. */
     equipmentApr: number;
     /** @deprecated Legacy: mapped onto the equipment loan. */
@@ -386,6 +388,8 @@ export interface ResolvedInputs {
   crews: CrewShift[];
   /** The used-equipment purchase factor. */
   equipmentPurchase: typeof defaultEquipmentPurchase;
+  /** A rented commercial facility's floor area, sq ft; null until a forecast states one. */
+  facilitySqFt: number | null;
   /** The loans the plan carries (Roadmap N1). */
   loans: LoanDef[];
   /** The monthly fixed costs the plan carries (Roadmap N1). */
@@ -737,8 +741,13 @@ export function resolveScenarioInputs(
   });
 
   // The scheduler's inputs ----------------------------------------------------
+  // Capacity and the scheduler read the equipment the forecast selects: its own status for a line where it sets one.
   const equipmentList = equipment.length > 0 ? equipment : equipmentSeed;
-  const resources = routeResources(equipmentList, config.resources ?? {});
+  const selected = equipmentList.map((l) => {
+    const status = config.forecast?.equipment?.[l.key]?.status;
+    return status ? { ...l, status } : l;
+  });
+  const resources = routeResources(selected, config.resources ?? {});
   const schedulePolicy = structuredClone(defaultSchedulePolicy);
   const sp = config.schedulePolicy ?? {};
   put(schedulePolicy.distributionTimeMin, sp.distributionTimeMin);
@@ -753,7 +762,7 @@ export function resolveScenarioInputs(
   // Crop plans page and production planning use.
   const finalCapacity = {
     ...(capacityInputs as unknown as typeof defaultCapacityInputs),
-    growUnits: growUnitsFrom(equipment.length > 0 ? equipment : equipmentSeed),
+    growUnits: growUnitsFrom(selected),
   } as unknown as CapacityInputs;
   const sharedAssumptions = assumptions as unknown as ResolvedInputs['assumptions'];
   const cropPlanCosts: Record<string, CropPlanCostInputs> = {};
@@ -780,6 +789,7 @@ export function resolveScenarioInputs(
     phaseProfiles: phaseProfiles as unknown as ResolvedInputs['phaseProfiles'],
     crews,
     equipmentPurchase,
+    facilitySqFt: fp.facilitySqFt ?? null,
     loans: resolvedLoans,
     fixedCostLines: resolvedFixedCostLines,
     leasehold: resolvedLeasehold,

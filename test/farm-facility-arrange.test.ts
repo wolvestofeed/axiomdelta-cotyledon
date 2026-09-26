@@ -9,8 +9,10 @@ import { facilityRequirement, facilityRows, rowsThroughPhase } from '@/engine/fa
 import { arrangeLayout } from '@/engine/facility-arrange';
 import { layoutFindings, measureLayout, rectContains, unitRect } from '@/engine/facility-layout';
 
-const rows = rowsThroughPhase(facilityRows(equipmentSeed), 3);
-const full = facilityRequirement(equipmentSeed, { psm: 1500 }).phases[2]!;
+// The commercial list, every row selected, as a commercial forecast would carry it.
+const COMMERCIAL = equipmentSeed.filter((e) => e.setting === 'commercial').map((e) => ({ ...e, status: 'planned' as const }));
+const rows = rowsThroughPhase(facilityRows(COMMERCIAL), 3);
+const full = facilityRequirement(COMMERCIAL, { psm: 1500 }).phases[2]!;
 const left = arrangeLayout({ rows, full, dockWall: 'left' });
 const right = arrangeLayout({ rows, full, dockWall: 'right' });
 
@@ -22,16 +24,14 @@ describe('farm facility arrangement', () => {
     expect(left.layout.units.length).toBe(withFloor);
   });
 
-  it('draws the whole floor: every support room, the spine, hoods, drains, two exits, and phase boundaries', () => {
+  it('draws the whole floor: every support room, the spine, two exits and the phase boundary; no hood with no hooded unit', () => {
     const rooms = left.layout.rooms;
     const supportKeys = new Set(rooms.filter((r) => r.kind === 'room').map((r) => r.supportKey).filter(Boolean));
     for (const k of ['office', 'lounge', 'lockers', 'toilets', 'trash', 'refrigerated-waste', 'recyclables', 'warewash', 'cart-wash', 'wares', 'dry-food', 'chemical', 'dock']) expect(supportKeys.has(k), k).toBe(true);
     expect(rooms.filter((r) => r.kind === 'spine').length).toBe(1);
-    expect(rooms.filter((r) => r.kind === 'hood').length).toBeGreaterThanOrEqual(3);
-    expect(rooms.filter((r) => r.kind === 'drain').length).toBeGreaterThanOrEqual(3);
+    expect(rooms.filter((r) => r.kind === 'hood')).toEqual([]);
     expect(rooms.filter((r) => r.kind === 'exit').length).toBe(2);
     expect(rooms.some((r) => r.kind === 'boundary' && /Phase 2/.test(r.label))).toBe(true);
-    expect(rooms.some((r) => r.kind === 'boundary' && /Phase 3/.test(r.label))).toBe(true);
   });
 
   it('passes every layout check against a limit, with either dock wall', () => {

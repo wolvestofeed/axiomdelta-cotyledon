@@ -96,6 +96,7 @@ async function updateEquipmentInner(input: unknown): Promise<Result> {
 const EquipmentInput = z.object({
   item: z.string().trim().min(1, 'Name the equipment').max(200),
   category: z.enum(EQUIPMENT_CATEGORIES),
+  setting: z.enum(['home', 'commercial']).default('home'),
   buildPhase: z.number().int().min(1).max(3).default(1),
 });
 
@@ -122,6 +123,7 @@ async function createEquipmentInner(input: unknown): Promise<Result<{ id: string
       position: Number(next),
       item: parsed.data.item,
       category: parsed.data.category,
+      setting: parsed.data.setting,
       buildPhase: parsed.data.buildPhase,
       status: 'unset',
       source: 'user_built',

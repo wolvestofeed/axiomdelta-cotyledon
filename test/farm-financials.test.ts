@@ -50,30 +50,26 @@ describe('farm financials — per-phase economics', () => {
 });
 
 describe('farm financials — amortising payments (PMT)', () => {
-  it('equipment lease and leasehold amortisation match the model', () => {
+  it('the level payment on a principal, a rate and a term', () => {
     expect(pmt(1_195_833, 0.09, 60)).toBeCloseTo(24_823.53, 1);
     expect(pmt(787_000, 0.08, 84)).toBeCloseTo(12_266.35, 1);
   });
 });
 
 describe('farm financials — capex rollup', () => {
-  it('subtotals match the equipment + leasehold schedule', () => {
+  it('the seed is the home grow room: Vallecito\'s rack as bought, no build-out', () => {
     const r = capexRollup();
-    expect(r.equipmentAll).toBe(1_195_833);
-    // Split into build-out phases in the equipment library seed (Roadmap N1);
-    // both blackout racks on Phase 1 since 2026-09-17 (the second rack's $36,000).
-    expect(r.equipmentPhase1).toBe(626_258);
-    expect(r.equipmentPhase2Add).toBe(491_775);
-    expect(r.equipmentPhase3Add).toBe(77_800);
-    expect(r.leaseholdSubtotal).toBe(787_000);
-    expect(r.totalCapex).toBe(1_982_833);
-    expect(r.phase1Capex).toBe(1_413_258);
+    expect(r.equipmentAll).toBe(1_058);
+    expect(r.equipmentPhase1).toBe(1_058);
+    expect(r.equipmentPhase2Add).toBe(0);
+    expect(r.equipmentPhase3Add).toBe(0);
+    expect(r.leaseholdSubtotal).toBe(0);
+    expect(r.totalCapex).toBe(1_058);
+    expect(r.phase1Capex).toBe(1_058);
   });
-  it('monthly financing totals ~$37,090', () => {
-    expect(Math.abs(capexRollup().totalMonthlyFinancing - 37_089.88)).toBeLessThan(2);
-  });
-  it('fixed cost monthly ties out to ~$59,590', () => {
-    expect(Math.abs(fixedCosts().monthly - 59_589.88)).toBeLessThan(2);
+  it('no loan and no fixed cost is carried until one is stated', () => {
+    expect(capexRollup().totalMonthlyFinancing).toBe(0);
+    expect(fixedCosts().monthly).toBe(0);
   });
 });
 
@@ -90,7 +86,6 @@ describe('overhead absorption on normal capacity', () => {
     expect(budget.annual).toBeCloseTo(budget.lease + budget.utilities + budget.depreciation, 6);
     expect(budget.excluded.admin).toBeCloseTo(fc.admin * 12, 6);
     expect(budget.excluded.financing).toBeCloseTo(fc.financing * 12, 6);
-    expect(budget.annual).toBeLessThan(fc.annual);
   });
 
   it('the inventory rate is set on normal capacity and is no part of the cost of a unit', () => {

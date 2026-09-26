@@ -15,8 +15,7 @@
  * Money in cents: these are stated commitments, not computed rates.
  */
 
-import { openingPosition } from '@/data/working-capital';
-import { equipmentSeed, leaseholdSeed } from '@/data/capex';
+import type { EquipmentSetting } from '@/data/capex';
 
 export const LOAN_PURPOSES = ['equipment', 'leasehold', 'other'] as const;
 export type LoanPurpose = (typeof LOAN_PURPOSES)[number];
@@ -82,6 +81,8 @@ export interface FixedCostLineDef {
   label: string;
   /** The operator's own grouping. */
   category: string;
+  /** The home grow room's cost, or a rented commercial facility's. */
+  setting: EquipmentSetting;
   /** The accounting fact, never inferred from the label. */
   treatment: FixedCostTreatment;
   status: FixedCostStatus;
@@ -99,99 +100,33 @@ export const equipmentPurchase = {
 };
 
 /**
- * The two loans the plan carries, seeded at the capex totals in force when the
- * seed runs (Roadmap N1). APR and term were the `financeParams` placeholders;
- * the start date is the stated loan start.
- *
- * Principals are passed in rather than read here so the seed is written from
- * the live equipment library, not from the code schedule — the two differ as
- * soon as a quantity is edited, and the seed should match what the page shows
- * on the day it runs.
+ * No loan is seeded: a home grow room is funded without one, and a commercial facility's loans
+ * are entered on Equipment's Commercial tab.
  */
-export function seedLoans(principals: { equipmentCents: number; leaseholdCents: number }): LoanDef[] {
-  const startDate = openingPosition.loanStartDate.value;
-  return [
-    {
-      key: 'equipment-loan',
-      label: 'Equipment loan',
-      purpose: 'equipment',
-      status: 'planned',
-      principalCents: principals.equipmentCents,
-      apr: 0.09,
-      termMonths: 60,
-      startDate,
-      notes:
-        'PLACEHOLDER terms: 9% over 60 months, a typical commercial equipment lease. Seeded at the equipment schedule total on the day the seed ran; it does not track the schedule afterwards, and the current total is shown beside it.',
-      source: 'seed',
-    },
-    {
-      key: 'leasehold-loan',
-      label: 'Leasehold improvements loan',
-      purpose: 'leasehold',
-      status: 'planned',
-      principalCents: principals.leaseholdCents,
-      apr: 0.08,
-      termMonths: 84,
-      startDate,
-      notes:
-        'PLACEHOLDER terms: 8% amortised over the 7-year lease term. Seeded at the leasehold schedule total on the day the seed ran.',
-      source: 'seed',
-    },
-  ];
+export function seedLoans(): LoanDef[] {
+  return [];
 }
 
-/** The three monthly fixed costs the constants carried, as definitions. */
-export function seedFixedCostLines(): FixedCostLineDef[] {
-  return [
-    {
-      key: 'lease',
-      label: 'Lease',
-      category: 'lease',
-      treatment: 'manufacturing_overhead',
-      status: 'planned',
-      monthlyAmountCents: 12_000_00,
-      startDate: null,
-      endDate: null,
-      notes: 'PLACEHOLDER: $12,000 a month on the 5,000 sq ft shell. A signed lease replaces it and moves the line to In force.',
-      source: 'seed',
-    },
-    {
-      key: 'utilities',
-      label: 'Utilities',
-      category: 'utilities',
-      treatment: 'manufacturing_overhead',
-      status: 'planned',
-      monthlyAmountCents: 4_500_00,
-      startDate: null,
-      endDate: null,
-      notes: 'PLACEHOLDER: $4,500 a month. The Sustainability energy and water inputs carry the same accounts on their own basis.',
-      source: 'seed',
-    },
-    {
-      key: 'admin',
-      label: 'Admin, insurance, software, licenses',
-      category: 'admin',
-      treatment: 'general_admin',
-      status: 'planned',
-      monthlyAmountCents: 6_000_00,
-      startDate: null,
-      endDate: null,
-      notes: 'PLACEHOLDER: $6,000 a month. G&A — ASC 330-10-30-8 keeps it out of inventory.',
-      source: 'seed',
-    },
-  ];
-}
+const NOT_STATED = 'Not stated: enter the monthly amount.';
+const line = (key: string, label: string, category: string, treatment: FixedCostTreatment, setting: EquipmentSetting, notes: string): FixedCostLineDef => ({
+  key, label, category, treatment, setting, status: 'planned', monthlyAmountCents: 0, startDate: null, endDate: null, notes, source: 'seed',
+});
 
 /**
- * The engine default when no loan library is loaded: the same two loans, with
- * their principals off the CODE capex schedule. The database seed uses the live
- * equipment library instead, so the seeded principal matches what the Capital
- * page showed on the day it ran.
+ * The monthly fixed costs, at zero until stated: the home grow room's electricity and business
+ * costs, and a rented commercial facility's rent, utilities and business costs.
  */
+export function seedFixedCostLines(): FixedCostLineDef[] {
+  return [
+    line('home-electricity', 'Electricity', 'utilities', 'manufacturing_overhead', 'home', `${NOT_STATED} The grow room's share of the household bill.`),
+    line('home-admin', 'Admin, insurance, software, licenses', 'admin', 'general_admin', 'home', `${NOT_STATED} G&A — ASC 330-10-30-8 keeps it out of inventory.`),
+    line('lease', 'Rent', 'lease', 'manufacturing_overhead', 'commercial', `${NOT_STATED} A signed lease moves the line to In force.`),
+    line('utilities', 'Utilities', 'utilities', 'manufacturing_overhead', 'commercial', NOT_STATED),
+    line('admin', 'Admin, insurance, software, licenses', 'admin', 'general_admin', 'commercial', `${NOT_STATED} G&A — ASC 330-10-30-8 keeps it out of inventory.`),
+  ];
+}
+
+/** The engine default when no loan library is loaded. */
 export function codeSeedLoans(): LoanDef[] {
-  const equipment = equipmentSeed
-    .filter((l) => l.status === 'in_service' || l.status === 'planned')
-    .reduce((s, l) => s + l.qty * l.unitCostNew * (l.newUsed === 'Used' ? equipmentPurchase.usedDiscount : 1), 0);
-  const leasehold = leaseholdSeed.filter((l) => l.counted).reduce((s, l) => s + l.extended, 0);
-  return seedLoans({ equipmentCents: Math.round(equipment * 100), leaseholdCents: Math.round(leasehold * 100) });
+  return seedLoans();
 }

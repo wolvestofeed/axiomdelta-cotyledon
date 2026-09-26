@@ -103,7 +103,7 @@ describe('services, dated volume and pickup point calendars (Roadmap N4a)', () =
 
 describe('equipment in service on a date in a forecast (Roadmap N4a, decision 20)', () => {
   const line = (key: string, phase: 1 | 2 | 3, status: EquipmentLine['status'], inServiceDate: string | null = null): EquipmentLine => ({
-    key, item: key, category: 'Hot production', phase, newUsed: 'New', qty: 1, unitCostNew: 1, critical: false, status, inServiceDate,
+    key, item: key, category: 'Prep', setting: 'commercial', phase, newUsed: 'New', qty: 1, unitCostNew: 1, critical: false, status, inServiceDate,
   } as EquipmentLine);
   const lines = [line('p1', 1, 'planned'), line('p2', 2, 'planned'), line('p2dated', 2, 'planned', '2028-07-01'), line('live', 1, 'in_service', '2026-01-10'), line('no', 1, 'no')];
 

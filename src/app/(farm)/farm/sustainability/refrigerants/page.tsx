@@ -31,7 +31,7 @@ export default function RefrigerantsPage() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [pending, start] = useTransition();
 
-  const carried = useMemo(() => resolved.equipment.filter((e) => countsTowardCapital(e.status)), [resolved.equipment]);
+  const carried = useMemo(() => resolved.datedEquipment.filter((e) => countsTowardCapital(e.status)), [resolved.datedEquipment]);
   const inv = useMemo(() => refrigerantInventory(carried.map((e) => ({ item: e.key, qty: e.qty })), attrs, service, asOf), [carried, attrs, service, asOf]);
   const records = useMemo(() => world.records?.refrigerantService ?? [], [world.records]);
   const sourceRefs = useMemo(
@@ -41,7 +41,7 @@ export default function RefrigerantsPage() {
   const sources = useLinkedEntities(sourceRefs);
   const sourceOf = (id: string | null | undefined) => (id ? sources[entityRef('source', id)] ?? null : null);
   const inYear = records.filter((r) => r.servicedOn.startsWith(`${year}-`));
-  const candidates = carried.filter((e) => e.category === 'Cold storage' || /blackout rack/i.test(e.item));
+  const candidates = carried.filter((e) => e.category === 'Cold storage');
   const unregistered = candidates.filter((e) => !inv.rows.some((r) => r.circuit.id === e.key));
 
   const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, ok: string, after?: () => void) =>

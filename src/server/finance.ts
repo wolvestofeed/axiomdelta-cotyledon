@@ -13,7 +13,6 @@ import {
 } from '@/data/finance';
 import { withSeedLock, insertLoans, insertFixedCostLines, insertLeaseholdLines, dbSeedLoans } from '@/server/seed-writes';
 import { leaseholdSeed, type LeaseholdLine } from '@/data/capex';
-import { listEquipment } from '@/server/equipment';
 
 /**
  * MicroFarm — loans and fixed-cost lines read layer (server-only).
@@ -31,11 +30,10 @@ const iso = (d: string | Date | null): string | null =>
 async function seedLoansIfEmpty(): Promise<void> {
   const any = await db.select({ id: farmLoans.id }).from(farmLoans).limit(1);
   if (any[0]) return;
-  const equipment = await listEquipment();
   await withSeedLock(db, 'finance', async (tx) => {
     const again = await tx.select({ id: farmLoans.id }).from(farmLoans).limit(1);
     if (again[0]) return;
-    await insertLoans(tx, dbSeedLoans(equipment));
+    await insertLoans(tx, dbSeedLoans());
   });
 }
 
@@ -78,6 +76,7 @@ export async function listFixedCostLines(): Promise<FixedCostLineDef[]> {
     key: r.key,
     label: r.label,
     category: r.category,
+    setting: r.setting === 'home' ? 'home' : 'commercial',
     treatment: r.treatment as FixedCostTreatment,
     status: r.status as FixedCostStatus,
     monthlyAmountCents: r.monthlyAmountCents,

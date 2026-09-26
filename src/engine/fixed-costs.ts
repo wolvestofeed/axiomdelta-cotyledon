@@ -100,8 +100,8 @@ export interface CapexRollup {
 
 export function capexRollup(inputs: ResolvedInputs = resolveScenarioInputs()): CapexRollup {
   const fp = inputs.equipmentPurchase;
-  // The equipment library's in-service and planned rows (Roadmap N1).
-  const equipment = inputs.equipment.filter((l) => countsTowardCapital(l.status));
+  // The in-service and planned rows, at the forecast's own status for a line where it sets one.
+  const equipment = inputs.datedEquipment.filter((l) => countsTowardCapital(l.status));
   const catOrder: EquipmentCategory[] = [];
   const catTotals = new Map<EquipmentCategory, number>();
   for (const l of equipment) {

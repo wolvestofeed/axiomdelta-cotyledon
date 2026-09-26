@@ -733,7 +733,7 @@ const wasteEndOfLife: Builder = async (ctx) => {
 const refrigerantLeakage: Builder = async (ctx) => {
   const w = await sustainabilityWorld(ctx);
   const R = w.R;
-  const carried = R.equipment.filter((e) => countsTowardCapital(e.status)).map((e) => ({ item: e.key, qty: e.qty }));
+  const carried = R.datedEquipment.filter((e) => countsTowardCapital(e.status)).map((e) => ({ item: e.key, qty: e.qty }));
   const inv = refrigerantInventory(carried, R.sustainability.equipment, w.refrigerantService, w.asOf);
   const rows = inv.rows;
   const fullCharge = rows.reduce((s, r) => s + r.circuit.fullChargeLb * r.quantity, 0);

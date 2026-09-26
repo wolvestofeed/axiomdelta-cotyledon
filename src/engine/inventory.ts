@@ -18,7 +18,6 @@ import { countsTowardCapital } from '@/engine/equipment';
 import { pickupPoints } from '@/data/seed-invented';
 import { FARM_HOME } from '@/data/farm-location';
 import { pickupPointCoordinates } from '@/data/pickup-point-geo';
-import { facility } from '@/data/plan-data';
 import {
   type EmissionPosting,
   type ActivityRecord,
@@ -164,7 +163,8 @@ export function fullInventory(
   lines.push({ scope: 1, category: 'combustion', label: 'Stationary and mobile combustion', kg: energy.location.scope1Kg, basis: 'AR5', activity: s1energy.length ? 'annual fuel inputs' : 'none on file', weakest: status(s1energy) });
 
   // Scope 1: fugitive refrigerants, one posting per service add this year.
-  const carriedEquipment = R.equipment.filter((e) => countsTowardCapital(e.status)).map((e) => ({ item: e.key, qty: e.qty }));
+  // The equipment the forecast carries, at its own status for a line where it sets one.
+  const carriedEquipment = R.datedEquipment.filter((e) => countsTowardCapital(e.status)).map((e) => ({ item: e.key, qty: e.qty }));
   const refr = refrigerantInventory(carriedEquipment, S.equipment, world.refrigerantService, asOf);
   const refrPostings: EmissionPosting[] = [];
   for (const r of refr.rows) {
@@ -231,7 +231,7 @@ export function fullInventory(
   const selSet = postings.filter((p) => !isRef(p));
   const reference = { location: aggregateByScope(refSet, 'location'), market: aggregateByScope(refSet, 'market') };
   const selected = { location: aggregateByScope(selSet, 'location'), market: aggregateByScope(selSet, 'market') };
-  const norm = { units: annualUnits, sqFt: facility.sizeSqFt.value, operatingDays };
+  const norm = { units: annualUnits, sqFt: R.facilitySqFt ?? undefined, operatingDays };
 
   return {
     asOf,

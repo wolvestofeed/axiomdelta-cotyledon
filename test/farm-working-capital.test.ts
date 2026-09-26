@@ -299,8 +299,7 @@ describe('Phase K — actuals', () => {
   };
 
   /** The Actual ledger's month and its working capital (Roadmap N6). */
-  const monthOf = (bundle: ActualsBundle, period: string) => {
-    const inputs = resolveScenarioInputs();
+  const monthOf = (bundle: ActualsBundle, period: string, inputs = resolveScenarioInputs()) => {
     const ledger = postActualLedger(bundle, inputs, `${period}-28`);
     const m = ledger.months.find((x) => x.label === period)!;
     const current = actualCurrentUnitOfDebtCents(bundle, inputs, m.to);
@@ -308,9 +307,12 @@ describe('Phase K — actuals', () => {
   };
 
   it('the opening balance posts equity, the fit-out and its financing; cash is equity + debt − fit-out', () => {
-    const posted = postActuals(base);
+    // A commercial forecast carrying an equipment loan (a test fixture; the seed carries none).
+    const loan = { key: 'equipment-loan', label: 'Equipment loan', purpose: 'equipment' as const, status: 'planned' as const, principalCents: 100_000_00, apr: 0.09, termMonths: 60, startDate: '2027-01-01', notes: null, source: 'user_built' as const };
+    const withLoan = resolveScenarioInputs({}, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, [loan]);
+    const posted = postActuals(base, withLoan);
     expect(posted.balanced).toBe(true);
-    const { m, wc } = monthOf(base, '2027-01');
+    const { m, wc } = monthOf(base, '2027-01', withLoan);
     expect(net(posted.entries, '3100')).toBe(-200_000_00);
     expect(m.cashFlow.closingCashCents).toBe(200_000_00);
     expect(wc.openingRecorded).toBe(true);

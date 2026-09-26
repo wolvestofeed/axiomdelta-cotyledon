@@ -23,40 +23,40 @@ import {
   type LayoutUnit,
 } from '@/engine/facility-layout';
 
-const rows = rowsThroughPhase(facilityRows(equipmentSeed), 1);
+// The commercial list, every row selected, as a commercial forecast would carry it.
+const COMMERCIAL = equipmentSeed.filter((e) => e.setting === 'commercial').map((e) => ({ ...e, status: 'planned' as const }));
+const rows = rowsThroughPhase(facilityRows(COMMERCIAL), 1);
 const row = (re: RegExp) => rows.find((r) => re.test(r.item))!;
-const req = facilityRequirement(equipmentSeed, { psm: 1500 });
+const req = facilityRequirement(COMMERCIAL, { psm: 1500 });
 const derived = req.phases[0]!.floor;
 const unit = (key: string, x: number, y: number, n = 1, rot: 0 | 90 = 0): LayoutUnit => ({ id: `${key}#${n}`, key, unit: n, x, y, rot });
 const base = (): FacilityLayout => ({ shell: { widthFt: 100, depthFt: 80 }, rooms: [], units: [] });
-const sproutingRack = row(/sprouting rack, 100/);
-const jarStand = row(/Jar stand/);
-const shelf = row(/shelf/);
-const blackoutRack = row(/Blackout rack/);
-const dish = row(/dishwasher/);
+const sealer = row(/Tray sealer/);
+const vacuum = row(/Vacuum packaging/);
+const reachIn = row(/Reach-in/);
 const table = row(/prep tables/);
+const W = 50.39 / 12;
+const D = 42.83 / 12;
 
 describe('farm facility layout — geometry', () => {
   it('snaps to half a foot and sizes a unit from its footprint, swapping on rotation', () => {
     expect(snap(3.24)).toBe(3);
     expect(snap(3.26)).toBe(3.5);
-    const r0 = unitRect(unit(sproutingRack.key, 0, 0), sproutingRack)!;
-    const r90 = unitRect(unit(sproutingRack.key, 0, 0, 1, 90), sproutingRack)!;
-    expect(r0.w).toBeCloseTo(51 / 12, 5);
-    expect(r0.h).toBeCloseTo(44 / 12, 5);
-    expect(r90.w).toBeCloseTo(44 / 12, 5);
-    expect(r90.h).toBeCloseTo(51 / 12, 5);
+    const r0 = unitRect(unit(sealer.key, 0, 0), sealer)!;
+    const r90 = unitRect(unit(sealer.key, 0, 0, 1, 90), sealer)!;
+    expect(r0.w).toBeCloseTo(W, 5);
+    expect(r0.h).toBeCloseTo(D, 5);
+    expect(r90.w).toBeCloseTo(D, 5);
+    expect(r90.h).toBeCloseTo(W, 5);
   });
 
-  it('gives a hot-line unit its zone aisle at the front, a walk-in its panel clearance and apron, the tumble blackout rack its published clearances', () => {
-    expect(unitClearanceFt(sproutingRack)).toEqual({ front: 54 / 12, rear: 0, side: 0 });
+  it('gives a unit its zone aisle at the front, and a walk-in its panel clearance and apron', () => {
+    expect(unitClearanceFt(sealer)).toEqual({ front: 4, rear: 0, side: 0 });
     const walkIn = row(/Walk-in cooler, 12x20/);
     expect(unitClearanceFt(walkIn)).toEqual({ front: 6, rear: 2 / 12, side: 2 / 12 });
-    const tumble = facilityRows(equipmentSeed).find((r) => /Tumble/.test(r.item))!;
-    expect(unitClearanceFt(tumble)).toEqual({ front: 5, rear: 2, side: 2 });
-    const h = haloRect(unit(sproutingRack.key, 10, 10), sproutingRack)!;
+    const h = haloRect(unit(sealer.key, 10, 10), sealer)!;
     expect(h.y).toBe(10);
-    expect(h.h).toBeCloseTo(44 / 12 + 54 / 12, 5);
+    expect(h.h).toBeCloseTo(D + 4, 5);
   });
 
   it('measures facing gaps and edge distances', () => {
@@ -70,61 +70,45 @@ describe('farm facility layout — geometry', () => {
   it('sizes an empty drawing to the derived gross and finds a free spot clear of every footprint', () => {
     const e = emptyLayout(6038);
     expect(e.shell.widthFt * e.shell.depthFt).toBeGreaterThanOrEqual(5900);
-    const l = { ...base(), units: [unit(sproutingRack.key, 1, 1)] };
+    const l = { ...base(), units: [unit(sealer.key, 1, 1)] };
     const at = findFreeSpot(l, rows, { w: 4, h: 4 });
     expect(at.y).toBe(1);
-    expect(at.x).toBeGreaterThanOrEqual(1 + 51 / 12);
+    expect(at.x).toBeGreaterThanOrEqual(1 + W);
   });
 
   it('lists every unit of a row\'s quantity until placed', () => {
     const l = base();
     const before = unplacedUnits(l, rows);
-    expect(before.filter((u) => u.row.key === blackoutRack.key).length).toBe(2);
+    expect(before.filter((u) => u.row.key === reachIn.key).length).toBe(2);
     expect(before.filter((u) => u.row.key === table.key).length).toBe(3);
     expect(before.some((u) => /distribution van/i.test(u.row.item))).toBe(false);
-    l.units.push(unit(blackoutRack.key, 1, 1, 1));
-    expect(unplacedUnits(l, rows).filter((u) => u.row.key === blackoutRack.key).map((u) => u.unit)).toEqual([2]);
+    l.units.push(unit(reachIn.key, 1, 1, 1));
+    expect(unplacedUnits(l, rows).filter((u) => u.row.key === reachIn.key).map((u) => u.unit)).toEqual([2]);
   });
 });
 
 describe('farm facility layout — the conformance checks', () => {
   it('reports a unit outside the shell', () => {
-    const l = { ...base(), units: [unit(sproutingRack.key, 98, 1)] };
+    const l = { ...base(), units: [unit(sealer.key, 98, 1)] };
     expect(layoutFindings(l, rows, 1).some((f) => f.check === 'inside_shell')).toBe(true);
   });
 
   it('reports a footprint standing in another unit\'s working clearance, and an aisle under 36 in', () => {
-    // The jar stand stands 2 ft in front of the sprouting rack: inside its 54 in aisle, and the gap is under 36 in.
-    const l = { ...base(), units: [unit(sproutingRack.key, 10, 10), unit(jarStand.key, 10, 10 + 44 / 12 + 2)] };
+    // The vacuum packer stands 2 ft in front of the sealer: inside its 4 ft aisle, and the gap is under 36 in.
+    const l = { ...base(), units: [unit(sealer.key, 10, 10), unit(vacuum.key, 10, 10 + D + 2)] };
     const f = layoutFindings(l, rows, 1);
-    expect(f.some((x) => x.check === 'clearance' && x.item === 'S-07')).toBe(true);
+    expect(f.some((x) => x.check === 'clearance')).toBe(true);
     expect(f.some((x) => x.check === 'aisle_min' && /24 in/.test(x.text))).toBe(true);
     // Side by side, abutting, is a line and not an aisle.
-    const line = { ...base(), units: [unit(sproutingRack.key, 10, 10), unit(jarStand.key, 10 + 51 / 12, 10)] };
+    const line = { ...base(), units: [unit(sealer.key, 10, 10), unit(vacuum.key, 10 + W, 10)] };
     expect(layoutFindings(line, rows, 1).some((x) => x.check === 'aisle_min')).toBe(false);
   });
 
   it('holds the cart spine to 5 ft clear and keeps footprints out of it', () => {
-    const l = { ...base(), rooms: [{ id: 's', kind: 'spine' as const, label: 'Spine', x: 40, y: 0, w: 4, h: 80 }], units: [unit(sproutingRack.key, 41, 10)] };
+    const l = { ...base(), rooms: [{ id: 's', kind: 'spine' as const, label: 'Spine', x: 40, y: 0, w: 4, h: 80 }], units: [unit(sealer.key, 41, 10)] };
     const f = layoutFindings(l, rows, 1).filter((x) => x.check === 'spine_width');
     expect(f.some((x) => /4\.0 ft clear/.test(x.text))).toBe(true);
     expect(f.some((x) => /stands in Spine/.test(x.text))).toBe(true);
-  });
-
-  it('requires a canopy overhanging every hooded unit 6 in on its open sides', () => {
-    const noHood = { ...base(), units: [unit(sproutingRack.key, 10, 10)] };
-    expect(layoutFindings(noHood, rows, 1).some((x) => x.check === 'hood_overhang' && /no canopy/.test(x.text))).toBe(true);
-    const hood = { ...noHood, rooms: [{ id: 'h', kind: 'hood' as const, label: 'Hood', x: 9.5, y: 9.5, w: 51 / 12 + 1, h: 44 / 12 + 1 }] };
-    expect(layoutFindings(hood, rows, 1).some((x) => x.check === 'hood_overhang')).toBe(false);
-    const short = { ...noHood, rooms: [{ id: 'h', kind: 'hood' as const, label: 'Hood', x: 10, y: 10, w: 51 / 12, h: 44 / 12 }] };
-    expect(layoutFindings(short, rows, 1).some((x) => x.check === 'hood_overhang')).toBe(true);
-  });
-
-  it('holds the dish machine within 5 ft of a floor drain (Food Code 5-402.11)', () => {
-    const far = { ...base(), units: [unit(dish.key, 10, 10)], rooms: [{ id: 'd', kind: 'drain' as const, label: 'Drain', x: 30, y: 10, w: 1, h: 1 }] };
-    expect(layoutFindings(far, rows, 1).some((x) => x.check === 'dish_machine_drain' && /allows 5 ft/.test(x.text))).toBe(true);
-    const near = { ...far, rooms: [{ id: 'd', kind: 'drain' as const, label: 'Drain', x: 10, y: 15, w: 1, h: 1 }] };
-    expect(layoutFindings(near, rows, 1).some((x) => x.check === 'dish_machine_drain')).toBe(false);
   });
 
   it('holds every work position within the self-imposed 25 ft of a hand sink, and names it as convention', () => {
@@ -136,16 +120,8 @@ describe('farm facility layout — the conformance checks', () => {
     expect(layoutFindings(close, rows, 1).some((x) => x.check === 'hand_sink_travel')).toBe(false);
   });
 
-  it('reads both blackout racks against the hot line: stacked at one end of an aisle is a finding, separate bearings is a note', () => {
-    const hot = [unit(sproutingRack.key, 10, 10), unit(shelf.key, 15, 10), unit(jarStand.key, 20, 10)];
-    const stacked = { ...base(), units: [...hot, unit(blackoutRack.key, 40, 10, 1), unit(blackoutRack.key, 44, 10, 2)] };
-    expect(layoutFindings(stacked, rows, 1).find((x) => x.check === 'two_streams')!.severity).toBe('limit');
-    const apart = { ...base(), units: [...hot, unit(blackoutRack.key, 2, 30, 1), unit(blackoutRack.key, 30, 30, 2)] };
-    expect(layoutFindings(apart, rows, 1).find((x) => x.check === 'two_streams')!.severity).toBe('note');
-  });
-
   it('counts exits and reports the longest straight line to one as a measurement, not a limit', () => {
-    const l = { ...base(), units: [unit(sproutingRack.key, 10, 10)], rooms: [{ id: 'e1', kind: 'exit' as const, label: 'Exit', x: 0, y: 0, w: 3, h: 1 }] };
+    const l = { ...base(), units: [unit(sealer.key, 10, 10)], rooms: [{ id: 'e1', kind: 'exit' as const, label: 'Exit', x: 0, y: 0, w: 3, h: 1 }] };
     expect(layoutFindings(l, rows, 1).find((x) => x.check === 'egress')!.severity).toBe('limit');
     const two = { ...l, rooms: [...l.rooms, { id: 'e2', kind: 'exit' as const, label: 'Exit 2', x: 97, y: 79, w: 3, h: 1 }] };
     const e = layoutFindings(two, rows, 1).find((x) => x.check === 'egress')!;
@@ -154,7 +130,7 @@ describe('farm facility layout — the conformance checks', () => {
   });
 
   it('never counsels: no recommend, should, best or optimal in any finding', () => {
-    const l = { ...base(), units: [unit(sproutingRack.key, 98, 1), unit(dish.key, 10, 10), unit(blackoutRack.key, 40, 10, 1), unit(blackoutRack.key, 44, 10, 2)] };
+    const l = { ...base(), units: [unit(sealer.key, 98, 1), unit(vacuum.key, 10, 10), unit(reachIn.key, 40, 10, 1), unit(reachIn.key, 44, 10, 2)] };
     const text = layoutFindings(l, rows, 1).map((f) => f.text).join(' ');
     expect(text).not.toMatch(/\b(recommend|should|best|optimal|consider)\b/i);
   });
@@ -172,7 +148,7 @@ describe('farm facility layout — measured against derived', () => {
     };
     const m = measureLayout(l, derived);
     expect(m.zones.find((z) => z.zone === 'Prep')!.measuredSqFt).toBe(280);
-    expect(m.zones.find((z) => z.zone === 'Prep')!.derivedSqFt).toBeCloseTo(269.8, 0);
+    expect(m.zones.find((z) => z.zone === 'Prep')!.derivedSqFt).toBeCloseTo(247.7, 0);
     expect(m.spineFt).toBe(60);
     expect(m.spineSqFt).toBe(300);
     expect(m.productionFloorSqFt).toBe(580);

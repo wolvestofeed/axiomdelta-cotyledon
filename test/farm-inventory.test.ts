@@ -81,18 +81,21 @@ describe('farm inventory — full inventory from the resolved model', () => {
     expect(inv.normalizers.reference.kgPerUnit).toBeCloseTo(s3 / inv.annualUnits, 9);
   });
   it('energy, refrigerant, compost and basis inputs flow into the right lines and totals', () => {
+    const walkIn = 'Walk-in cooler, 12x20, with refrigeration';
     const R = resolveScenarioInputs({
+      // A commercial forecast that selects the walk-in cooler.
+      forecast: { equipment: { [walkIn]: { status: 'planned' } } },
       sustainability: {
         energy: { naturalGasTherms: 1000, electricityKwh: 10000, renewableShare: 0.5 },
         waste: { compostShare: 1 },
-        equipment: { 'Walk-in freezer, 10x12, with refrigeration': { refrigerant: 'R-404A', chargeLbPerUnit: 60 } },
+        equipment: { [walkIn]: { refrigerant: 'R-404A', chargeLbPerUnit: 60 } },
       },
     });
     const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
     const inv = fullInventory(R, '2026-09-12', {
       basis: basisFor(cropPlan.code, cropPlan.channels[0]),
       energy: R.sustainability.energy,
-      refrigerantService: { 'Walk-in freezer, 10x12, with refrigeration': [{ date: '2026-04-01', lbAdded: 4 }] },
+      refrigerantService: { [walkIn]: [{ date: '2026-04-01', lbAdded: 4 }] },
     });
     expect(inv.lines.find((l) => l.category === 'combustion')!.kg).toBeCloseTo(5311.45, 3);
     expect(inv.lines.find((l) => l.category === 'electricity-location')!.kg).toBeCloseTo(3516.018, 2);

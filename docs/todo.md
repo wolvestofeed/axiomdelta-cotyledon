@@ -13,6 +13,8 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - The restaurant channel price ($15) is a placeholder; the subscription ($20) and retail ($25) prices per 1020 flat are Vallecito's (DATED).
 - The grow-room temperature and humidity band for the temperature-and-humidity control point: readings are recorded and none is judged until the produce safety plan states the band.
 - The labor rate is the $29.28/h placeholder loaded wage until Staffing's rates arrive; a live 1020 flat carries 21 minutes on the three streams from your 2023 study.
+- Quantities and prices for the home grow list on Equipment, Home: 25 rows sit at quantity 1 with no price.
+- Whether the 1010 tray and the 12 oz and 16 oz mason jars become tray formats for costing (seed grams, harvest grams, trays a shelf) or stay equipment only. The formats today are the 1020 flat, the 7x11, the 5x5 insert and the pint jar.
 - The incurred side of the light, tray wear and sanitizer a tray takes. The ledger applies them to work in process at their standard per tray (5195), but the forecast bills no electricity by tray-day, no trays and no sanitizer, and the electricity also sits in the utilities of the fixed overhead budget. Where each is billed (a utility bill, trays as equipment, sanitizer as a supply) is yours to state.
 
 ## Code
@@ -23,6 +25,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - Lint: three react-hooks errors carried from the source, `OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`; fix when those files are touched.
 - Nested async server components rendered as JSX elements lose the workspace scope; only the dashboard does it today, by calling them as functions. Add a structural check if the pattern spreads.
 - The Muse-era topic build plans in `roadmaps/` describe kitchen builds; re-base or delete each in the phase that touches its module.
+- The facility engine still carries the source client's kitchen rules, which no seed row now triggers: hood runs and canopy overhang, the dish machine within 5 ft of a floor drain, the two blackout-rack streams, drains placed by kettle and braising-pan names, the hot line and a la carte zones, the tumble chiller's clearances, the 34°F hold room and the 7- or 30-day shelf-life configurations (`facility.ts`, `facility-arrange.ts`, `facility-layout.ts`, `facility-design.ts`, `facility-conformance.ts`). Restate them for a grow facility when a commercial facility is designed.
 - The dashboard's order-week note reads "No order in the next two weeks on this world" under a table of 625 units, and its copy prints identifiers ("cropPlan's", "pickupPoints").
 - `docs/accounting-policy.md` §10 (unit-pattern nutrition as a costing constraint) and parts of §12 (open items) still describe the source client's kitchen; rewrite them for the grow model.
 - Conformance C2's allowlist and `plan-data.ts` still carry `nslpReimbursementBenchmark`, the USDA school-lunch reimbursement figure from the source client.

@@ -149,6 +149,7 @@ async function deleteLoanInner(id: unknown): Promise<Result> {
 const NewFixedCostLine = z.object({
   label: z.string().trim().min(1, 'Name the line').max(200),
   category: z.string().trim().min(1).max(80).default('other'),
+  setting: z.enum(['home', 'commercial']).default('commercial'),
   treatment: z.enum(FIXED_COST_TREATMENTS),
   status: z.enum(FIXED_COST_STATUSES).default('planned'),
   monthlyAmountCents: z.number().int().min(0, 'A monthly amount cannot be negative').max(1_000_000_000_00).default(0),
@@ -180,6 +181,7 @@ async function createFixedCostLineInner(input: unknown): Promise<Result<{ id: st
       key: await freeKey('fixed', d.label),
       label: d.label,
       category: d.category,
+      setting: d.setting,
       treatment: d.treatment,
       status: d.status,
       monthlyAmountCents: d.monthlyAmountCents,

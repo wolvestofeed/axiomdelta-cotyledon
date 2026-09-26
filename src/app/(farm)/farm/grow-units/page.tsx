@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
-import { EquipmentClient } from '@/app/(farm)/farm/grow-units/EquipmentClient';
+import { SetupClient } from '@/app/(farm)/farm/grow-units/SetupClient';
 import { withWorkspace } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
@@ -15,8 +15,8 @@ async function EquipmentPageInner() {
     <>
       <PageHeader
         title="Equipment"
-        purpose="Keep the master list of every unit in service, planned or considered."
-        functions={['Equipment library', 'In service', 'Phase 1', 'Phase 2', 'Phase 3']}
+        purpose="Set up the home grow room or a rented commercial facility: equipment, costs, build-out and loans."
+        functions={['Home', 'Commercial', 'Grow racks', 'Equipment library', 'Fixed costs']}
         connects={[
           { href: '/farm/financials/capital', dir: 'to' },
           { href: '/farm/capacity', dir: 'to' },
@@ -24,15 +24,15 @@ async function EquipmentPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>Quantity, unit cost, status and service date are entered here. Capital, depreciation and financing on Capital &amp; Financing read from it.</li>
-            <li>In-service and planned rows count toward capital and financing. No and &ndash; rows do not.</li>
-            <li>Only Phase 1 units set capacity. Grow unit sizes are estimates until stated.</li>
-            <li>A blank service date means TBD.</li>
+            <li>Home is the grow room: the racks, the home equipment and the home running costs.</li>
+            <li>Commercial is a rented facility: floor area, equipment, build-out, loans, rent, utilities and business costs. Nothing on it counts until a forecast fills it in.</li>
+            <li>In-service and planned rows count toward capital and financing. No and &ndash; rows do not. A blank service date means TBD.</li>
+            <li>Only Phase 1 units set capacity.</li>
           </ul>
         }
         status="live"
       />
-      <EquipmentClient canEdit={access.isSuperAdmin} />
+      <SetupClient canEdit={access.isSuperAdmin} />
     </>
   );
 }

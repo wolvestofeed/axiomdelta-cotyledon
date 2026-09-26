@@ -2,9 +2,8 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { Card, Kpi, StatusBadge, TaggedValue, num } from '@/components/ui';
+import { Card, Kpi, StatusBadge, num } from '@/components/ui';
 import { Cite } from '@/components/Cite';
-import { facility } from '@/data/plan-data';
 import { foodFactorSource } from '@/data/emission-factors';
 import { normalize } from '@/engine/carbon';
 import { useScenario } from '@/state/scenario-store';
@@ -24,7 +23,7 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
   const { food, basis } = world;
   const marketOf = useMemo(() => new Map(resolved.phases.map((p) => [p.phase, p.market])), [resolved.phases]);
   const operatingDays = basis.distributionDays;
-  const n = normalize(food.referenceKg, { units: food.totalUnits, sqFt: facility.sizeSqFt.value, operatingDays });
+  const n = normalize(food.referenceKg, { units: food.totalUnits, sqFt: resolved.facilitySqFt ?? undefined, operatingDays });
   const derivedGross = view.requirement.phases[view.requirement.phases.length - 1]!.buildingGrossSqFt;
   const nDerived = normalize(food.referenceKg, { units: food.totalUnits, sqFt: derivedGross, operatingDays });
 
@@ -33,8 +32,8 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
       <SustainabilityWorldNote world={world} />
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={<TaggedValue t={facility.sizeSqFt} render={(v) => num(v)} />} label="Facility, as stated" sub="The denominator in use" />
-        <Kpi value={<span className="inline-flex items-center gap-2">{num(Math.round(derivedGross))} <span className="farm-c-faint">sq ft</span><StatusBadge status="DERIVED" title="Building gross, cumulative through Phase 3, from the equipment library (Space tab)" /></span>} label="Facility, derived" sub="Full-build building gross from the library" />
+        <Kpi value={resolved.facilitySqFt === null ? '—' : <span className="inline-flex items-center gap-2">{num(resolved.facilitySqFt)} <span className="farm-c-faint">sq ft</span><StatusBadge status="STATED" title="Entered on Equipment, Commercial tab" /></span>} label="Facility, as stated" sub={resolved.facilitySqFt === null ? 'No commercial facility stated; entered on Equipment' : 'The denominator in use'} />
+        <Kpi value={view.selected ? <span className="inline-flex items-center gap-2">{num(Math.round(derivedGross))} <span className="farm-c-faint">sq ft</span><StatusBadge status="DERIVED" title="Building gross, cumulative through Phase 3, from the equipment library (Space tab)" /></span> : '—'} label="Facility, derived" sub={view.selected ? 'Full-build building gross from the library' : 'No commercial equipment selected'} />
         <Kpi value={num(food.totalUnits)} label="Units distributed" sub={world.periodLabel} />
         <Kpi value={num(operatingDays)} label="Operating days" sub="Dates with a distribution" />
         <Kpi value={`${(food.referenceKg / 1000).toFixed(1)} t`} label="Food footprint" sub="Scope 3 purchased food, reference basis" />
@@ -68,8 +67,8 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
       <Card title="Intensity of the annual food footprint" className="mt-4">
         <div className="grid gap-3 farm-autofit-11">
           <Kpi value={`${(n.kgPerUnit ?? 0).toFixed(2)} kg`} label="CO2e per unit" sub="Across the crop plans distributed" />
-          <Kpi value={`${(n.kgPerSqFt ?? 0).toFixed(0)} kg`} label="CO2e per sq ft / yr" sub={`Food only, on the stated ${num(facility.sizeSqFt.value)} sq ft`} />
-          <Kpi value={`${(nDerived.kgPerSqFt ?? 0).toFixed(0)} kg`} label="CO2e per sq ft / yr" sub={`Food only, on the derived ${num(Math.round(derivedGross))} sq ft`} />
+          <Kpi value={n.kgPerSqFt === undefined ? '—' : `${n.kgPerSqFt.toFixed(0)} kg`} label="CO2e per sq ft / yr" sub={resolved.facilitySqFt === null ? 'No facility size stated' : `Food only, on the stated ${num(resolved.facilitySqFt)} sq ft`} />
+          <Kpi value={view.selected ? `${(nDerived.kgPerSqFt ?? 0).toFixed(0)} kg` : '—'} label="CO2e per sq ft / yr" sub={view.selected ? `Food only, on the derived ${num(Math.round(derivedGross))} sq ft` : 'No facility derived'} />
           <Kpi value={`${((n.kgPerOperatingDay ?? 0) / 1000).toFixed(2)} t`} label="CO2e per operating day" sub="Food only" />
         </div>
         <p className="farm-kpi-sub mt-3">
