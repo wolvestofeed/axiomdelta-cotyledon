@@ -31,8 +31,13 @@ describe('the seed: a home grow room owes nothing until it is stated', () => {
     expect(codeSeedLoans()).toEqual([]);
     expect(leaseholdSeed).toEqual([]);
     const lines = seedFixedCostLines();
-    expect(lines.map((l) => [l.key, l.setting])).toEqual([['home-electricity', 'home'], ['home-admin', 'home'], ['lease', 'commercial'], ['utilities', 'commercial'], ['admin', 'commercial']]);
-    expect(lines.every((l) => l.monthlyAmountCents === 0 && /Not stated/.test(l.notes ?? ''))).toBe(true);
+    expect(lines.map((l) => [l.key, l.setting])).toEqual([
+      ['home-rent', 'home'], ['home-water', 'home'], ['home-sewer', 'home'], ['home-trash', 'home'], ['home-compost', 'home'], ['home-admin', 'home'],
+      ['lease', 'commercial'], ['utilities', 'commercial'], ['admin', 'commercial'],
+    ]);
+    expect(lines.every((l) => l.monthlyAmountCents === 0)).toBe(true);
+    // The grow lights' electricity is on the cost card, not a fixed-cost line.
+    expect(lines.some((l) => /electric/i.test(l.label))).toBe(false);
     const roll = capexRollup(R());
     expect(roll.totalMonthlyFinancing).toBe(0);
     expect(roll.leaseholdSubtotal).toBe(0);
@@ -100,10 +105,30 @@ describe('loans and fixed costs are definitions (Roadmap N1)', () => {
     expect(edited.loans.find((l) => l.key === 'leasehold-loan')!.apr).toBe(0.08);
   });
 
-  it('a scenario states the seed\'s zero lines: the commercial rent, then the home electricity', () => {
-    const r = R({ capex: { fixedCostLines: { lease: { monthlyAmountCents: 4_000_00 }, 'home-electricity': { monthlyAmountCents: 60_00 } } } });
-    expect(fixedCosts(r).lease).toBe(4_000);
-    expect(r.fixedCostLines.find((l) => l.key === 'home-electricity')!.monthlyAmountCents).toBe(60_00);
+  it('a scenario states the commercial rent directly', () => {
+    expect(fixedCosts(R({ capex: { fixedCostLines: { lease: { monthlyAmountCents: 4_000_00 } } } })).lease).toBe(4_000);
+  });
+
+  it('a home line is the grow room\'s share of the household bill: floor area by default, a stated share over it, all of a G&A bill', () => {
+    const r = R({
+      capex: {
+        financeParams: { homeSqFt: 1_800, growRoomSqFt: 120 },
+        fixedCostLines: {
+          'home-rent': { householdAmountCents: 2_000_00 },
+          'home-water': { householdAmountCents: 90_00, householdQuantity: 3_000, allocationShare: 0.1 },
+          'home-admin': { householdAmountCents: 50_00 },
+        },
+      },
+    });
+    expect(r.home.share).toBeCloseTo(120 / 1_800, 9);
+    const line = (k: string) => r.fixedCostLines.find((l) => l.key === k)!;
+    expect(line('home-rent').monthlyAmountCents).toBe(Math.round(2_000_00 * (120 / 1_800)));
+    expect(line('home-water').monthlyAmountCents).toBe(9_00);
+    expect(line('home-admin').monthlyAmountCents).toBe(50_00);
+    // One entry for water: the grow room's gallons are the metered water on Sustainability.
+    expect(r.sustainability.water.meteredGalPerMonth).toBeCloseTo(300, 9);
+    // With no floor areas a line with no stated share carries nothing yet.
+    expect(R({ capex: { fixedCostLines: { 'home-rent': { householdAmountCents: 2_000_00 } } } }).fixedCostLines.find((l) => l.key === 'home-rent')!.monthlyAmountCents).toBe(0);
   });
 });
 

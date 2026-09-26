@@ -15,6 +15,7 @@ import { EquipmentClient } from '@/app/(farm)/farm/grow-units/EquipmentClient';
 import { BuildOutCard } from '@/components/setup/BuildOutCard';
 import { LoansCard } from '@/components/setup/LoansCard';
 import { FixedCostsCard } from '@/components/setup/FixedCostsCard';
+import { HomeCostsCard } from '@/components/setup/HomeCostsCard';
 
 /**
  * The farm set up two ways. Home: the grow racks, the home equipment list and the home running
@@ -46,7 +47,7 @@ export function SetupClient({ canEdit }: { canEdit: boolean }) {
         <>
           <RacksCard canEdit={canEdit} />
           <div className="mt-4"><EquipmentClient canEdit={canEdit} setting="home" /></div>
-          <FixedCostsCard setting="home" title="Home running costs" className="mt-4" />
+          <HomeCostsCard className="mt-4" />
         </>
       ) : (
         <>

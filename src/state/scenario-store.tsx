@@ -110,7 +110,7 @@ export interface ScenarioStore {
   /** Edit one loan on this scenario, keyed by its stable key (Roadmap N1). */
   setLoan: (key: string, patch: Partial<{ principalCents: number; apr: number; termMonths: number; startDate: string; status: 'planned' | 'funded' }>) => void;
   /** Edit one fixed-cost line on this scenario, keyed by its stable key (Roadmap N1). */
-  setFixedCostLine: (key: string, patch: Partial<{ monthlyAmountCents: number; status: 'planned' | 'in_force'; startDate: string | null; endDate: string | null }>) => void;
+  setFixedCostLine: (key: string, patch: Partial<{ monthlyAmountCents: number; status: 'planned' | 'in_force'; startDate: string | null; endDate: string | null; householdAmountCents: number | null; allocationShare: number | null; householdQuantity: number | null }>) => void;
   /** Edit one leasehold line on this scenario; `counted: false` keeps it on record, out of the rollup. */
   setLeasehold: (key: string, patch: Partial<{ extended: number; counted: boolean }>) => void;
   /** Choose the LCA basis for one input (undefined = study mean). Super admins only. */

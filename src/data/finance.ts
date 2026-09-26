@@ -92,7 +92,21 @@ export interface FixedCostLineDef {
   endDate: string | null;
   notes: string | null;
   source: 'seed' | 'user_built';
+  /**
+   * A home line's household bill, cents a month, as a forecast states it. The grow room's share
+   * of it is the monthly amount (`allocatedShare`); null on a line typed directly.
+   */
+  householdAmountCents?: number | null;
+  /** The share a forecast types for this line, 0–1, over the floor-area share; null = the floor-area share. */
+  allocationShare?: number | null;
+  /** The household quantity the bill is for (water: gallons a month), as a forecast states it. */
+  householdQuantity?: number | null;
+  /** The share in force on the line after the forecast resolves it; null when no share is known. */
+  allocatedShare?: number | null;
 }
+
+/** The unit a home line's household quantity is in, by line key. */
+export const HOME_LINE_QUANTITY_UNITS: Readonly<Record<string, string>> = { 'home-water': 'gal' };
 
 /** Used equipment costs this share of new — a purchase factor, not a loan term. */
 export const equipmentPurchase = {
@@ -113,13 +127,20 @@ const line = (key: string, label: string, category: string, treatment: FixedCost
 });
 
 /**
- * The monthly fixed costs, at zero until stated: the home grow room's electricity and business
- * costs, and a rented commercial facility's rent, utilities and business costs.
+ * The monthly fixed costs, at zero until stated. Home: the grow room's share of the household's
+ * residential services (rent or mortgage, water, sewer, trash and recycling, compost) and its
+ * business costs; the grow lights' electricity is on each plan's cost card, not here. Commercial:
+ * a rented facility's rent, utilities and business costs.
  */
 export function seedFixedCostLines(): FixedCostLineDef[] {
+  const share = 'Enter the household bill; the grow room\'s share of it is the monthly amount.';
   return [
-    line('home-electricity', 'Electricity', 'utilities', 'manufacturing_overhead', 'home', `${NOT_STATED} The grow room's share of the household bill.`),
-    line('home-admin', 'Admin, insurance, software, licenses', 'admin', 'general_admin', 'home', `${NOT_STATED} G&A — ASC 330-10-30-8 keeps it out of inventory.`),
+    line('home-rent', 'Rent or mortgage', 'lease', 'manufacturing_overhead', 'home', share),
+    line('home-water', 'Water', 'utilities', 'manufacturing_overhead', 'home', `${share} The gallons feed Sustainability · Water.`),
+    line('home-sewer', 'Sewer', 'utilities', 'manufacturing_overhead', 'home', share),
+    line('home-trash', 'Trash and recycling', 'utilities', 'manufacturing_overhead', 'home', share),
+    line('home-compost', 'Compost', 'utilities', 'manufacturing_overhead', 'home', share),
+    line('home-admin', 'Admin, insurance, software, licenses', 'admin', 'general_admin', 'home', 'The business\'s own bills: all of each unless a share is stated. G&A — ASC 330-10-30-8 keeps it out of inventory.'),
     line('lease', 'Rent', 'lease', 'manufacturing_overhead', 'commercial', `${NOT_STATED} A signed lease moves the line to In force.`),
     line('utilities', 'Utilities', 'utilities', 'manufacturing_overhead', 'commercial', NOT_STATED),
     line('admin', 'Admin, insurance, software, licenses', 'admin', 'general_admin', 'commercial', `${NOT_STATED} G&A — ASC 330-10-30-8 keeps it out of inventory.`),

@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { PageHeader, Card, Kpi, CheckPill, StatusBadge, money, num } from '@/components/ui';
+import { PageHeader, Card, Kpi, CheckPill, StatusBadge, money, num, pct } from '@/components/ui';
+import Link from 'next/link';
 import { Cite } from '@/components/Cite';
 import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
@@ -36,6 +37,8 @@ export default function WaterPage() {
   const world = useSustainabilityWorld();
   // Plan: the quantities loaded into the forecast. Actual: the year's bills, lab results and inspections (Roadmap N6 slice 4).
   const w = world.water;
+  // One entry for water in a home forecast: the home water line's gallons, at the grow room's share.
+  const homeWater = resolved.fixedCostLines.find((l) => l.key === 'home-water' && l.householdQuantity != null && l.allocatedShare != null);
   const year = resolved.sustainability.audit.reportingYear;
   const waterRecords = (world.records?.readings ?? []).filter((r) => READING_METRICS[r.metric]?.group === 'water' && r.readOn.startsWith(`${year}-`));
   const sources = useDocumentSources();
@@ -115,7 +118,7 @@ export default function WaterPage() {
           <table className="farm-table">
             <thead><tr><th>Input</th><th className="num">Value</th><th className="num">Limit</th><th>Source document</th></tr></thead>
             <tbody>
-              <tr><td className="font-medium!">Metered water</td><td className="num"><EditableNumber value={w.meteredGalPerMonth} defaultValue={0} onChange={(v) => setNum('meteredGalPerMonth', v)} step={100} suffix="gal / month" ariaLabel="Metered water per month" /></td><td className="num">—</td><td>{docCell('meteredGalPerMonth')}</td></tr>
+              <tr><td className="font-medium!">Metered water</td><td className="num">{homeWater ? <span title="Entered on Equipment, Home: the household's gallons at the grow room's share">{num(w.meteredGalPerMonth)} gal / month<div className="farm-kpi-sub farm-fs-2xs">{num(homeWater.householdQuantity ?? 0)} household gal at {pct(homeWater.allocatedShare ?? 0, 1)}, on <Link className="farm-link" href="/farm/grow-units">Equipment, Home</Link></div></span> : <EditableNumber value={w.meteredGalPerMonth} defaultValue={0} onChange={(v) => setNum('meteredGalPerMonth', v)} step={100} suffix="gal / month" ariaLabel="Metered water per month" />}</td><td className="num">—</td><td>{docCell('meteredGalPerMonth')}</td></tr>
               <tr><td className="font-medium!">Billed wastewater volume</td><td className="num"><EditableNumber value={w.billedWastewaterMGalPerMonth} defaultValue={0} onChange={(v) => setNum('billedWastewaterMGalPerMonth', v)} step={0.01} suffix="million gal / month" ariaLabel="Billed wastewater volume per month" /></td><td className="num">—</td><td>{docCell('billedWastewaterMGalPerMonth')}</td></tr>
               <tr><td className="font-medium!">Biochemical oxygen demand (BOD)</td><td className="num"><EditableNumber value={w.bodMgL} defaultValue={0} onChange={(v) => setNum('bodMgL', v)} step={10} suffix="mg/L" ariaLabel="BOD" /></td><td className="num">{lim.limits.bodMgL}</td><td>{docCell('bodMgL')}</td></tr>
               <tr><td className="font-medium!">Total suspended solids (TSS)</td><td className="num"><EditableNumber value={w.tssMgL} defaultValue={0} onChange={(v) => setNum('tssMgL', v)} step={10} suffix="mg/L" ariaLabel="TSS" /></td><td className="num">{lim.limits.tssMgL}</td><td>{docCell('tssMgL')}</td></tr>

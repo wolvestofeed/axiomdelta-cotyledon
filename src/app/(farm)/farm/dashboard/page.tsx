@@ -334,7 +334,7 @@ async function AdminDashboard() {
           </table>
         </div>
         <p className="farm-fs-xs farm-c-faint mt-[0.9rem]! mr-0! mb-0! ml-0! leading-[1.4]">
-          The order book from today: forecast orders from the subscriber pickupPoints with confirmed and distributed rows in their place. Each unit is costed at its cropPlan&rsquo;s unit input cost on the channel&rsquo;s unit and its cropPlan&rsquo;s labor standard at the cropPlan&rsquo;s own one-line sowing &mdash; the seeded estimates until observed studies are adopted; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a crop plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
+          The order book from today: forecast orders from the subscribers&rsquo; pickup points with confirmed and distributed rows in their place. Each unit is costed at its plan&rsquo;s input cost on the channel&rsquo;s unit and its plan&rsquo;s labor standard at the plan&rsquo;s own sowing &mdash; the seeded estimates until observed studies are adopted; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a crop plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
         </p>
         <div className="flex flex-wrap gap-y-[0.1rem] gap-x-3 mt-[0.8rem]! pt-[0.7rem] border-t border-t-[color:var(--farm-line)]">
           {modulesFor(true).filter((m) => m.section === 'Production').map((m) => (
@@ -349,7 +349,10 @@ async function AdminDashboard() {
 }
 
 function dayNote(day: Picture['day']): string {
-  if (!day.productionDate) return 'No order in the next two weeks on this world.';
+  if (!day.productionDate) {
+    if (day.distributionDays === 0) return 'No order in the next two weeks on this world.';
+    return `${num(day.distributionDays)} distribution day${day.distributionDays === 1 ? '' : 's'} ordered in the next two weeks; no sowing from today has room on a grow unit${day.shelf && day.shelf.noRoom > 0 ? ` (${num(day.shelf.noRoom)} sowing${day.shelf.noRoom === 1 ? '' : 's'} with no room)` : ''}.`;
+  }
   return `Next production day ${day.productionDate}: ${num(day.sowings)} sowings · ${num(day.units)} units${day.shortfall > 0 ? ` · ${num(day.shortfall)} short: no room on a grow unit` : ''} · ${coverText(day)}-day cover`;
 }
 

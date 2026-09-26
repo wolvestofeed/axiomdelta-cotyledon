@@ -112,7 +112,7 @@ describe('the forecast timeline (Roadmap N4b)', () => {
   it('fixed-cost lines bill each month they are in force; loans draw and repay inside the window', () => {
     // The seed's lines are at zero until stated, so they bill nothing; a stated line bills every month.
     expect(t.documents.bills).toEqual([]);
-    const stated = simulateForecast({ inputs: resolveScenarioInputs({ capex: { fixedCostLines: { 'home-electricity': { monthlyAmountCents: 60_00 } } } }), cycles });
+    const stated = simulateForecast({ inputs: resolveScenarioInputs({ capex: { fixedCostLines: { 'home-admin': { householdAmountCents: 60_00 } } } }), cycles });
     expect(new Set(stated.documents.bills.map((b) => b.period)).size).toBe(12);
     for (const l of inputs.loans.filter((x) => x.principalCents > 0)) {
       expect(t.documents.loanDraws.some((d) => d.loanKey === l.key)).toBe(true);

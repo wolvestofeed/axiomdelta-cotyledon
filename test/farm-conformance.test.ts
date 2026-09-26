@@ -85,7 +85,6 @@ describe('C2 — no page or server library reads a figure from plan-data', () =>
   /** Labels, the HACCP plan and stated reference constants with no definition table: allowed with the reason. */
   const ALLOWED = new Set([
     'CROP_PLAN_STATUS_LABELS', // a label
-    'nslpReimbursementBenchmark', // the USDA reimbursement benchmark, sourced
   ]);
   const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
   const files = walk(FARM).filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith('seed-writes.ts'));

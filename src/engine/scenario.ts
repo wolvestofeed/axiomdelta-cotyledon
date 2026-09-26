@@ -281,6 +281,9 @@ export interface CapexOverlay {
     usedDiscount: number;
     /** A rented commercial facility's floor area, sq ft; absent = no facility (a home grow room). */
     facilitySqFt: number;
+    /** The home's floor area and the grow room's, sq ft: the grow room's share of the household's services. */
+    homeSqFt: number;
+    growRoomSqFt: number;
     /** @deprecated Legacy: mapped onto the equipment loan. */
     equipmentApr: number;
     /** @deprecated Legacy: mapped onto the equipment loan. */
@@ -295,7 +298,7 @@ export interface CapexOverlay {
   /** Per-loan edits, keyed by the loan's stable key (Roadmap N1). */
   loans?: Record<string, Partial<{ principalCents: number; apr: number; termMonths: number; startDate: string; status: 'planned' | 'funded' }>>;
   /** Per-line edits, keyed by the fixed-cost line's stable key (Roadmap N1). */
-  fixedCostLines?: Record<string, Partial<{ monthlyAmountCents: number; status: 'planned' | 'in_force'; startDate: string | null; endDate: string | null }>>;
+  fixedCostLines?: Record<string, Partial<{ monthlyAmountCents: number; status: 'planned' | 'in_force'; startDate: string | null; endDate: string | null; householdAmountCents: number | null; allocationShare: number | null; householdQuantity: number | null }>>;
   /** Per-line leasehold edits, keyed by the line's stable key (Roadmap N1). */
   leasehold?: Record<string, Partial<{ extended: number; counted: boolean }>>;
   /** Opening owners' equity, dollars (Roadmap K6). */
@@ -390,6 +393,8 @@ export interface ResolvedInputs {
   equipmentPurchase: typeof defaultEquipmentPurchase;
   /** A rented commercial facility's floor area, sq ft; null until a forecast states one. */
   facilitySqFt: number | null;
+  /** The home and grow-room floor areas and the grow room's share of the household; null until stated. */
+  home: { homeSqFt: number | null; growRoomSqFt: number | null; share: number | null };
   /** The loans the plan carries (Roadmap N1). */
   loans: LoanDef[];
   /** The monthly fixed costs the plan carries (Roadmap N1). */
@@ -723,6 +728,8 @@ export function resolveScenarioInputs(
     return l;
   });
 
+  // The grow room's share of the household: its floor area over the home's.
+  const home = { homeSqFt: fp.homeSqFt ?? null, growRoomSqFt: fp.growRoomSqFt ?? null, share: fp.homeSqFt && fp.growRoomSqFt ? Math.min(1, fp.growRoomSqFt / fp.homeSqFt) : null };
   const lineOverlay = config.capex?.fixedCostLines ?? {};
   const mfc = config.capex?.monthlyFixedCosts ?? {};
   const resolvedFixedCostLines: FixedCostLineDef[] = (fixedCostLines.length > 0 ? fixedCostLines : seedFixedCostLines()).map((seed) => {
@@ -736,9 +743,21 @@ export function resolveScenarioInputs(
       if (o.status !== undefined) l.status = o.status;
       if (o.startDate !== undefined) l.startDate = o.startDate;
       if (o.endDate !== undefined) l.endDate = o.endDate;
+      if (o.householdAmountCents !== undefined) l.householdAmountCents = o.householdAmountCents;
+      if (o.allocationShare !== undefined) l.allocationShare = o.allocationShare;
+      if (o.householdQuantity !== undefined) l.householdQuantity = o.householdQuantity;
+    }
+    // A home line with a household bill carries the grow room's share of it: the line's own share, else the
+    // floor-area share. A G&A line is the business's own bill (insurance, software), so all of it by default.
+    if (l.setting === 'home') {
+      l.allocatedShare = l.allocationShare ?? (l.treatment === 'general_admin' ? 1 : home.share);
+      if (l.householdAmountCents != null) l.monthlyAmountCents = l.allocatedShare === null ? 0 : Math.round(l.householdAmountCents * l.allocatedShare);
     }
     return l;
   });
+  // One entry for water: the home water line's gallons, at the grow room's share, are the metered water unless the forecast types it on Sustainability.
+  const homeWater = resolvedFixedCostLines.find((l) => l.key === 'home-water');
+  const homeWaterGal = homeWater?.householdQuantity != null && homeWater.allocatedShare != null ? homeWater.householdQuantity * homeWater.allocatedShare : null;
 
   // The scheduler's inputs ----------------------------------------------------
   // Capacity and the scheduler read the equipment the forecast selects: its own status for a line where it sets one.
@@ -790,6 +809,7 @@ export function resolveScenarioInputs(
     crews,
     equipmentPurchase,
     facilitySqFt: fp.facilitySqFt ?? null,
+    home,
     loans: resolvedLoans,
     fixedCostLines: resolvedFixedCostLines,
     leasehold: resolvedLeasehold,
@@ -819,7 +839,7 @@ export function resolveScenarioInputs(
       audit: { ...AUDIT_DEFAULTS, ...(config.sustainability?.audit ?? {}) },
       waste: { ...WASTE_DEFAULTS, ...(config.sustainability?.waste ?? {}) },
       energy: { ...ENERGY_DEFAULTS, ...(config.sustainability?.energy ?? {}) },
-      water: { ...WATER_DEFAULTS, ...(config.sustainability?.water ?? {}) },
+      water: { ...WATER_DEFAULTS, ...(homeWaterGal !== null ? { meteredGalPerMonth: homeWaterGal } : {}), ...(config.sustainability?.water ?? {}) },
       equipment: structuredClone(config.sustainability?.equipment ?? {}),
     },
   };
