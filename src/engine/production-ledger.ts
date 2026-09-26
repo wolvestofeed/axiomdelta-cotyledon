@@ -69,11 +69,7 @@ import {
 } from '@/data/coa-farm';
 import { componentCosting, laborForDay, type ComponentCosting, type OverheadAbsorption } from '@/engine';
 import { splitLoadedLaborCents } from '@/engine/comp';
-import {
-  assumptions as defaultAssumptions,
-  cropPlan as defaultCropPlan,
-  componentSpecs,
-} from '@/data/plan-data';
+import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
 import { FARM_HOME } from '@/data/farm-location';
 import {
   massBalance,
@@ -242,13 +238,15 @@ export interface ProductionLedgerOptions {
 export function productionSowingLedger(
   sowing: SowingExecution,
   opts: ProductionLedgerOptions,
-  cropPlan = defaultCropPlan,
+  cropPlan: CropPlanDef,
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;
   const components: ComponentCosting[] = componentCosting(cropPlan, shrink);
   const byName = new Map(components.map((c) => [c.name, c]));
-  const hotNames = new Set(componentSpecs.filter((s) => s.isHot).map((s) => s.name));
+  // No component issues to the sow-stage WIP today: the Phase 1-era hot list is gone and a grow sowing's
+  // lots issue at pack, as they always have. Deep-cut step (4) sets the grow ledger's stages.
+  const hotNames = new Set<string>();
 
   const units = sowing.goodUnits;
   const servings = opts.servingsProduced ?? units;

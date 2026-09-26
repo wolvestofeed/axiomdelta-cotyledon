@@ -87,12 +87,9 @@ describe('C2 — no page or server library reads a figure from plan-data', () =>
   /** Labels, the HACCP plan and stated reference constants with no definition table: allowed with the reason. */
   const ALLOWED = new Set([
     'CROP_PLAN_STATUS_LABELS', // a label
-    'allergenMatrix', // the HACCP plan's allergen matrix
-    'controlPoints', // the produce-safety plan's control points
     'facility', // the leased shell's stated size: no definition table yet
     'otherCapacities', // published comparison capacities, shown for comparison only
     'nslpReimbursementBenchmark', // the USDA reimbursement benchmark, sourced
-    'timeStudy', // the plan's 14-task estimate the estimated studies were built from, documented on the Time Study Sheet
   ]);
   const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
   const files = walk(FARM).filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith('seed-writes.ts'));
@@ -101,7 +98,7 @@ describe('C2 — no page or server library reads a figure from plan-data', () =>
     const offences: string[] = [];
     for (const f of files) {
       const src = readFileSync(f, 'utf8');
-      for (const m of src.matchAll(/import\s+(type\s+)?\{([^}]*)\}\s+from\s+'[./]*_data\/plan-data'/g)) {
+      for (const m of src.matchAll(/import\s+(type\s+)?\{([^}]*)\}\s+from\s+'(?:@\/data|[./]*_data)\/plan-data'/g)) {
         if (m[1]) continue;
         for (const raw of m[2].split(',')) {
           const name = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0];

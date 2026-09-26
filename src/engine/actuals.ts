@@ -10,7 +10,7 @@
  * and prices.
  */
 
-import { cropPlan as defaultCropPlan, assumptions as defaultAssumptions } from '@/data/plan-data';
+import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
 import { componentCosting } from '@/engine';
 import { standardSowing, type SowingExecution, type ComponentExecution } from '@/engine/sowing';
 import { traceabilityLotCode } from '@/engine/traceability';
@@ -22,7 +22,7 @@ import type { TrayFormatKey } from '@/data/tray-formats';
 import { growSowingPrefill, type StageRecords } from '@/engine/sowing-record';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
-type CropPlan = typeof defaultCropPlan;
+type CropPlan = CropPlanDef;
 
 // ── Documents ───────────────────────────────────────────────────────────────
 
@@ -430,7 +430,7 @@ export function standardSowingRecordPrefill(
   productionDate: string,
   sequence: number,
   units: number,
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   shrinkAllowance: number = defaultAssumptions.yield.shrinkAllowance.value,
   /** The standard the record names: an approved version's label, else the live library's. */
   standardVersion: string = libraryLabel(cropPlan.code),
@@ -478,7 +478,7 @@ export interface ReceiptLineCost {
   purchasePriceVarianceCents: number;
 }
 
-export function costReceiptLines(lines: readonly ReceiptLine[], cropPlan: CropPlan = defaultCropPlan): ReceiptLineCost[] {
+export function costReceiptLines(lines: readonly ReceiptLine[], cropPlan: CropPlan): ReceiptLineCost[] {
   return lines.map((line) => {
     const ing = cropPlan.inputs.find((i) => i.name === line.input);
     const stdUnit = ing ? Math.round(ing.seedUnitCost * 100) : null;

@@ -34,11 +34,9 @@
 import type { EquipmentLine } from '@/data/capex';
 import { RESOURCE_SEED } from '@/data/capex';
 import type { CropPlanDef } from '@/data/plan-data';
-import { timeStudy } from '@/data/plan-data';
 import { tagged, type Tagged } from '@/data/tagged';
-import { LOAD_TASK, PACK_CHECK_TASK, type LaborScaling, type TimeStudyDoc, type TimeStudyStream } from '@/data/time-studies';
-import { sowingGrowUnitsFrom, isBlackoutRack, phaseOneEquipment, growUnitForProcess } from '@/engine/equipment';
-import { cropPlanStage, PLAN_RANGE_POINT } from '@/engine/stage';
+import type { LaborScaling, TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
+import { phaseOneEquipment } from '@/engine/equipment';
 import { timeStudyScaffold, type ScaffoldKind } from '@/engine/time-study-estimate';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
@@ -74,7 +72,7 @@ export interface RouteStep {
   edited: boolean;
 }
 
-export type RouteFindingKind = 'no-study' | 'unclassified-line' | 'no-resource' | 'unknown-resource' | 'overnight-process' | 'unknown-predecessor' | 'cycle';
+export type RouteFindingKind = 'no-study' | 'not-a-grow-plan' | 'unclassified-line' | 'no-resource' | 'unknown-resource' | 'overnight-process' | 'unknown-predecessor' | 'cycle';
 
 export interface RouteFinding {
   kind: RouteFindingKind;
@@ -115,24 +113,6 @@ export function routeOverlayFor(routing: Readonly<Record<string, RouteStepOverla
 
 export const stepDuration = (s: Pick<RouteStep, 'setupMinutes' | 'runMinutesPerUnit'>, units: number): number => s.setupMinutes + units * s.runMinutesPerUnit;
 export const stepLaborMinutes = (s: Pick<RouteStep, 'laborMinutesFixed' | 'laborMinutesPerUnit'>, units: number): number => s.laborMinutesFixed + units * s.laborMinutesPerUnit;
-
-/** The plan's own task names (the AMK-E-001 seed study) by kind. */
-const PLAN_KINDS: Partial<Record<string, ScaffoldKind>> = {
-  'Receiving, verification, put-away': 'receiving',
-  'Dry goods scaling and mise en place': 'scaling',
-  'Bean sow (soaked prior day)': 'sow',
-  'Rice sow': 'sow',
-  'Beef browning and seasoning': 'sow',
-  'Vegetable wash, trim, cut': 'prep',
-  'Vegetable roasting': 'sow',
-  'Salsa roja production': 'sow',
-  'Component blackout and stage': 'blackout',
-  'Line turnaround and sanitation': 'turnaround',
-  'Unit and assemble bowls': 'assemble',
-  'Seal, label, date and lot code': 'seal',
-  [PACK_CHECK_TASK]: 'pack-check',
-  [LOAD_TASK]: 'load',
-};
 
 /** Kinds that occur once in a route; the others repeat per component. */
 const SINGLE: ReadonlySet<RouteStepKind> = new Set(['receiving', 'scaling', 'blackout', 'turnaround', 'assemble', 'seal', 'pack-check', 'load']);
@@ -229,53 +209,30 @@ export function deriveRoute(input: {
     return { cropPlanCode: cropPlan.code, studyId: null, basis: null, sowingSize: 0, steps: [], order: [], findings };
   }
 
+  if (!isGrowPlanCarrier(cropPlan)) {
+    findings.push({ kind: 'not-a-grow-plan', stepId: null, detail: `${cropPlan.code} is not a grow plan, so it has no route.` });
+    return { cropPlanCode: cropPlan.code, studyId: standard.id, basis: standard.basis, sowingSize: standard.sowingSize, steps: [], order: [], findings };
+  }
   const scaffold = timeStudyScaffold(cropPlan);
   // A grow plan's daily lines are the calendar's, not the day's clock; its sow and harvest run at the stations, on no equipment.
-  const grow = isGrowPlanCarrier(cropPlan);
-  const routeLines = grow ? standard.lines.filter((l) => l.stream !== 'daily') : standard.lines;
-  const stage = new Map(cropPlanStage(cropPlan, PLAN_RANGE_POINT).components.map((c) => [c.component, c]));
-  const growUnits = sowingGrowUnitsFrom([...input.equipment]);
-  const phaseOne = phaseOneEquipment(input.equipment).filter((e) => e.qty > 0);
-  const onList = (re: RegExp) => phaseOne.find((e) => re.test(e.item)) ?? null;
+  const routeLines = standard.lines.filter((l) => l.stream !== 'daily');
   const sowing = standard.sowingSize;
   const taken = new Set<string>();
 
   const steps: RouteStep[] = routeLines.map((line, i) => {
     const seq = i + 1;
     const s = scaffold.find((t) => line.task === t.task || (t.kind === 'sow' && line.task.startsWith(`${t.task} (`)));
-    const kind: RouteStepKind = s?.kind ?? PLAN_KINDS[line.task] ?? 'other';
+    const kind: RouteStepKind = s?.kind ?? 'other';
     const component = s?.component ?? null;
-    const controlPoint = s ? s.controlPoint : (timeStudy.tasks.find((t) => t.task === line.task)?.controlPoint ?? null);
+    const controlPoint = s?.controlPoint ?? null;
     const base = component ? `${kind}:${component}` : kind;
     const id = (component || SINGLE.has(kind)) && !taken.has(base) ? base : `${kind}#${seq}`;
     taken.add(id);
 
-    let resourceKey: string | null = null;
-    let priorDay = false;
-    if (grow) {
-      // Labor at a station; the grow unit is the calendar's resource for the cycle, not the day's.
-    } else if (kind === 'sow') {
-      const th = component ? stage.get(component) : undefined;
-      if (component && th?.process) {
-        priorDay = th.process.overnight;
-        resourceKey = growUnitForProcess(th.process.equipment, growUnits)?.key ?? null;
-        if (!resourceKey) findings.push({ kind: 'no-resource', stepId: id, detail: `${line.task}: the stage standard sows it in ${th.process.equipment}, which is not on the Phase 1 equipment list with a sowing capacity.` });
-        if (priorDay) findings.push({ kind: 'overnight-process', stepId: id, detail: `${line.task}: the stage standard runs ${th.process.name} overnight (${th.process.minMinutes}–${th.process.maxMinutes} min). The operating rules allow no overnight activity other than soaking.` });
-      } else if (component) {
-        findings.push({ kind: 'no-resource', stepId: id, detail: `${line.task}: no sow process is on file for ${component}, so no grow unit is named.` });
-      } else {
-        resourceKey = line.station ? growUnitForProcess(line.station, growUnits)?.key ?? null : null;
-        if (!resourceKey) findings.push({ kind: 'no-resource', stepId: id, detail: `${line.task}: the station ${line.station ? `"${line.station}"` : 'on the line'} names no grow unit on the Phase 1 equipment list.` });
-      }
-    } else if (kind === 'blackout') {
-      resourceKey = growUnits.find((v) => isBlackoutRack(v.item))?.key ?? null;
-      if (!resourceKey) findings.push({ kind: 'no-resource', stepId: id, detail: `${line.task}: no blackout rack is on the Phase 1 equipment list.` });
-    } else if (kind === 'prep' && /vcm/i.test(line.station ?? '')) {
-      resourceKey = onList(/^Vertical cutter mixer/i)?.key ?? null;
-    } else if (kind === 'seal') {
-      resourceKey = onList(/^Tray sealer/i)?.key ?? null;
-      if (!resourceKey) findings.push({ kind: 'no-resource', stepId: id, detail: `${line.task}: no tray sealer is on the Phase 1 equipment list.` });
-    } else if (kind === 'other') {
+    // Labor at a station; the grow unit is the calendar's resource for the cycle, not the day's.
+    const resourceKey: string | null = null;
+    const priorDay = false;
+    if (kind === 'other') {
       findings.push({ kind: 'unclassified-line', stepId: id, detail: `"${line.task}" is not a task the scaffold names; it follows the line before it on the ${line.stream} stream.` });
     }
 

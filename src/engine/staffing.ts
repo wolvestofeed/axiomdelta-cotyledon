@@ -18,24 +18,13 @@
  * headcount, marked not placed, and are not checked against crew times.
  */
 
-import {
-  timeStudy as defaultTimeStudy,
-  capacityInputs as defaultCapacityInputs,
-} from '@/data/plan-data';
+import { capacityInputs as defaultCapacityInputs } from '@/data/plan-data';
 import { clock, type CrewShift } from '@/data/crews';
 import type { CapacityProfile } from '@/engine';
 
 type CapacityInputs = typeof defaultCapacityInputs;
-type TimeStudy = typeof defaultTimeStudy;
 
 export const REQUIREMENT_INTERVAL_MIN = 15;
-
-/**
- * The time-study tasks the rack's load and unload blocks stand in for. Their
- * minutes are placed on the clock from the capacity inputs, so they are not
- * counted a second time among the unplaced tasks.
- */
-export const BLACKOUT_RACK_HANDLING_TASKS: readonly string[] = ['Component blackout and stage', 'Cold hold to harvest'];
 
 /** One sowing on the blackout rack: when it loads and how many units it carries. */
 export interface SowingSlot {
@@ -131,7 +120,6 @@ function peakConcurrent(tasks: readonly PlacedTask[], startMin: number, endMin: 
 export function laborRequirement(
   slots: readonly SowingSlot[],
   cap: CapacityInputs = defaultCapacityInputs,
-  study: TimeStudy = defaultTimeStudy,
   intervalMinutes: number = REQUIREMENT_INTERVAL_MIN,
 ): LaborRequirement {
   const load = cap.loadMinutes.value;
@@ -156,17 +144,8 @@ export function laborRequirement(
 
   const sowings = slots.length;
   const units = slots.reduce((s, b) => s + b.units, 0);
-  const unplaced: UnplacedTask[] = study.tasks
-    .filter((t) => !BLACKOUT_RACK_HANDLING_TASKS.includes(t.task))
-    .map((t) => ({
-      task: t.task,
-      station: t.station,
-      staff: t.staff,
-      controlPoint: t.controlPoint,
-      scalesWith: t.scalesWith,
-      laborMinutes: t.scalesWith === 'fixed' ? t.laborMinutes * sowings : (t.laborMinutes / study.estimatedAtSowingSize) * units,
-    }))
-    .filter((t) => t.laborMinutes > 0);
+  // A grow sowing's own tasks are added by the caller (`withUnplacedTasks`); the rack places only its load and unload.
+  const unplaced: UnplacedTask[] = [];
 
   const openMin = cap.operatingOpenMin.value;
   const closeMin = cap.operatingCloseMin.value;

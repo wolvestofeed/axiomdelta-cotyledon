@@ -5,9 +5,8 @@
  * the scripts or the docs. The words are the ones CLAUDE.md §3 names, plus the rest of
  * the swap table's sources. A hit fails with the file and the word.
  *
- * The allowlist is the Phase 2 work: files whose contents are the kitchen's own domain
- * data (the seeded crop plan, the nutrient profile, the grow stages, the produce-safety
- * plan) and are replaced outright in Phase 2, not re-worded.
+ * The allowlist is the files that name the origin or cite a source as it is titled, the compiled
+ * food factor table, and the Phase 1-era produce-safety module the deep cut has yet to replace.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,16 +24,10 @@ const WORDS = [
 ];
 const RX = new RegExp(`(?<![A-Za-z0-9])(${WORDS.join('|')})(?![a-z0-9])`, 'gi');
 
-/** Phase 2 replaces these outright; their kitchen data is not re-worded here. */
+/** Files that name the origin or quote a source, and the Phase 1-era module still to be replaced. */
 const ALLOWED = new Set([
-  'src/data/plan-data.ts',
-  'src/data/crop-plans-seed.ts',
-  'src/data/nutrient-profile.ts',
-  'src/data/grow-stages.ts',
   'src/data/input-factors-compiled.json',
-  'src/engine/nutrition.ts',
   'src/engine/produce-safety.ts',
-  'test/fixtures',
   'docs/outline.md',
   'docs/grow-operations.md',
   'docs/glossary.md', // names the kitchen origin of terms and uses cook in its plain sense

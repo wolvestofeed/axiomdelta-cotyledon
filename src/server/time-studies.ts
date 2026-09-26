@@ -2,7 +2,7 @@ import 'server-only';
 import { asc, inArray } from 'drizzle-orm';
 import { farmTimeStudies, farmTimeStudyIntervals, farmTimeStudyLines } from '@/db';
 import { db } from '@/lib/db';
-import { TIME_STUDY_SEED_CROP_PLAN, timeStudySeed, type TimeStudyLibrary } from '@/data/time-studies';
+import type { TimeStudyLibrary } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
 import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
 import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
@@ -18,8 +18,7 @@ import { withSeedLock, insertTimeStudy } from '@/server/seed-writes';
  *
  * On read, every library crop plan with no study at all is seeded with one
  * ESTIMATED study, `source = 'seed'`, under an advisory lock and idempotent
- * per crop plan: AMK-E-001 gets the plan's time study; every other crop plan gets
- * the built estimate (`estimatedTimeStudy`) at its sowing: for a grow plan, the trays
+ * per plan: the built estimate (`estimatedTimeStudy`) at its sowing, the trays
  * one of the workspace's grow units takes. The estimate stands as the labor standard
  * until an observed study is adopted.
  */
@@ -35,7 +34,7 @@ async function seedMissingStudies(cropPlans: readonly LibraryCropPlan[]): Promis
       if (again.has(r.id)) continue;
       // A plan no grow unit takes yet has a sowing of zero; its estimate is written per tray until a unit lights it.
       const sowing = isGrowPlanCarrier(r) ? deriveGrowCapacity(r.plan, growUnits).sowingTrays : deriveCapacity(r).sowingSize;
-      const seed = r.code === TIME_STUDY_SEED_CROP_PLAN ? timeStudySeed : estimatedTimeStudy(r, Math.max(1, sowing));
+      const seed = estimatedTimeStudy(r, Math.max(1, sowing));
       await insertTimeStudy(tx, r.id, seed, 'seed');
     }
   });

@@ -16,7 +16,6 @@
  * The two-stream Phase 1-era studies carry zero cycle days and no daily line.
  */
 
-import { timeStudy } from '@/data/plan-data';
 
 export const QUALITY_RESULTS = ['pass', 'hold', 'fail'] as const;
 export type QualityResult = (typeof QUALITY_RESULTS)[number];
@@ -122,68 +121,3 @@ export const VALLECITO_1020_STUDY = {
     { task: 'Clean station', station: 'Harvest station', minutes: 1, cutOnly: false },
   ] as readonly (TrayStudyTask & { cutOnly: boolean })[],
 } as const;
-
-/** The crop plan the plan's time study was estimated for. */
-export const TIME_STUDY_SEED_CROP_PLAN = 'AMK-E-001';
-
-/** The harvest-stream tasks the two retired plan lines hand their minutes to. */
-export const PACK_CHECK_TASK = 'Temperature check at pack (CONTROL POINT verification)';
-export const LOAD_TASK = 'Load for transport';
-
-/**
- * The plan's 14 tasks on the two streams. There is no
- * second blackout and cold hold is a hold, not labor: those two lines leave
- * the study. Their estimated minutes carry to the harvest tasks that take their
- * place — the temperature logging to the check at pack (per unit), the move
- * to harvest to loading the vehicle (once per distribution day) — so the plan's
- * fixed and variable labor split is unchanged.
- */
-export const PLAN_TASK_STREAMS: Record<string, { stream: TimeStudyStream; task?: string; station?: string; controlPoint?: string | null }> = {
-  'Receiving, verification, put-away': { stream: 'sowing' },
-  'Dry goods scaling and mise en place': { stream: 'sowing' },
-  'Bean sow (soaked prior day)': { stream: 'sowing' },
-  'Rice sow': { stream: 'sowing' },
-  'Beef browning and seasoning': { stream: 'sowing' },
-  'Vegetable wash, trim, cut': { stream: 'sowing' },
-  'Vegetable roasting': { stream: 'sowing' },
-  'Salsa roja production': { stream: 'sowing' },
-  'Component blackout and stage': { stream: 'sowing' },
-  'Line turnaround and sanitation': { stream: 'sowing' },
-  'Unit and assemble bowls': { stream: 'harvest' },
-  'Seal, label, date and lot code': { stream: 'harvest' },
-  'Final blackout and temp logging': { stream: 'harvest', task: PACK_CHECK_TASK, station: 'Assembly line', controlPoint: null },
-  'Cold hold to harvest': { stream: 'harvest', task: LOAD_TASK, station: 'Dock', controlPoint: null },
-};
-
-const planStream = (task: string) => {
-  const s = PLAN_TASK_STREAMS[task];
-  if (!s) throw new Error(`The plan's time study task "${task}" has no stream`);
-  return s;
-};
-
-/** The plan's time study as a first study: estimated, not observed — no date, observer or quality result. Sowing lines first, then harvest. */
-export const timeStudySeed: TimeStudySeed = {
-  studiedOn: null,
-  sowingSize: timeStudy.estimatedAtSowingSize,
-  cycleDays: 0,
-  observer: null,
-  qualityResult: null,
-  qualityNotes: `The plan's time study, estimated at a ${timeStudy.estimatedAtSowingSize}-unit sowing — not an observation. No study date, observer or quality result was recorded. Split into the sowing and harvest streams (2026-09-15): no second blackout, no cold-hold line; their minutes carry to the check at pack and the vehicle load.`,
-  basis: 'estimated',
-  lines: TIME_STUDY_STREAMS.flatMap((stream) =>
-    timeStudy.tasks
-      .filter((t) => planStream(t.task).stream === stream)
-      .map((t): TimeStudyLine => {
-        const s = planStream(t.task);
-        return {
-          task: s.task ?? t.task,
-          station: s.station ?? t.station,
-          staff: t.staff,
-          elapsedMinutes: t.elapsedMin,
-          laborMinutes: t.laborMinutes,
-          scalesWith: t.scalesWith,
-          stream,
-        };
-      }),
-  ),
-};

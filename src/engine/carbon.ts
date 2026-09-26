@@ -34,7 +34,7 @@ import {
   KG_PER_LB,
   KG_PER_OZ,
 } from '@/data/emission-factors';
-import { cropPlan as defaultCropPlan } from '@/data/plan-data';
+import type { CropPlanDef } from '@/data/plan-data';
 import { lcaOptions as defaultLcaOptions, type LcaOption, type LcaBoundary } from '@/data/lca-options';
 import type { EnergyActivity, WaterActivity, EquipmentAttrs, ServiceAdd } from '@/engine/scenario';
 import { canopyMassPerUnit } from '@/engine';
@@ -278,7 +278,7 @@ const STATUS_RANK: Record<FactorProvenance['status'], number> = {
 
 // ── Scope 3: the crop plan's food footprint per unit ────────────────────────
 
-type CropPlan = typeof defaultCropPlan;
+type CropPlan = CropPlanDef;
 
 export interface CropPlanFoodLine {
   name: string;
@@ -306,7 +306,7 @@ export interface CropPlanFoodFootprint {
  * listed as excluded, not silently dropped.
  */
 export function cropPlanFoodFootprint(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   factors: FoodFactor[] = inputFactors,
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
   unitFactor = 1,
@@ -357,7 +357,7 @@ export function cropPlanFoodFootprint(
 
 /** As-purchased food mass per unit, kg, from every mapped input (excluded lines carry no mass). */
 export function seedMassPerUnitKg(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
   unitFactor = 1,
 ): number {
@@ -373,7 +373,7 @@ export function seedMassPerUnitKg(
 
 /** Shipped mass per unit, kg: blackout hot mass plus the cold-packed components. */
 export function shippedMassPerUnitKg(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
   unitFactor = 1,
 ): number {
@@ -532,7 +532,7 @@ export interface DualFoodFootprint {
  * boundary; the raw figure is carried alongside for display.
  */
 export function cropPlanFoodFootprintDual(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   selection: Record<string, string> = {},
   factors: FoodFactor[] = inputFactors,
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,

@@ -27,7 +27,7 @@ import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor } from '
 import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
 import { contextFor, costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { cropPlanToRows, rowsToCropPlan, rowsToGrowPlan, nextCropPlanCode, SEED_GROW_PLANS } from '@/engine/crop-plan-library';
-import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, validationWarnings, sowingCosting, costPerUnit } from '@/engine';
+import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
@@ -275,8 +275,8 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     expect(seed.isHotComponent).toBe(true);
     expect(seed.component).toBe(VARIETY_BY_KEY['broccoli']!.name);
     expect(lib.inputs.slice(1).every((l) => l.unit === 'each' && l.yieldToHarvest === 0)).toBe(true);
-    expect(validationWarnings(lib).map((w) => w.id)).not.toContain('yield-integrity');
-    expect(validationWarnings(lib).map((w) => w.id)).not.toContain('time-study-rebasing');
+    // The yield chain holds on every line: seed × yield = harvested.
+    for (const l of lib.inputs) expect(l.seedQtyPerSowing * l.yieldToHarvest, l.name).toBeCloseTo(l.harvestedYieldPerSowing, 9);
   });
 
   it('the engine costs a library plan on its grow costing: the same total, the mass on the seed line', () => {

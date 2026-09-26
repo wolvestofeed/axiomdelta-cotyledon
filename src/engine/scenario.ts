@@ -21,7 +21,6 @@
 import {
   assumptions as defaultAssumptions,
   capacityInputs as defaultCapacityInputs,
-  cropPlan as defaultCropPlan,
   type CropPlanDef,
   phases as defaultPhases,
   phaseProfiles as defaultPhaseProfiles,
@@ -80,12 +79,7 @@ export interface AssumptionsOverlay {
   }>;
 }
 
-/**
- * Editable per-input fields, keyed by `<crop plan code>::<input name>`.
- * A bare input name (scenarios saved before the library existed) applies
- * to the seed crop plan.
- */
-export const SEED_CROP_PLAN_CODE = 'AMK-E-001';
+/** Editable per-input fields, keyed by `<crop plan code>::<input name>`. */
 export const inputKey = (cropPlanCode: string, name: string) => `${cropPlanCode}::${name}`;
 
 /**
@@ -633,9 +627,7 @@ export function resolveScenarioInputs(
         ing.status = 'SOURCED';
         ing.source = `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.`;
       }
-      const o =
-        ingOverlay[inputKey(rec.code, ing.name)] ??
-        (rec.code === SEED_CROP_PLAN_CODE ? ingOverlay[ing.name] : undefined);
+      const o = ingOverlay[inputKey(rec.code, ing.name)];
       if (!o) continue;
       if (o.seedUnitCost !== undefined) {
         ing.seedUnitCost = o.seedUnitCost;
@@ -659,7 +651,8 @@ export function resolveScenarioInputs(
     }
     return rec;
   });
-  const cropPlan = cropPlans.find((r) => r.status === 'in_service') ?? cropPlans[0] ?? (structuredClone(defaultCropPlan) as CropPlanDef);
+  // The library is never empty here: an empty one falls back to the seed grow plans above.
+  const cropPlan = cropPlans.find((r) => r.status === 'in_service') ?? cropPlans[0]!;
 
   // Crews: a proposed staffing answer ---------------------------------------
   // No crew is seeded. A scenario that edits one of the retired invented seed

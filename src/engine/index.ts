@@ -9,21 +9,13 @@
  *   - production runs in whole sowings only
  */
 
-import {
-  cropPlan as defaultCropPlan,
-  capacityInputs as defaultCapacityInputs,
-  assumptions,
-  timeStudy,
-  type InputLine,
-} from '@/data/plan-data';
-import { clock } from '@/data/crews';
+import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine, type CropPlanDef } from '@/data/plan-data';
 import { equipmentSeed } from '@/data/capex';
-import { sowingGrowUnitsFrom, isBlackoutRack, growUnitForProcess, type SowingGrowUnit } from '@/engine/equipment';
-import { cropPlanStage, type CropPlanStage } from '@/engine/stage';
+import { sowingGrowUnitsFrom, type SowingGrowUnit } from '@/engine/equipment';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
 import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
-type CropPlan = typeof defaultCropPlan;
+type CropPlan = CropPlanDef;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
  * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
@@ -102,7 +94,7 @@ export interface CropPlanCosting {
 const OZ_PER_LB = 16;
 
 export function costCropPlan(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): CropPlanCosting {
@@ -255,7 +247,7 @@ export interface ComponentCosting {
 
 /** Roll the costed lines up into the components that are actually harvested and packed. */
 export function componentCosting(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): ComponentCosting[] {
@@ -292,66 +284,6 @@ export function componentCosting(
       lines: ls,
     };
   });
-}
-
-// ── Spec-first derivation: the direction the chain is supposed to run ───────
-
-export interface SpecDerivedLine {
-  name: string;
-  unit: 'lb' | 'each';
-  /** SEED quantity for the authored sowing the packed spec requires. */
-  requiredSeedPerSowing: number;
-  /** SEED quantity for the authored sowing currently authored. */
-  authoredSeedPerSowing: number;
-  /** requiredSeedPerSowing / authoredSeedPerSowing - 1. Positive means the crop plan is short. */
-  drift: number;
-}
-
-export interface SpecReconciliation {
-  /** Scale factor the packed spec implies against the authored quantities. */
-  unitFactorRequired: number;
-  bindingComponent: 'MMA' | 'GRAINS';
-  authoredPackedOz: number;
-  specPackedOz: number;
-  lines: SpecDerivedLine[];
-  /** Packed weight exceeds the serving grow unit it is packed into. */
-  exceedsGrowUnit: boolean;
-  growUnitCapacityOz: number | null;
-}
-
-/**
- * Run the chain the way it is supposed to run: packed spec first, as-purchased
- * quantities derived from it.
- *
- * The scale factor comes from the nutrition engine — the smallest factor at which
- * the unit still meets its tray format's daily minimums — and is applied back
- * through the yield chain to an SEED requirement per line. Authored quantities are
- * then reconciled against it, so drift is reported rather than absorbed.
- */
-export function reconcileToSpec(
-  cropPlan: CropPlan = defaultCropPlan,
-  unitFactorRequired: number,
-  bindingComponent: 'MMA' | 'GRAINS',
-): SpecReconciliation {
-  const authored = costCropPlan(cropPlan);
-  const lines: SpecDerivedLine[] = cropPlan.inputs.map((ing) => ({
-    name: ing.name,
-    unit: ing.unit,
-    requiredSeedPerSowing: ing.seedQtyPerSowing * unitFactorRequired,
-    authoredSeedPerSowing: ing.seedQtyPerSowing,
-    drift: unitFactorRequired - 1,
-  }));
-  const growUnit = cropPlan.spec?.servingGrowUnitCapacityOz?.value ?? null;
-  const specPackedOz = authored.packedOzPerUnit * unitFactorRequired;
-  return {
-    unitFactorRequired,
-    bindingComponent,
-    authoredPackedOz: authored.packedOzPerUnit,
-    specPackedOz,
-    lines,
-    exceedsGrowUnit: growUnit !== null && authored.packedOzPerUnit > growUnit,
-    growUnitCapacityOz: growUnit,
-  };
 }
 
 // ── Fixed overhead absorption on NORMAL CAPACITY (ASC 330-10-30-3) ──────────
@@ -459,21 +391,13 @@ export function absorbOverhead(
  * what the blackout rack bounds the sowing on, and it differs per crop plan.
  */
 export function canopyMassPerUnit(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   unitFactor = 1,
 ): number {
   const hotHarvestedYieldPerSowing = cropPlan.inputs
     .filter((i) => i.isHotComponent)
     .reduce((s, i) => s + i.harvestedYieldPerSowing, 0);
   return (hotHarvestedYieldPerSowing / cropPlan.sowingUnits) * unitFactor;
-}
-
-/** Harvested pounds per unit of one served component (each-units by their unit mass). */
-export function harvestedLbPerUnitOfComponent(cropPlan: CropPlan, component: string, unitFactor = 1): number {
-  const lb = cropPlan.inputs
-    .filter((i) => i.component === component)
-    .reduce((s, i) => s + (i.unit === 'each' ? (i.harvestedYieldPerSowing * (i.unitMassOz ?? 0)) / 16 : i.harvestedYieldPerSowing), 0);
-  return (lb / cropPlan.sowingUnits) * unitFactor;
 }
 
 /**
@@ -498,7 +422,7 @@ export interface PackedUnit {
 }
 
 export function packedUnitOz(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   unitFactor = 1,
 ): PackedUnit {
   // One derivation, not two: the weight chain is `costCropPlan`'s; this is the
@@ -524,50 +448,9 @@ export const FOOD_CODE_COOLING_STAGE_ONE_MIN = 120;
 /** FDA Food Code 3-501.14(A)(2): 135°F to 41°F within 6 hours total. */
 export const FOOD_CODE_COOLING_TOTAL_MIN = 360;
 
-export interface CoolingConformance {
-  stageOneLimitMin: number; // 135°F → 70°F
-  totalLimitMin: number; // 135°F → 41°F
-  modelledBlackoutMin: number;
-  stageOneOk: boolean;
-  totalOk: boolean;
-  /** Headroom against the 2-hour stage; negative when the blackout stage exceeds it. */
-  marginMin: number;
-}
+// ── The day a sowing is placed in ────────────────────────────────────────────
 
-/**
- * Does the modelled BLACKOUT STAGE comply with the Food Code's two-stage cooling
- * limit (control-point-2)? Only the blackout stage is on the cooling clock — the product is
- * not in the cooling window while the rack is being loaded, unloaded or
- * sanitised, so occupancy is never tested here (that would be a category
- * error). The check is conservative: the whole rated 160°F→38°F cycle is held
- * against each stage's limit, and the product passes 70°F before the cycle ends.
- */
-export function coolingConformance(
-  blackoutMinutes: number = defaultCapacityInputs.blackoutMinutes.value,
-): CoolingConformance {
-  return {
-    stageOneLimitMin: FOOD_CODE_COOLING_STAGE_ONE_MIN,
-    totalLimitMin: FOOD_CODE_COOLING_TOTAL_MIN,
-    modelledBlackoutMin: blackoutMinutes,
-    stageOneOk: blackoutMinutes <= FOOD_CODE_COOLING_STAGE_ONE_MIN,
-    totalOk: blackoutMinutes <= FOOD_CODE_COOLING_TOTAL_MIN,
-    marginMin: FOOD_CODE_COOLING_STAGE_ONE_MIN - blackoutMinutes,
-  };
-}
-
-// ── Blackout rack occupancy and the plant's blackout window ──────────────────────────
-
-/**
- * Minutes the rack is unavailable per sowing: load + blackout + unload. The
- * blackout stage is the equipment rating; load and unload are handling time.
- * Cycles per day divide the window by THIS, never by the blackout stage alone.
- * The rack is not sanitized between sowings, and defrosting is maintenance,
- * not production.
- */
-export function blackoutRackOccupancyMinutes(cap: CapacityInputs = defaultCapacityInputs): number {
-  return cap.loadMinutes.value + cap.blackoutMinutes.value + cap.unloadMinutes.value;
-}
-
+/** The operating day as a sowing reads it; on a grow plan the whole day, one sowing per grow unit. */
 export interface BlackoutWindow {
   /** The operating day the plant runs — a scenario input, not a staffing fact. */
   openMin: number;
@@ -593,50 +476,10 @@ export interface BlackoutWindow {
   loadBeforeCloseExtraCycle: boolean;
 }
 
-/**
- * The blackout window is a property of the PLANT: the operating day the business
- * chooses to run, less the minutes before the first harvested component can go in.
- * No crew, headcount or shift enters it. Labor is a requirement derived from
- * the plan placed on this window, and proposed crews are checked against that
- * requirement — a gap there is a finding on the schedule, not a smaller plant.
- */
-export function plantBlackoutWindow(
-  cap: CapacityInputs = defaultCapacityInputs,
-  first: { minutes: number | null; basis: BlackoutWindow['firstLoadBasis'] } = firstLoadAfterOpen(defaultCropPlan),
-): BlackoutWindow {
-  const openMin = cap.operatingOpenMin.value;
-  const closeMin = cap.operatingCloseMin.value;
-  const firstLoadAfterOpenMin = first.minutes;
-  const firstLoadBasis = first.basis;
-  // No sow time on file: there is no first load to place, so the window is empty.
-  const startMin = firstLoadAfterOpenMin === null ? closeMin : openMin + firstLoadAfterOpenMin;
-  const endMin = closeMin;
-  const occupancyMinutes = blackoutRackOccupancyMinutes(cap);
-  const minutes = Math.max(0, endMin - startMin);
-  const cycles = occupancyMinutes > 0 ? Math.floor(minutes / occupancyMinutes) : 0;
-  const nextStart = startMin + cycles * occupancyMinutes;
-  return {
-    openMin,
-    closeMin,
-    firstLoadAfterOpenMin,
-    firstLoadBasis,
-    startMin,
-    endMin,
-    minutes,
-    occupancyMinutes,
-    cycles,
-    loadBeforeCloseExtraCycle: minutes > 0 && nextStart + cap.loadMinutes.value <= closeMin,
-  };
-}
-
 export interface CapacityProfile {
   lbPerCycle: number;
   canopyMassPerUnit: number;
   unitsPerCycleRaw: number;
-  /** Every Phase 1 grow unit's bound on the sowing — one unit each — tightest first. */
-  bounds: SowingBound[];
-  /** The grow unit that sets the sowing; null when no grow unit list is in hand. */
-  binding: SowingBound | null;
   sowingSize: number; // DERIVED, floored to nearest step — off mass, never off time
   loadMinutes: number;
   blackoutMinutes: number;
@@ -650,100 +493,22 @@ export interface CapacityProfile {
    * result (`planProductionDay` with `lines`, the scheduler), never N × this.
    */
   maxUnitsPerDay: number;
-  cooling: CoolingConformance; // the blackout stage against FDA Food Code 3-501.14
-  stage: CropPlanStage; // the crop plan's components against the stage processing standards
   /** Set on a grow plan: the sowing in trays, the units that take it, the cycle and the sustained ceiling. */
   grow?: GrowCapacity;
 }
 
-/**
- * Minutes from opening to a crop plan's first blackout rack load: its sow-to-blackout time
- * read from the crop plan's sow times, gaps listed on `stage`. The crew starts
- * growing at opening. With no sow time on file there is no first load.
- */
-export function firstLoadAfterOpen(
-  cropPlan: CropPlan = defaultCropPlan,
-): { minutes: number | null; basis: BlackoutWindow['firstLoadBasis']; stage: CropPlanStage } {
-  const stage = cropPlanStage(cropPlan);
-  return { minutes: stage.sowToBlackoutMinutes, basis: stage.sowToBlackoutMinutes === null ? 'none' : 'stage', stage };
-}
-
-/**
- * One grow unit's bound on the sowing: the pounds one run takes over the pounds a
- * unit of what it sows weighs. The blackout rack bounds on the whole blackout
- * unit; a growing grow unit on the component it sows.
- */
-export interface SowingBound {
-  growUnit: SowingGrowUnit;
-  /** The served component the grow unit sows; null for the blackout rack (every hot component). */
-  component: string | null;
-  lbPerUnit: number;
-  /** Units one run of the grow unit makes, before rounding. */
-  units: number;
-}
-
-/**
- * The sowing a crop plan runs in is bounded by ONE unit of each grow unit it passes
- * through — one blackout rack on the blackout unit, one growing grow unit on the
- * component it sows — the tightest bound wins, floored to the rounding step
- *. A second rack or shelf is a parallel stream the
- * production plan places as its own sowing, not a larger sowing. Grow unit
- * capacities come from the equipment library and are estimated until stated;
- * planned build-outs never count.
- */
-export function sowingBounds(cropPlan: CropPlan, growUnits: readonly SowingGrowUnit[], unitFactor = 1): SowingBound[] {
-  const bounds: SowingBound[] = [];
-  const blackoutRack = growUnits.find((v) => isBlackoutRack(v.item));
-  if (blackoutRack) {
-    const lbPerUnit = canopyMassPerUnit(cropPlan, unitFactor);
-    bounds.push({ growUnit: blackoutRack, component: null, lbPerUnit, units: lbPerUnit > 0 ? blackoutRack.capacityLb / lbPerUnit : Infinity });
-  }
-  for (const c of cropPlanStage(cropPlan).components) {
-    if (!c.process) continue;
-    const growUnit = growUnitForProcess(c.process.equipment, growUnits);
-    if (!growUnit) continue;
-    const lbPerUnit = harvestedLbPerUnitOfComponent(cropPlan, c.component, unitFactor);
-    if (lbPerUnit <= 0) continue;
-    bounds.push({ growUnit, component: c.component, lbPerUnit, units: growUnit.capacityLb / lbPerUnit });
-  }
-  return bounds.sort((a, b) => a.units - b.units);
-}
-
 export function deriveCapacity(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   cap: CapacityInputs = defaultCapacityInputs,
   unitFactor = 1,
 ): CapacityProfile {
   if (isGrowPlanCarrier(cropPlan)) return deriveGrowProfile(cropPlan, cap, unitFactor);
-  const growUnits = cap.sowingGrowUnits ?? defaultSowingGrowUnits;
-  const blackoutRack = growUnits.find((v) => isBlackoutRack(v.item));
-  // One rack's load: a sowing binds to one unit.
-  const lbPerCycle = blackoutRack ? blackoutRack.capacityLb : cap.capacityPerUnitLb.value;
-  const massPerUnit = canopyMassPerUnit(cropPlan, unitFactor);
-  const unitsPerCycleRaw = lbPerCycle / massPerUnit;
-  const bounds = blackoutRack ? sowingBounds(cropPlan, growUnits, unitFactor) : [];
-  const tightest = bounds.length ? Math.min(unitsPerCycleRaw, bounds[0]!.units) : unitsPerCycleRaw;
-  const sowingSize = roundDownToNearest(tightest, cap.sowingRoundingUnits);
-  const first = firstLoadAfterOpen(cropPlan);
-  const blackoutWindow = plantBlackoutWindow(cap, first);
-  const cyclesPerDay = blackoutWindow.cycles;
-  return {
-    lbPerCycle,
-    canopyMassPerUnit: massPerUnit,
-    unitsPerCycleRaw,
-    bounds,
-    binding: bounds[0] ?? null,
-    sowingSize,
-    loadMinutes: cap.loadMinutes.value,
-    blackoutMinutes: cap.blackoutMinutes.value,
-    unloadMinutes: cap.unloadMinutes.value,
-    occupancyMinutes: blackoutWindow.occupancyMinutes,
-    blackoutWindow,
-    cyclesPerDay,
-    maxUnitsPerDay: sowingSize * cyclesPerDay,
-    cooling: coolingConformance(cap.blackoutMinutes.value),
-    stage: first.stage,
-  };
+  // A plan that is not a grow plan takes no grow unit: a sowing of zero.
+  const openMin = cap.operatingOpenMin.value;
+  const closeMin = cap.operatingCloseMin.value;
+  const day = Math.max(0, closeMin - openMin);
+  const blackoutWindow: BlackoutWindow = { openMin, closeMin, firstLoadAfterOpenMin: null, firstLoadBasis: 'none', startMin: closeMin, endMin: closeMin, minutes: 0, occupancyMinutes: day, cycles: 0, loadBeforeCloseExtraCycle: false };
+  return { lbPerCycle: 0, canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor), unitsPerCycleRaw: 0, sowingSize: 0, loadMinutes: 0, blackoutMinutes: 0, unloadMinutes: 0, occupancyMinutes: day, blackoutWindow, cyclesPerDay: 0, maxUnitsPerDay: 0 };
 }
 
 /**
@@ -755,7 +520,6 @@ export function deriveCapacity(
  */
 function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan').GrowPlanDef }, cap: CapacityInputs, unitFactor: number): CapacityProfile {
   const grow = deriveGrowCapacity(cropPlan.plan, cap.growUnits ?? defaultGrowUnits);
-  const first = firstLoadAfterOpen(cropPlan);
   const openMin = cap.operatingOpenMin.value;
   const closeMin = cap.operatingCloseMin.value;
   const day = Math.max(0, closeMin - openMin);
@@ -766,8 +530,6 @@ function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan
     lbPerCycle: (grow.sowingTrays * massPerUnit),
     canopyMassPerUnit: massPerUnit,
     unitsPerCycleRaw: grow.sowingTrays,
-    bounds: [],
-    binding: null,
     sowingSize: grow.sowingTrays,
     loadMinutes: 0,
     blackoutMinutes: 0,
@@ -776,8 +538,6 @@ function deriveGrowProfile(cropPlan: CropPlan & { plan: import('@/data/grow-plan
     blackoutWindow,
     cyclesPerDay,
     maxUnitsPerDay: grow.sowingTrays * cyclesPerDay,
-    cooling: coolingConformance(0),
-    stage: first.stage,
     grow,
   };
 }
@@ -890,7 +650,7 @@ export interface PurchaseOrder {
 
 export function buildPurchaseOrder(
   unitsProduced: number,
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
 ): PurchaseOrder {
   const lines: PurchaseOrderLine[] = cropPlan.inputs.map((ing) => {
     const requiredForProduction = (ing.seedQtyPerSowing * unitsProduced) / cropPlan.sowingUnits;
@@ -919,7 +679,7 @@ export function buildPurchaseOrder(
  */
 export function purchaseOrderForRun(
   unitsProduced: number,
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
 ): PurchaseOrder {
   return buildPurchaseOrder(unitsProduced * (1 + shrinkAllowance), cropPlan);
@@ -950,7 +710,7 @@ export interface CostPerUnit {
 }
 
 export function costPerUnit(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   a: typeof assumptions = assumptions,
   cap: CapacityInputs = defaultCapacityInputs,
   laborMinutesPerUnit?: number,
@@ -1008,7 +768,7 @@ export interface SowingCosting {
 }
 
 export function sowingCosting(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   cap: CapacityInputs = defaultCapacityInputs,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
@@ -1046,7 +806,7 @@ export interface CostToServe extends CostPerUnit {
 }
 
 export function costToServe(
-  cropPlan: CropPlan = defaultCropPlan,
+  cropPlan: CropPlan,
   a: typeof assumptions = assumptions,
   cap: CapacityInputs = defaultCapacityInputs,
   laborMinutesPerUnit?: number,
@@ -1054,80 +814,4 @@ export function costToServe(
   const unit = costPerUnit(cropPlan, a, cap, laborMinutesPerUnit);
   const distribution = a.perUnit.distribution.value;
   return { ...unit, distribution, costToServe: unit.total + distribution };
-}
-
-// ── Validation warnings — surfaced, never silently resolved ─────────────────
-
-export interface ValidationWarning {
-  id: string;
-  title: string;
-  detail: string;
-}
-
-export function validationWarnings(
-  cropPlan: CropPlan = defaultCropPlan,
-  a: typeof assumptions = assumptions,
-  study: typeof timeStudy = timeStudy,
-  cap: CapacityInputs = defaultCapacityInputs,
-): ValidationWarning[] {
-  const warnings: ValidationWarning[] = [];
-
-  // 1. Stored harvested yields must equal as-purchased x yield factor. A typed
-  //    harvested yield that drifts from its inputs silently moves sowing size.
-  const drift = cropPlan.inputs.filter(
-    (i) => Math.abs(i.seedQtyPerSowing * i.yieldToHarvest - i.harvestedYieldPerSowing) > 0.001,
-  );
-  if (drift.length > 0) {
-    warnings.push({
-      id: 'yield-integrity',
-      title: 'Stored harvested yield does not equal SEED x yield factor',
-      detail: `${drift.map((d) => d.name).join(', ')}. Canopy mass per unit, and therefore sowing size, derives from the harvested column. Recompute it from the inputs.`,
-    });
-  }
-
-  // 2. The time study is estimated at one sowing size and the model runs at another.
-  const capacity = deriveCapacity(cropPlan, cap);
-  const derived = capacity.sowingSize;
-  if (!isGrowPlanCarrier(cropPlan) && derived !== study.estimatedAtSowingSize) {
-    warnings.push({
-      id: 'time-study-rebasing',
-      title: 'Time-study re-basing',
-      detail: `Task minutes were estimated at a ${study.estimatedAtSowingSize}-unit sowing; the derived sowing is ${derived}. The variable rate is held on the ${study.estimatedAtSowingSize} basis so the minutes are not flattered, but the study is an estimate, not an observation. Re-observe at the real sowing size.`,
-    });
-  }
-
-  // 3. (Retired, Roadmap N3.) This checked that the TYPED variable rate stayed
-  //    tied to the plan's single study. Labor is now each crop plan's own standard,
-  //    derived from its own study, so there is no typed rate for it to drift
-  //    from — and against a crop plan's resolved assumptions it would fire on every
-  //    crop plan that is not AMK-E-001.
-
-  // 5. The blackout stage against the Food Code cooling limit (control-point-2). A scenario
-  //    may set a blackout the Code forbids; the engine says so rather than
-  //    refusing the edit.
-  const cooling = capacity.cooling;
-  if (!cooling.stageOneOk || !cooling.totalOk) {
-    warnings.push({
-      id: 'ccp2-cooling-limit',
-      title: 'Modelled blackout stage exceeds the Food Code cooling limit',
-      detail: `The blackout stage is ${cooling.modelledBlackoutMin} min. FDA Food Code 3-501.14 allows ${cooling.stageOneLimitMin} min for 135°F to 70°F${cooling.stageOneOk ? '' : ' (exceeded)'} and ${cooling.totalLimitMin} min for 135°F to 41°F${cooling.totalOk ? '' : ' (exceeded)'}. control-point-2's critical limit is not met by this scenario.`,
-    });
-  }
-
-  // 6. The operating day against the rack. Staffing is not checked here —
-  //    crews are a proposed answer checked against the labor requirement in
-  //    `_engine/staffing.ts`, never an input to the ceiling.
-  const w = capacity.blackoutWindow;
-  if (w.cycles === 0) {
-    warnings.push({
-      id: 'plant-window-no-cycle',
-      title: 'No whole blackout rack cycle fits the operating day',
-      detail:
-        w.firstLoadBasis === 'none'
-          ? `No component of ${cropPlan.code} has a sow time on file, so there is no first blackout rack load to place and the daily ceiling is 0.`
-          : `The first load is ${clock(w.startMin)} and the operating day closes ${clock(w.endMin)}: ${w.minutes} min against a ${w.occupancyMinutes}-min occupancy, so the daily ceiling is 0.`,
-    });
-  }
-
-  return warnings;
 }

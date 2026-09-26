@@ -14,7 +14,6 @@
  */
 
 import type { CropPlanDef } from '@/data/plan-data';
-import { MENU_CODES, ADULT_CODES } from '@/data/crop-plans-seed';
 
 export type SubscriptionCycleStatus = 'active' | 'inactive';
 export type OrderStatus = 'forecast' | 'confirmed' | 'distributed';
@@ -94,8 +93,9 @@ export function mondayOf(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export const STUDENT_MENU_NAME = 'Student menu — 10 days';
-export const ADULT_MENU_NAME = 'Adult menu — 10 days';
+/** The seed cycles, one per channel group; the ids are the rows' keys in every workspace. */
+export const SEED_CYCLE_SUBSCRIPTIONS = 'CYCLE-SEED-STUDENT';
+export const SEED_CYCLE_OTHER_CHANNELS = 'CYCLE-SEED-ADULT';
 
 const cycleShape = (id: string, name: string, startDate: string, codes: readonly string[], notes: string): SubscriptionCycleDef => ({
   id,
@@ -115,44 +115,31 @@ const cycleShape = (id: string, name: string, startDate: string, codes: readonly
 });
 
 /**
- * The saved subscription cycles the library starts with: the student menu (AMK-E-002 …
- * 011) and the adult menu (AMK-A-002 … 011), ten days each — week 1 is days
- * 1–5, week 2 days 6–10, Monday to Friday — anchored to the Monday of the week
- * the library is first read. They are the menu, edited in place. Where a menu's
- * crop plans are not all in service in the library (a bare engine call), a five-day
- * sequence of the first in-service crop plan offered to the menu's channels stands
- * in, named so.
+ * The saved subscription cycles the library starts with: for Subscriptions, and for the other
+ * channels, five days of the first in-service plan offered there, Monday to Friday, anchored to the
+ * Monday of the week the library is first read. A channel group with no plan in service has none.
  */
 export function seedSubscriptionCycles(library: readonly CropPlanDef[], today: string): SubscriptionCycleDef[] {
-  const inService = (code: string) => library.some((r) => r.code === code && r.status === 'in_service');
   const firstOn = (channels: readonly number[]) => library.find((r) => r.status === 'in_service' && channels.some((c) => r.channels.includes(c)));
-  const out: SubscriptionCycleDef[] = [];
-  const note = 'Week 1 is days 1–5, week 2 is days 6–10, Monday to Friday.';
   const start = mondayOf(today);
-  const menus = [
-    { id: 'CYCLE-SEED-STUDENT', name: STUDENT_MENU_NAME, codes: MENU_CODES, channels: [1] },
-    { id: 'CYCLE-SEED-ADULT', name: ADULT_MENU_NAME, codes: ADULT_CODES, channels: [2, 3] },
+  const groups = [
+    { id: SEED_CYCLE_SUBSCRIPTIONS, label: 'Subscriptions', channels: [1] },
+    { id: SEED_CYCLE_OTHER_CHANNELS, label: 'Restaurants, retail and wholesale', channels: [2, 3] },
   ];
-  for (const m of menus) {
-    if (m.codes.every(inService)) {
-      out.push(cycleShape(m.id, m.name, start, m.codes, note));
-      continue;
-    }
-    const r = firstOn(m.channels);
-    if (r) out.push(cycleShape(m.id, `${m.name.split(' — ')[0]} — five days of ${r.code}`, start, [r.code, r.code, r.code, r.code, r.code], `The menu is not in the library; ${r.code} on every service day, Monday to Friday.`));
-  }
-  return out;
+  return groups.flatMap((g) => {
+    const r = firstOn(g.channels);
+    return r ? [cycleShape(g.id, `${g.label} — five days of ${r.code}`, start, [r.code, r.code, r.code, r.code, r.code], `${r.code} on every service day, Monday to Friday.`)] : [];
+  });
 }
 
 /**
- * A flat plan for every subscriber that is not inactive and has none: a copy of
- * the student menu for a Subscriptions subscriber, the adult menu otherwise —
- * the menus each channel's crop plans are offered from. Seed rows, so a reseed
- * removes them with the seed subscribers.
+ * A flat plan for every subscriber that is not inactive and has none: a copy of the Subscriptions
+ * seed cycle for a Subscriptions subscriber, the other channels' cycle otherwise. Seed rows, so a
+ * reseed removes them with the seed subscribers.
  */
 export function seedFlatPlans(subscribers: readonly { id: string; channel: number; status: string }[], cycles: readonly SubscriptionCycleDef[]): SubscriptionCycleDef[] {
-  const student = cycles.find((c) => c.subscriberId === null && c.name.startsWith('Student menu'));
-  const adult = cycles.find((c) => c.subscriberId === null && c.name.startsWith('Adult menu'));
+  const student = cycles.find((c) => c.subscriberId === null && c.id === SEED_CYCLE_SUBSCRIPTIONS);
+  const adult = cycles.find((c) => c.subscriberId === null && c.id === SEED_CYCLE_OTHER_CHANNELS);
   const out: SubscriptionCycleDef[] = [];
   for (const c of subscribers) {
     if (c.status === 'inactive' || cycles.some((p) => p.subscriberId === c.id)) continue;

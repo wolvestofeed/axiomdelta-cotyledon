@@ -4,12 +4,8 @@ import { PageControls } from '@/components/PageControls';
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, money, num } from '@/components/ui';
-import { EditableNumber } from '@/components/EditableNumber';
-import { SectionSave } from '@/components/SectionSave';
-import { sowingCosting, costCropPlan, costToServe, deriveCapacity, canopyMassPerUnit, packedUnitOz, componentCosting, reconcileToSpec } from '@/engine';
-import { creditCropPlan, creditableLines, minimumUnitFactor } from '@/engine/nutrition';
-import { SOWING_CAPACITY_BASIS_LABELS } from '@/data/capex';
-import { allergenMatrix, CROP_PLAN_STATUS_LABELS, type CropPlanStatus } from '@/data/plan-data';
+import { sowingCosting, costCropPlan, costToServe, deriveCapacity } from '@/engine';
+import { CROP_PLAN_STATUS_LABELS, type CropPlanStatus } from '@/data/plan-data';
 import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
 import { CropPlanEditor } from '@/components/CropPlanEditor';
 import { setCropPlanStatus } from '@/server/crop-plan-actions';
@@ -18,13 +14,7 @@ import { standardInForce, standardHistory, standardDiffers, standardLabel, type 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
-import { useOperationsWorld } from '@/state/ledger';
-import { assumptionsFor, inputKey } from '@/engine/scenario';
-import { clock } from '@/data/crews';
-import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
-import { inputRatings, ratingFor } from '@/data/mark';
-import { SupplierPicker } from '@/components/SupplierPicker';
-import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
+import { assumptionsFor } from '@/engine/scenario';
 import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
 import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { LINE_KIND_LABELS, leadVariety, planStageDays, planStages } from '@/data/grow-plan';
@@ -33,11 +23,8 @@ import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { unitSku } from '@/data/tray-formats';
 
 export function CropPlansClient({ standards, today }: { standards: StandardVersionDoc[]; today: string }) {
-  const { resolved, setInput, setSustainability, isSuperAdmin, library } = useScenario();
+  const { resolved, isSuperAdmin, library } = useScenario();
   const { cropPlan: selected, setCode } = useSelectedCropPlan();
-  // Input lines and supplier links are forecast edits: on Plan only. The library,
-  // packaging and standards are records and edit in both worlds (Roadmap N6 slice 3).
-  const { forecastEditing } = useOperationsWorld({});
   const libraryCropPlan = library.find((r) => r.code === selected.code);
   const libraryPlan = libraryCropPlan && isGrowPlanCarrier(libraryCropPlan) ? libraryCropPlan.plan : undefined;
   const router = useRouter();
@@ -56,51 +43,19 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   const current = Math.min(page, pageCount - 1);
   const pageRows = resolved.cropPlans.slice(current * pageSize, current * pageSize + pageSize);
 
-  // The crop plan is where a line's source is set. Inputs (Scope 3),
-  // Procurement and Logistics read the same link.
-  const links = resolved.sustainability.inputSupplier;
-  const linkedSuppliers = useLinkedSuppliers(links);
-  const setLink = (name: string, id: string | undefined) =>
-    setSustainability((d) => {
-      const m = (d.inputSupplier ??= {});
-      if (id === undefined) delete m[name];
-      else m[name] = id;
-      if (Object.keys(m).length === 0) delete d.inputSupplier;
-    });
-  const costing = useMemo(() => costCropPlan(selected), [selected]);
   const growCosting = useMemo(() => (isGrowPlanCarrier(selected) ? costCarrier(selected) : null), [selected]);
   const growPlan = isGrowPlanCarrier(selected) ? selected.plan : null;
   const leadVarietyOf = growPlan ? leadVariety(growPlan) : undefined;
   const planTargets = useMemo(() => (isGrowPlanCarrier(selected) ? targetsOfPlan(selected.plan) : []), [selected]);
-  const linesLinked = costing.lines.filter((l) => links[l.name]).length;
   const cap = useMemo(
     () => deriveCapacity(selected, resolved.capacityInputs),
     [selected, resolved.capacityInputs],
   );
-  const mass = useMemo(() => canopyMassPerUnit(selected), [selected]);
   // Sowing costing → yield → costing down to the unit (the costing rule, `sowingCosting`).
   const sowing = useMemo(() => sowingCosting(selected, resolved.capacityInputs, resolved.assumptions.yield.shrinkAllowance.value), [selected, resolved.capacityInputs, resolved.assumptions.yield.shrinkAllowance.value]);
   // The selected crop plan at its OWN labor standard and packaging (Roadmap N3).
   const selectedAssumptions = useMemo(() => assumptionsFor(resolved, selected.code), [resolved, selected.code]);
   const serve = useMemo(() => costToServe(selected, selectedAssumptions, resolved.capacityInputs), [selected, selectedAssumptions, resolved.capacityInputs]);
-  /** Authored quantities are shown and edited at the derived sowing: typed × this. */
-  const scale = sowing.scale;
-  const packed = useMemo(() => packedUnitOz(selected), [selected]);
-  const trayFormat = selected.spec.trayFormat.value;
-  const credit = useMemo(
-    () => creditCropPlan(creditableLines(selected), trayFormat),
-    [selected, trayFormat],
-  );
-  const minUnit = useMemo(
-    () => minimumUnitFactor(creditableLines(selected), trayFormat),
-    [selected, trayFormat],
-  );
-  const spec = useMemo(
-    () => reconcileToSpec(selected, minUnit.factor, minUnit.bindingComponent),
-    [selected, minUnit],
-  );
-  const components = useMemo(() => componentCosting(selected), [selected]);
-
   // ── The standard in force (Roadmap J5) ───────────────────────────────────
   const shrink = resolved.assumptions.yield.shrinkAllowance.value;
   const inForce = useMemo(() => standardInForce(standards, selected.code, today), [standards, selected.code, today]);
@@ -126,21 +81,6 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
     });
   }
 
-  // Plan-data defaults, for the "your input" comparison on each editable field.
-  const defByName = useMemo(
-    () => new Map((libraryCropPlan ?? selected).inputs.map((d) => [d.name, d])),
-    [libraryCropPlan, selected],
-  );
-
-  const allergenCols: Array<[keyof (typeof allergenMatrix)[number], string]> = [
-    ['milk', 'Milk'],
-    ['egg', 'Egg'],
-    ['wheat', 'Wheat'],
-    ['soy', 'Soy'],
-    ['peanut', 'Peanut'],
-    ['treeNut', 'Tree nut'],
-    ['fishShellfishSesame', 'Fish / shellfish / sesame'],
-  ];
 
   return (
     <>
@@ -192,7 +132,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
                     <td className="num">{money(c.totalInputCostPerUnit)}</td>
                     <td className="num">{g ? num(g.harvestGramsPerTray, 0) : c.packedOzPerUnit.toFixed(2)}</td>
                     <td className="num">{num(k.sowingSize)}{k.grow && k.grow.sowingTrays === 0 && <div className="farm-c-faint farm-fs-2xs">no unit lights it</div>}</td>
-                    <td className="num">{k.grow ? `${num(k.grow.cycleDays)} d` : k.stage.sowToBlackoutMinutes === null ? '—' : `${k.stage.sowToBlackoutMinutes} min`}</td>
+                    <td className="num">{k.grow ? `${num(k.grow.cycleDays)} d` : '—'}</td>
                     <td className="num">{isSel ? <span className="farm-kpi-sub">selected</span> : <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setCode(r.code)}>Select</button>}</td>
                   </tr>
                 );
@@ -300,7 +240,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
       </Card>
 
-      {growCosting && cap.grow ? (
+      {growCosting && cap.grow && (
         <div className="grid gap-3 mt-4 farm-autofit-11">
           <Kpi value={money(growCosting.perTray.total)} label="Input cost per tray" sub={`seed ${money(growCosting.perTray.seed)} · medium ${money(growCosting.perTray.medium)} · nutrient ${money(growCosting.perTray.nutrient)} · light ${money(growCosting.perTray.light)} · consumables ${money(growCosting.perTray.consumables)}`} />
           <Kpi value={`${num(cap.grow.sowingTrays)} trays`} label="Sowing — what one grow unit takes" sub={cap.grow.binding ? `one ${cap.grow.binding.unit.item.toLowerCase()}` : 'no grow unit takes this plan'} />
@@ -311,24 +251,9 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           <Kpi value={num(cap.grow.traysPerDay, 2)} label="Sustained ceiling, trays a day" sub={`${num(cap.grow.totalTrays)} trays across ${num(cap.grow.unitCount)} units over the cycle`} />
           <Kpi value={unitSku(selected.code, growCosting.format.key)} label="Unit SKU" sub="the plan code and the packaged format" />
         </div>
-      ) : (
-      <div className="grid gap-3 mt-4 farm-autofit-11">
-        <Kpi value={money(costing.totalInputCostPerUnit)} label="Unit input cost" sub="Sowing cost over the sowing's units, with the shrink allowance" />
-        <Kpi value={num(cap.sowingSize)} label="Sowing — one unit of each grow unit" sub={cap.binding ? `Bound by the ${cap.binding.growUnit.item.toLowerCase()}${cap.binding.component ? ` on ${cap.binding.component.toLowerCase()}` : ''} (${SOWING_CAPACITY_BASIS_LABELS[cap.binding.growUnit.basis].toLowerCase()} capacity)` : `${mass.toFixed(4)} lb canopy mass/unit`} />
-        <Kpi value={money(serve.costToServe)} label="Cost to serve" sub={`Food ${money(serve.food)} · labor ${money(serve.directLabor)} · packaging ${money(serve.packaging)} · distribution ${money(serve.distribution)}`} />
-        <Kpi value={`${packed.totalOz.toFixed(2)} oz`} label="Packed unit (derived)" sub={`${(mass * 16).toFixed(1)} oz hot harvested mass · ${packed.seedOz.toFixed(2)} oz as-purchased — the as-purchased figure is not the bowl`} />
-        <Kpi value={money(costing.costPerPackedOz, 4)} label="Input cost / packed oz" sub={`${money(costing.costPerHarvestedLb)}/lb harvested · ${money(costing.costPerSeedLb)}/lb as-purchased`} />
-        <Kpi value={num(cap.maxUnitsPerDay)} label="One-stream ceiling / day" sub={`${cap.cyclesPerDay} cycles × ${num(cap.sowingSize)} on one rack`} />
-        <Kpi value={`${linesLinked} / ${costing.lines.length}`} label="Lines with a supplier linked" sub="Inherited by Procurement and Logistics" />
-        <Kpi
-          value={cap.stage.sowToBlackoutMinutes === null ? '—' : `${cap.stage.sowToBlackoutMinutes} min`}
-          label="Sow to blackout rack"
-          sub={cap.blackoutWindow.firstLoadBasis === 'none' ? 'No sow time on file' : `First load ${clock(cap.blackoutWindow.startMin)} with growing from ${clock(cap.blackoutWindow.openMin)}${cap.stage.gaps.length ? ` · ${cap.stage.gaps.length} gap${cap.stage.gaps.length === 1 ? '' : 's'}` : ''}`}
-        />
-      </div>
       )}
 
-      {growCosting && cap.grow && growPlan ? (
+      {growCosting && cap.grow && growPlan && (
         <>
           <Card title="Sowing costing → yield → costing down to the unit" className="mt-4">
             <div className="farm-scroll-x">
@@ -371,56 +296,6 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
             <p className="farm-kpi-sub mt-2">The days are the varieties&rsquo; ({leadVarietyOf?.stageDays.note ?? ''}) unless the plan overrides them; a mixed tray runs on the slowest variety at each stage. A nutrient line names the stage it enters the water; the light line the stage the lights come on. The control points are on <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>.</p>
           </Card>
         </>
-      ) : (
-        <>
-      <Card title="Sowing costing → yield → costing down to the unit" className="mt-4">
-        <div className="farm-scroll-x">
-          <table className="farm-table">
-            <tbody>
-              <tr><td>The sowing</td><td className="num">{num(sowing.sowingUnits)} units</td><td className="farm-c-faint farm-fs-xs">One unit of each growUnit: the tightest of the growUnits a sowing passes through{cap.binding ? `, the ${cap.binding.growUnit.item.toLowerCase()}` : ''}. The cropPlan is written for {num(sowing.authoredUnits)} units; every quantity below is scaled × {sowing.scale.toFixed(3)}.</td></tr>
-              <tr><td>Sowing cost — bulk inputs as purchased</td><td className="num">{money(sowing.sowingInputCost)}</td><td className="farm-c-faint farm-fs-xs">{sowing.seedLb.toFixed(1)} lb purchased at as-purchased prices.</td></tr>
-              <tr><td>Yield — harvested over purchased</td><td className="num">{(sowing.yieldHarvestedOverSeed * 100).toFixed(1)}%</td><td className="farm-c-faint farm-fs-xs">{sowing.seedLb.toFixed(1)} lb purchased → {sowing.sownLb.toFixed(1)} lb edible → {sowing.harvestedLb.toFixed(1)} lb harvested → {sowing.blackoutLb.toFixed(1)} lb blackout → {sowing.packedLb.toFixed(1)} lb packed ({(sowing.yieldPackedOverSeed * 100).toFixed(1)}% of purchased). Measured on the sowing record when one is closed; the yields on file until then.</td></tr>
-              <tr><td>Shrink allowance ({(sowing.shrinkAllowance * 100).toFixed(0)}%)</td><td className="num">{money(sowing.sowingInputCostWithShrink - sowing.sowingInputCost)}</td><td className="farm-c-faint farm-fs-xs">Trim, over-packing and spoilage bought and never packed.</td></tr>
-              <tr className="total"><td>Unit input cost — sowing cost ÷ units</td><td className="num">{money(sowing.unitInputCost, 4)}</td><td className="farm-c-faint farm-fs-xs">{money(sowing.sowingInputCostWithShrink)} ÷ {num(sowing.sowingUnits)}.</td></tr>
-              <tr><td>+ conversion labor</td><td className="num">{money(serve.directLabor, 4)}</td><td className="farm-c-faint farm-fs-xs">The time study at the sowing, at the placeholder loaded rate.</td></tr>
-              <tr><td>+ packaging</td><td className="num">{money(serve.packaging, 4)}</td><td className="farm-c-faint farm-fs-xs">Per unit.</td></tr>
-              <tr><td>+ distribution to the pickup points</td><td className="num">{money(serve.distribution, 4)}</td><td className="farm-c-faint farm-fs-xs">Per unit. Storage is a fixed cost and is not in the cost to serve.</td></tr>
-              <tr className="total"><td>Cost to serve</td><td className="num">{money(serve.costToServe, 4)}</td><td className="farm-c-faint farm-fs-xs">The cost of a unit the ledger carries is food, labor and packaging ({money(serve.total, 4)}); distribution is a selling cost there.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        {cap.bounds.length > 0 && (
-          <p className="farm-kpi-sub mt-2">
-            GrowUnit bounds on the sowing, one unit each, tightest first: {cap.bounds.map((b) => `${b.growUnit.item} (${num(b.growUnit.capacityLb)} lb a run, ${SOWING_CAPACITY_BASIS_LABELS[b.growUnit.basis].toLowerCase()}${b.growUnit.units > 1 ? `, ${num(b.growUnit.units)} units as parallel streams` : ''}) on ${b.component ?? 'the blackout unit'} at ${b.lbPerUnit.toFixed(3)} lb/unit → ${num(Math.floor(b.units))} units`).join('; ')}. Capacities are open fields on <Link className="farm-link" href="/farm/grow-units">Equipment</Link>.
-          </p>
-        )}
-      </Card>
-
-      <Card title="Sow to blackout rack — the stage processing standards" className="mt-4">
-        <div className="farm-scroll-x">
-          <table className="farm-table">
-            <thead>
-              <tr><th>Hot component</th><th>Process</th><th>Equipment and mode</th><th className="num">Stated range</th><th className="num">Plan (high end)</th><th>Gap</th></tr>
-            </thead>
-            <tbody>
-              {cap.stage.components.map((c) => (
-                <tr key={c.component} className={c.component === cap.stage.longestComponent ? 'total' : ''}>
-                  <td>{c.component}{c.basis && <div className="farm-c-faint farm-fs-2xs">{c.basis}</div>}</td>
-                  <td>{c.process ? c.process.name : '—'}{c.process?.overnight && <div className="farm-c-faint farm-fs-2xs">Overnight, before the production day</div>}</td>
-                  <td className="farm-c-soft">{c.process ? `${c.process.equipment} — ${c.process.mode}` : '—'}</td>
-                  <td className="num">{c.process ? `${c.process.minMinutes}–${c.process.maxMinutes} min` : '—'}</td>
-                  <td className="num">{c.minutes === null ? '—' : `${c.minutes} min`}</td>
-                  <td className={`${(c.gap ? 'farm-c-placeholder' : 'farm-c-faint')}`}>{c.gap ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="farm-kpi-sub mt-2">
-          The cooling clock starts the moment a sow ends: the product is poured into 2-inch hotel pans and loaded (25 minutes). The components start staggered, longest first, so they finish together and fill one blackoutRack sowing; the cropPlan&rsquo;s time to the blackoutRack is its longest component sow{cap.stage.longestComponent ? ` — ${cap.stage.longestComponent}` : ''}, read at the high end of each stated range. A component with no sow time on file is a gap and is not filled in. Source: the farm&rsquo;s stage processing standards (2026-09-14).
-        </p>
-      </Card>
-        </>
       )}
 
 
@@ -446,284 +321,12 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           </div>
         </Card>
       )}
-      {!growCosting && (
-      <Card title="Unit spec — what the packed weight is anchored to" className="mt-4">
-        <p className="text-sm farm-c-soft mb-3!">
-          The packed weight is not a preference. It is the weight that distributes this
-          entree&rsquo;s nutrition contribution for its tray format under 7 CFR 210.10(c).
-          Nutrition runs on the as-served weight of each served COMPONENT, and USDA rounds
-          every component total down &mdash; to the nearest quarter ounce equivalent for
-          meats/meat alternates and grains, and to the nearest eighth cup for vegetables.
-        </p>
-        <div className="grid gap-3 farm-autofit-11">
-          <Kpi
-            value={`${credit.mmaOzEq.toFixed(2)} oz eq`}
-            label="Meats / meat alternates"
-            sub={`Grades ${trayFormat} daily minimum ${credit.pattern.mma.dailyMin} oz eq · raw ${credit.rawMmaOzEq.toFixed(3)}`}
-          />
-          <Kpi
-            value={`${credit.grainsOzEq.toFixed(2)} oz eq`}
-            label="Grains"
-            sub={`Grades ${trayFormat} daily minimum ${credit.pattern.grains.dailyMin} oz eq · raw ${credit.rawGrainsOzEq.toFixed(3)}`}
-          />
-          <Kpi
-            value={`${credit.vegCups.toFixed(3)} cup`}
-            label="Vegetables"
-            sub={`Grades ${trayFormat} daily minimum ${credit.pattern.vegetables.dailyMin} cup · the entree does not carry the whole requirement`}
-          />
-          <Kpi
-            value={`${((1 - minUnit.factor) * 100).toFixed(1)}%`}
-            label="Unit headroom"
-            sub={`The unit can fall this far before the grades ${trayFormat} ${minUnit.bindingComponent === 'GRAINS' ? 'grain' : 'meats/meat alternates'} daily minimum is not met`}
-          />
-        </div>
-
-        <div className="farm-scroll-x mt-4!">
-          <table className="farm-table">
-            <thead>
-              <tr>
-                <th>Served component</th>
-                <th>Blackout?</th>
-                <th className="num">Packed oz</th>
-                <th className="num">$ / unit</th>
-                <th className="num">$ / lb harvested</th>
-                <th className="num">M/MA oz eq</th>
-                <th className="num">Grains oz eq</th>
-                <th className="num">Veg cup</th>
-              </tr>
-            </thead>
-            <tbody>
-              {credit.components.map((k) => {
-                const cost = components.find((c) => c.name === k.component);
-                return (
-                  <tr key={k.component}>
-                    <td className="font-medium!">{k.component}</td>
-                    <td className="farm-c-soft">{cost?.isHot ? 'Hot' : 'Cold-pack'}</td>
-                    <td className="num">{(cost?.packedOz ?? 0).toFixed(3)}</td>
-                    <td className="num">{money(cost?.costPerUnit ?? 0, 4)}</td>
-                    <td className="num">{cost?.harvestedCostPerLb == null ? '—' : money(cost.harvestedCostPerLb)}</td>
-                    <td className="num">{k.mmaOzEqRaw > 0 ? k.mmaOzEqRaw.toFixed(3) : '—'}</td>
-                    <td className="num">{k.grainsOzEqRaw > 0 ? k.grainsOzEqRaw.toFixed(3) : '—'}</td>
-                    <td className="num">{k.vegCupsRaw > 0 ? k.vegCupsRaw.toFixed(3) : '—'}</td>
-                  </tr>
-                );
-              })}
-              <tr className="total">
-                <td colSpan={2}>Packed unit</td>
-                <td className="num">{costing.packedOzPerUnit.toFixed(3)}</td>
-                <td className="num">{money(costing.inputCostPerUnit, 4)}</td>
-                <td className="num">{money(costing.costPerHarvestedLb)}</td>
-                <td className="num">{credit.rawMmaOzEq.toFixed(3)}</td>
-                <td className="num">{credit.rawGrainsOzEq.toFixed(3)}</td>
-                <td className="num">{credit.rawVegCups.toFixed(3)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="text-sm farm-c-soft mt-3! grid! gap-[0.35rem]!">
-          <div>
-            <strong className="farm-c-ink">As-purchased is not the bowl.</strong>{' '}
-            One unit is {packed.seedOz.toFixed(2)} oz as purchased and{' '}
-            {costing.packedOzPerUnit.toFixed(2)} oz packed. Dry rice and dry beans take on
-            water; the two columns are different weights of the same unit.
-          </div>
-          <div>
-            <strong className="farm-c-ink">Spec floor.</strong>{' '}
-            {spec.specPackedOz.toFixed(2)} oz is the lightest packed unit that still meets the
-            grades {trayFormat} daily minimums, binding on{' '}
-            {minUnit.bindingComponent === 'GRAINS' ? 'grains' : 'meats/meat alternates'}.
-            {spec.growUnitCapacityOz !== null
-              ? ` The serving grow unit holds ${spec.growUnitCapacityOz} oz.`
-              : ' No serving grow unit capacity is on file.'}
-          </div>
-          <div>
-            <strong className="farm-c-ink">Tray format.</strong>{' '}
-            <StatusBadge
-              status={selected.spec.trayFormat.status}
-              title={selected.spec.trayFormat.note}
-            />{' '}
-            {selected.spec.trayFormat.note}
-          </div>
-          {credit.blocked.length > 0 && (
-            <div>
-              <strong className="farm-c-ink">Not credited:</strong>{' '}
-              {credit.blocked.join(' ')}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      )}
       <CropPlanPackagingCard
         cropPlanCode={selected.code}
         cropPlanId={(libraryCropPlan as { id?: string } | undefined)?.id}
         cropPlanChannels={selected.channels ?? []}
       />
 
-      {!growCosting && (
-        <>
-      <Card title={`Input lines — the ${num(sowing.sowingUnits)}-unit sowing`} className="mt-4">
-        <div className="mb-3!">
-          {forecastEditing ? <SectionSave sections={['inputs', 'sustainability']} title="the crop plan" /> : <p className="farm-kpi-sub">The open forecast&rsquo;s input lines, read-only on Actual. They are edited on Plan.</p>}
-        </div>
-        <div className="farm-scroll-x">
-          <table className="farm-table">
-            <thead>
-              <tr>
-                <th>Input</th>
-                <th>{ratingHeader()}</th>
-                <th>Supplier</th>
-                <th>Blackout?</th>
-                <th className="num">As purchased / sowing</th>
-                <th className="num">Yield (× SEED)</th>
-                <th className="num">Harvested / sowing</th>
-                <th className="num">As served, oz / unit</th>
-                <th className="num">SEED $/unit</th>
-                <th className="num">$ / lb SEED</th>
-                <th className="num">$ / lb harvested</th>
-                <th className="num">$ / packed oz</th>
-                <th className="num">$ / sowing</th>
-                <th className="num">$ / unit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {costing.lines.map((l) => {
-                const def = defByName.get(l.name);
-                return (
-                  <tr key={l.name}>
-                    <td>
-                      <div className="font-medium">{l.name}</div>
-                      <div className="mt-[0.15rem]!"><StatusBadge status={l.status} title={l.source} /></div>
-                    </td>
-                    <td><RatingPill rating={ratingFor(inputRatings, l.name)} /></td>
-                    <td>
-                      <SupplierPicker
-                        input={l.name}
-                        linked={links[l.name] ? linkedSuppliers[links[l.name]] ?? null : null}
-                        canEdit={isSuperAdmin && forecastEditing}
-                        onLink={(id) => setLink(l.name, id)}
-                      />
-                    </td>
-                    <td className="farm-c-soft">{l.isHotComponent ? 'Hot' : 'Cold-pack'}</td>
-                    <td className="num">
-                      <EditableNumber
-                        disabled={!forecastEditing}
-                        value={l.seedQtyPerSowing * scale}
-                        defaultValue={def === undefined ? undefined : def.seedQtyPerSowing * scale}
-                        onChange={(v) => setInput(selected.code, l.name, 'seedQtyPerSowing', scale > 0 ? v / scale : v)}
-                        step={0.125}
-                        suffix={l.unit}
-                        ariaLabel={`${l.name} as-purchased quantity for the sowing`}
-                        showBadge={false}
-                      />
-                    </td>
-                    <td className="num">
-                      <EditableNumber
-                        disabled={!forecastEditing}
-                        value={l.yieldToHarvest}
-                        defaultValue={def?.yieldToHarvest}
-                        onChange={(v) => setInput(selected.code, l.name, 'yieldToHarvest', v)}
-                        step={0.05}
-                        suffix="×"
-                        ariaLabel={`${l.name} yield to harvest`}
-                        showBadge={false}
-                      />
-                      <div className="mt-[0.15rem]!"><StatusBadge status={l.yieldStatus} title={l.yieldSource} /></div>
-                    </td>
-                    <td className="num">{num(l.harvestedYieldPerSowing * scale, 2)}</td>
-                    <td className="num">{l.packedOz.toFixed(3)}</td>
-                    <td className="num">
-                      <EditableNumber
-                        disabled={!forecastEditing}
-                        value={l.seedUnitCost}
-                        defaultValue={def?.seedUnitCost}
-                        onChange={(v) => setInput(selected.code, l.name, 'seedUnitCost', v)}
-                        step={0.05}
-                        prefix="$"
-                        ariaLabel={`${l.name} as-purchased unit cost`}
-                        showBadge={false}
-                      />
-                      {/* Where the price came from: the supplier catalog when one is on
-                          file, else the crop plan's own figure with the reason why. */}
-                      {(() => {
-                        const pr = resolved.inputPrices[inputKey(selected.code, l.name)];
-                        return (
-                          <div className="mt-[0.15rem]!">
-                            <StatusBadge status={l.status} title={pr?.gap ? `${l.source} — ${pr.gap}` : l.source} />
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="num">{l.seedCostPerLb === null ? '—' : money(l.seedCostPerLb)}</td>
-                    <td className="num">{l.harvestedCostPerLb === null ? '—' : money(l.harvestedCostPerLb)}</td>
-                    <td className="num">{l.costPerPackedOz === null ? '—' : money(l.costPerPackedOz, 4)}</td>
-                    <td className="num">{money(l.extCostPerSowing * scale)}</td>
-                    <td className="num">{money(l.costPerUnit, 4)}</td>
-                  </tr>
-                );
-              })}
-              <tr className="total">
-                <td colSpan={12}>Subtotal — input cost</td>
-                <td className="num">{money(costing.inputCostPerSowing * scale)}</td>
-                <td className="num">{money(costing.inputCostPerUnit, 4)}</td>
-              </tr>
-              <tr>
-                <td colSpan={12} className="farm-c-soft">Waste / shrink allowance ({(resolved.assumptions.yield.shrinkAllowance.value * 100).toFixed(0)}%)</td>
-                <td />
-                <td className="num">{money(costing.shrinkPerUnit, 4)}</td>
-              </tr>
-              <tr className="total">
-                <td colSpan={8}>Total input cost per unit</td>
-                <td />
-                <td className="num">{money(costing.totalInputCostPerUnit, 4)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <RatingLegend />
-        <p className="farm-kpi-sub mt-2">
-          Quantities are shown for the sowing — one unit of each Phase 1 growUnit — and stored for the {num(selected.sowingUnits)} units the
-          cropPlan is written for. Editing an as-purchased quantity or a yield recomputes the harvested yield, which drives the
-          mass per unit and therefore the sowing. Cold-pack components (tortilla, cheese) are excluded from
-          canopy mass, which is why they don’t move the sowing size. The supplier on a line is set
-          here and read everywhere else: it carries the certification and rating shown on{' '}
-          <Link className="farm-link" href="/farm/procurement">Procurement</Link>, the inbound
-          ton-miles on <Link className="farm-link" href="/farm/sustainability/logistics">Logistics</Link>,
-          and the supplier figures offered on{' '}
-          <Link className="farm-link" href="/farm/sustainability/inputs">Inputs (Scope 3)</Link>.
-          The link is part of the scenario, saved with a forecast.
-        </p>
-      </Card>
-
-      <Card title="Allergen matrix" className="mt-4">
-        <div className="farm-scroll-x">
-          <table className="farm-table">
-            <thead>
-              <tr>
-                <th>Component</th>
-                {allergenCols.map(([, label]) => (
-                  <th key={label} className="num">{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allergenMatrix.map((row) => (
-                <tr key={row.component}>
-                  <td className="font-medium!">{row.component}</td>
-                  {allergenCols.map(([key, label]) => (
-                    <td key={label} className={`num ${(row[key] ? 'farm-c-accent' : 'farm-c-faint')} ${(row[key] ? 'font-semibold!' : 'font-normal!')}`}>
-                      {row[key] ? 'YES' : '—'}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-        </>
-      )}
 
       <Card title={`Standard in force — ${selected.code}`} className="mt-4">
         {stdMsg && <div className={`farm-scenariobar-msg ${stdMsg.kind} mb-[0.6rem]!`} role="status">{stdMsg.text}</div>}

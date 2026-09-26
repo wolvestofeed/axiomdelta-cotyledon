@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { cropPlan as seed } from '@/data/plan-data';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { datesBetween } from '@/engine/orders';
 import { deriveCapacity, purchaseOrderForRun } from '@/engine';
@@ -303,22 +302,5 @@ describe('the grow model', () => {
     const doc = { id: 's', cropPlanCode: 'BROC-01', adoptedAt: '2027-01-01T00:00:00Z', adoptedBy: null, source: 'user_built' as const, ...study, basis: 'observed' as const, lines: study.lines.map((l) => (l.stream === 'sowing' ? { ...l, laborMinutes: l.laborMinutes * 2 } : l)) };
     const withStudy = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 20)], cropPlans: G.cropPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, studies: [doc] as never });
     expect(withStudy.productionDays[0]!.labor.totalStaffHours).toBeCloseTo(labor.totalStaffHours * 2, 9);
-  });
-
-  it('a mixed library makes a Phase 1-era plan the day before and a grow plan on its sow date', () => {
-    const M = resolveScenarioInputs({}, [seed, ...lib]);
-    const h = horizon([order(DIST, 'BROC-01', 20), order(DIST, seed.code, 100)], M);
-    const sowDate = sowDateFor(growPlan('BROC-01'), DIST);
-    expect(h.productionDays.map((p) => [p.productionDate, p.runs.map((r) => r.cropPlanCode)])).toEqual([
-      [sowDate, ['BROC-01']],
-      [productionDateFor(DIST), [seed.code]],
-    ]);
-    expect(h.productionDays.every((p) => p.fits)).toBe(true);
-    // The rack's load and unload are placed for the Phase 1-era sowing only.
-    expect(h.productionDays[0]!.labor.placed).toEqual([]);
-    expect(h.productionDays[1]!.labor.placed.length).toBeGreaterThan(0);
-    expect(h.growCalendar!.sowings).toHaveLength(1);
-    expect(h.growCalendar!.sowings[0]!.cropPlanCode).toBe('BROC-01');
-    expect(h.distributionDays[0]!.productionDate).toBe(sowDate);
   });
 });

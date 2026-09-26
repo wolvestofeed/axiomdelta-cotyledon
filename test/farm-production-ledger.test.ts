@@ -148,7 +148,7 @@ describe('variances when the sowing does not run to standard', () => {
       purchaseOrderCost: po,
       actualInvoiceCost: po * 1.04,
       pricePerUnit: phases[0].pricePerUnit,
-    });
+    }, cropPlan);
     expect(led.balanced).toBe(true);
     expect(led.variances.purchasePrice).toBeCloseTo(po * 0.04, 2);
   });
@@ -175,7 +175,7 @@ describe('variances when the sowing does not run to standard', () => {
       overheadIncurred: incurred,
       purchaseOrderCost: buildPurchaseOrder(units, cropPlan).total,
       pricePerUnit: phases[0].pricePerUnit,
-    });
+    }, cropPlan);
     expect(led.balanced).toBe(true);
     const inc = led.entries.find((e) => e.id.endsWith('OH-INCURRED'))!;
     expect(inc.lines.some((l) => l.accountCode === ACC_OH_CONTROL && l.debitCents > 0)).toBe(true);
@@ -211,7 +211,7 @@ describe('variances when the sowing does not run to standard', () => {
       overhead: absorbOverhead(annualFixed, nc, nc.unitsPerYear),
       purchaseOrderCost: buildPurchaseOrder(units, cropPlan).total,
       pricePerUnit: phases[0].pricePerUnit,
-    });
+    }, cropPlan);
     expect(two.amounts.directLaborStandard).toBeGreaterThan(one.amounts.directLaborStandard);
     expect(two.balanced).toBe(true);
   });
@@ -224,7 +224,7 @@ describe('variances when the sowing does not run to standard', () => {
       purchaseOrderCost: po,
       actualInvoiceCost: po * 1.5,
       pricePerUnit: phases[0].pricePerUnit,
-    });
+    }, cropPlan);
     expect(led.variances.disposition).toBe('PRORATE');
   });
 });

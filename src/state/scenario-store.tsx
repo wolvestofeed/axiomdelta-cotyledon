@@ -296,11 +296,6 @@ export function ScenarioProvider({
       mutate((d) => {
         const ings = (d.inputs ??= {});
         const k = inputKey(cropPlanCode, name);
-        // A legacy bare-name key for the seed crop plan is migrated onto the new key.
-        if (cropPlanCode === 'AMK-E-001' && ings[name] && !ings[k]) {
-          ings[k] = ings[name];
-          delete ings[name];
-        }
         const row = ((ings[k] ??= {}) as Record<string, number>);
         if (value === undefined) delete row[key];
         else row[key] = value;

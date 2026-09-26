@@ -7,7 +7,6 @@
  */
 
 import type { SupplierOperation, Region } from '@/data/suppliers';
-import { cropPlan } from '@/data/plan-data';
 
 export interface SupplierFilters {
   region?: Region | 'all';
@@ -103,7 +102,7 @@ const LINE_KEYWORDS: Record<string, string[]> = {
 export function matchCropPlanToSuppliers(
   ops: SupplierOperation[],
   region: Region | 'all' = 'all',
-  targetCropPlan: MatchableCropPlan = cropPlan,
+  targetCropPlan: MatchableCropPlan,
 ): CropPlanLineMatch[] {
   const pool = region === 'all' ? ops : ops.filter((o) => o.region === region);
   return targetCropPlan.inputs.map((ing) => {
