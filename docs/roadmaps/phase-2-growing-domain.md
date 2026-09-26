@@ -58,14 +58,20 @@ Tested by `test/farm-grow-calendar.test.ts`.
 - [ ] `_data/grow-stages.ts` and `_engine/stage.ts` still serve the Phase 1-era plans through the projection; they go with the projection in part 10, when `deriveCapacity` also drops the one-day window
 - [ ] The Phase 1-era equipment rows leave `capex.ts` in part 10 with the projection; the facility, equipment, scheduler and routing goldens are restated then
 
-## Part 7 — Nutrition targets replace crediting
+## Part 7 — Nutrition targets replace crediting  IN PROGRESS
 
-- [ ] `_engine/nutrition.ts`, `_data/nutrient-profile.ts` and the Flat Builder: a subscriber's named targets scored against `varieties.ts` profiles, every shown benefit citing its row; `claimsForVariety` behind it
+- [x] `_data/nutrition-targets.ts`: the target catalog is the union of the nutrients and compounds on the variety records, each target with the varieties that carry it and `benefitsFor` the stated benefits that mention it, citing their rows; `_engine/nutrition-targets.ts` `scoreFlat` reports which targets a flat of plans covers, by which varieties on which plans with their benefits, and which library plans carry the rest, with `claimsForVariety` behind the portal's citations
+- [ ] The subscriber carries `nutritionTargets` (a jsonb list on `farm.subscribers`, migration `0005`), read and written through the subscriber layer and actions
+- [ ] The Flat Builder scores the flat against the subscriber's targets and cites the rows; its subscriber list stops excluding the subscriptions channel
+- [ ] The Crop Plans page shows the plan's nutrient profile and the targets it carries in place of the Phase 1-era unit spec; `nutrition.ts` and `nutrient-profile.ts` go with the projection in part 10
 - [ ] Two or three mixed trays composed to targets join the seed (`grow-plans-seed.ts`)
+- [ ] Tests for the catalog and the score
 
-## Part 8 — Produce safety
+## Part 8 — Produce safety  IN PROGRESS
 
-- [ ] `_engine/produce-safety.ts` and `plan-data.ts` `controlPoints`: the stage control points from `stage-schedule.ts` (seed sanitation, spent-water test for sprouts, temperature and humidity, harvest check) replace the thermal CCPs
+- [x] `_data/produce-safety.ts`: the four stage control points (seed sanitation, spent sprout irrigation water test, temperature and humidity, harvest check) with hazard, critical limit, monitoring, corrective action, verification and record; the sprout limits SOURCED to 21 CFR Part 112 Subpart M, the grow-room band PLACEHOLDER until the produce safety plan states it
+- [ ] Register the FSMA Produce Safety Rule (21 CFR Part 112) on `sources-registry.ts` under the key `fda:fsma-produce-safety-rule` the control points cite; the sources test enforces it
+- [ ] `_engine/produce-safety.ts`: `controlPointsForPlan` (the points along a plan's stages), `evaluateSpentWaterTest`; the Produce Safety page shows the stage control points and, per plan, which apply; the thermal CCPs and `evaluateCcp2` stay for the Phase 1-era sowing records until the sowing record is re-based in part 10
 
 ## Part 9 — Seeds
 
