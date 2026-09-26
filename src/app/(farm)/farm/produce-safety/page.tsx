@@ -68,7 +68,7 @@ async function ProduceSafetyPageInner() {
   const completeLots = blackoutLots.filter((l) => l.recorded >= l.expected).length;
   const failed = coolingLog.filter((r) => !r.pass);
   const pf = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
-  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.cropPlans, pf), shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, asOf: today });
+  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.cropPlans, pf), shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, asOf: today, cropPlans: inputs.cropPlans });
   const lotBySowing = new Map(onHand.lots.map((l) => [l.sowingId, l]));
   const edges: LotEdge[] = rows
     .filter((r) => r.fromKind === 'lot')

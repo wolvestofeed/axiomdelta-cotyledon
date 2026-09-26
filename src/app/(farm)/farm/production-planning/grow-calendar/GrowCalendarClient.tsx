@@ -81,7 +81,7 @@ export function GrowCalendarClient({
     [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.cropPlans, cycles, orders, today, horizonTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.cropPlans]);
   // Recorded sowings still inside their cycle are on the shelves when the window opens.
   const openingSowings = useMemo(
     () =>

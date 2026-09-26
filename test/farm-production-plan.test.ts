@@ -77,7 +77,7 @@ describe('finished goods on hand from records', () => {
   ];
 
   it('lots inside shelf life count; distributed orders draw oldest first', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [{ cropPlanCode: 'AMK-E-001', date: '2026-09-11', baseUnits: 600 }], shelfLifeDays: 30, asOf: MON });
+    const s = finishedGoodsOnHand({ sowings, consumed: [{ cropPlanCode: 'AMK-E-001', date: '2026-09-11', baseUnits: 600 }], shelfLifeDays: 30, asOf: MON, cropPlans: R.cropPlans });
     expect(s.byCropPlan['AMK-E-001']).toBe(500);
     expect(s.lots[0].remaining).toBe(0);
     expect(s.lots[1].remaining).toBe(500);
@@ -85,14 +85,14 @@ describe('finished goods on hand from records', () => {
   });
 
   it('a lot past shelf life is expired, not on hand; consumption with no stock is unmatched', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [{ cropPlanCode: 'AMK-E-002', date: MON, baseUnits: 10 }], shelfLifeDays: 7, asOf: MON });
+    const s = finishedGoodsOnHand({ sowings, consumed: [{ cropPlanCode: 'AMK-E-002', date: MON, baseUnits: 10 }], shelfLifeDays: 7, asOf: MON, cropPlans: R.cropPlans });
     expect(s.byCropPlan['AMK-E-001']).toBe(550);
     expect(s.expiredByCropPlan['AMK-E-001']).toBe(550);
     expect(s.unmatchedByCropPlan['AMK-E-002']).toBe(10);
   });
 
   it('a record after the as-of date is not stock yet', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [], shelfLifeDays: 30, asOf: '2026-09-05' });
+    const s = finishedGoodsOnHand({ sowings, consumed: [], shelfLifeDays: 30, asOf: '2026-09-05', cropPlans: R.cropPlans });
     expect(s.byCropPlan['AMK-E-001']).toBe(550);
   });
 });
@@ -381,6 +381,31 @@ describe('the grow model', () => {
     expect(sowings.map((s) => s.placed)).toEqual([true, false]);
     expect(sowings[1]!.distributionDate).toBe(DIST);
     expect(h.growCalendar!.findings.map((f) => f.kind)).toEqual(['over-capacity']);
+  });
+
+  it('a grow sowing is stock from its first harvest day, and its shelf life counts from there', () => {
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 10)], cropPlans: G.cropPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, cropPlanAssumptions: G.cropPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 7 });
+    const harvest = h.growCalendar!.sowings[0]!.harvestFrom;
+    expect(harvest).toBe(DIST);
+    // On the shelves from the sow date to the harvest: no stock.
+    expect(h.byDate.filter((r) => r.date < harvest).every((r) => r.closingStockBase === 0)).toBe(true);
+    expect(h.distributionDays[0]).toMatchObject({ filledBase: 10, unfilledBase: 0 });
+    expect(h.byDate.find((r) => r.date === DIST)!.closingStockBase).toBe(10);
+    // Seven days from the sow date the lot would have expired before the distribution; from the harvest
+    // it fills it, and the overshoot expires inside the window.
+    expect(h.totals.expiredBase).toBe(10);
+    expect(h.totals.closingStockBase).toBe(0);
+  });
+
+  it('a closed grow sowing record is stock from its first harvest day; an order before it finds none', () => {
+    const sowDate = sowDateFor(growPlan('BROC-01'), DIST);
+    const records = [{ sowingId: 'G-1', cropPlanCode: 'BROC-01', productionDate: sowDate, goodUnits: 20 }];
+    const onShelf = finishedGoodsOnHand({ sowings: records, consumed: [], shelfLifeDays: 7, asOf: '2027-03-15', cropPlans: G.cropPlans });
+    expect(onShelf.lots).toHaveLength(0);
+    const harvested = finishedGoodsOnHand({ sowings: records, consumed: [{ cropPlanCode: 'BROC-01', date: '2027-03-15', baseUnits: 20 }], shelfLifeDays: 7, asOf: DIST, cropPlans: G.cropPlans });
+    expect(harvested.lots[0]).toMatchObject({ produced: DIST, expires: '2027-03-29', remaining: 20 });
+    expect(harvested.byCropPlan['BROC-01']).toBe(20);
+    expect(harvested.unmatchedByCropPlan['BROC-01']).toBe(20);
   });
 
   it('a mixed library makes a Phase 1-era plan the day before and a grow plan on its sow date', () => {

@@ -117,7 +117,7 @@ export function sustainabilityBasis(input: {
       date: d.distributedOn,
       baseUnits: d.units * unitFactorFor(input.cropPlans.find((r) => r.code === d.cropPlanCode), d.phase, input.unitFactorByChannel),
     }));
-  const onHand = finishedGoodsOnHand({ sowings: bundle.sowings.filter((b) => b.productionDate <= to), consumed, shelfLifeDays: input.shelfLifeDays, asOf: to });
+  const onHand = finishedGoodsOnHand({ sowings: bundle.sowings.filter((b) => b.productionDate <= to), consumed, shelfLifeDays: input.shelfLifeDays, asOf: to, cropPlans: input.cropPlans });
   const expiredByCropPlan: Record<string, number> = {};
   for (const lot of onHand.lots) {
     if (lot.remaining <= 1e-9 || lot.expires >= to || lot.expires < from) continue;

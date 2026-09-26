@@ -82,6 +82,14 @@ export function leadDaysFor(cropPlan: CropPlanDef | undefined): number {
   return cropPlan && isGrowPlanCarrier(cropPlan) ? daysToHarvestOf(planStageDays(cropPlan.plan)) : 1;
 }
 
+/**
+ * The date a sowing's trays become finished goods: a grow plan's first day in the harvest window
+ * (the sow date plus days to harvest), a Phase 1-era plan's production date. Shelf life counts from it.
+ */
+export function stockDateFor(cropPlan: CropPlanDef | undefined, productionDate: string): string {
+  return cropPlan && isGrowPlanCarrier(cropPlan) ? isoAddDays(productionDate, daysToHarvestOf(planStageDays(cropPlan.plan))) : productionDate;
+}
+
 export interface CalendarSowing {
   id: string;
   cropPlanCode: string;

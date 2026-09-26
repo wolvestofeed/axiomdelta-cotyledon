@@ -128,7 +128,7 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
   const consumed = isPlan
     ? worldBundle.distributions.filter((d) => d.cropPlanCode).map((d) => ({ cropPlanCode: d.cropPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(R.cropPlans.find((r) => r.code === d.cropPlanCode), d.phase, pf) }))
     : distributedConsumption(orders, records.distributions, R.cropPlans, pf);
-  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, shelfLifeDays: shelfLife, asOf: today });
+  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, cropPlans: R.cropPlans });
   const horizon = planHorizon({
     closures,
     from: horizonFrom,
@@ -202,7 +202,7 @@ const alertsRegister: Builder = (ctx) => {
   for (const r of coolingLog(records, cropPlanName).filter((x) => !x.pass)) items.push({ finding: 'Stage record failed control-point-2', item: `${r.lot} load ${r.load}`, detail: `${r.product}, ${r.date}: ${r.reason}`, module: 'Produce Safety' });
   for (const l of blackoutLotsOwed(records, R, cropPlanName).filter((x) => x.recorded < x.expected)) items.push({ finding: 'Blackout lot with a rack load unrecorded', item: l.lot, detail: `${l.product}, ${l.date}: ${l.recorded} of ${l.expected} loads on the record`, module: 'Produce Safety' });
   const pfc = ctx.pf;
-  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.cropPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today });
+  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.cropPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today, cropPlans: R.cropPlans });
   for (const l of recordedFinished.lots.filter((x) => x.remaining > 1e-9)) {
     const days = daysBetween(today, l.expires);
     if (days <= 7) items.push({ finding: 'Finished lot within seven days of shelf life', item: l.sowingId, detail: `${cropPlanName(l.cropPlanCode)}: ${num(Math.round(l.remaining))} units on hand, shelf life ends ${l.expires} (${days} day${days === 1 ? '' : 's'})`, module: 'Inventory' });

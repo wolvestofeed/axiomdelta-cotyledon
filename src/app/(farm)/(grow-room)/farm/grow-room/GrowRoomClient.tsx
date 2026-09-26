@@ -155,7 +155,7 @@ export function GrowRoomClient({
     if (!distributionDate) return null;
     const book = bookFor(distributionDate, distributionDate);
     const requirements = requirementsFor(book, inputs.cropPlans, pfByChannel);
-    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today });
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, cropPlans: inputs.cropPlans });
     return planProductionDay({ productionDate: today, requirements, onHand: stock.byCropPlan, cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: A, cropPlanAssumptions: inputs.cropPlanAssumptions });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [distributionDate, inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A]);
@@ -165,7 +165,7 @@ export function GrowRoomClient({
   const growQueue = useMemo<CalendarSowing[]>(() => {
     if (!hasGrowPlans) return [];
     const to = isoAddDays(today, 28);
-    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today });
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, cropPlans: inputs.cropPlans });
     const openingSowings = sowings
       .filter((b) => b.goodUnits > 0)
       .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))

@@ -103,7 +103,7 @@ async function loadOperatingPicture() {
   const shelfLife = R.assumptions.inventory.blackoutShelfLife.value;
   const openingLots = isPlan
     ? []
-    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.cropPlans, pf), shelfLifeDays: shelfLife, asOf: today }).lots.filter((l) => l.remaining > 0);
+    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.cropPlans, pf), shelfLifeDays: shelfLife, asOf: today, cropPlans: R.cropPlans }).lots.filter((l) => l.remaining > 0);
   const day = dashboardToday({ today, book, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: pf, openingLots, closures, channels: R.phases.map((p) => p.phase) });
 
   // Food: active-crop-plan averages per unit, and the period's footprint on the selected ledger.

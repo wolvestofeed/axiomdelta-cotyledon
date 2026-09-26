@@ -80,7 +80,7 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
 
   // ── Finished goods: sowings less distributions, FIFO, inside shelf life, as of `today`.
   const consumed = consumedFrom(pfByChannel);
-  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, shelfLifeDays: shelfLife, asOf: today });
+  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, cropPlans: inputs.cropPlans });
   const cropPlanName = (code: string) => inputs.cropPlans.find((r) => r.code === code)?.name ?? code;
   const sowingByCode = new Map(actuals.sowings.map((b) => [b.sowingId, b]));
   const open = fg.lots

@@ -186,7 +186,7 @@ export function ProductionPlanningClient({
   const productionDate = productionDateFor(dayDate, SERVICE_WEEKDAYS, closures);
   const dayBook = useMemo(() => bookFor(dayDate, dayDate), [bookFor, dayDate]);
   const requirements = useMemo(() => requirementsFor(dayBook, resolved.cropPlans, pfByChannel), [dayBook, resolved.cropPlans, pfByChannel]);
-  const stock = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: productionDate }), [sowings, consumption, shelfLife, productionDate]);
+  const stock = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: productionDate, cropPlans: resolved.cropPlans }), [sowings, consumption, shelfLife, productionDate, resolved.cropPlans]);
   const [onHandOverride, setOnHandOverride] = useState<Record<string, number>>({});
   const onHand = useMemo(() => {
     const m: Record<string, number> = { ...stock.byCropPlan };
@@ -219,14 +219,14 @@ export function ProductionPlanningClient({
   // The day on the grow model: each order back-planned to its plan's sow date, the sowings placed on
   // the grow units for their cycle — the horizon over this one distribution date.
   const dayLots = useMemo(() => {
-    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.cropPlanCode] === undefined);
+    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.cropPlanCode] === undefined);
     // A typed on-hand figure stands in for the records of its plan as one lot inside shelf life.
     for (const [code, qty] of Object.entries(onHandOverride)) {
       const produced = isoAddDays(dayDate, -1);
       lots.push({ sowingId: `typed-${code}`, cropPlanCode: code, produced, expires: isoAddDays(produced, shelfLife), qtyProduced: qty, remaining: qty });
     }
     return lots;
-  }, [sowings, consumption, shelfLife, dayDate, onHandOverride]);
+  }, [sowings, consumption, shelfLife, dayDate, onHandOverride, resolved.cropPlans]);
   const dayHorizon = useMemo(
     () =>
       growLibrary
@@ -277,7 +277,7 @@ export function ProductionPlanningClient({
   const [hFrom, setHFrom] = useState(today);
   const [hTo, setHTo] = useState(isoAddDays(today, 27));
   const hBook = useMemo(() => bookFor(hFrom, hTo), [bookFor, hFrom, hTo]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: hFrom }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, hFrom]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: hFrom, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, hFrom, resolved.cropPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({

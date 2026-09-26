@@ -68,7 +68,7 @@ export function ScheduleClient({
     [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.cropPlans, cycles, orders, from, bookTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: from }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, from]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: from, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, from, resolved.cropPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
