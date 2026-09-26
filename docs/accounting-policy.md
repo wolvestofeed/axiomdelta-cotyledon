@@ -31,10 +31,10 @@ an article to its existing condition and location.
 
 | Element | Treatment |
 |---|---|
-| Purchased inputs | At standard purchase price; freight-in and duties capitalise |
-| Packaging (bowl, lid, label) | Each crop plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every crop plan; received into its own inventory at standard and charged at the pack stage |
-| Direct labor | Standard hours × standard loaded rate, absorbed into WIP-sow |
-| Variable manufacturing overhead | Absorbed on the same base as fixed |
+| Purchased inputs | Seed, medium and nutrient at standard purchase price; freight-in and duties capitalise. Issued from raw materials to WIP-Sow on the trays sown |
+| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every crop plan; received into its own inventory at standard and charged at the pack stage |
+| Direct labor | Standard hours × standard loaded rate on the trays sown, absorbed by stream: the sowing stream to WIP-Sow, the daily stream to WIP-Grow, the harvest stream to WIP-Pack, split by the plan's study |
+| Variable manufacturing overhead | The light a tray takes (to WIP-Grow), its tray wear and the sanitizer (to WIP-Sow), applied at their standard per tray on the trays sown and credited to 5195. None of them is bought into raw materials |
 | Fixed manufacturing overhead | Absorbed at a predetermined rate set on **normal capacity** (§4) |
 | Normal spoilage | Inside the 3% shrink allowance; already in standard cost |
 
@@ -59,8 +59,8 @@ cost divided into its units (`sowingCosting`).
 ## 3. The chart of accounts
 
 Staffing's `DEFAULT_HOSPITALITY_COA` is a restaurant chart with one inventory
-account and no work in process. A facility running grow is a manufacturer:
-components sit in WIP for days carrying absorbed labor and overhead. Farm
+account and no work in process. A facility growing trays is a manufacturer:
+trays sit in WIP for their cycle carrying absorbed labor and overhead. Farm
 **extends** that chart rather than editing it (`_data/coa-farm.ts`); every other
 Staffing surface keeps the accounts it has.
 
@@ -68,9 +68,9 @@ Staffing surface keeps the accounts it has.
 |---|---|---|
 | 1410 | Inventory — Food | Raw materials |
 | 1415 | Inventory — Packaging & Disposables | Packaging is a product cost charged at pack |
-| 1430 | Work in Process — Sow | Sprouting rack and jar stand; carries material, labor, overhead |
-| 1435 | Work in Process — Blackout | The blackout rack. A costing boundary **and** control-point-2 |
-| 1440 | Work in Process — Pack | Assembly. Cold components enter the chain here |
+| 1430 | Work in Process — Sow | Trays sown: seed, medium and nutrient, tray wear and sanitizer, the sowing stream, fixed overhead |
+| 1435 | Work in Process — Grow | Trays on the shelves: light and the daily stream over the cycle |
+| 1440 | Work in Process — Pack | Harvested trays at the check and in packing: the harvest stream |
 | 1450 | Inventory — Finished Goods | Packed units awaiting distribution |
 | 2015 | Goods Received Not Invoiced | Clearing between receipt and vendor invoice |
 | 2160 | Accrued Manufacturing Overhead | Budgeted lease and utilities accrued at month end until the bill settles it (§4) |
@@ -82,14 +82,15 @@ Staffing surface keeps the accounts it has.
 | 5160 | MOH Volume Variance | Budget not absorbed because volume < normal capacity |
 | 5170 | Production Labor Not Charged to a Sowing | Loaded labor on the time clock beyond what sowing records charged; a period production cost (§16) |
 | 5180 | Manufacturing Overhead Control | Fixed manufacturing overhead actually incurred in the period |
-| 5190 | Manufacturing Overhead Applied | Contra; cleared against control at period end |
+| 5190 | Manufacturing Overhead Applied | Contra for fixed overhead; cleared against control at period end |
+| 5195 | Variable Manufacturing Overhead Applied | Contra for light, tray wear and sanitizer applied at their standard per tray; the electricity, trays and sanitizer are expensed as billed |
 | 5910 | Abnormal Spoilage | Its own P&L line, never buried in cost of goods sold |
 | 7910 | Marketplace Commissions | Retained by a marketplace on ghost-farm orders; a selling cost (§16) |
 
-**Three WIP stages, not one.** The blackout stage is where product sits longest, where
-the binding capacity constraint is, and where control-point-2 is monitored. Making it a
-costing boundary means cost and the stage record share a stage, and a sowing held
-across a period end can be valued at the stage it is actually in.
+**Three WIP stages, not one.** A tray is sown on one day, sits on its grow unit for its
+cycle and is harvested and packed at the end of it. Making each a costing boundary means
+a sowing held across a period end can be valued at the stage it is actually in, and a
+tray lost on the shelves leaves with the cost it had reached.
 
 ## 4. Fixed overhead absorption — the material policy
 
@@ -206,52 +207,46 @@ ISO 22400 draws the same line between planned and actual scrap.
 
 | Normal — inventoriable | Abnormal — period charge (ASC 330-10-30-7) |
 |---|---|
-| Trim | Blackout failure (control-point-2 limit not met) |
-| Sow loss | Temperature excursion |
-| Unit overage | Equipment failure |
-| | Contamination |
+| Trim: seed sorted out before sowing, trim at harvest | Temperature excursion |
+| | Equipment failure |
+| | Contamination (a tray removed at the harvest check) |
 | | Dropped or damaged |
 | | Recall or withdrawal |
 | | Shelf life exceeded |
 
 Normal spoilage is already inside the 3% shrink allowance and rides into WIP with
 the standard. Abnormal spoilage is relieved from the stage it occurred in and
-charged to 5910, **at the stage's fully absorbed cost per pound**: the component's
-material per pound at that stage plus the conversion cost the stage carries —
-direct labor and absorbed overhead over the standard mass in the stage, and
-packaging once packed. A pound lost in the blackout rack therefore leaves with the
-labor and overhead already spent on it; a pound lost before the sprouting rack is raw
-material at purchase cost and carries none.
+charged to 5910, **at the fully absorbed cost of the stages it passed**, per gram of
+the standard harvest: seed lost before or at sowing (stage `SOW`) is raw material at
+its purchase price; a gram lost on the shelves (`GROW`) carries the sow and grow
+stages, one lost at the harvest check or in packing (`PACK`) the pack stage as well,
+and one lost after packing (`FINISHED`) the packaging too. A tray removed at the
+check therefore leaves with the material, labor and overhead already spent on it,
+and a packed tray still costs the standard.
 
 **The allowance is on the record.** The standard issue for a sowing is the quantity
-the run bought for, `units × (1 + shrink allowance)`, and each component carries
-its allowance in pounds. The standard record shows the allowance as normal `TRIM`
-scrap at stage `PREP` — before the sprouting rack — so a record that ran exactly to standard
-balances and has no usage variance. A scrap event with a normal reason is normal
-only up to the component's allowance, consumed in the order recorded; the pounds
-beyond it are abnormal spoilage and leave inventory. An abnormal reason is abnormal
-in full. Scrap at `PREP` is raw material: it is valued at purchase cost and relieved
-from the stage the component was issued to.
+the trays sown were bought for, `trays × (1 + shrink allowance)`, and each variety lot
+carries its allowance in grams. The standard record shows the allowance as normal
+`TRIM` scrap at stage `SOW` — seed sorted out before sowing — so a record that ran
+exactly to standard balances and has no usage variance. A scrap event with a normal
+reason is normal only up to the lot's allowance, consumed in the order recorded; the
+grams beyond it are abnormal spoilage and leave inventory. An abnormal reason is
+abnormal in full.
 
 ## 7. The mass balance invariant
 
-A sowing does not close unless its weights reconcile:
+A sowing is one lot per variety, in grams: the seed issued in, the harvest out. It does
+not close unless every lot reconciles:
 
 ```
-SEED issued + sow delta − blackout loss − scrap = packed
+harvested − scrap at the check or in packing = packed
 ```
 
-The sow delta is **signed**. This crop plan gains mass through growing — dry rice and
-dry beans take on water — so a model that assumes growing only removes weight is
-wrong about this product. Scrap at stage `PREP` leaves before the sprouting rack, so the
-sow delta is measured on what was actually harvested (`SEED issued − prep scrap`), and
-scrap at the other four stages is subtracted after it. Every pound issued must
-resolve to packed product, a named stage loss, or scrap with a reason code.
-Tolerance is 0.5 lb; a residual that drifts is a control failure, not scale noise.
-
-**The harvested-to-blackout gap is not a loss.** Only hot components enter the blast
-blackout rack. The difference between harvested mass and canopy mass for this crop plan is the
-cold-packed cheese and tortilla, which never enter the rack.
+Seed and harvest are not balanced against each other: growing turns seed into many
+times its weight, and the variety record's yield, not the balance, says by how much.
+The seed side must still hold — seed scrapped before sowing cannot exceed the seed
+issued. Every gram harvested must resolve to packed product or scrap with a reason
+code. Tolerance is 5 g; a residual that drifts is a control failure, not scale noise.
 
 ## 8. Revenue
 
@@ -269,8 +264,10 @@ and the lot code, quantity and unit of the output.
 
 That is the same data as the material consumption entry. **One capture, two
 postings** — the ledger and the traceability record come off the same transaction,
-so they cannot drift. An input with no recorded lot code is reported as a gap
-rather than filled with a placeholder that would read as a record.
+so they cannot drift. Each variety lot on a sowing is one event: its seed lot in, its
+packed grams out, and the medium and nutrient the trays took, in the lot's share of the
+seed. An input with no recorded lot code is reported as a gap rather than filled with a
+placeholder that would read as a record.
 
 Compliance date carried: **2028-07-20**, FDA's proposed 30-month extension (published
 2025-08-07) of the 2026-01-20 date in the rule. Carried as a field, not as logic, so it can be
@@ -335,8 +332,11 @@ These are named rather than resolved. Nothing here is settled by the engine.
 - No trim yield is observed separately from growing yield. USDA Food Buying Guide
   factors are SEED → harvested-and-drained and already include trim, so the composite is
   used and the split is left undefined rather than invented.
-- No blackout-stage weight loss has been observed. The stage exists in the cost chain
-  so an observation can be recorded against it; it is not assumed.
+- The light a tray takes, its tray wear and the sanitizer are applied to work in process
+  at their standard per tray (5195); the forecast bills no electricity by tray-day, no
+  trays and no sanitizer against them, so on the Plan ledger their applied credit stands
+  with nothing incurred beside it. The electricity sits in the utilities of the fixed
+  overhead budget.
 - A sowing record with no actual labor hours posts labor at standard, so both labor
   variances are zero on it. Plan ledger sowings carry none; a recorded sowing carries
   them only when its crew hours or a total are entered.
@@ -348,7 +348,7 @@ Plan ledger (§17); nothing is typed as a dollar total.
 
 | Record | Posts |
 |---|---|
-| Sowing record | Issue → labor → overhead → sow → blackout → pack → finished goods, at standard, with usage and labor variances from the actual weights and hours. No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
+| Sowing record | Issue → apply → labor → overhead → sow → grow → pack → finished goods, at standard on the trays sown, with usage and labor variances from the actual grams, quantities and hours, and abnormal spoilage for trays removed at the check. No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
 | Receipt | Accepted lines: raw materials at standard — the input's standard from any crop plan in the library that uses it, at the version in force on the receipt date (Roadmap N5); the price received against standard to purchase price variance; goods received not invoiced (2015) at the price received. A rejected line posts nothing. An input on no crop plan is received at the price received with no variance and named in the notes. |
 | Supplier bill | Clears goods received not invoiced at what its receipts received; payable at the bill; any difference to purchase price variance while the bill is flagged (§16). |
 | Absorption | A sowing with no approved standard absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); an approved standard absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |

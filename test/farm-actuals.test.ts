@@ -112,7 +112,7 @@ describe('actuals — documents and periods', () => {
     const doc = sowingDoc();
     expect(doc.goodUnits).toBe(sowingSize);
     expect(massBalance(toSowingExecution(doc)).balanced).toBe(true);
-    expect(doc.components.every((c) => c.consumed.every((l) => l.inputLotCode === 'not recorded'))).toBe(true);
+    expect(doc.lots.every((l) => l.seedLotCode === 'not recorded') && doc.issues.every((i) => i.lotCode === 'not recorded')).toBe(true);
   });
 
   it('periods are listed from every record type and filtered per period', () => {
@@ -164,8 +164,8 @@ describe('actuals — posting a period', () => {
     // packaging receipt posts.
     expect(ids.some((id) => id.endsWith('-PKG-RECV'))).toBe(false);
     expect(ids.some((id) => id.includes('-SHIP'))).toBe(false);
-    // The materials issue to WIP; the split of a grow sowing's issue is step (4) of the deep cut.
-    expect(ids.some((id) => /-ISSUE-(HOT|COLD)$/.test(id))).toBe(true);
+    // Seed, medium and nutrient issue to the sow stage.
+    expect(ids.some((id) => /-ISSUE$/.test(id))).toBe(true);
     expect(ids.some((id) => id.endsWith('-FG'))).toBe(true);
   });
 
@@ -299,9 +299,9 @@ describe('actuals — finished lots for a distribution (Roadmap I4)', () => {
     const older = sowingDoc({ id: 'b1000000-0000-0000-0000-000000000002', productionDate: '2026-09-10', sowingId: 'B-260910-01' });
     const newer = sowingDoc();
     const blank = sowingDoc({ id: 'b1000000-0000-0000-0000-000000000003', productionDate: '2026-09-12', sowingId: 'B-260912-01' });
-    blank.components[0] = { ...blank.components[0], outputLotCode: '   ' };
+    blank.lots[0] = { ...blank.lots[0]!, outputLotCode: '   ' };
     const lots = finishedLotsOf([older, blank, newer]);
-    expect(lots.length).toBe(older.components.length + newer.components.length + blank.components.length - 1);
+    expect(lots.length).toBe(older.lots.length + newer.lots.length + blank.lots.length - 1);
     expect(lots[0].productionDate).toBe(DATE);
     expect(lots.every((l) => l.cropPlanCode === cropPlan.code && l.lotCode.trim().length > 0)).toBe(true);
     expect(lots.at(-1)!.productionDate).toBe('2026-09-10');
@@ -324,7 +324,7 @@ describe('actuals — crew hours by person (Roadmap I3)', () => {
 describe('actuals — the mass balance gate', () => {
   it('a sowing with unaccounted weight does not balance and would be refused at close', () => {
     const doc = sowingDoc();
-    doc.components[0].packedLb -= 30;
+    doc.lots[0]!.packedG -= 30;
     const mb = massBalance(toSowingExecution(doc));
     expect(mb.balanced).toBe(false);
   });

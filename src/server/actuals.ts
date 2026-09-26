@@ -16,7 +16,7 @@ import type {
   BillCategory,
   CrewHoursLine
 } from '@/engine/actuals';
-import { stageLoadsOf, type ComponentExecution } from '@/engine/sowing';
+import type { SowingIssue, VarietyLot } from '@/engine/sowing';
 
 /**
  * MicroFarm — actuals read layer (server-only).
@@ -43,14 +43,8 @@ const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   goodUnits: r.goodUnits,
   sowingsRun: r.sowingsRun,
   servingsProduced: r.servingsProduced,
-  // Cooling is one record per rack load; a record written before the lot was
-  // the sow holds a single object, read as one load.
-  components: ((r.components ?? []) as ComponentExecution[]).map((c) => {
-    const loads = stageLoadsOf(c);
-    const rest: ComponentExecution = { ...c };
-    delete rest.cooling;
-    return loads.length ? { ...rest, cooling: loads } : rest;
-  }),
+  lots: (r.lots ?? []) as VarietyLot[],
+  issues: (r.issues ?? []) as SowingIssue[],
   crew: (r.crew ?? []) as CrewHoursLine[],
   actualLaborHours: r.actualLaborHours,
   actualLaborRate: r.actualLaborRate,

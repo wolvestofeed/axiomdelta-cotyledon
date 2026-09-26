@@ -6,26 +6,34 @@
  * it posts from the SOWING EXECUTION RECORD only — the ISA-95 production
  * performance object. Planning pages never post.
  *
+ * A sowing is costed by its grow plan's cost card per tray (`grow-costing.ts`), on the trays
+ * SOWN: seed, medium and nutrient are materials issued from raw stock; the light a tray takes
+ * and the wear on its tray and the sanitizer are overhead, applied at their standard per tray;
+ * labor splits over the three stages by the plan's study, the sowing stream to Sow, the daily
+ * stream to Grow, the harvest stream to Pack. Trays removed at the harvest check leave as
+ * abnormal spoilage at the cost of the stages they passed.
+ *
  * The chain, and the authority for each step:
  *
  *   receipt        Dr Raw Materials @ standard, Dr/Cr PPV, Cr GR/IR
  *                  ASC 330-10-30-1 — purchase price plus freight-in is inventory.
- *                  Case-rounding is NOT a variance: the over-ordered quantity is
+ *                  Pack-rounding is NOT a variance: the over-ordered quantity is
  *                  inventory on hand and nets against the next requirement.
  *   invoice        Dr GR/IR, Cr Accounts Payable
- *   issue          Dr WIP-sow (hot) / WIP-Pack (cold), Cr Raw Materials
- *                  Usage beyond standard -> Material Usage Variance.
- *   labor          Dr WIP-sow @ standard, Cr Accrued Wages @ actual,
- *                  difference split into rate and efficiency variances.
- *   overhead       Dr WIP-sow @ normal-capacity rate, Cr Overhead Applied
+ *   issue          Dr WIP-Sow, Cr Raw Materials: seed, medium and nutrient at standard
+ *                  on the trays sown. Usage beyond standard -> Material Usage Variance.
+ *   apply          Dr WIP-Sow (tray wear, sanitizer) and WIP-Grow (light), Cr Variable
+ *                  Overhead Applied, at the standard per tray.
+ *   labor          Dr WIP-Sow / WIP-Grow / WIP-Pack @ standard by stream, Cr Accrued
+ *                  Wages @ actual, difference split into rate and efficiency variances.
+ *   overhead       Dr WIP-Sow @ normal-capacity rate, Cr Overhead Applied
  *                  ASC 330-10-30-3 — allocation on normal capacity.
- *                  Dr Overhead Control, Cr SEED for the overhead actually incurred
+ *                  Dr Overhead Control, Cr AP for the fixed overhead actually incurred
  *                  in the sowing's period; Control against Applied is the
  *                  period's under- or over-absorption, which stays in the
- *                  period (never in the bowl) and closes to the volume
- *                  variance at period end.
- *   sow -> blackout  Dr WIP-blackout, Cr WIP-sow
- *   blackout -> pack  Dr WIP-Pack, Cr WIP-blackout
+ *                  period and closes to the volume variance at period end.
+ *   sow -> grow    Dr WIP-Grow, Cr WIP-Sow
+ *   grow -> pack   Dr WIP-Pack, Cr WIP-Grow
  *   pack -> FG     Dr Finished Goods, Cr WIP-Pack + Packaging Inventory
  *   abnormal scrap Dr Abnormal Spoilage, Cr the stage it occurred in
  *                  ASC 330-10-30-7 — a current-period charge, never inventory.
@@ -48,7 +56,7 @@ import {
   ACC_RAW_MATERIALS,
   ACC_PACKAGING,
   ACC_WIP_SOW,
-  ACC_WIP_BLACKOUT,
+  ACC_WIP_GROW,
   ACC_WIP_PACK,
   ACC_FINISHED_GOODS,
   ACC_GRIR,
@@ -59,6 +67,7 @@ import {
   ACC_LABOR_EFFICIENCY_VAR,
   ACC_OH_CONTROL,
   ACC_OH_APPLIED,
+  ACC_VAR_OH_APPLIED,
   ACC_ABNORMAL_SPOILAGE,
   ACC_ACCRUED_WAGES,
   ACC_ACCRUED_PAYROLL_TAXES,
@@ -67,7 +76,13 @@ import {
   ACC_AR,
   ACC_FOOD_SALES,
 } from '@/data/coa-farm';
-import { componentCosting, laborForDay, type ComponentCosting, type OverheadAbsorption } from '@/engine';
+import { laborForDay, type OverheadAbsorption } from '@/engine';
+import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { GRAMS_PER_LB } from '@/data/tray-formats';
+import { lineLabel } from '@/data/grow-plan';
+import { estimatedTimeStudy } from '@/engine/time-study-estimate';
+import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import type { TimeStudyDoc } from '@/data/time-studies';
 import { splitLoadedLaborCents } from '@/engine/comp';
 import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
 import { FARM_HOME } from '@/data/farm-location';
@@ -80,30 +95,30 @@ import {
 } from '@/engine/sowing';
 import {
   transformationEvent,
-  traceabilityLotCode,
   traceabilityGaps,
   type TransformationEvent,
   type TraceabilityGap,
 } from '@/engine/traceability';
 
 const cents = (dollars: number) => Math.round(dollars * 100);
-const OZ_PER_LB = 16;
 
-/** A balanced entry from a list of {account, dollars} where positive is a debit. */
+/**
+ * A balanced entry from a list of {account, dollars} where positive is a debit. Each leg is
+ * rounded to the cent on its own, so the last leg takes the rounding residual and the entry
+ * balances to the cent.
+ */
 function entry(
   id: string,
   date: string,
   description: string,
   legs: Array<{ account: string; dollars: number; memo: string }>,
 ): JournalEntry {
-  const lines: JournalLine[] = legs
-    .filter((l) => Math.abs(cents(l.dollars)) > 0)
-    .map((l) => ({
-      accountCode: l.account,
-      debitCents: l.dollars > 0 ? cents(l.dollars) : 0,
-      creditCents: l.dollars < 0 ? cents(-l.dollars) : 0,
-      memo: l.memo,
-    }));
+  const signed = legs.map((l) => ({ ...l, c: cents(l.dollars) })).filter((l) => l.c !== 0);
+  const residual = signed.reduce((s, l) => s + l.c, 0);
+  if (residual !== 0 && Math.abs(residual) <= signed.length && signed.length > 0) signed[signed.length - 1]!.c -= residual;
+  const lines: JournalLine[] = signed
+    .filter((l) => l.c !== 0)
+    .map((l) => ({ accountCode: l.account, debitCents: l.c > 0 ? l.c : 0, creditCents: l.c < 0 ? -l.c : 0, memo: l.memo }));
   return { id, date, description, lines };
 }
 
@@ -143,16 +158,16 @@ export interface ProductionSowingLedger {
   massBalance: MassBalance;
   traceability: TransformationEvent[];
   traceabilityGaps: TraceabilityGap[];
-  /** Stage weights for the sowing, lb — what Production Planning was missing. */
+  /** The sowing's weights, grams. */
   weights: {
-    purchasedLb: number;
-    issuedLb: number;
-    harvestedLb: number;
-    blackoutLb: number;
-    packedLb: number;
+    seedIssuedG: number;
+    harvestedG: number;
+    packedG: number;
   };
   amounts: {
-    /** Base-unit equivalents the record produced. */
+    /** Trays sown: the basis of the standard. */
+    traysSown: number;
+    /** Trays packed: what finished goods receives. */
     unitsProduced: number;
     /** Units those units became (conversion-cost basis). */
     servingsProduced: number;
@@ -161,7 +176,12 @@ export interface ProductionSowingLedger {
     materialIssuedToWip: number;
     directLaborStandard: number;
     directLaborActual: number;
+    /** Fixed overhead absorbed at the normal-capacity rate. */
     overheadAbsorbed: number;
+    /** Light applied to the Grow stage at its standard per tray. */
+    lightApplied: number;
+    /** Tray wear and sanitizer applied to the Sow stage at their standard per tray. */
+    consumablesApplied: number;
     packagingCost: number;
     finishedGoodsCost: number;
     /** Finished-goods cost ÷ units: the standard cost of one UNIT. */
@@ -197,19 +217,15 @@ export interface ProductionLedgerOptions {
    */
   shipments?: Shipment[];
   /**
-   * Units the sowing's units became. The sowing record counts BASE-unit
-   * equivalents (material and canopy mass scale with them); conversion costs
-   * — variable labor, packaging, overhead — scale with units, because a 1.5×
-   * bowl is assembled, packed and overheaded once. Defaults to the units.
+   * Units the packed trays became; defaults to the trays packed.
    */
   servingsProduced?: number;
   /** The assumptions in force (a resolved scenario's, or the plan-data defaults). */
   assumptions?: typeof defaultAssumptions;
-  /**
-   * Blackout rack sowings the record covers. Fixed labor is per sowing, so a record
-   * that spans a whole production day must say how many sowings it ran.
-   */
+  /** Sowings the record covers: fixed labor is per sowing. */
   sowings?: number;
+  /** The studies the plan's labor standard is read from, to split labor over the stages; absent, the estimate. */
+  studies?: readonly TimeStudyDoc[];
   /** The predetermined rate and the normal capacity it was set on. */
   overhead: OverheadAbsorption;
   /**
@@ -218,7 +234,7 @@ export interface ProductionLedgerOptions {
    * against Overhead Applied it is the period's under- or over-absorption.
    */
   overheadIncurred?: number;
-  /** Case-rounded purchase cost actually committed for this sowing. */
+  /** Pack-rounded purchase cost actually committed for this sowing. */
   purchaseOrderCost: number;
   /**
    * True when goods were received through a receipt record that already posted
@@ -242,37 +258,41 @@ export function productionSowingLedger(
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;
-  const components: ComponentCosting[] = componentCosting(cropPlan, shrink);
-  const byName = new Map(components.map((c) => [c.name, c]));
-  // No component issues to the sow-stage WIP today: the Phase 1-era hot list is gone and a grow sowing's
-  // lots issue at pack, as they always have. Deep-cut step (4) sets the grow ledger's stages.
-  const hotNames = new Set<string>();
+  const notes: string[] = [];
+  const costing = isGrowPlanCarrier(cropPlan) ? costCarrier(cropPlan) : null;
+  if (!costing) notes.push(`${cropPlan.code} is not a grow plan: it has no cost card per tray, so its material, light and consumables post at zero.`);
+  const perTray = costing?.perTray ?? { seed: 0, medium: 0, nutrient: 0, light: 0, consumables: 0, total: 0 };
 
+  const trays = sowing.traysSown;
   const units = sowing.goodUnits;
   const servings = opts.servingsProduced ?? units;
   const date = sowing.productionDate;
-  const notes: string[] = [];
+  const std = (perTrayCost: number) => perTrayCost * trays * (1 + shrink);
 
-  // ── Standard material cost, split hot / cold. Normal shrink is inventoriable:
-  //    it is inside the standard, so it rides into WIP with the rest.
-  const stdCost = (c: ComponentCosting) => c.costPerUnit * units * (1 + shrink);
-  const hotComponents = components.filter((c) => hotNames.has(c.name));
-  const coldComponents = components.filter((c) => !hotNames.has(c.name));
-  const hotMaterial = hotComponents.reduce((s, c) => s + stdCost(c), 0);
-  const coldMaterial = coldComponents.reduce((s, c) => s + stdCost(c), 0);
-  const standardMaterialCost = hotMaterial + coldMaterial;
+  // ── Standard material on the trays sown. Normal shrink is inventoriable: the
+  //    cost card carries it on the whole tray, so it rides into WIP with the rest.
+  const standardMaterialCost = std(perTray.seed + perTray.medium + perTray.nutrient);
+  const lightApplied = std(perTray.light);
+  const consumablesApplied = std(perTray.consumables);
 
-  // ── Labor at standard, and the actual if the sowing recorded one. Fixed
-  //    labor is per blackout rack sowing, variable per unit.
+  // ── Labor at standard on the trays sown, split over the stages by the plan's study.
   const sowings = opts.sowings ?? 1;
-  const std = laborForDay(sowings, units, assumptions);
-  const directLaborStandard = std.directLaborCost;
+  const labor = laborForDay(sowings, trays, assumptions);
+  const directLaborStandard = labor.directLaborCost;
+  const study = summarizeStudy(laborStandard(studiesForCropPlan(opts.studies ?? [], cropPlan.code)) ?? estimatedTimeStudy(cropPlan, Math.max(1, trays)));
+  const streamMinutes = study.sowingLaborMinutes + study.dailyLaborMinutes + study.harvestLaborMinutes;
+  const streamShare = streamMinutes > 0
+    ? { sow: study.sowingLaborMinutes / streamMinutes, grow: study.dailyLaborMinutes / streamMinutes }
+    : { sow: 1, grow: 0 };
   const stdRate = assumptions.labor.blendedLoadedWage.value;
-  const actualHours = sowing.actualLaborHours ?? std.totalLaborHours;
+  const actualHours = sowing.actualLaborHours ?? labor.totalLaborHours;
   const actualRate = sowing.actualLaborRate ?? stdRate;
   const directLaborActual = actualHours * actualRate;
   const laborRateVariance = (actualRate - stdRate) * actualHours;
-  const laborEfficiencyVariance = (actualHours - std.totalLaborHours) * stdRate;
+  const laborStdC = cents(directLaborStandard);
+  const laborSowC = Math.round(laborStdC * streamShare.sow);
+  const laborGrowC = Math.round(laborStdC * streamShare.grow);
+  const laborPackC = laborStdC - laborSowC - laborGrowC;
   if (sowing.actualLaborHours === null) {
     notes.push(
       'No actual labor hours on the sowing record, so labor posts at standard and both labor variances are zero. The time study is an estimate, not an observation.',
@@ -280,89 +300,71 @@ export function productionSowingLedger(
   }
 
   // ── Overhead applied at the normal-capacity rate, and what the period incurred.
-  const overheadAbsorbed = opts.overhead.ratePerUnit * units;
+  const overheadAbsorbed = opts.overhead.ratePerUnit * trays;
   const overheadIncurred = opts.overheadIncurred ?? 0;
   const overheadVolume = opts.overheadIncurred !== undefined ? overheadIncurred - overheadAbsorbed : 0;
 
-  // ── Packaging is a product cost; distribution is not.
+  // ── Packaging is a product cost on the trays packed; distribution is not.
   const packagingCost = assumptions.perUnit.packaging.value * units;
   const distributionPerUnit = assumptions.perUnit.distribution.value;
 
-  // ── Purchase price variance. Case-rounding is a quantity difference, not this.
+  // ── Purchase price variance. Pack-rounding is a quantity difference, not this.
   const invoice = opts.actualInvoiceCost ?? opts.purchaseOrderCost;
   const purchasePriceVariance = invoice - opts.purchaseOrderCost;
 
-  // ── Material usage variance from the sowing's actual issue against standard,
-  //    kept per stream so each is relieved from the stage it was issued to.
+  // ── Material usage variance from the record's actual issues against standard, at the
+  //    standard price. The standard issue carries the shrink allowance, so a record issued
+  //    at standard has none.
   const mb = massBalance(sowing);
-  let hotUsageVariance = 0;
-  let coldUsageVariance = 0;
-  for (const c of sowing.components) {
-    const card = byName.get(c.component);
-    if (!card) continue;
-    // The standard issue carries the shrink allowance — the quantity the run
-    // bought for — so a record issued at standard has no usage variance.
-    const standardIssuedLb = (card.seedOz * units * (1 + shrink)) / OZ_PER_LB;
-    const stdPricePerLb = card.seedCostPerLb ?? 0;
-    const v = (c.seedIssuedLb - standardIssuedLb) * stdPricePerLb;
-    if (hotNames.has(c.component)) hotUsageVariance += v;
-    else coldUsageVariance += v;
-  }
-  const materialUsageVariance = hotUsageVariance + coldUsageVariance;
-
-  // ── Abnormal spoilage, valued at the FULLY ABSORBED cost of the stage it
-  //    left (Roadmap J7): the component's material per lb at that stage plus
-  //    the conversion cost per lb the stage carries — direct labor and
-  //    absorbed overhead, spread over the standard mass in the stage (and
-  //    packaging once packed). An abnormal reason is abnormal in full; a
-  //    normal reason is abnormal for the pounds beyond the component's shrink
-  //    allowance. Scrap before the sprouting rack (PREP) is raw material at purchase
-  //    cost and carries no conversion; it is relieved from the stage it was
-  //    issued to.
-  const lbOf = (oz: number) => (oz * units) / OZ_PER_LB;
-  const hotHarvestedLb = hotComponents.reduce((s, c) => s + lbOf(c.harvestedOz), 0);
-  const hotBlackoutLb = hotComponents.reduce((s, c) => s + lbOf(c.blackoutOz), 0);
-  const coldLb = coldComponents.reduce((s, c) => s + lbOf(c.packedOz), 0);
-  const conversion = directLaborStandard + overheadAbsorbed;
-  const perLb = (dollars: number, lb: number) => (lb > 0 ? dollars / lb : 0);
-  const conversionPerLb: Record<ScrapStage, number> = {
-    PREP: 0,
-    SOW: perLb(conversion, hotHarvestedLb),
-    BLACKOUT: perLb(conversion, hotBlackoutLb),
-    PACK: perLb(conversion, hotBlackoutLb + coldLb),
-    FINISHED: perLb(conversion + packagingCost, hotBlackoutLb + coldLb),
+  const seedLines = (costing?.lines ?? []).filter((l) => l.line.kind === 'seed');
+  const seedPricePerG = (varietyKey: string) => {
+    const l = seedLines.find((x) => x.line.kind === 'seed' && x.line.varietyKey === varietyKey);
+    return l ? l.unitCost / GRAMS_PER_LB : 0;
   };
+  let materialUsageVariance = 0;
+  for (const lot of sowing.lots) {
+    const l = seedLines.find((x) => x.line.kind === 'seed' && x.line.varietyKey === lot.varietyKey);
+    if (!l) continue;
+    materialUsageVariance += (lot.seedIssuedG - l.quantity * trays * (1 + shrink)) * seedPricePerG(lot.varietyKey);
+  }
+  for (const l of (costing?.lines ?? []).filter((x) => (x.line.kind === 'medium' || x.line.kind === 'nutrient') && x.quantity > 0)) {
+    const issued = sowing.issues.filter((i) => i.input === lineLabel(l.line)).reduce((s, i) => s + i.qty, 0);
+    materialUsageVariance += (issued - l.quantity * trays * (1 + shrink)) * l.unitCost;
+  }
+
+  // ── Abnormal spoilage, valued at the FULLY ABSORBED cost of the stages it
+  //    passed: seed lost at sowing is raw material at its price; a gram lost on the
+  //    shelves, at the check or after packing carries the cost of each stage it
+  //    passed, spread over the standard harvest grams (and packaging once packed).
+  //    An abnormal reason is abnormal in full; a normal reason is abnormal for the
+  //    grams beyond the lot's shrink allowance.
+  const stdHarvestG = (costing?.harvestGramsPerTray ?? 0) * trays;
+  const perG = (dollars: number, g: number) => (g > 0 ? dollars / g : 0);
+  const sowStage = standardMaterialCost + consumablesApplied + laborSowC / 100 + overheadAbsorbed;
+  const growStage = lightApplied + laborGrowC / 100;
+  const packStage = laborPackC / 100;
+  const costPerG: Record<Exclude<ScrapStage, 'SOW'>, number> = {
+    GROW: perG(sowStage + growStage, stdHarvestG),
+    PACK: perG(sowStage + growStage + packStage, stdHarvestG),
+    FINISHED: perG(sowStage + growStage + packStage, stdHarvestG) + perG(packagingCost, (costing?.harvestGramsPerTray ?? 0) * units),
+  };
+  const stageAccount: Record<ScrapStage, string> = { SOW: ACC_WIP_SOW, GROW: ACC_WIP_GROW, PACK: ACC_WIP_PACK, FINISHED: ACC_FINISHED_GOODS };
   let abnormalSpoilage = 0;
   const abnormalByStage = new Map<string, number>();
   const stagesHit = new Set<ScrapStage>();
-  for (const c of sowing.components) {
-    const card = byName.get(c.component);
-    if (!card) continue;
-    const issueAccount = hotNames.has(c.component) ? ACC_WIP_SOW : ACC_WIP_PACK;
-    const materialPerLb = (stage: ScrapStage) => (stage === 'PREP' ? (card.seedCostPerLb ?? 0) : (card.harvestedCostPerLb ?? card.seedCostPerLb ?? 0));
-    for (const k of classifyScrap(c)) {
-      if (k.abnormalLb <= 0) continue;
-      const s = k.event;
-      stagesHit.add(s.stage);
-      const value = k.abnormalLb * (materialPerLb(s.stage) + conversionPerLb[s.stage]);
+  for (const lot of sowing.lots) {
+    for (const k of classifyScrap(lot)) {
+      if (k.abnormalG <= 0) continue;
+      const st = k.event.stage;
+      stagesHit.add(st);
+      const value = k.abnormalG * (st === 'SOW' ? seedPricePerG(lot.varietyKey) : costPerG[st]);
       abnormalSpoilage += value;
-      const acct =
-        s.stage === 'PREP'
-          ? issueAccount
-          : s.stage === 'SOW'
-            ? ACC_WIP_SOW
-            : s.stage === 'BLACKOUT'
-              ? ACC_WIP_BLACKOUT
-              : s.stage === 'PACK'
-                ? ACC_WIP_PACK
-                : ACC_FINISHED_GOODS;
-      abnormalByStage.set(acct, (abnormalByStage.get(acct) ?? 0) + value);
+      abnormalByStage.set(stageAccount[st], (abnormalByStage.get(stageAccount[st]) ?? 0) + value);
     }
   }
-
   if (stagesHit.size > 0) {
     notes.push(
-      `Abnormal spoilage is valued at the fully absorbed cost of the stage it left: material per lb plus conversion of ${[...stagesHit].map((st) => `${st} $${conversionPerLb[st].toFixed(2)}/lb`).join(', ')} (labor and absorbed overhead${stagesHit.has('FINISHED') ? ', and packaging once packed' : ''} over the standard mass in the stage).`,
+      `Abnormal spoilage is valued at the fully absorbed cost of the stages it passed: ${[...stagesHit].map((st) => (st === 'SOW' ? 'SOW at the seed price' : `${st} $${(costPerG[st] * 1000).toFixed(2)}/kg`)).join(', ')} (material, overhead applied and labor over the standard harvest${stagesHit.has('FINISHED') ? ', and packaging once packed' : ''}).`,
     );
   }
 
@@ -396,44 +398,55 @@ export function productionSowingLedger(
   );
 
   entries.push(
-    entry(
-      `${sowing.sowingId}-ISSUE-HOT`,
-      date,
-      'Issue hot components to the sow stage',
-      [
-        { account: ACC_WIP_SOW, dollars: hotMaterial, memo: `Material at standard for ${units} units, incl. ${(shrink * 100).toFixed(1)}% normal shrink` },
-        { account: ACC_MATERIAL_USAGE_VAR, dollars: hotUsageVariance, memo: 'Material usage variance at standard price' },
-        { account: ACC_RAW_MATERIALS, dollars: -(hotMaterial + hotUsageVariance), memo: 'Raw materials relieved' },
-      ],
-    ),
+    entry(`${sowing.sowingId}-ISSUE`, date, 'Issue seed, medium and nutrient to the sow stage', [
+      { account: ACC_WIP_SOW, dollars: standardMaterialCost, memo: `Material at standard for ${trays} trays sown, incl. ${(shrink * 100).toFixed(1)}% normal shrink` },
+      { account: ACC_MATERIAL_USAGE_VAR, dollars: materialUsageVariance, memo: 'Material usage variance at standard price' },
+      { account: ACC_RAW_MATERIALS, dollars: -(standardMaterialCost + materialUsageVariance), memo: 'Raw materials relieved' },
+    ]),
   );
 
   entries.push(
-    entry(`${sowing.sowingId}-ISSUE-COLD`, date, 'Issue cold-packed components to the pack stage', [
-      { account: ACC_WIP_PACK, dollars: coldMaterial, memo: 'Cheese and tortilla — never enter sow or blackout' },
-      { account: ACC_MATERIAL_USAGE_VAR, dollars: coldUsageVariance, memo: 'Material usage variance at standard price' },
-      { account: ACC_RAW_MATERIALS, dollars: -(coldMaterial + coldUsageVariance), memo: 'Raw materials relieved' },
+    entry(`${sowing.sowingId}-APPLY`, date, 'Apply light, tray wear and sanitizer at the standard per tray', [
+      { account: ACC_WIP_SOW, dollars: consumablesApplied, memo: `Tray wear and sanitizer, ${trays} trays sown` },
+      { account: ACC_WIP_GROW, dollars: lightApplied, memo: `Light over the cycle, ${trays} trays sown` },
+      { account: ACC_VAR_OH_APPLIED, dollars: -(consumablesApplied + lightApplied), memo: 'Variable manufacturing overhead applied' },
     ]),
   );
 
   // Loaded labor at actual is owed as wages, payroll taxes, workers' comp and
-  // benefits (Roadmap K5); the split is built in cents so it sums to the total.
+  // benefits (Roadmap K5). Built in cents: the standard legs sum to the standard,
+  // the owed legs to the actual, and the efficiency variance closes the entry.
+  const line = (account: string, c: number, memo: string): JournalLine => ({
+    accountCode: account,
+    debitCents: c > 0 ? c : 0,
+    creditCents: c < 0 ? -c : 0,
+    memo,
+  });
   const owed = splitLoadedLaborCents(cents(directLaborActual), assumptions.labor.payrollBurden.value);
-  entries.push(
-    entry(`${sowing.sowingId}-LABOR`, date, 'Direct labor — standard into work in process, actual accrued', [
-      { account: ACC_WIP_SOW, dollars: directLaborStandard, memo: `${std.totalLaborHours.toFixed(2)} standard hours at $${stdRate.toFixed(2)}` },
-      { account: ACC_LABOR_RATE_VAR, dollars: laborRateVariance, memo: 'Labor rate variance' },
-      { account: ACC_LABOR_EFFICIENCY_VAR, dollars: laborEfficiencyVariance, memo: 'Labor efficiency variance' },
-      { account: ACC_ACCRUED_WAGES, dollars: -owed.wagesCents / 100, memo: 'Accrued wages at actual' },
-      { account: ACC_ACCRUED_PAYROLL_TAXES, dollars: -owed.payrollTaxesCents / 100, memo: 'Employer FICA, FUTA and SUTA on the wages' },
-      { account: ACC_ACCRUED_WORKERS_COMP, dollars: -owed.workersCompCents / 100, memo: "Workers' comp premium on the wages" },
-      { account: ACC_ACCRUED_BENEFITS, dollars: -owed.benefitsCents / 100, memo: 'Burden over the statutory rates, as benefits' },
-    ]),
-  );
+  const owedC = owed.wagesCents + owed.payrollTaxesCents + owed.workersCompCents + owed.benefitsCents;
+  const rateVarC = cents(laborRateVariance);
+  const effVarC = owedC - laborStdC - rateVarC;
+  entries.push({
+    id: `${sowing.sowingId}-LABOR`,
+    date,
+    description: 'Direct labor — standard into work in process by stream, actual accrued',
+    lines: [
+      line(ACC_WIP_SOW, laborSowC, `Sowing stream: ${labor.totalLaborHours.toFixed(2)} standard hours in all at $${stdRate.toFixed(2)}`),
+      line(ACC_WIP_GROW, laborGrowC, 'Daily stream over the cycle'),
+      line(ACC_WIP_PACK, laborPackC, 'Harvest stream'),
+      line(ACC_LABOR_RATE_VAR, rateVarC, 'Labor rate variance'),
+      line(ACC_LABOR_EFFICIENCY_VAR, effVarC, 'Labor efficiency variance'),
+      line(ACC_ACCRUED_WAGES, -owed.wagesCents, 'Accrued wages at actual'),
+      line(ACC_ACCRUED_PAYROLL_TAXES, -owed.payrollTaxesCents, 'Employer FICA, FUTA and SUTA on the wages'),
+      line(ACC_ACCRUED_WORKERS_COMP, -owed.workersCompCents, "Workers' comp premium on the wages"),
+      line(ACC_ACCRUED_BENEFITS, -owed.benefitsCents, 'Burden over the statutory rates, as benefits'),
+    ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
+  });
+  const laborEfficiencyVariance = effVarC / 100;
 
   entries.push(
     entry(`${sowing.sowingId}-OH`, date, 'Absorb fixed manufacturing overhead at the normal-capacity rate', [
-      { account: ACC_WIP_SOW, dollars: overheadAbsorbed, memo: `$${opts.overhead.ratePerUnit.toFixed(4)}/unit x ${units.toLocaleString()} units; rate set on ${Math.round(opts.overhead.normalCapacityUnits).toLocaleString()} units of normal capacity` },
+      { account: ACC_WIP_SOW, dollars: overheadAbsorbed, memo: `$${opts.overhead.ratePerUnit.toFixed(4)}/tray x ${trays.toLocaleString()} trays sown; rate set on ${Math.round(opts.overhead.normalCapacityUnits).toLocaleString()} trays of normal capacity` },
       { account: ACC_OH_APPLIED, dollars: -overheadAbsorbed, memo: 'Manufacturing overhead applied' },
     ]),
   );
@@ -446,75 +459,57 @@ export function productionSowingLedger(
       ]),
     );
     notes.push(
-      `Fixed manufacturing overhead incurred for the period is $${Math.round(overheadIncurred).toLocaleString()} against $${Math.round(overheadAbsorbed).toLocaleString()} applied to ${units.toLocaleString()} units at $${opts.overhead.ratePerUnit.toFixed(4)}/unit, so $${Math.round(Math.abs(overheadVolume)).toLocaleString()} is ${overheadVolume >= 0 ? 'under-absorbed and stays in the period' : 'over-absorbed and reduces the period’s cost'}. Neither figure is carried in inventory beyond the applied rate.`,
+      `Fixed manufacturing overhead incurred for the period is $${Math.round(overheadIncurred).toLocaleString()} against $${Math.round(overheadAbsorbed).toLocaleString()} applied to ${trays.toLocaleString()} trays at $${opts.overhead.ratePerUnit.toFixed(4)}/tray, so $${Math.round(Math.abs(overheadVolume)).toLocaleString()} is ${overheadVolume >= 0 ? 'under-absorbed and stays in the period' : 'over-absorbed and reduces the period’s cost'}. Neither figure is carried in inventory beyond the applied rate.`,
     );
   }
 
   // ── The stage transfers are built in CENTS from the cents already posted to
-  //    each stage, so every stage clears to exactly zero. Rounding a float total
-  //    once can differ from the sum of its separately rounded legs by a cent,
-  //    which would sit in a stage account as inventory that does not exist.
-  const line = (account: string, c: number, memo: string): JournalLine => ({
-    accountCode: account,
-    debitCents: c > 0 ? c : 0,
-    creditCents: c < 0 ? -c : 0,
-    memo,
-  });
-  const abnormalSowC = cents(abnormalByStage.get(ACC_WIP_SOW) ?? 0);
-  const abnormalBlackoutC = cents(abnormalByStage.get(ACC_WIP_BLACKOUT) ?? 0);
-  const abnormalPackC = cents(abnormalByStage.get(ACC_WIP_PACK) ?? 0);
-  const sowStageC =
-    cents(hotMaterial) + cents(directLaborStandard) + cents(overheadAbsorbed) - abnormalSowC;
+  //    each stage, so every stage clears to exactly zero.
+  const abnormalC = (acct: string) => cents(abnormalByStage.get(acct) ?? 0);
+  const sowStageC = cents(standardMaterialCost) + cents(consumablesApplied) + laborSowC + cents(overheadAbsorbed) - abnormalC(ACC_WIP_SOW);
   entries.push({
-    id: `${sowing.sowingId}-XFER-blackout`,
+    id: `${sowing.sowingId}-XFER-GROW`,
     date,
-    description: 'Transfer harvested components to the blackout stage',
-    lines: [
-      line(ACC_WIP_BLACKOUT, sowStageC, 'Harvested components, blackout'),
-      line(ACC_WIP_SOW, -sowStageC, 'Sow stage relieved'),
-    ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
+    description: 'Transfer the sown trays to the grow stage',
+    lines: [line(ACC_WIP_GROW, sowStageC, 'Trays on the shelves'), line(ACC_WIP_SOW, -sowStageC, 'Sow stage relieved')].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
 
-  const blackoutStageC = sowStageC - abnormalBlackoutC;
+  const growStageC = sowStageC + cents(lightApplied) + laborGrowC - abnormalC(ACC_WIP_GROW);
   entries.push({
     id: `${sowing.sowingId}-XFER-PACK`,
     date,
-    description: 'Transfer blackouted components to the pack stage',
-    lines: [
-      line(ACC_WIP_PACK, blackoutStageC, 'Blackout components released to assembly'),
-      line(ACC_WIP_BLACKOUT, -blackoutStageC, 'Blackout stage relieved'),
-    ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
+    description: 'Transfer the harvested trays to the pack stage',
+    lines: [line(ACC_WIP_PACK, growStageC, 'Harvested trays to packing'), line(ACC_WIP_GROW, -growStageC, 'Grow stage relieved')].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
 
   if (abnormalSpoilage > 0) {
     entries.push(
       entry(`${sowing.sowingId}-SPOIL`, date, 'Abnormal spoilage charged to the period', [
-        { account: ACC_ABNORMAL_SPOILAGE, dollars: abnormalSpoilage, memo: 'ASC 330-10-30-7 — abnormal wasted material is a current-period charge' },
         ...[...abnormalByStage.entries()].map(([acct, v]) => ({
           account: acct,
           dollars: -v,
           memo: 'Stage relieved of abnormal loss',
         })),
+        // Last, so the rounding residual lands on the expense and every stage clears.
+        { account: ACC_ABNORMAL_SPOILAGE, dollars: abnormalSpoilage, memo: 'ASC 330-10-30-7 — abnormal waste is a current-period charge' },
       ]),
     );
   }
 
   // Finished goods receives exactly what the pack stage and the packaging
   // store were charged, leg by leg.
-  const packBlackoutC = blackoutStageC - abnormalPackC;
-  const coldMaterialC = cents(coldMaterial);
+  const packStageC = growStageC + laborPackC - abnormalC(ACC_WIP_PACK);
   const packagingC = cents(packagingCost);
-  const fgDebitCents = packBlackoutC + coldMaterialC + packagingC;
+  const fgDebitCents = packStageC + packagingC;
   const finishedGoodsCost = fgDebitCents / 100;
   entries.push({
     id: `${sowing.sowingId}-FG`,
     date,
-    description: 'Pack and receive finished units into finished goods',
+    description: 'Pack and receive finished trays into finished goods',
     lines: [
-      line(ACC_FINISHED_GOODS, fgDebitCents, `${units.toLocaleString()} units at standard`),
-      line(ACC_WIP_PACK, -packBlackoutC, 'Pack stage relieved — blackout components'),
-      line(ACC_WIP_PACK, -coldMaterialC, 'Pack stage relieved — cold-packed components'),
-      line(ACC_PACKAGING, -packagingC, 'Bowl, lid, label'),
+      line(ACC_FINISHED_GOODS, fgDebitCents, `${units.toLocaleString()} trays at standard`),
+      line(ACC_WIP_PACK, -packStageC, 'Pack stage relieved'),
+      line(ACC_PACKAGING, -packagingC, "The plan's packaging"),
     ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
 
@@ -572,27 +567,26 @@ export function productionSowingLedger(
     ]),
   );
 
-  // ── Traceability: emitted from the same consumption the issue entries posted.
-  const traceability: TransformationEvent[] = sowing.components.map((c, idx) =>
-    transformationEvent({
+  // ── Traceability: one transformation event per variety lot, from the same issues the
+  //    issue entry posted. The medium and nutrient went into every tray, so each lot's event
+  //    carries them in the lot's share of the seed.
+  const seedTotalG = sowing.lots.reduce((t, l) => t + l.seedIssuedG, 0);
+  const traceability: TransformationEvent[] = sowing.lots.map((l) => {
+    const lotShare = seedTotalG > 0 ? l.seedIssuedG / seedTotalG : 1 / Math.max(1, sowing.lots.length);
+    return transformationEvent({
       sowingId: sowing.sowingId,
-      component: c.component,
-      outputLotCode:
-        c.outputLotCode ||
-        traceabilityLotCode('AMK', sowing.cropPlanCode, date, c.component, idx + 1),
-      outputQty: c.packedLb,
-      outputUnit: 'lb',
+      component: l.variety,
+      outputLotCode: l.outputLotCode || `${sowing.sowingId}-${l.varietyKey}`,
+      outputQty: l.packedG,
+      outputUnit: 'g',
       eventDate: date,
       location: FARM_HOME.name ?? 'Austin facility',
-      inputs: c.consumed.map((l) => ({
-        input: l.input,
-        inputLotCode: l.inputLotCode,
-        qty: l.qty,
-        unit: l.unit,
-        onFoodTraceabilityList: l.onFoodTraceabilityList,
-      })),
-    }),
-  );
+      inputs: [
+        { input: l.variety, inputLotCode: l.seedLotCode, qty: l.seedIssuedG, unit: 'g', onFoodTraceabilityList: l.onFoodTraceabilityList },
+        ...sowing.issues.map((i) => ({ input: i.input, inputLotCode: i.lotCode, qty: i.qty * lotShare, unit: i.unit, onFoodTraceabilityList: false })),
+      ],
+    });
+  });
 
   const netVariance =
     purchasePriceVariance +
@@ -613,26 +607,22 @@ export function productionSowingLedger(
     traceability,
     traceabilityGaps: traceabilityGaps(traceability),
     weights: {
-      purchasedLb: mb.totalSeedIssuedLb,
-      issuedLb: mb.totalSeedIssuedLb,
-      // Mass at the sow stage: what entered the sprouting rack plus the sow delta. A
-      // cold-packed component is never harvested, so its weight here is its issue
-      // less scrap taken before the sprouting rack. Canopy mass counts only what enters
-      // the rack — the gap between the two is the cheese and the tortilla,
-      // not a loss.
-      harvestedLb: mb.components.reduce((s, c) => s + (c.seedIssuedLb - c.prepScrapLb + c.sowDeltaLb), 0),
-      blackoutLb: sowing.components.reduce((s, c) => s + (c.blackoutLb ?? 0), 0),
-      packedLb: mb.totalPackedLb,
+      seedIssuedG: mb.totalSeedIssuedG,
+      harvestedG: mb.totalHarvestedG,
+      packedG: mb.totalPackedG,
     },
     amounts: {
+      traysSown: trays,
       unitsProduced: units,
       servingsProduced: servings,
       purchaseOrderCost: opts.purchaseOrderCost,
       standardMaterialCost,
-      materialIssuedToWip: hotMaterial + coldMaterial,
+      materialIssuedToWip: standardMaterialCost,
       directLaborStandard,
       directLaborActual,
       overheadAbsorbed,
+      lightApplied,
+      consumablesApplied,
       packagingCost,
       finishedGoodsCost,
       standardCostPerUnit,

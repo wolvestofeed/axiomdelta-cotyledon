@@ -17,7 +17,7 @@ import { DEFAULT_HOSPITALITY_COA, type Account } from '@/ledger';
 export const ACC_RAW_MATERIALS = '1410';
 export const ACC_PACKAGING = '1415';
 export const ACC_WIP_SOW = '1430';
-export const ACC_WIP_BLACKOUT = '1435';
+export const ACC_WIP_GROW = '1435';
 export const ACC_WIP_PACK = '1440';
 export const ACC_FINISHED_GOODS = '1450';
 export const ACC_GRIR = '2015';
@@ -31,6 +31,7 @@ export const ACC_OH_SPENDING_VAR = '5150';
 export const ACC_OH_VOLUME_VAR = '5160';
 export const ACC_OH_CONTROL = '5180';
 export const ACC_OH_APPLIED = '5190';
+export const ACC_VAR_OH_APPLIED = '5195';
 export const ACC_ABNORMAL_SPOILAGE = '5910';
 /** Selling expense: the marketplace's cut on ghost-farm / retail orders. */
 export const ACC_MARKETPLACE_COMMISSION = '7910';
@@ -63,28 +64,28 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     code: ACC_PACKAGING,
     name: 'Inventory — Packaging & Disposables',
     type: 'asset',
-    description: 'Bowls, lids, labels and case packaging held at standard cost.',
+    description: "The plans' packaging held at standard cost.",
   },
   {
     code: ACC_WIP_SOW,
     name: 'Work in Process — Sow',
     type: 'asset',
     description:
-      'Components issued to the sprouting rack or jar stand, carrying material, absorbed labor and absorbed overhead until the sow stage completes.',
+      'Trays sown: seed, medium and nutrient issued, tray wear and sanitizer applied, the sowing stream and fixed overhead absorbed.',
   },
   {
-    code: ACC_WIP_BLACKOUT,
-    name: 'Work in Process — Blackout',
+    code: ACC_WIP_GROW,
+    name: 'Work in Process — Grow',
     type: 'asset',
     description:
-      'Harvested components in or awaiting the blackout rack. A costing boundary as well as control-point-2, so cost and the stage record share a stage.',
+      'Trays on the shelves: the sow stage carried in, light applied and the daily stream absorbed over the cycle.',
   },
   {
     code: ACC_WIP_PACK,
     name: 'Work in Process — Pack',
     type: 'asset',
     description:
-      'Blackout components and cold-packed components staged for assembly. Cold components enter the chain here and never pass through sow or blackout.',
+      'Harvested trays at the check and in packing: the grow stage carried in and the harvest stream absorbed.',
   },
   {
     code: ACC_FINISHED_GOODS,
@@ -168,6 +169,13 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
       'Contra-expense. Credited as overhead absorbs into work in process at the predetermined normal-capacity rate; cleared against overhead control at period end.',
   },
   {
+    code: ACC_VAR_OH_APPLIED,
+    name: 'Variable Manufacturing Overhead Applied',
+    type: 'expense',
+    description:
+      'Contra-expense. Credited as the light a tray takes, its tray wear and the sanitizer apply to work in process at their standard per tray. The electricity, trays and sanitizer themselves are expensed as billed; the two net to what stays in inventory.',
+  },
+  {
     code: ACC_ABNORMAL_SPOILAGE,
     name: 'Abnormal Spoilage',
     type: 'expense',
@@ -190,7 +198,7 @@ export const FARM_COA: Account[] = [...DEFAULT_HOSPITALITY_COA, ...FARM_MANUFACT
 export const FARM_INVENTORY_FLOW = [
   ACC_RAW_MATERIALS,
   ACC_WIP_SOW,
-  ACC_WIP_BLACKOUT,
+  ACC_WIP_GROW,
   ACC_WIP_PACK,
   ACC_FINISHED_GOODS,
 ] as const;

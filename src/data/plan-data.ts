@@ -179,6 +179,8 @@ export interface InputLine {
   harvestedYieldPerSowing: number; // seedQtyPerSowing × yieldToHarvest, for the same authored sowing — asserted by test, never typed loose
   seedUnitCost: number;
   packSize: number; // case/pack size for the purchase-order calculator
+  /** The grow line the input projects. A light line is overhead, never bought into raw stock, so no purchase order carries it. */
+  lineKind?: 'seed' | 'medium' | 'nutrient' | 'light';
   isHotComponent: boolean; // hot components are blackouted → drive canopy mass/unit
   /** Each-unit items (tortilla) carry no lb weight; this is their mass for the packed-weight math. */
   unitMassOz?: number;

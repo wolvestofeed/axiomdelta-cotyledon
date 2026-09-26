@@ -11,9 +11,7 @@
  */
 
 import { assumptions as defaultAssumptions, type CropPlanDef } from '@/data/plan-data';
-import { componentCosting } from '@/engine';
-import { standardSowing, type SowingExecution, type ComponentExecution } from '@/engine/sowing';
-import { traceabilityLotCode } from '@/engine/traceability';
+import type { SowingExecution, SowingIssue, VarietyLot } from '@/engine/sowing';
 import { libraryLabel, type StandardVersionDoc } from '@/engine/standards';
 import type { PaymentTerms } from '@/data/working-capital';
 import type { InvoiceDoc, SubscriberPaymentDoc, SupplierBillDoc, SupplierPaymentDoc } from '@/engine/working-capital';
@@ -56,18 +54,16 @@ export interface SowingRecordDoc {
   productionDate: string;
   standardVersion: string;
   plannedUnits: number;
-  /** Base-unit equivalents that passed and were packed. */
+  /** Trays that passed the harvest check and were packed. */
   goodUnits: number;
-  /**
-   * Rack loads filled from this sow. A sowing record is one sow and the sow
-   * is the lot: a double sowing — two racks from one
-   * sow — is one record with `sowingsRun` 2 and one lot per component; two
-   * sows of one crop plan on one day are two records and two lots.
-   */
+  /** Sowings the record covers: fixed labor is per sowing. A record is one sow, and the sow is the lot. */
   sowingsRun: number;
-  /** Units the units became; null = one unit per unit. */
+  /** Units the trays became; null = one unit per tray. */
   servingsProduced: number | null;
-  components: ComponentExecution[];
+  /** One lot per variety, in grams. */
+  lots: VarietyLot[];
+  /** The medium and nutrient issued to the trays. */
+  issues: SowingIssue[];
   /** Crew hours by person (Roadmap I3). Absent on records written before 0053. */
   crew?: CrewHoursLine[];
   actualLaborHours: number | null;
@@ -75,7 +71,7 @@ export interface SowingRecordDoc {
   closedBy: string | null;
   closedAt: string | null;
   notes: string | null;
-  /** The grow-model fields (`sowing-record.ts`): absent on a Phase 1-era record. */
+  /** The grow-model fields (`sowing-record.ts`). */
   format?: TrayFormatKey | null;
   traysSown?: number | null;
   traysPacked?: number | null;
@@ -382,20 +378,21 @@ export function toSowingExecution(doc: SowingRecordDoc): SowingExecution {
     cropPlanCode: doc.cropPlanCode,
     productionDate: doc.productionDate,
     standardVersion: doc.standardVersion,
-    plannedUnits: doc.plannedUnits,
+    traysSown: doc.traysSown ?? doc.plannedUnits,
     goodUnits: doc.goodUnits,
-    components: doc.components,
+    lots: doc.lots,
+    issues: doc.issues,
     actualLaborHours: doc.actualLaborHours,
     actualLaborRate: doc.actualLaborRate,
     closedBy: doc.closedBy ?? 'unsigned',
   };
 }
 
-/** A finished-goods lot: one component's output on a closed sowing record. */
+/** A finished-goods lot: one variety's output on a closed sowing record. */
 export interface FinishedLotRef {
   lotCode: string;
   cropPlanCode: string;
-  component: string;
+  variety: string;
   productionDate: string;
 }
 
@@ -407,9 +404,9 @@ export interface FinishedLotRef {
 export function finishedLotsOf(sowings: readonly SowingRecordDoc[]): FinishedLotRef[] {
   const out: FinishedLotRef[] = [];
   for (const b of sowings) {
-    for (const c of b.components) {
-      const lotCode = c.outputLotCode.trim();
-      if (lotCode) out.push({ lotCode, cropPlanCode: b.cropPlanCode, component: c.component, productionDate: b.productionDate });
+    for (const l of b.lots) {
+      const lotCode = l.outputLotCode.trim();
+      if (lotCode) out.push({ lotCode, cropPlanCode: b.cropPlanCode, variety: l.variety, productionDate: b.productionDate });
     }
   }
   return out.sort((a, b) => b.productionDate.localeCompare(a.productionDate) || a.lotCode.localeCompare(b.lotCode));
@@ -421,10 +418,10 @@ export function sowingIdFor(productionDate: string, sequence: number): string {
 }
 
 /**
- * A sowing record prefilled at standard for a production date, so the capture
- * form starts from the crop plan's own weights and the operator types only what
- * differed. Every input lot code starts as "not recorded" and every weight as
- * the standard; the record is not closed until someone signs it.
+ * A sowing record prefilled at standard for a sow date, so the capture form starts from the
+ * plan's own grams and the operator types only what differed (`growSowingPrefill`). Every lot
+ * code starts as "not recorded"; the record is not closed until someone signs it. A plan that
+ * is not a grow plan has no lots to prefill, and a record with no lot does not close.
  */
 export function standardSowingRecordPrefill(
   productionDate: string,
@@ -437,17 +434,6 @@ export function standardSowingRecordPrefill(
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> {
   const sowingId = sowingIdFor(productionDate, sequence);
   if (isGrowPlanCarrier(cropPlan)) return growSowingPrefill(cropPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
-  const components = componentCosting(cropPlan, shrinkAllowance);
-  const b = standardSowing(
-    sowingId,
-    productionDate,
-    units,
-    components,
-    `${cropPlan.code}@${productionDate}`,
-    (c) => traceabilityLotCode('AMK', cropPlan.code.replace(/-/g, ''), productionDate, c, sequence),
-    cropPlan.code,
-    shrinkAllowance,
-  );
   return {
     sowingId,
     cropPlanCode: cropPlan.code,
@@ -457,7 +443,8 @@ export function standardSowingRecordPrefill(
     goodUnits: units,
     sowingsRun: 1,
     servingsProduced: null,
-    components: b.components,
+    lots: [],
+    issues: [],
     crew: [],
     actualLaborHours: null,
     actualLaborRate: null,

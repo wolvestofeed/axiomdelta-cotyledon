@@ -23,7 +23,7 @@ import { standardSowingRecordPrefill, type ActualsBundle } from '@/engine/actual
 import { EMPTY_BUNDLE } from '@/engine/actuals';
 import { libraryLabel } from '@/engine/standards';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { laborMinutesPerUnit } from '@/engine/unit-cost';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeCropPlanAverages } from '@/engine/active-averages';
@@ -64,19 +64,17 @@ describe('C1 — a crop plan costs the same per unit on every surface', () => {
       const bundle: ActualsBundle = { ...EMPTY_BUNDLE, sowings: [doc] };
       const onPlan = postActuals(bundle, R, undefined, { liveLibraryIsStandard: true }).periods[0].sowings[0].amounts;
       const onActual = postActuals(bundle, R).periods[0].sowings[0].amounts;
-      const perUnit = (x: typeof onPlan) => x.standardMaterialCost / x.unitsProduced;
+      const perUnit = (x: typeof onPlan) => (x.standardMaterialCost + x.lightApplied + x.consumablesApplied) / x.traysSown;
 
       for (const [surface, v] of [['Unit Economics', unitEconomics], ['Unit Economics by channel', channelRow.inputCostPerUnit], ['Production Planning', productionPlanning]] as const) {
         expect(v, `${cropPlan.code} on ${surface}`).toBeCloseTo(cropPlansPage, 6);
       }
-      // The ledgers cost a sowing from its projected input lines, which carry no consumables line: they
-      // sit below the other surfaces by the consumables per tray with the shrink allowance, until deep-cut
-      // step (4) costs a sowing by the grow costing. When that lands, this gap is zero and the ledgers join the loop above.
-      const consumables = isGrowPlanCarrier(cropPlan) ? costCarrier(cropPlan).perTray.consumables * (1 + a.yield.shrinkAllowance.value) : 0;
+      // The ledgers cost a sowing by its cost card on the trays sown: seed, medium and nutrient
+      // as material, light, tray wear and sanitizer as variable overhead applied.
       // A sowing of zero trays is never recorded, so the ledgers have nothing to cost.
       if (sowing === 0) return;
       for (const [surface, v] of [['Plan ledger', perUnit(onPlan)], ['Actual ledger', perUnit(onActual)]] as const) {
-        expect(v + consumables, `${cropPlan.code} on ${surface}`).toBeCloseTo(cropPlansPage, 6);
+        expect(v, `${cropPlan.code} on ${surface}`).toBeCloseTo(cropPlansPage, 6);
       }
     });
   }

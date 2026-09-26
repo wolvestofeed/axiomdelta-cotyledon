@@ -222,7 +222,7 @@ async function searchKind(kind: EntityKind, q: string): Promise<LeanEntity[]> {
         .map(courseToEntity);
     case 'lot':
       return (await loadActuals()).sowings
-        .filter((b) => matches([b.sowingId, b.cropPlanCode, b.productionDate, ...b.components.map((c) => c.outputLotCode)].join(' '), needle))
+        .filter((b) => matches([b.sowingId, b.cropPlanCode, b.productionDate, ...b.lots.map((l) => l.outputLotCode)].join(' '), needle))
         .slice(0, LIMIT)
         .map(lotToEntity);
   }

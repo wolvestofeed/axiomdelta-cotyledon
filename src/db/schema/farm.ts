@@ -814,9 +814,9 @@ export type FarmPurchaseOrderLineInsert = typeof farmPurchaseOrderLines.$inferIn
 
 /**
  * A closed production record: the ISA-95 production performance object the
- * ledger posts from (`SowingExecution` in the Farm engine). Weights, scrap with
- * reason codes, input lot codes and the control-point-2 stage record are one JSONB
- * document because they are one physical event.
+ * ledger posts from (`SowingExecution` in the Farm engine). The lots per variety — seed
+ * issued, harvest, packed, in grams, with the seed lot, the output lot code and scrap with
+ * reason codes — are one JSONB document because they are one physical event.
  */
 export const farmSowingRecords = farmSchema.table(
   'sowing_records',
@@ -836,22 +836,25 @@ export const farmSowingRecords = farmSchema.table(
     standardVersion: text('standard_version').notNull(),
     // @classification: Internal
     plannedUnits: doublePrecision('planned_units').notNull(),
-    /** Base-unit equivalents that passed and were packed. */
+    /** Trays that passed the harvest check and were packed. */
     // @classification: Internal
     goodUnits: doublePrecision('good_units').notNull(),
-    /** Blackout rack sowings the record covers. */
+    /** Sowings the record covers: fixed labor is per sowing. */
     // @classification: Internal
     sowingsRun: integer('sowings_run').notNull().default(1),
-    /** Units the units became; null = one unit per unit. */
+    /** Units the trays became; null = one unit per tray. */
     // @classification: Internal
     servingsProduced: doublePrecision('servings_produced'),
-    /** ComponentExecution[] — consumed lots, stage weights, scrap, cooling. */
+    /** VarietyLot[] — one lot per variety: seed issued, harvest, packed, in grams, and scrap (0009). */
     // @classification: Internal
-    components: jsonb('components').notNull().default([]),
+    lots: jsonb('lots').notNull().default([]),
+    /** SowingIssue[] — the medium and nutrient issued to the trays (0009). */
+    // @classification: Internal
+    issues: jsonb('issues').notNull().default([]),
     /** CrewHoursLine[] — who worked the sowing and for how long (0053). */
     // @classification: Confidential
     crew: jsonb('crew').notNull().default([]),
-    /** The grow-model record (0008): the tray format, trays sown and packed, the grow unit, the packed day and the stage records. Null on a Phase 1-era record. */
+    /** The grow-model record (0008): the tray format, trays sown and packed, the grow unit, the packed day and the stage records. */
     // @classification: Internal
     format: text('format'),
     // @classification: Internal

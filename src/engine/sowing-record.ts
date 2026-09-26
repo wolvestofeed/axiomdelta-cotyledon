@@ -3,21 +3,20 @@
  *
  * A sowing is one grow plan sown on one day: its trays, the grow unit they sit on, one lot per
  * variety, the stage records the control points ask for (seed treatment, the spent-water test on
- * a jar, the grow-room readings, the harvest check), the mass balance in the ledger's pounds
- * (seed issued + water gain − scrap = packed) and the crew's hours. Only a closed record posts
- * journals, through the same execution shape the ledger has always read: one component per
- * variety, so the lot and the costing are the variety's.
+ * a jar, the grow-room readings, the harvest check), the medium and nutrient issued, the mass
+ * balance in grams (harvested − scrap = packed) and the crew's hours. Only a closed record posts
+ * journals (`production-ledger.ts`).
  */
 
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { planStages, seedLines } from '@/data/grow-plan';
+import { lineLabel, planStages, seedLines } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID, STAGE_CONTROL_POINTS, type ControlPointDef } from '@/data/produce-safety';
-import { GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
+import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import type { SowingRecordDoc } from '@/engine/actuals';
 import { costCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { controlPointsForPlan, evaluateSpentWaterTest, type SpentWaterTest, type SpentWaterVerdict } from '@/engine/produce-safety';
-import type { ComponentExecution, LotConsumption } from '@/engine/sowing';
+import type { SowingIssue, VarietyLot } from '@/engine/sowing';
 
 export interface SeedTreatmentRecord {
   /** The treatment as the produce safety plan names it. */
@@ -77,11 +76,11 @@ export function growLotCode(planCode: string, sowDate: string, variety: VarietyD
 }
 
 /**
- * A record prefilled at standard for a sow date: one component per variety with the seed issued
- * (the plan's grams per tray times the trays, plus the shrink allowance as normal scrap before
- * sowing), the harvest weight from the record, packed as harvested; the medium, nutrient and
- * light consumed on the first component for the trace; every stage record empty. The operator
- * types what differed and signs.
+ * A record prefilled at standard for a sow date: one lot per variety with the seed issued (the
+ * plan's grams per tray times the trays, plus the shrink allowance as normal scrap before
+ * sowing) and the harvest weight from the variety record, packed as harvested; the medium and
+ * nutrient issued at the plan's quantity per tray times the trays, with the allowance; every
+ * stage record empty. The operator types what differed and signs.
  */
 export function growSowingPrefill(
   carrier: GrowPlanCarrier,
@@ -97,29 +96,25 @@ export function growSowingPrefill(
   const plan = carrier.plan;
   const costing = costCarrier(carrier);
   const sprout = TRAY_FORMAT_BY_KEY[plan.format].kind === 'sprout';
-  const seeds = seedLines(plan);
-  const nonSeed: LotConsumption[] = costing.lines
-    .filter((l) => l.line.kind !== 'seed' && l.quantity > 0)
-    .map((l) => ({ input: l.label, inputLotCode: 'not recorded', qty: l.quantity * trays, unit: 'each' as const, onFoodTraceabilityList: false }));
-  const components: ComponentExecution[] = seeds.map((line, i) => {
+  const issues: SowingIssue[] = costing.lines
+    .filter((l): l is typeof l & { line: { kind: 'medium' | 'nutrient' } } => (l.line.kind === 'medium' || l.line.kind === 'nutrient') && l.quantity > 0)
+    .map((l) => ({ kind: l.line.kind, input: lineLabel(l.line, varieties), lotCode: 'not recorded', qty: l.quantity * trays * (1 + shrinkAllowance), unit: l.quantityUnit }));
+  const lots: VarietyLot[] = seedLines(plan).map((line, i) => {
     const v = varieties[line.varietyKey];
-    const name = v?.name ?? line.varietyKey;
-    const seedLb = (line.gramsPerTray.value * trays) / GRAMS_PER_LB;
-    const harvestLb = v ? (v.harvestGramsPer1020.value * (sprout ? 1 : costing.format.densityFactor.value) * line.share * trays) / GRAMS_PER_LB : seedLb;
-    const allowanceLb = seedLb * shrinkAllowance;
+    const seedG = line.gramsPerTray.value * trays;
+    const harvestG = v ? v.harvestGramsPer1020.value * (sprout ? 1 : costing.format.densityFactor.value) * line.share * trays : 0;
+    const allowanceG = seedG * shrinkAllowance;
     return {
-      component: name,
+      varietyKey: line.varietyKey,
+      variety: v?.name ?? line.varietyKey,
+      seedLotCode: 'not recorded',
+      onFoodTraceabilityList: sprout,
+      seedIssuedG: seedG + allowanceG,
+      shrinkAllowanceG: allowanceG,
+      harvestedG: harvestG,
+      packedG: harvestG,
       outputLotCode: v ? growLotCode(plan.code, sowDate, v, sequence) : `${plan.code}-${sowDate}-${i + 1}`,
-      consumed: [
-        { input: name, inputLotCode: 'not recorded', qty: seedLb + allowanceLb, unit: 'lb' as const, onFoodTraceabilityList: sprout },
-        ...(i === 0 ? nonSeed : []),
-      ],
-      seedIssuedLb: seedLb + allowanceLb,
-      harvestedLb: harvestLb,
-      blackoutLb: harvestLb,
-      packedLb: harvestLb,
-      shrinkAllowanceLb: allowanceLb,
-      scrap: allowanceLb > 0 ? [{ reason: 'TRIM' as const, lb: allowanceLb, stage: 'PREP' as const, note: `Standard shrink allowance, ${(shrinkAllowance * 100).toFixed(1)}% of the seed issued: seed sorted out before sowing` }] : [],
+      scrap: allowanceG > 0 ? [{ reason: 'TRIM' as const, g: allowanceG, stage: 'SOW' as const, note: `Standard shrink allowance, ${(shrinkAllowance * 100).toFixed(1)}% of the seed issued: seed sorted out before sowing` }] : [],
     };
   });
   return {
@@ -131,7 +126,8 @@ export function growSowingPrefill(
     goodUnits: trays,
     sowingsRun: 1,
     servingsProduced: null,
-    components,
+    lots,
+    issues,
     crew: [],
     actualLaborHours: null,
     actualLaborRate: null,

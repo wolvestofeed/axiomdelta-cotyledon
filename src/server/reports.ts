@@ -266,19 +266,19 @@ const productionHistory: Builder = (ctx) => {
   const R = selected.inputs;
   const sowings = selected.bundle.sowings;
   const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
-  interface MonthAcc { records: number; loads: number; planned: number; good: number; balanced: number; scrapLb: number }
+  interface MonthAcc { records: number; loads: number; planned: number; good: number; balanced: number; scrapG: number }
   const months = new Map<string, MonthAcc>();
   const detail: ReportRow[] = [];
   const sorted = [...sowings].sort((a, b) => a.productionDate.localeCompare(b.productionDate) || a.sowingId.localeCompare(b.sowingId));
   for (const b of sorted) {
     const m = monthOf(b.productionDate);
-    const acc = months.get(m) ?? { records: 0, loads: 0, planned: 0, good: 0, balanced: 0, scrapLb: 0 };
+    const acc = months.get(m) ?? { records: 0, loads: 0, planned: 0, good: 0, balanced: 0, scrapG: 0 };
     let balanced = false;
-    let scrapLb = 0;
+    let scrapG = 0;
     try {
       const mb = massBalance(toSowingExecution(b));
       balanced = mb.balanced;
-      scrapLb = mb.totalScrapLb;
+      scrapG = mb.totalScrapG;
     } catch {
       balanced = false;
     }
@@ -287,16 +287,16 @@ const productionHistory: Builder = (ctx) => {
     acc.planned += b.plannedUnits;
     acc.good += b.goodUnits;
     acc.balanced += balanced ? 1 : 0;
-    acc.scrapLb += scrapLb;
+    acc.scrapG += scrapG;
     months.set(m, acc);
-    detail.push(row([b.productionDate, b.sowingId, cropPlanName(b.cropPlanCode), b.sowingsRun, num(b.plannedUnits), num(b.goodUnits), b.plannedUnits > 0 ? pct(b.goodUnits / b.plannedUnits, 1) : '—', num(scrapLb, 1), balanced ? 'Balanced' : 'Not balanced'], balanced ? undefined : 'over'));
+    detail.push(row([b.productionDate, b.sowingId, cropPlanName(b.cropPlanCode), b.sowingsRun, num(b.plannedUnits), num(b.goodUnits), b.plannedUnits > 0 ? pct(b.goodUnits / b.plannedUnits, 1) : '—', num(scrapG, 0), balanced ? 'Balanced' : 'Not balanced'], balanced ? undefined : 'over'));
   }
-  const rows = [...months.entries()].map(([m, a]) => row([m, a.records, a.loads, num(a.planned), num(a.good), a.planned > 0 ? pct(a.good / a.planned, 1) : '—', num(a.scrapLb, 1), `${a.balanced} / ${a.records}`]));
-  const t = [...months.values()].reduce((s, a) => ({ records: s.records + a.records, loads: s.loads + a.loads, planned: s.planned + a.planned, good: s.good + a.good, balanced: s.balanced + a.balanced, scrapLb: s.scrapLb + a.scrapLb }), { records: 0, loads: 0, planned: 0, good: 0, balanced: 0, scrapLb: 0 });
-  rows.push(row(['All months', t.records, t.loads, num(t.planned), num(t.good), t.planned > 0 ? pct(t.good / t.planned, 1) : '—', num(t.scrapLb, 1), `${t.balanced} / ${t.records}`], 'total'));
+  const rows = [...months.entries()].map(([m, a]) => row([m, a.records, a.loads, num(a.planned), num(a.good), a.planned > 0 ? pct(a.good / a.planned, 1) : '—', num(a.scrapG, 0), `${a.balanced} / ${a.records}`]));
+  const t = [...months.values()].reduce((s, a) => ({ records: s.records + a.records, loads: s.loads + a.loads, planned: s.planned + a.planned, good: s.good + a.good, balanced: s.balanced + a.balanced, scrapG: s.scrapG + a.scrapG }), { records: 0, loads: 0, planned: 0, good: 0, balanced: 0, scrapG: 0 });
+  rows.push(row(['All months', t.records, t.loads, num(t.planned), num(t.good), t.planned > 0 ? pct(t.good / t.planned, 1) : '—', num(t.scrapG, 0), `${t.balanced} / ${t.records}`], 'total'));
   return {
-    summary: table([{ label: 'Month' }, { label: 'Sows', num: true }, { label: 'Rack loads', num: true }, { label: 'Units planned', num: true }, { label: 'Units packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap lb', num: true }, { label: 'Mass-balanced', num: true }], rows),
-    detail: table([{ label: 'Date' }, { label: 'Sowing' }, { label: 'Crop plan' }, { label: 'Loads', num: true }, { label: 'Planned', num: true }, { label: 'Packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap lb', num: true }, { label: 'Mass balance' }], detail),
+    summary: table([{ label: 'Month' }, { label: 'Sows', num: true }, { label: 'Sowings', num: true }, { label: 'Trays planned', num: true }, { label: 'Trays packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap g', num: true }, { label: 'Mass-balanced', num: true }], rows),
+    detail: table([{ label: 'Date' }, { label: 'Sowing' }, { label: 'Crop plan' }, { label: 'Sowings', num: true }, { label: 'Planned', num: true }, { label: 'Packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap g', num: true }, { label: 'Mass balance' }], detail),
     basis: `Sowing records on ${ctx.worldLabel}. A record is one plan's sowings on one sow day, and the sow is the lot.`,
     empty: sowings.length === 0 ? (selected.kind === 'plan' ? 'The forecast places no sowing.' : 'No sowing record has been closed.') : undefined,
   };

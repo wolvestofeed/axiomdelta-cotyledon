@@ -19,6 +19,7 @@
  */
 
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
+import { issuesOf } from '@/engine/sowing';
 import type { PurchaseOrderLine } from '@/engine';
 import type { RequirementLine } from '@/engine/catalog';
 import { isoAddDays } from '@/engine/orders';
@@ -70,7 +71,7 @@ function drawRaw(lots: RawLot[], input: string, date: string, qty: number, prefe
   return Math.max(0, left);
 }
 
-/** Raw stock on a date: every receipt line is a lot; every sowing record's consumed line is an issue. */
+/** Raw stock on a date: every receipt line is a lot; every sowing record's seed lots and medium and nutrient are issues. */
 export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings: readonly SowingRecordDoc[]; asOf: string }): RawStock {
   const lots: RawLot[] = [];
   for (const r of input.receipts) {
@@ -84,7 +85,7 @@ export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings
   lots.sort((a, b) => a.receivedOn.localeCompare(b.receivedOn) || a.lotCode.localeCompare(b.lotCode));
   const issues = input.sowings
     .filter((b) => b.productionDate <= input.asOf)
-    .flatMap((b) => b.components.flatMap((c) => c.consumed.map((x) => ({ date: b.productionDate, input: x.input, lot: x.inputLotCode, qty: x.qty }))))
+    .flatMap((b) => issuesOf(b).map((x) => ({ date: b.productionDate, input: x.input, lot: x.lotCode, qty: x.qty })))
     .sort((a, b) => a.date.localeCompare(b.date));
   const unmatchedIssues: Record<string, number> = {};
   for (const i of issues) {

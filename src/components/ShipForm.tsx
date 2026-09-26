@@ -107,7 +107,7 @@ export function ShipForm({
         <div className="flex flex-wrap gap-[0.4rem] mb-2!">
           {forCropPlan.map((l) => (
             <button key={l.lotCode} type="button" className={`farm-btn${lots.includes(l.lotCode) ? ' primary' : ''}`} onClick={() => toggleLot(l.lotCode)}>
-              {l.lotCode}<span className="farm-fs-2xs opacity-[0.8]"> · {l.component} · {l.productionDate}</span>
+              {l.lotCode}<span className="farm-fs-2xs opacity-[0.8]"> · {l.variety} · {l.productionDate}</span>
             </button>
           ))}
         </div>

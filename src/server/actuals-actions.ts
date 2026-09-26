@@ -9,8 +9,8 @@ import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/ser
 import { BILL_ACCOUNTS, laborFromCrew, periodOf, periodStart } from '@/engine/actuals';
 import { refuseIfLocked } from '@/server/periods';
 import { appendPosting } from '@/server/posting-log';
-import { massBalance, ABNORMAL_SCRAP_REASONS, type ScrapReason } from '@/engine/sowing';
-import { toSowingExecution } from '@/engine/actuals';
+import { massBalance, SCRAP_REASONS, SCRAP_STAGES } from '@/engine/sowing';
+import { toSowingExecution, type SowingRecordDoc } from '@/engine/actuals';
 import { receiptCoverage } from '@/engine/net-requirements';
 import { withWorkspace } from '@/server/workspace';
 
@@ -40,41 +40,31 @@ function refuse(e: unknown): { ok: false; error: string } {
 }
 
 const ScrapSchema = z.object({
-  reason: z.enum([
-    'TRIM', 'SOW_LOSS', 'UNIT_OVERAGE', 'BLACKOUT_FAILURE', 'TEMPERATURE_EXCURSION',
-    'EQUIPMENT_FAILURE', 'CONTAMINATION', 'DROPPED_OR_DAMAGED', 'RECALL_OR_WITHDRAWAL', 'EXPIRED_SHELF_LIFE',
-  ]),
-  lb: z.number().min(0),
-  stage: z.enum(['PREP', 'SOW', 'BLACKOUT', 'PACK', 'FINISHED']),
+  reason: z.enum(SCRAP_REASONS as [string, ...string[]]),
+  g: z.number().min(0),
+  stage: z.enum(SCRAP_STAGES as [string, ...string[]]),
   note: z.string().max(400).default(''),
 });
 
-const CoolingSchema = z.object({ t0F: z.number(), t2F: z.number(), t6F: z.number(), startedAt: z.string(), endedAt: z.string() });
-
-const ComponentSchema = z.object({
-  component: z.string().min(1),
+const LotSchema = z.object({
+  varietyKey: z.string().min(1),
+  variety: z.string().min(1),
+  seedLotCode: z.string().max(80).default('not recorded'),
+  onFoodTraceabilityList: z.boolean().default(false),
+  seedIssuedG: z.number().min(0),
+  shrinkAllowanceG: z.number().min(0),
+  harvestedG: z.number().min(0),
+  packedG: z.number().min(0),
   outputLotCode: z.string().min(1),
-  consumed: z.array(
-    z.object({
-      input: z.string().min(1),
-      inputLotCode: z.string().max(80).default('not recorded'),
-      qty: z.number().min(0),
-      unit: z.enum(['lb', 'each']),
-      onFoodTraceabilityList: z.boolean().default(false),
-    }),
-  ),
-  seedIssuedLb: z.number().min(0),
-  harvestedLb: z.number().min(0).nullable(),
-  blackoutLb: z.number().min(0).nullable(),
-  packedLb: z.number().min(0),
   scrap: z.array(ScrapSchema).default([]),
-  shrinkAllowanceLb: z.number().min(0).optional(),
-  sowEndTempF: z.number().nullable().optional(),
-  // One stage record per rack load (the sow is the lot); a single object
-  // from an older client is read as one load.
-  cooling: z
-    .union([z.array(CoolingSchema), CoolingSchema.transform((c) => [c])])
-    .optional(),
+});
+
+const IssueSchema = z.object({
+  kind: z.enum(['medium', 'nutrient']),
+  input: z.string().min(1),
+  lotCode: z.string().max(80).default('not recorded'),
+  qty: z.number().min(0),
+  unit: z.string().min(1).max(20),
 });
 
 const StageRecordsSchema = z.object({
@@ -93,7 +83,8 @@ const SowingInput = z.object({
   goodUnits: z.number().min(0),
   sowingsRun: z.number().int().min(1).default(1),
   servingsProduced: z.number().min(0).nullable().default(null),
-  components: z.array(ComponentSchema).min(1),
+  lots: z.array(LotSchema).min(1, 'A sowing record carries at least one variety lot'),
+  issues: z.array(IssueSchema).default([]),
   crew: z
     .array(z.object({ name: z.string().trim().min(1).max(80), hours: z.number().min(0), ratePerHour: z.number().min(0).nullable().default(null) }))
     .default([]),
@@ -101,7 +92,7 @@ const SowingInput = z.object({
   actualLaborRate: z.number().min(0).nullable().default(null),
   closedBy: z.string().trim().min(1, 'A sowing record is signed by the person closing it').max(120),
   notes: z.string().max(2000).nullable().default(null),
-  /** The grow-model fields; absent on a Phase 1-era record. */
+  /** The grow-model fields. */
   format: z.enum(['flat-1020', 'tray-7x11', 'insert-5x5', 'pint-jar']).nullable().default(null),
   traysSown: z.number().min(0).nullable().default(null),
   traysPacked: z.number().min(0).nullable().default(null),
@@ -125,20 +116,7 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
   }
   const d = parsed.data;
 
-  // Every scrap reason resolves to normal or abnormal — a reason outside the
-  // register is not a record.
-  for (const c of d.components) {
-    for (const s of c.scrap) {
-      const r = s.reason as ScrapReason;
-      if (!ABNORMAL_SCRAP_REASONS.has(r) && !['TRIM', 'SOW_LOSS', 'UNIT_OVERAGE'].includes(r)) {
-        return { ok: false, error: `Unknown scrap reason ${s.reason}.` };
-      }
-    }
-  }
-
-  const mb = massBalance(
-    toSowingExecution({ ...d, id: '', closedAt: null, components: d.components }),
-  );
+  const mb = massBalance(toSowingExecution({ ...d, id: '', closedAt: null } as SowingRecordDoc));
   if (!mb.balanced) {
     return { ok: false, error: `The sowing does not mass-balance and cannot close. ${mb.failures.join(' ')}` };
   }
@@ -164,7 +142,8 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
       goodUnits: d.goodUnits,
       sowingsRun: d.sowingsRun,
       servingsProduced: d.servingsProduced,
-      components: d.components,
+      lots: d.lots,
+      issues: d.issues,
       crew: d.crew,
       actualLaborHours,
       actualLaborRate,

@@ -7,13 +7,13 @@
  * Nothing on a planning page ever writes to the ledger — a plan change must not
  * be able to restate the books.
  *
- * The same record carries the FSMA 204 transformation event and the control-point-2
- * cooling measurements, because they are the same physical event as the
- * inventory movement. One capture, three purposes: cost, recall, produce safety.
+ * A sowing is one grow plan sown on one day. It carries one lot per variety, in
+ * grams — the seed issued in and the harvest out — and the medium and nutrient
+ * issued to its trays. The same record is the inventory movement and the FSMA 204
+ * transformation event: one capture, cost and recall.
  */
 
-import type { ComponentCosting } from '@/engine';
-import { assumptions as defaultAssumptions } from '@/data/plan-data';
+import { GRAMS_PER_LB } from '@/data/tray-formats';
 
 // ── Scrap disposition: the field that decides inventory vs period expense ───
 
@@ -27,19 +27,17 @@ import { assumptions as defaultAssumptions } from '@/data/plan-data';
  * format; ISO 22400 draws the same line between planned and actual scrap.
  */
 export type ScrapReason =
-  | 'TRIM' // normal — prep loss inside the standard yield
-  | 'SOW_LOSS' // normal — evaporation and pan loss inside the standard yield
-  | 'UNIT_OVERAGE' // normal — over-packing inside the shrink allowance
-  | 'BLACKOUT_FAILURE' // abnormal — control-point-2 cooling limit not met
+  | 'TRIM' // normal — seed sorted out before sowing, trim at harvest, inside the shrink allowance
   | 'TEMPERATURE_EXCURSION' // abnormal
   | 'EQUIPMENT_FAILURE' // abnormal
-  | 'CONTAMINATION' // abnormal
+  | 'CONTAMINATION' // abnormal — a tray removed at the harvest check
   | 'DROPPED_OR_DAMAGED' // abnormal
   | 'RECALL_OR_WITHDRAWAL' // abnormal
   | 'EXPIRED_SHELF_LIFE'; // abnormal — shelf life exceeded in finished goods
 
+export const SCRAP_REASONS: readonly ScrapReason[] = ['TRIM', 'TEMPERATURE_EXCURSION', 'EQUIPMENT_FAILURE', 'CONTAMINATION', 'DROPPED_OR_DAMAGED', 'RECALL_OR_WITHDRAWAL', 'EXPIRED_SHELF_LIFE'];
+
 export const ABNORMAL_SCRAP_REASONS: ReadonlySet<ScrapReason> = new Set<ScrapReason>([
-  'BLACKOUT_FAILURE',
   'TEMPERATURE_EXCURSION',
   'EQUIPMENT_FAILURE',
   'CONTAMINATION',
@@ -51,125 +49,91 @@ export const ABNORMAL_SCRAP_REASONS: ReadonlySet<ScrapReason> = new Set<ScrapRea
 export const isAbnormalScrap = (r: ScrapReason) => ABNORMAL_SCRAP_REASONS.has(r);
 
 /**
- * Where the loss occurred. PREP is before the sprouting rack — trim, a dropped case at
- * issue — so it leaves the mass before growing and the sow delta is measured
- * on what was actually harvested. The other four are relieved from that WIP stage.
+ * Where the loss occurred, one per work-in-process stage and finished goods. SOW is seed lost
+ * before or at sowing: raw material at its purchase cost. GROW is a tray lost on the shelves,
+ * PACK a tray lost at the harvest check or in packing, FINISHED a packed tray lost after it.
+ * Each is relieved from that stage's account.
  */
-export type ScrapStage = 'PREP' | 'SOW' | 'BLACKOUT' | 'PACK' | 'FINISHED';
-export const SCRAP_STAGES: readonly ScrapStage[] = ['PREP', 'SOW', 'BLACKOUT', 'PACK', 'FINISHED'];
+export type ScrapStage = 'SOW' | 'GROW' | 'PACK' | 'FINISHED';
+export const SCRAP_STAGES: readonly ScrapStage[] = ['SOW', 'GROW', 'PACK', 'FINISHED'];
 
 export interface ScrapEvent {
   reason: ScrapReason;
-  lb: number;
+  /** Grams: seed at SOW, harvest weight at every later stage. */
+  g: number;
   /** Which stage the loss occurred in — it is relieved from that account. */
   stage: ScrapStage;
   note: string;
 }
 
 /**
- * One scrap event split into its normal and abnormal pounds. A normal reason is
- * normal only up to the component's shrink allowance; the pounds beyond it are
+ * One scrap event split into its normal and abnormal grams. A normal reason is
+ * normal only up to the lot's shrink allowance; the grams beyond it are
  * abnormal spoilage (ASC 330-10-30-7) and leave inventory. An abnormal reason
  * is abnormal in full. Events consume the allowance in the order recorded.
  */
 export interface ClassifiedScrap {
   event: ScrapEvent;
-  normalLb: number;
-  abnormalLb: number;
+  normalG: number;
+  abnormalG: number;
 }
 
-export function classifyScrap(c: Pick<ComponentExecution, 'scrap' | 'shrinkAllowanceLb'>): ClassifiedScrap[] {
-  let allowanceLeft = c.shrinkAllowanceLb ?? Number.POSITIVE_INFINITY;
-  return c.scrap.map((event) => {
-    if (isAbnormalScrap(event.reason)) return { event, normalLb: 0, abnormalLb: event.lb };
-    const normalLb = Math.min(event.lb, Math.max(0, allowanceLeft));
-    allowanceLeft -= normalLb;
-    return { event, normalLb, abnormalLb: event.lb - normalLb };
+export function classifyScrap(lot: Pick<VarietyLot, 'scrap' | 'shrinkAllowanceG'>): ClassifiedScrap[] {
+  let allowanceLeft = lot.shrinkAllowanceG;
+  return lot.scrap.map((event) => {
+    if (isAbnormalScrap(event.reason)) return { event, normalG: 0, abnormalG: event.g };
+    const normalG = Math.min(event.g, Math.max(0, allowanceLeft));
+    allowanceLeft -= normalG;
+    return { event, normalG, abnormalG: event.g - normalG };
   });
-}
-
-// ── Lot consumption: the line that relieves inventory AND records the CTE ───
-
-export interface LotConsumption {
-  /** Input line consumed. */
-  input: string;
-  /** Traceability lot code of the input, as received from the supplier. */
-  inputLotCode: string;
-  /** Quantity consumed, in the input's own purchase unit. */
-  qty: number;
-  unit: 'lb' | 'each';
-  /** True when the input sits on the FDA Food Traceability List. */
-  onFoodTraceabilityList: boolean;
 }
 
 // ── The sowing record ────────────────────────────────────────────────────────
 
-/** control-point-2 readings for ONE rack load: °F at 0, 2 and 6 hours, and the clock times of the blackout. */
-export interface StageRecord {
-  t0F: number;
-  t2F: number;
-  t6F: number;
-  startedAt: string;
-  endedAt: string;
-}
-
-/**
- * The stage records on a component, one per rack load, tolerant of the
- * single object records held before the lot was the sow. A record with no
- * readings is an empty list, never a placeholder that reads as data.
- */
-export function stageLoadsOf(c: Pick<ComponentExecution, 'cooling'>): StageRecord[] {
-  const k = c.cooling as StageRecord[] | StageRecord | undefined | null;
-  if (!k) return [];
-  return Array.isArray(k) ? k : [k];
-}
-
-export interface ComponentExecution {
-  component: string;
-  /** Traceability lot code assigned to this component's output. */
+/** One variety's lot on a sowing: the seed issued in and the harvest out, in grams. */
+export interface VarietyLot {
+  varietyKey: string;
+  /** The variety's name: the input a seed receipt is recorded under. */
+  variety: string;
+  /** The seed lot issued, as received from the supplier; 'not recorded' when none was typed. */
+  seedLotCode: string;
+  /** True when the seed sits on the FDA Food Traceability List (sprouts). */
+  onFoodTraceabilityList: boolean;
+  /** Seed issued for the sowing, the shrink allowance included. */
+  seedIssuedG: number;
+  /** The standard shrink allowance inside the issue; normal scrap is normal only up to it. */
+  shrinkAllowanceG: number;
+  /** Harvest weight of the whole sowing, trays later removed at the check included. */
+  harvestedG: number;
+  packedG: number;
+  /** Traceability lot code assigned to this variety's output. */
   outputLotCode: string;
-  /** What was actually drawn from the raw store, by lot. */
-  consumed: LotConsumption[];
-  /** Actual weights at each stage, lb. Cold components skip sow and blackout. */
-  seedIssuedLb: number;
-  harvestedLb: number | null;
-  blackoutLb: number | null;
-  packedLb: number;
   scrap: ScrapEvent[];
-  /**
-   * The standard shrink allowance for this component, lb — the issued weight
-   * carries it, and scrap with a normal reason is normal only up to it. Absent
-   * on records written before the allowance was on the record: every normal
-   * reason is then normal in full.
-   */
-  shrinkAllowanceLb?: number;
-  /**
-   * control-point-1: the minimum internal temperature reached at the end of growing, °F,
-   * for a hot component. Null when not recorded — a gap on the record, never a
-   * pass. The limit is read from the HACCP plan, not stored here.
-   */
-  sowEndTempF?: number | null;
-  /**
-   * control-point-2 measurements for this component's blackout, ONE PER RACK LOAD the sow
-   * filled — as many as the record's `sowingsRun`. The sow is the lot: two racks loaded from one sow are one lot with two cooling
-   * records, and the lot fails control-point-2 if any load fails; a load with no readings
-   * is a gap on the lot, never a pass. Read through `stageLoadsOf`, which also
-   * accepts the single object older records hold.
-   */
-  cooling?: StageRecord[];
+}
+
+/** A medium or nutrient issued to the sowing's trays, in the line's own unit. Light is not issued: it is overhead. */
+export interface SowingIssue {
+  kind: 'medium' | 'nutrient';
+  /** The line's name (`lineLabel`): the input a purchase order and a receipt are recorded under. */
+  input: string;
+  lotCode: string;
+  qty: number;
+  unit: string;
 }
 
 export interface SowingExecution {
   sowingId: string;
   cropPlanCode: string;
-  /** ISO 8601. The production record and the standard cost version both key on it. */
+  /** ISO 8601: the sow date. The standard cost version keys on it. */
   productionDate: string;
-  /** Version of the crop plan standard in force on the production date. */
+  /** Version of the plan standard in force on the sow date. */
   standardVersion: string;
-  plannedUnits: number;
-  /** Units that passed and were packed. Drives everything downstream. */
+  /** Trays (or jars) sown: the basis of the standard. */
+  traysSown: number;
+  /** Trays that passed the harvest check and were packed. */
   goodUnits: number;
-  components: ComponentExecution[];
+  lots: VarietyLot[];
+  issues: SowingIssue[];
   /** Actual direct labor. Null means the sowing ran at standard. */
   actualLaborHours: number | null;
   actualLaborRate: number | null;
@@ -177,149 +141,98 @@ export interface SowingExecution {
   closedBy: string;
 }
 
+/** Every raw-material issue on a sowing, seed in lb as it is received, for the raw stock and the recall trace. */
+export function issuesOf(s: Pick<SowingExecution, 'lots' | 'issues'>): { input: string; lotCode: string; qty: number; unit: string; onFoodTraceabilityList: boolean }[] {
+  return [
+    ...s.lots.map((l) => ({ input: l.variety, lotCode: l.seedLotCode, qty: l.seedIssuedG / GRAMS_PER_LB, unit: 'lb', onFoodTraceabilityList: l.onFoodTraceabilityList })),
+    ...s.issues.map((i) => ({ input: i.input, lotCode: i.lotCode, qty: i.qty, unit: i.unit, onFoodTraceabilityList: false })),
+  ];
+}
+
 // ── The mass balance invariant ──────────────────────────────────────────────
 
-export interface ComponentMassBalance {
-  component: string;
-  seedIssuedLb: number;
-  /** Scrap taken before the sprouting rack (stage PREP); the sow delta is measured on what remains. */
-  prepScrapLb: number;
-  /** Positive where growing added mass (water uptake), negative where it removed it. */
-  sowDeltaLb: number;
-  blackoutLossLb: number;
-  /** Every scrap event on the component, all stages. */
-  scrapLb: number;
-  /** The component's shrink allowance, lb; null when the record carries none. */
-  allowanceLb: number | null;
-  normalScrapLb: number;
-  abnormalScrapLb: number;
-  packedLb: number;
-  /** seedIssued − prepScrap + sowDelta − blackoutLoss − (scrap after prep) − packed. Must be zero. */
-  residualLb: number;
+export interface LotMassBalance {
+  variety: string;
+  seedIssuedG: number;
+  /** Seed lost before or at sowing (stage SOW). */
+  sowScrapG: number;
+  harvestedG: number;
+  /** Harvest lost at the check or in packing (stage PACK). */
+  packScrapG: number;
+  /** Every scrap event on the lot, all stages. */
+  scrapG: number;
+  allowanceG: number;
+  normalScrapG: number;
+  abnormalScrapG: number;
+  packedG: number;
+  /** harvested − pack scrap − packed. Must be zero. */
+  residualG: number;
   balanced: boolean;
 }
 
 export interface MassBalance {
   sowingId: string;
-  components: ComponentMassBalance[];
+  lots: LotMassBalance[];
   balanced: boolean;
-  /** Components whose weights do not reconcile, with the residual named. */
+  /** Lots whose weights do not reconcile, with the residual named. */
   failures: string[];
-  totalSeedIssuedLb: number;
-  totalPackedLb: number;
-  totalScrapLb: number;
-  normalScrapLb: number;
-  abnormalScrapLb: number;
+  totalSeedIssuedG: number;
+  totalHarvestedG: number;
+  totalPackedG: number;
+  totalScrapG: number;
+  normalScrapG: number;
+  abnormalScrapG: number;
 }
 
-/** Tolerance in pounds. Scale weights are not exact; a drifting residual is. */
-export const MASS_BALANCE_TOLERANCE_LB = 0.5;
+/** Tolerance in grams. Scale weights are not exact; a drifting residual is. */
+export const MASS_BALANCE_TOLERANCE_G = 5;
 
 /**
- * Reconcile every stage weight of a sowing.
- *
- * Growing ADDS mass to this crop plan — rice and beans take on water — so the
- * balance carries a signed sow delta rather than a loss. What must hold is that
- * every pound issued is accounted for as packed product, a named loss, or scrap
- * with a reason code. A sowing that does not balance does not close.
+ * Reconcile every weight of a sowing. Growing turns seed into many times its weight, so
+ * seed and harvest are not balanced against each other: the seed side is the issue less
+ * what was lost before sowing, which cannot be negative, and the harvest side must close —
+ * every gram harvested is packed or is scrap with a reason code. A sowing that does not
+ * balance does not close.
  */
-export function massBalance(sowing: SowingExecution): MassBalance {
-  const components: ComponentMassBalance[] = sowing.components.map((c) => {
-    const prepScrapLb = c.scrap.filter((e) => e.stage === 'PREP').reduce((s, e) => s + e.lb, 0);
-    const laterScrapLb = c.scrap.filter((e) => e.stage !== 'PREP').reduce((s, e) => s + e.lb, 0);
-    const intoSproutingRackLb = c.seedIssuedLb - prepScrapLb;
-    const harvestedLb = c.harvestedLb ?? intoSproutingRackLb;
-    const blackoutLb = c.blackoutLb ?? harvestedLb;
-    const sowDeltaLb = harvestedLb - intoSproutingRackLb;
-    const blackoutLossLb = harvestedLb - blackoutLb;
-    const residualLb = intoSproutingRackLb + sowDeltaLb - blackoutLossLb - laterScrapLb - c.packedLb;
-    const classified = classifyScrap(c);
+export function massBalance(sowing: Pick<SowingExecution, 'sowingId' | 'lots'>): MassBalance {
+  const lots: LotMassBalance[] = sowing.lots.map((l) => {
+    const at = (stage: ScrapStage) => l.scrap.filter((e) => e.stage === stage).reduce((s, e) => s + e.g, 0);
+    const sowScrapG = at('SOW');
+    const packScrapG = at('PACK');
+    const residualG = l.harvestedG - packScrapG - l.packedG;
+    const classified = classifyScrap(l);
     return {
-      component: c.component,
-      seedIssuedLb: c.seedIssuedLb,
-      prepScrapLb,
-      sowDeltaLb,
-      blackoutLossLb,
-      scrapLb: prepScrapLb + laterScrapLb,
-      allowanceLb: c.shrinkAllowanceLb ?? null,
-      normalScrapLb: classified.reduce((s, k) => s + k.normalLb, 0),
-      abnormalScrapLb: classified.reduce((s, k) => s + k.abnormalLb, 0),
-      packedLb: c.packedLb,
-      residualLb,
-      balanced: Math.abs(residualLb) <= MASS_BALANCE_TOLERANCE_LB,
+      variety: l.variety,
+      seedIssuedG: l.seedIssuedG,
+      sowScrapG,
+      harvestedG: l.harvestedG,
+      packScrapG,
+      scrapG: l.scrap.reduce((s, e) => s + e.g, 0),
+      allowanceG: l.shrinkAllowanceG,
+      normalScrapG: classified.reduce((s, k) => s + k.normalG, 0),
+      abnormalScrapG: classified.reduce((s, k) => s + k.abnormalG, 0),
+      packedG: l.packedG,
+      residualG,
+      balanced: Math.abs(residualG) <= MASS_BALANCE_TOLERANCE_G && sowScrapG <= l.seedIssuedG + MASS_BALANCE_TOLERANCE_G,
     };
   });
-
+  const g = (x: number) => x.toFixed(0);
   return {
     sowingId: sowing.sowingId,
-    components,
-    balanced: components.every((c) => c.balanced),
-    failures: components
-      .filter((c) => !c.balanced)
-      .map(
-        (c) =>
-          `${c.component}: ${c.residualLb.toFixed(2)} lb unaccounted for (issued ${c.seedIssuedLb.toFixed(1)}, prep scrap ${c.prepScrapLb.toFixed(1)}, sow delta ${c.sowDeltaLb >= 0 ? '+' : ''}${c.sowDeltaLb.toFixed(1)}, blackout loss ${c.blackoutLossLb.toFixed(1)}, scrap after prep ${(c.scrapLb - c.prepScrapLb).toFixed(1)}, packed ${c.packedLb.toFixed(1)}).`,
+    lots,
+    balanced: lots.every((l) => l.balanced),
+    failures: lots
+      .filter((l) => !l.balanced)
+      .map((l) =>
+        l.sowScrapG > l.seedIssuedG + MASS_BALANCE_TOLERANCE_G
+          ? `${l.variety}: ${g(l.sowScrapG)} g of seed scrapped before sowing against ${g(l.seedIssuedG)} g issued.`
+          : `${l.variety}: ${g(l.residualG)} g unaccounted for (harvested ${g(l.harvestedG)}, scrap at the check or in packing ${g(l.packScrapG)}, packed ${g(l.packedG)}).`,
       ),
-    totalSeedIssuedLb: components.reduce((s, c) => s + c.seedIssuedLb, 0),
-    totalPackedLb: components.reduce((s, c) => s + c.packedLb, 0),
-    totalScrapLb: components.reduce((s, c) => s + c.scrapLb, 0),
-    normalScrapLb: components.reduce((s, c) => s + c.normalScrapLb, 0),
-    abnormalScrapLb: components.reduce((s, c) => s + c.abnormalScrapLb, 0),
-  };
-}
-
-/**
- * Build a sowing record that ran exactly to standard, from the costed components.
- * The model's default state: no actuals recorded, so every variance is zero and
- * the ledger shows the standard chain cleanly.
- *
- * The issue carries the shrink allowance: the run buys `units × (1 + shrink)`
- * (accounting policy §5), so the standard issue is that quantity and the
- * allowance itself is on the record as normal TRIM scrap before the sprouting rack.
- * The same pounds then reconcile through sow, blackout and pack to the standard
- * packed weight, and a record issued exactly at standard has no usage variance.
- */
-export function standardSowing(
-  sowingId: string,
-  productionDate: string,
-  units: number,
-  components: ComponentCosting[],
-  standardVersion: string,
-  lotCodeFor: (component: string) => string,
-  cropPlanCode = 'AMK-E-001',
-  shrinkAllowance: number = defaultAssumptions.yield.shrinkAllowance.value,
-): SowingExecution {
-  const OZ_PER_LB = 16;
-  const issueFactor = 1 + shrinkAllowance;
-  return {
-    sowingId,
-    cropPlanCode,
-    productionDate,
-    standardVersion,
-    plannedUnits: units,
-    goodUnits: units,
-    actualLaborHours: null,
-    actualLaborRate: null,
-    closedBy: 'unsigned — standard-cost model, no production record on file',
-    components: components.map((k) => ({
-      component: k.name,
-      outputLotCode: lotCodeFor(k.name),
-      consumed: k.lines.map((l) => ({
-        input: l.name,
-        inputLotCode: 'not recorded',
-        qty: l.seedPerUnit * units * issueFactor,
-        unit: l.unit,
-        onFoodTraceabilityList: Boolean(l.foodTraceabilityList),
-      })),
-      seedIssuedLb: (k.seedOz * units * issueFactor) / OZ_PER_LB,
-      harvestedLb: k.isHot ? (k.harvestedOz * units) / OZ_PER_LB : null,
-      blackoutLb: k.isHot ? (k.blackoutOz * units) / OZ_PER_LB : null,
-      packedLb: (k.packedOz * units) / OZ_PER_LB,
-      shrinkAllowanceLb: (k.seedOz * units * shrinkAllowance) / OZ_PER_LB,
-      scrap:
-        shrinkAllowance > 0
-          ? [{ reason: 'TRIM', lb: (k.seedOz * units * shrinkAllowance) / OZ_PER_LB, stage: 'PREP', note: `Standard shrink allowance, ${(shrinkAllowance * 100).toFixed(1)}% of the issue` }]
-          : [],
-    })),
+    totalSeedIssuedG: lots.reduce((s, l) => s + l.seedIssuedG, 0),
+    totalHarvestedG: lots.reduce((s, l) => s + l.harvestedG, 0),
+    totalPackedG: lots.reduce((s, l) => s + l.packedG, 0),
+    totalScrapG: lots.reduce((s, l) => s + l.scrapG, 0),
+    normalScrapG: lots.reduce((s, l) => s + l.normalScrapG, 0),
+    abnormalScrapG: lots.reduce((s, l) => s + l.abnormalScrapG, 0),
   };
 }

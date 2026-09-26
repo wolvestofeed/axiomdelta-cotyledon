@@ -4,6 +4,7 @@ import { RecordedLinkList } from '@/components/RecordedLinks';
 import { getResolvedActiveInputs } from '@/server/scenarios';
 import { getFarmAccess } from '@/server/access';
 import { loadActuals } from '@/server/actuals';
+import { issuesOf } from '@/engine/sowing';
 import { listOrders } from '@/server/orders';
 import { getLedgerKind, postLedger } from '@/server/ledgers';
 import { LedgerMonthBar, pickMonth } from '@/components/ledger/LedgerMonthBar';
@@ -94,10 +95,10 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
   const traceOf = (sowingId: string) => {
     const doc = sowingByCode.get(sowingId);
     if (!doc) return { suppliers: [] as string[], pickupPoints: [] as string[], outputLots: [] as string[], inputsRecorded: 0, inputsTotal: 0 };
-    const inputs = doc.components.flatMap((c) => c.consumed);
-    const recorded = inputs.filter((l) => l.inputLotCode && l.inputLotCode !== 'not recorded');
-    const suppliers = [...new Set(recorded.map((l) => supplierByLot.get(l.inputLotCode)).filter((s): s is string => Boolean(s)))];
-    const outputLots = doc.components.map((c) => c.outputLotCode).filter(Boolean);
+    const inputs = issuesOf(doc);
+    const recorded = inputs.filter((l) => l.lotCode && l.lotCode !== 'not recorded');
+    const suppliers = [...new Set(recorded.map((l) => supplierByLot.get(l.lotCode)).filter((s): s is string => Boolean(s)))];
+    const outputLots = doc.lots.map((l) => l.outputLotCode).filter(Boolean);
     const pickupPoints = [...new Set(actuals.distributions.filter((d) => d.lotCodes.some((c) => outputLots.includes(c))).map((d) => d.pickupPointName).filter((s): s is string => Boolean(s)))];
     return { suppliers, pickupPoints, outputLots, inputsRecorded: recorded.length, inputsTotal: inputs.length };
   };

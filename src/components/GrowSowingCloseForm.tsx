@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { CheckPill, StatusBadge, num } from '@/components/ui';
 import { recordSowing } from '@/server/actuals-actions';
 import { sowingIdFor, laborFromCrew, type SowingRecordDoc, type CrewHoursLine } from '@/engine/actuals';
-import { massBalance, type ComponentExecution } from '@/engine/sowing';
+import { massBalance, type SowingIssue, type VarietyLot } from '@/engine/sowing';
 import { sowingRecordChecks, type GrowSowingFields, type StageRecords, type GrowRoomReading } from '@/engine/sowing-record';
-import { GRAMS_PER_LB, TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
+import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
 import { STAGE_BY_KEY } from '@/data/stage-schedule';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import type { GrowUnit } from '@/engine/grow-capacity';
@@ -23,7 +23,7 @@ import type { GrowUnit } from '@/engine/grow-capacity';
 type Prefill = Omit<SowingRecordDoc, 'id' | 'closedAt'> & GrowSowingFields;
 
 interface VarietyLine {
-  component: string;
+  variety: string;
   outputLotCode: string;
   seedLot: string;
   /** Seed issued for the sowing, grams, allowance included. */
@@ -61,8 +61,9 @@ export function GrowSowingCloseForm({
   const [traysSown, setTraysSown] = useState(prefill.traysSown);
   const [growUnitKey, setGrowUnitKey] = useState(prefill.growUnitKey ?? growUnits[0]?.key ?? '');
   const [lines, setLines] = useState<VarietyLine[]>(
-    prefill.components.map((c) => ({ component: c.component, outputLotCode: c.outputLotCode, seedLot: '', seedGrams: c.seedIssuedLb * GRAMS_PER_LB, harvestGrams: (c.harvestedLb ?? 0) * GRAMS_PER_LB })),
+    prefill.lots.map((l) => ({ variety: l.variety, outputLotCode: l.outputLotCode, seedLot: '', seedGrams: l.seedIssuedG, harvestGrams: l.harvestedG })),
   );
+  const [issueLots, setIssueLots] = useState<string[]>(prefill.issues.map(() => ''));
   const [records, setRecords] = useState<StageRecords>(prefill.stageRecords);
   const [removed, setRemoved] = useState(0);
   const [removedNote, setRemovedNote] = useState('');
@@ -73,41 +74,36 @@ export function GrowSowingCloseForm({
   const traysPacked = Math.max(0, traysSown - removed);
   const crewTotals = useMemo(() => laborFromCrew(crew), [crew]);
 
-  /** Rescale every weight to the trays typed: the standard per tray times the trays. */
+  /** Rescale every weight and issue to the trays typed: the standard per tray times the trays. */
+  const scale = prefill.traysSown > 0 ? traysSown / prefill.traysSown : 1;
   function rescale(trays: number) {
     const f = prefill.traysSown > 0 ? trays / prefill.traysSown : 1;
     setTraysSown(trays);
-    setLines((ls) => ls.map((l, i) => ({ ...l, seedGrams: prefill.components[i]!.seedIssuedLb * GRAMS_PER_LB * f, harvestGrams: (prefill.components[i]!.harvestedLb ?? 0) * GRAMS_PER_LB * f })));
+    setLines((ls) => ls.map((l, i) => ({ ...l, seedGrams: prefill.lots[i]!.seedIssuedG * f, harvestGrams: prefill.lots[i]!.harvestedG * f })));
   }
 
-  /** The components the ledger reads: seed issued, harvested, packed less the trays removed at the check. */
-  const components = useMemo((): ComponentExecution[] => {
+  /** The lots the ledger reads: seed issued, harvested, packed less the trays removed at the check. */
+  const lots = useMemo((): VarietyLot[] => {
     const share = traysSown > 0 ? removed / traysSown : 0;
-    return prefill.components.map((c, i) => {
+    return prefill.lots.map((lot, i) => {
       const l = lines[i]!;
-      const seedLb = l.seedGrams / GRAMS_PER_LB;
-      const harvestLb = l.harvestGrams / GRAMS_PER_LB;
-      const removedLb = harvestLb * share;
-      const allowanceLb = c.shrinkAllowanceLb ?? 0;
-      const prep = c.scrap.filter((s) => s.stage === 'PREP').map((s) => ({ ...s, lb: Math.min(s.lb, seedLb) }));
-      const scrap = [...prep, ...(removedLb > 0 ? [{ reason: 'CONTAMINATION' as const, lb: removedLb, stage: 'PACK' as const, note: removedNote || `${num(removed)} ${unitWord} removed at the harvest check` }] : [])];
+      const removedG = l.harvestGrams * share;
+      const sown = lot.scrap.filter((x) => x.stage === 'SOW').map((x) => ({ ...x, g: Math.min(x.g, l.seedGrams) }));
+      const scrap = [...sown, ...(removedG > 0 ? [{ reason: 'CONTAMINATION' as const, g: removedG, stage: 'PACK' as const, note: removedNote || `${num(removed)} ${unitWord} removed at the harvest check` }] : [])];
       return {
-        ...c,
-        consumed: c.consumed.map((k, ki) => (ki === 0 ? { ...k, inputLotCode: l.seedLot.trim() || 'not recorded', qty: seedLb } : k)),
-        seedIssuedLb: seedLb,
-        harvestedLb: harvestLb,
-        blackoutLb: harvestLb,
-        packedLb: Math.max(0, harvestLb - removedLb),
-        shrinkAllowanceLb: Math.min(allowanceLb, seedLb),
+        ...lot,
+        seedLotCode: l.seedLot.trim() || 'not recorded',
+        seedIssuedG: l.seedGrams,
+        shrinkAllowanceG: Math.min(lot.shrinkAllowanceG * scale, l.seedGrams),
+        harvestedG: l.harvestGrams,
+        packedG: Math.max(0, l.harvestGrams - removedG),
         scrap,
       };
     });
-  }, [prefill.components, lines, traysSown, removed, removedNote, unitWord]);
+  }, [prefill.lots, lines, traysSown, removed, removedNote, unitWord, scale]);
+  const issues = useMemo((): SowingIssue[] => prefill.issues.map((x, i) => ({ ...x, qty: x.qty * scale, lotCode: issueLots[i]?.trim() || 'not recorded' })), [prefill.issues, issueLots, scale]);
 
-  const balance = useMemo(
-    () => massBalance({ sowingId, cropPlanCode: prefill.cropPlanCode, productionDate: sowDate, standardVersion: prefill.standardVersion, plannedUnits: traysSown, goodUnits: traysPacked, components, actualLaborHours: null, actualLaborRate: null, closedBy: '' }),
-    [sowingId, prefill.cropPlanCode, prefill.standardVersion, sowDate, traysSown, traysPacked, components],
-  );
+  const balance = useMemo(() => massBalance({ sowingId, lots }), [sowingId, lots]);
   const stageRecords = useMemo((): StageRecords => ({ ...records, harvestCheck: { traysPassed: traysPacked, traysRemoved: removed, note: removedNote } }), [records, traysPacked, removed, removedNote]);
   const checks = useMemo(() => sowingRecordChecks(stageRecords, plan), [stageRecords, plan]);
 
@@ -127,7 +123,8 @@ export function GrowSowingCloseForm({
         goodUnits: traysPacked,
         sowingsRun: 1,
         servingsProduced: null,
-        components,
+        lots,
+        issues,
         crew,
         actualLaborHours: crew.length > 0 ? crewTotals.hours : null,
         actualLaborRate: crew.length > 0 ? crewTotals.rate : null,
@@ -173,18 +170,34 @@ export function GrowSowingCloseForm({
           <thead><tr><th>Variety (lot)</th><th>Seed lot received</th><th className="num">Seed issued, g</th><th className="num">Harvest, g</th><th className="num">Packed, g</th></tr></thead>
           <tbody>
             {lines.map((l, i) => (
-              <tr key={l.component}>
-                <td>{l.component}<div className="farm-mono farm-fs-2xs farm-c-faint">{l.outputLotCode}</div></td>
+              <tr key={l.variety}>
+                <td>{l.variety}<div className="farm-mono farm-fs-2xs farm-c-faint">{l.outputLotCode}</div></td>
                 <td><input className="farm-input w-40!" placeholder="not recorded" value={l.seedLot} onChange={(e) => setLine(i, { seedLot: e.target.value })} /></td>
                 <td className="num"><input type="number" min={0} step={1} className="farm-num-input" value={Math.round(l.seedGrams)} onChange={(e) => setLine(i, { seedGrams: Number(e.target.value) })} /></td>
                 <td className="num"><input type="number" min={0} step={1} className="farm-num-input" value={Math.round(l.harvestGrams)} onChange={(e) => setLine(i, { harvestGrams: Number(e.target.value) })} /></td>
-                <td className="num">{num(components[i]!.packedLb * GRAMS_PER_LB, 0)}</td>
+                <td className="num">{num(lots[i]!.packedG, 0)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="farm-kpi-sub mt-1">Seed issued includes the shrink allowance sorted out before sowing. The harvest weight is the whole sowing; a live tray packs what it harvests less the trays removed at the check.</p>
+      {issues.length > 0 && (
+        <div className="farm-scroll-x mt-2">
+          <table className="farm-table compact">
+            <thead><tr><th>Medium and nutrient issued</th><th>Lot received</th><th className="num">Quantity</th></tr></thead>
+            <tbody>
+              {issues.map((x, i) => (
+                <tr key={`${x.kind}-${x.input}`}>
+                  <td>{x.input}<div className="farm-fs-2xs farm-c-faint">{x.kind}</div></td>
+                  <td><input className="farm-input w-40!" placeholder="not recorded" value={issueLots[i] ?? ''} onChange={(e) => setIssueLots((ls) => ls.map((v, j) => (j === i ? e.target.value : v)))} /></td>
+                  <td className="num">{num(x.qty, 1)} {x.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="farm-kpi-sub mt-1">Seed issued includes the shrink allowance sorted out before sowing; the medium and nutrient are the plan&rsquo;s quantity per tray for the trays sown. The harvest weight is the whole sowing; a live tray packs what it harvests less the trays removed at the check.</p>
 
       <div className="grid gap-4 mt-3! md:grid-cols-2">
         <div>

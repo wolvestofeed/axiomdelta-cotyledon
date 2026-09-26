@@ -590,7 +590,8 @@ export function buildPurchaseOrder(
   unitsProduced: number,
   cropPlan: CropPlan,
 ): PurchaseOrder {
-  const lines: PurchaseOrderLine[] = cropPlan.inputs.map((ing) => {
+  // Light is overhead (the fixture's electricity), never bought into raw stock.
+  const lines: PurchaseOrderLine[] = cropPlan.inputs.filter((ing) => ing.lineKind !== 'light').map((ing) => {
     const requiredForProduction = (ing.seedQtyPerSowing * unitsProduced) / cropPlan.sowingUnits;
     const casesToOrder = Math.ceil(requiredForProduction / ing.packSize);
     const extendedCost = casesToOrder * ing.packSize * ing.seedUnitCost;

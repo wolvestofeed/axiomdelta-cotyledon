@@ -12,7 +12,9 @@ const receipt = (id: string, on: string, lines: { input: string; qty: number; lo
 });
 const sowing = (id: string, on: string, consumed: { input: string; qty: number; lot?: string }[]): SowingRecordDoc => ({
   id, sowingId: id, cropPlanCode: 'BROC-01', productionDate: on, standardVersion: 'v', plannedUnits: 0, goodUnits: 0, sowingsRun: 1, servingsProduced: null,
-  components: [{ component: 'c', outputLotCode: 'o', consumed: consumed.map((c) => ({ input: c.input, inputLotCode: c.lot ?? 'not recorded', qty: c.qty, unit: 'lb', onFoodTraceabilityList: false })), seedIssuedLb: 0, harvestedLb: null, blackoutLb: null, packedLb: 0, scrap: [] }],
+  // Each consumed line as an issue in its own unit; the raw stock reads a seed lot the same way.
+  lots: [],
+  issues: consumed.map((c) => ({ kind: 'medium' as const, input: c.input, lotCode: c.lot ?? 'not recorded', qty: c.qty, unit: 'lb' })),
   actualLaborHours: null, actualLaborRate: null, closedBy: null, closedAt: null, notes: null,
 });
 const seed = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);

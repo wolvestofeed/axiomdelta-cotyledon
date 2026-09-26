@@ -135,7 +135,7 @@ describe('the forecast reads no rack', () => {
 });
 
 describe('a Plan sowing record is one plan\'s sowings on one sow day, and the sow is the lot', () => {
-  it('each plan\'s sow day is one record carrying its sowings, trays and labor, one lot per component', () => {
+  it('each plan\'s sow day is one record carrying its sowings, trays and labor, one lot per variety', () => {
     let checked = 0;
     for (const day of t.horizon.productionDays) {
       for (const run of day.runs) {
@@ -145,8 +145,8 @@ describe('a Plan sowing record is one plan\'s sowings on one sow day, and the so
         expect(records[0]!.sowingsRun).toBe(run.sowingsScheduled);
         expect(records.reduce((s, r) => s + r.goodUnits, 0)).toBe(run.produced);
         expect(records.reduce((s, r) => s + (r.actualLaborHours ?? 0), 0)).toBeCloseTo(run.laborHours, 9);
-        // One lot per component per sow: no lot code repeats across the crop plan's records that day.
-        const lots = records.flatMap((r) => r.components.map((c) => c.outputLotCode));
+        // One lot per variety per sow: no lot code repeats across the plan's records that day.
+        const lots = records.flatMap((r) => r.lots.map((l) => l.outputLotCode));
         expect(new Set(lots).size).toBe(lots.length);
         checked += 1;
       }
