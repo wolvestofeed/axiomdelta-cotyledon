@@ -74,7 +74,7 @@ export async function listSubscriptionCycles(): Promise<SubscriptionCycleDef[]> 
 }
 
 const ORDER_STATUSES: OrderStatus[] = ['forecast', 'confirmed', 'distributed'];
-const ORDER_SOURCES: OrderSource[] = ['typed', 'cycle', 'sales', 'portal'];
+const ORDER_SOURCES: OrderSource[] = ['typed', 'cycle', 'subscription', 'sales', 'portal'];
 
 /** Every stored order, oldest date first. */
 export async function listOrders(): Promise<OrderDef[]> {
@@ -85,6 +85,7 @@ export async function listOrders(): Promise<OrderDef[]> {
     subscriberId: r.subscriberId,
     subscriberPickupPointId: r.subscriberPickupPointId,
     subscriberServiceId: r.subscriberServiceId,
+    subscriptionId: r.subscriptionId ?? null,
     channel: r.channel,
     growPlanCode: r.growPlanCode,
     units: r.units,

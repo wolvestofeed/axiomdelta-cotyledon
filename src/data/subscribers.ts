@@ -116,6 +116,8 @@ export interface SubscriberDef {
   source: 'seed' | 'user_built';
   /** Named nutrition targets (outline §4): keys from `nutrition-targets.ts`. Absent = none named. */
   nutritionTargets?: string[];
+  /** The subscriber's subscriptions (0019): standing orders on a cadence at their pickup points. */
+  subscriptions?: import('@/data/subscriptions').SubscriptionDef[];
   pickupPoints: SubscriberPickupPointDef[];
 }
 

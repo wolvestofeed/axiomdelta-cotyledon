@@ -12,6 +12,7 @@ import {
   farmSubscriberServices,
   farmDistributions,
   farmGrowPlans,
+  farmSubscriptions,
 } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/server/access';
@@ -251,14 +252,15 @@ const OrderInput = z.object({
   subscriberId: z.string().uuid(),
   subscriberPickupPointId: z.string().uuid(),
   subscriberServiceId: z.string().uuid().nullable().default(null),
+  subscriptionId: z.string().uuid().nullable().default(null),
   growPlanCode: z.string().min(1, 'Name the grow plan').max(40),
   units: z.number().min(0),
   status: z.enum(['forecast', 'confirmed']).default('forecast'),
   pricePerUnitCents: z.number().int().min(0).nullable().default(null),
   subscriptionCycleId: z.string().uuid().nullable().default(null),
-  source: z.enum(['typed', 'cycle', 'sales', 'portal']).default('typed'),
+  source: z.enum(['typed', 'cycle', 'subscription', 'sales', 'portal']).default('typed'),
   notes: z.string().max(2000).nullable().default(null),
-});
+}).refine((v) => v.subscriberServiceId === null || v.subscriptionId === null, { message: 'An order is from a service or a subscription, not both.' });
 
 /** The pickup point must belong to the subscriber; the order takes the subscriber's channel. */
 async function pickupPointOf(subscriberId: string, subscriberPickupPointId: string): Promise<{ channel: number; pickupPointId: string | null; name: string; subscriberStatus: string } | null> {
@@ -298,6 +300,10 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
     const sv = await db.select({ id: farmSubscriberServices.id }).from(farmSubscriberServices).where(and(eq(farmSubscriberServices.id, d.subscriberServiceId), eq(farmSubscriberServices.subscriberPickupPointId, d.subscriberPickupPointId))).limit(1);
     if (!sv[0]) return { ok: false, error: 'The service is not one of this pickup point’s services.' };
   }
+  if (d.subscriptionId) {
+    const sub = await db.select({ id: farmSubscriptions.id }).from(farmSubscriptions).where(and(eq(farmSubscriptions.id, d.subscriptionId), eq(farmSubscriptions.subscriberPickupPointId, d.subscriberPickupPointId))).limit(1);
+    if (!sub[0]) return { ok: false, error: 'The subscription is not one at this pickup point.' };
+  }
   if (!(await growPlanExists(d.growPlanCode))) return { ok: false, error: `${d.growPlanCode} is not in the grow plan library.` };
   const clash = await db
     .select({ id: farmOrders.id })
@@ -308,10 +314,11 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
         eq(farmOrders.subscriberPickupPointId, d.subscriberPickupPointId),
         eq(farmOrders.growPlanCode, d.growPlanCode),
         d.subscriberServiceId ? eq(farmOrders.subscriberServiceId, d.subscriberServiceId) : isNull(farmOrders.subscriberServiceId),
+        d.subscriptionId ? eq(farmOrders.subscriptionId, d.subscriptionId) : isNull(farmOrders.subscriptionId),
       ),
     )
     .limit(1);
-  if (clash[0]) return { ok: false, error: 'An order for that pickup point, service, date and grow plan is already on file; edit it instead.' };
+  if (clash[0]) return { ok: false, error: 'An order for that pickup point, service or subscription, date and grow plan is already on file; edit it instead.' };
   const inserted = await db
     .insert(farmOrders)
     .values({ ...d, channel: pickupPoint.channel, createdBy: access.userId })

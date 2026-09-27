@@ -1542,7 +1542,10 @@ export const farmOrders = farmSchema.table(
     /** The service the order is for (0071). Null on rows typed before services existed. */
     // @classification: Internal
     subscriberServiceId: uuid('subscriber_service_id').references(() => farmSubscriberServices.id, { onDelete: 'set null' }),
-    /** 'typed' | 'cycle' | 'sales' | 'portal' */
+    /** The subscription the order is a distribution of (0019); null on an order from a service or typed. */
+    // @classification: Internal
+    subscriptionId: uuid('subscription_id'),
+    /** 'typed' | 'cycle' | 'subscription' | 'sales' | 'portal' */
     // @classification: Internal
     source: text('source').notNull().default('typed'),
     // @classification: Internal
@@ -2385,3 +2388,45 @@ export const farmExperiments = farmSchema.table(
 );
 
 export type FarmExperimentRow = typeof farmExperiments.$inferSelect;
+
+/** Subscriptions (migration 0019): a subscriber's standing order at one pickup point, on a cadence, with a dated flat plan. */
+export const farmSubscriptions = farmSchema.table(
+  'subscriptions',
+  {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
+    // @classification: Internal
+    id: uuid('id').primaryKey().defaultRandom(),
+    // @classification: Internal
+    subscriberId: uuid('subscriber_id').notNull(),
+    // @classification: Internal
+    subscriberPickupPointId: uuid('subscriber_pickup_point_id').notNull(),
+    /** 'weekly' | 'biweekly' | 'monthly' */
+    // @classification: Internal
+    cadence: text('cadence').notNull(),
+    /** The first distribution: its weekday, and for a monthly subscription its week of the month, are the cadence's. */
+    // @classification: Internal
+    startDate: date('start_date').notNull(),
+    // @classification: Internal
+    endDate: date('end_date'),
+    /** FlatPlanVersion[]: what each distribution carries, from a distribution date on. */
+    // @classification: Internal
+    flatPlan: jsonb('flat_plan').notNull().default([]),
+    /** Distribution dates skipped. */
+    // @classification: Internal
+    skips: jsonb('skips').notNull().default([]),
+    /** Paused from this distribution date until resumed; null = running. */
+    // @classification: Internal
+    pausedFrom: date('paused_from'),
+    // @classification: Internal
+    notes: text('notes'),
+    // @classification: Internal
+    createdBy: text('created_by'),
+    // @classification: Internal
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // @classification: Internal
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('farm_subscriptions_subscriber_idx').on(t.subscriberId)],
+);
+
+export type FarmSubscriptionRow = typeof farmSubscriptions.$inferSelect;

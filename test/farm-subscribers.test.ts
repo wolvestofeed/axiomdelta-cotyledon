@@ -149,7 +149,7 @@ describe('the resolver derives the channel volumes from subscribers', () => {
 describe('participation — a sales figure from confirmed and distributed orders', async () => {
   const { pickupPointParticipation } = await import('@/engine/participation');
   const order = (date: string, service: string | null, units: number, status: 'forecast' | 'confirmed' | 'distributed') => ({
-    id: `${date}-${service}-${status}`, orderDate: date, subscriberId: 'c', subscriberPickupPointId: 'pickupPoint', subscriberServiceId: service, channel: 1, growPlanCode: 'R', units, status,
+    id: `${date}-${service}-${status}`, orderDate: date, subscriberId: 'c', subscriberPickupPointId: 'pickupPoint', subscriberServiceId: service, subscriptionId: null, channel: 1, growPlanCode: 'R', units, status,
     pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed' as const, notes: null,
   });
 

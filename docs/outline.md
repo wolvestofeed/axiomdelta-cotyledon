@@ -32,7 +32,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 - **Scheduler ↔ Staffing.** The production scheduler reads the internal staff roster and schedule and reports coverage against the plan's labor demand on the Staffing page.
 - **Coaching and bodywork live outside MicroFarm** (Feed The Wolf, the AxiomDelta Coaching Engine, and whatever books in-person sessions). MicroFarm holds a subscriber's nutrition targets, nothing more about them.
 - **Multi-tenant:** every farm is a workspace. Built in from the port, not retrofitted.
-- **Subscriptions:** Stripe recurring billing is a first-class module, bi-weekly and monthly cadences.
+- **Subscriptions:** a first-class module: weekly, every-two-weeks and monthly cadences, each distribution billed through Stripe as it is handed over.
 - **Documents replace, they do not log** (CLAUDE.md §1).
 - **The practice's phases:** home-based microgreens for individuals now; massage school Oct/Nov 2026 to a Texas LMT license Apr/May 2027; massage therapy from summer 2027, still from the house; a commercial facility only when the center is operating well. Only the production facility is in MicroFarm's scope.
 
@@ -107,7 +107,7 @@ A plan also carries the allergens present and the allergen-free claims, as state
 
 **Sowing.** The batch. One grow plan, one sow day, one lot per variety, grow-unit loads, stage records, mass balance (seed issued + water gain − stage loss − scrap = packed), crew hours. Only a closed sowing posts journals. A sowing's output is a count of units in its format; there is no second billable count.
 
-**Subscriber.** A customer with pickup points, a cadence (bi-weekly or monthly), payment terms via Stripe, nutrition targets, and a flat plan (standing composition of grow plans and formats). Restaurants and retail/wholesale customers are the same object on a different channel without nutrition targets.
+**Subscriber.** A customer with pickup points, payment via Stripe, nutrition targets, and subscriptions. A subscription is a standing order at one pickup point: a cadence (weekly, every two weeks, or monthly on the same weekday of the same week of the month) from its first distribution, and a flat plan (the grow plans and units each distribution carries, changed from the next distribution not yet sown). A distribution is skipped, or a subscription paused, only before the distribution's sow date; each distribution is billed as it is handed over, so a skipped or paused one bills nothing. Restaurants and retail/wholesale customers are the same object on a different channel without nutrition targets.
 
 **Nutrition targets.** Per subscriber: named targets (iron, protein, sulforaphane, vitamin C, folate, omega-3, fiber, …). The Flat Builder scores a flat plan against the targets from the variety nutrient profiles, and every benefit it shows cites its source row. This is the reason the facility exists.
 

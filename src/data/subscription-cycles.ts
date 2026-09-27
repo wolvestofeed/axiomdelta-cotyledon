@@ -17,7 +17,7 @@ import type { GrowPlanDef } from '@/data/grow-plan';
 
 export type SubscriptionCycleStatus = 'active' | 'inactive';
 export type OrderStatus = 'forecast' | 'confirmed' | 'distributed';
-export type OrderSource = 'typed' | 'cycle' | 'sales' | 'portal';
+export type OrderSource = 'typed' | 'cycle' | 'subscription' | 'sales' | 'portal';
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   forecast: 'Forecast',
@@ -28,6 +28,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export const ORDER_SOURCE_LABELS: Record<OrderSource, string> = {
   typed: 'Typed',
   cycle: 'Flat plan',
+  subscription: 'Subscription',
   sales: 'Sales workspace',
   portal: 'Subscriber portal',
 };
@@ -73,6 +74,8 @@ export interface OrderDef {
   subscriberPickupPointId: string;
   /** The service the order is for; null on a row typed before services existed. */
   subscriberServiceId: string | null;
+  /** The subscription the order is a distribution of; null on an order from a service or typed. */
+  subscriptionId: string | null;
   channel: number;
   growPlanCode: string;
   units: number;

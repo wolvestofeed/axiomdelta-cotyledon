@@ -111,7 +111,7 @@ describe('flat plans (Roadmap N4a)', () => {
   });
 
   it('a plan for one service wins over the all-services plan on that service only', () => {
-    const unit = { ...base, id: 'unit', subscriberServiceId: 'sv-unit', startDate: '2026-09-01' };
+    const unit = { ...base, id: 'unit', subscriberServiceId: 'sv-unit', subscriptionId: null, startDate: '2026-09-01' };
     expect(flatPlanInForce([base, unit], 'sv-unit', MON)?.id).toBe('unit');
     expect(flatPlanInForce([base, unit], 'sv-breakfast', MON)?.id).toBe('p');
   });
@@ -192,7 +192,7 @@ describe('the order book', () => {
 
   it('a stored order replaces the derived one with the same date, pickup point and grow plan; another grow plan adds', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const confirmed: OrderDef = { id: 'o1', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, growPlanCode: 'BROC-01', units: 450, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: 'CYCLE-SEED-1', source: 'cycle', notes: null };
+    const confirmed: OrderDef = { id: 'o1', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), subscriptionId: null, channel: 1, growPlanCode: 'BROC-01', units: 450, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: 'CYCLE-SEED-1', source: 'cycle', notes: null };
     const extra: OrderDef = { ...confirmed, id: 'o2', growPlanCode: 'PEA-01', units: 40, status: 'forecast', source: 'typed', subscriptionCycleId: null };
     const book = orderBook({ ...base, orders: [confirmed, extra] });
     expect(book).toHaveLength(16);
@@ -211,7 +211,7 @@ describe('the order book', () => {
     custs[0].pricePerUnitCents = 950;
     const s = resolveSubscriberPickupPoints(custs);
     const pickupPoint = custs[0].pickupPoints[1];
-    const typed: OrderDef = { id: 'o', orderDate: MON, subscriberId: custs[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, growPlanCode: 'BROC-01', units: 10, status: 'forecast', pricePerUnitCents: 1200, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
+    const typed: OrderDef = { id: 'o', orderDate: MON, subscriberId: custs[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, subscriptionId: null, channel: 1, growPlanCode: 'BROC-01', units: 10, status: 'forecast', pricePerUnitCents: 1200, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
     const book = orderBook({ ...base, pickupPoints: s, subscribers: custs, orders: [typed] });
     const derived = book.find((o) => o.basis === 'derived');
     expect(derived?.priceBasis).toBe('contract');
@@ -223,7 +223,7 @@ describe('the order book', () => {
 
   it('a stored order outside the range is not in the book; one for a removed pickup point still shows', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const outside: OrderDef = { id: 'x', orderDate: '2026-10-05', subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, growPlanCode: 'BROC-01', units: 1, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
+    const outside: OrderDef = { id: 'x', orderDate: '2026-10-05', subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, subscriptionId: null, channel: 1, growPlanCode: 'BROC-01', units: 1, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
     const orphan: OrderDef = { ...outside, id: 'y', orderDate: MON, subscriberPickupPointId: 'gone', subscriberId: 'gone' };
     const book = orderBook({ ...base, orders: [outside, orphan] });
     expect(book.find((o) => o.id === 'x')).toBeUndefined();
@@ -234,7 +234,7 @@ describe('the order book', () => {
 
   it('summary, revenue and units by grow plan are computed from the book', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const distributed: OrderDef = { id: 'd', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, growPlanCode: 'BROC-01', units: 492, status: 'distributed', pricePerUnitCents: null, distributionId: 'del', subscriptionCycleId: null, source: 'cycle', notes: null };
+    const distributed: OrderDef = { id: 'd', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), subscriptionId: null, channel: 1, growPlanCode: 'BROC-01', units: 492, status: 'distributed', pricePerUnitCents: null, distributionId: 'del', subscriptionCycleId: null, source: 'cycle', notes: null };
     const book = orderBook({ ...base, orders: [distributed] });
     const s = summarizeBook(book);
     expect(s[1].distributedUnits).toBe(492);
@@ -261,7 +261,7 @@ describe('the order book', () => {
 describe('per-pickup-point actual against forecast (Roadmap I4)', () => {
   const row = (over: Partial<BookOrder> & Pick<BookOrder, 'subscriberPickupPointId' | 'orderDate' | 'units' | 'status' | 'basis'>): BookOrder => ({
     key: `${over.orderDate}|${over.subscriberPickupPointId}|R1`, id: over.basis === 'record' ? `id-${over.key ?? Math.random()}` : null,
-    subscriberId: 'c1', subscriberName: 'Elm ISD', pickupPointName: `Pickup point ${over.subscriberPickupPointId}`, subscriberServiceId: null, serviceName: null, distributionPickupPointId: null, channel: 1,
+    subscriberId: 'c1', subscriberName: 'Elm ISD', pickupPointName: `Pickup point ${over.subscriberPickupPointId}`, subscriberServiceId: null, subscriptionId: null, serviceName: null, distributionPickupPointId: null, channel: 1,
     growPlanCode: 'R1', growPlanName: 'Broccoli', source: 'cycle', pricePerUnitCents: 1000, priceBasis: 'channel', distributionId: null, subscriptionCycleId: null, notes: null,
     ...over,
   });

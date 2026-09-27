@@ -28,7 +28,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Flat plan.** A subscriber's standing order: which varieties, which formats, how often.
 
-**Subscription cycle.** The cadence flats arrive: every two weeks or every month.
+**Subscription cycle.** The cadence flats arrive: every week, every two weeks or every month.
 
 **Pickup point.** Where a subscriber collects: the farm, a shared location, or their own address on a delivery route.
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { CADENCE_LABELS } from '@/data/subscriptions';
+
 import { PageControls } from '@/components/PageControls';
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
@@ -50,7 +52,7 @@ const toCents = (d: number) => Math.round(d * 100);
 
 interface OrderForm {
   orderDate: string; subscriberId: string; subscriberPickupPointId: string; subscriberServiceId: string | null; growPlanCode: string; units: number;
-  status: 'forecast' | 'confirmed'; price: number | ''; notes: string; subscriptionCycleId: string | null; source: 'typed' | 'cycle';
+  status: 'forecast' | 'confirmed'; price: number | ''; notes: string; subscriptionCycleId: string | null; subscriptionId: string | null; source: 'typed' | 'cycle' | 'subscription';
 }
 
 export function OrdersClient({
@@ -75,6 +77,7 @@ export function OrdersClient({
   today: string;
 }) {
   const { resolved } = useScenario();
+  const cadenceOf = useMemo(() => new Map(resolved.subscribers.flatMap((c) => (c.subscriptions ?? []).map((x) => [x.id, CADENCE_LABELS[x.cadence]] as const))), [resolved.subscribers]);
   // Plan runs the open forecast's own world; Actual the real farm (Roadmap N6 slice 3).
   const world = useOperationsWorld({ orders: recordedOrders, distributions: recordedDistributions });
   const { orders, distributions } = world;
@@ -149,13 +152,13 @@ export function OrdersClient({
   const subscribersWithPickupPoints = resolved.subscribers.filter((c) => c.status !== 'inactive' && recordsActuals(c.status) && c.pickupPoints.length > 0);
   const emptyOrder = (): OrderForm => {
     const c = subscribersWithPickupPoints[0];
-    return { orderDate: today, subscriberId: c?.id ?? '', subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null, growPlanCode: resolved.growPlan.code, units: 0, status: 'forecast', price: '', notes: '', subscriptionCycleId: null, source: 'typed' };
+    return { orderDate: today, subscriberId: c?.id ?? '', subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null, growPlanCode: resolved.growPlan.code, units: 0, status: 'forecast', price: '', notes: '', subscriptionCycleId: null, subscriptionId: null, source: 'typed' };
   };
   const confirmDerived = (o: BookOrder) =>
-    setOrderForm({ mode: 'create', form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: Math.round(o.units), status: 'confirmed', price: '', notes: '', subscriptionCycleId: o.subscriptionCycleId, source: 'cycle' } });
+    setOrderForm({ mode: 'create', form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: Math.round(o.units), status: 'confirmed', price: '', notes: '', subscriptionCycleId: o.subscriptionCycleId, subscriptionId: o.subscriptionId, source: o.source === 'subscription' ? 'subscription' : 'cycle' } });
   const openEditOrder = (o: BookOrder) => {
     const row = orders.find((x) => x.id === o.id);
-    setOrderForm({ mode: 'edit', id: o.id ?? undefined, form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: o.units, status: o.status === 'confirmed' ? 'confirmed' : 'forecast', price: row?.pricePerUnitCents == null ? '' : fromCents(row.pricePerUnitCents), notes: o.notes ?? '', subscriptionCycleId: o.subscriptionCycleId, source: o.source === 'cycle' ? 'cycle' : 'typed' } });
+    setOrderForm({ mode: 'edit', id: o.id ?? undefined, form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: o.units, status: o.status === 'confirmed' ? 'confirmed' : 'forecast', price: row?.pricePerUnitCents == null ? '' : fromCents(row.pricePerUnitCents), notes: o.notes ?? '', subscriptionCycleId: o.subscriptionCycleId, subscriptionId: o.subscriptionId, source: o.source === 'cycle' || o.source === 'subscription' ? o.source : 'typed' } });
   };
   function submitOrder() {
     if (!orderForm) return;
@@ -164,7 +167,7 @@ export function OrdersClient({
     if (orderForm.mode === 'edit') {
       run(() => updateOrder({ id: orderForm.id, orderDate: f.orderDate, growPlanCode: f.growPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, notes: f.notes || null }), 'Saved the order.');
     } else {
-      run(() => createOrder({ orderDate: f.orderDate, subscriberId: f.subscriberId, subscriberPickupPointId: f.subscriberPickupPointId, subscriberServiceId: f.subscriberServiceId, growPlanCode: f.growPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, subscriptionCycleId: f.subscriptionCycleId, source: f.source, notes: f.notes || null }), `${ORDER_STATUS_LABELS[f.status]} order on file.`);
+      run(() => createOrder({ orderDate: f.orderDate, subscriberId: f.subscriberId, subscriberPickupPointId: f.subscriberPickupPointId, subscriberServiceId: f.subscriberServiceId, growPlanCode: f.growPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, subscriptionCycleId: f.subscriptionCycleId, subscriptionId: f.subscriptionId, source: f.source, notes: f.notes || null }), `${ORDER_STATUS_LABELS[f.status]} order on file.`);
     }
   }
   const setStatus = (o: BookOrder, status: 'forecast' | 'confirmed') => {
@@ -328,7 +331,7 @@ export function OrdersClient({
                   {rows.map((o) => (
                     <tr key={o.key}>
                       <td>{o.subscriberName}<div className="farm-c-faint farm-fs-2xs">{channelLabel(o.channel)}</div></td>
-                      <td>{o.pickupPointName}<div className="farm-c-faint farm-fs-2xs">{o.serviceName ?? 'no service named'}{o.distributionPickupPointId ? ` · distribution pickup point ${o.distributionPickupPointId}` : ''}</div></td>
+                      <td>{o.pickupPointName}<div className="farm-c-faint farm-fs-2xs">{o.serviceName ?? (o.subscriptionId ? `${cadenceOf.get(o.subscriptionId) ?? 'Subscription'} subscription` : 'no service named')}{o.distributionPickupPointId ? ` · distribution pickup point ${o.distributionPickupPointId}` : ''}</div></td>
                       <td>{o.growPlanCode}<div className="farm-c-faint farm-fs-2xs">{o.growPlanName}</div></td>
                       <td className="num">{num(Math.round(o.units))}</td>
                       <td className="num">{money(fromCents(o.pricePerUnitCents))}<div className="farm-c-faint farm-fs-2xs">{o.priceBasis === 'order' ? 'on the order' : o.priceBasis === 'contract' ? 'contracted' : 'channel default'}</div></td>
@@ -358,17 +361,17 @@ export function OrdersClient({
           <div className="flex flex-wrap gap-3 items-end">
             <label className="farm-kpi-sub">Date<br /><input className="farm-input" type="date" value={orderForm.form.orderDate} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, orderDate: e.target.value } })} /></label>
             <label className="farm-kpi-sub">Subscriber<br />
-              <select className="farm-select" value={orderForm.form.subscriberId} disabled={orderForm.mode === 'edit' || orderForm.form.source === 'cycle'} onChange={(e) => { const c = subscribersWithPickupPoints.find((x) => x.id === e.target.value); setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberId: e.target.value, subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null } }); }}>
+              <select className="farm-select" value={orderForm.form.subscriberId} disabled={orderForm.mode === 'edit' || orderForm.form.source !== 'typed'} onChange={(e) => { const c = subscribersWithPickupPoints.find((x) => x.id === e.target.value); setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberId: e.target.value, subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null } }); }}>
                 {(orderForm.mode === 'edit' ? resolved.subscribers : subscribersWithPickupPoints).map((c) => <option key={c.id} value={c.id}>{c.name} · {channelLabel(c.channel)}</option>)}
               </select>
             </label>
             <label className="farm-kpi-sub">Pickup point<br />
-              <select className="farm-select" value={orderForm.form.subscriberPickupPointId} disabled={orderForm.mode === 'edit' || orderForm.form.source === 'cycle'} onChange={(e) => { const pickupPoint = resolved.subscribers.find((c) => c.id === orderForm.form.subscriberId)?.pickupPoints.find((x) => x.id === e.target.value); setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberPickupPointId: e.target.value, subscriberServiceId: pickupPoint?.services[0]?.id ?? null } }); }}>
+              <select className="farm-select" value={orderForm.form.subscriberPickupPointId} disabled={orderForm.mode === 'edit' || orderForm.form.source !== 'typed'} onChange={(e) => { const pickupPoint = resolved.subscribers.find((c) => c.id === orderForm.form.subscriberId)?.pickupPoints.find((x) => x.id === e.target.value); setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberPickupPointId: e.target.value, subscriberServiceId: pickupPoint?.services[0]?.id ?? null } }); }}>
                 {(resolved.subscribers.find((c) => c.id === orderForm.form.subscriberId)?.pickupPoints ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </label>
             <label className="farm-kpi-sub">Service<br />
-              <select className="farm-select" value={orderForm.form.subscriberServiceId ?? ''} disabled={orderForm.mode === 'edit' || orderForm.form.source === 'cycle'} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberServiceId: e.target.value || null } })}>
+              <select className="farm-select" value={orderForm.form.subscriberServiceId ?? ''} disabled={orderForm.mode === 'edit' || orderForm.form.source !== 'typed'} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, subscriberServiceId: e.target.value || null } })}>
                 {(resolved.subscribers.find((c) => c.id === orderForm.form.subscriberId)?.pickupPoints.find((x) => x.id === orderForm.form.subscriberPickupPointId)?.services ?? []).map((sv) => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
               </select>
             </label>
@@ -388,7 +391,7 @@ export function OrdersClient({
             <button type="button" className="farm-btn primary" onClick={submitOrder} disabled={pending || !orderForm.form.subscriberPickupPointId || !orderForm.form.growPlanCode}>Save</button>
             <button type="button" className="farm-btn" onClick={() => setOrderForm(null)} disabled={pending}>Cancel</button>
           </div>
-          {orderForm.form.source === 'cycle' && <p className="farm-kpi-sub mt-2">Confirming writes a row that replaces the forecast order for this pickup point, service, date and grow plan. The volume on Subscribers is unchanged.</p>}
+          {orderForm.form.source !== 'typed' && <p className="farm-kpi-sub mt-2">Confirming writes a row that replaces the forecast order for this pickup point, service, date and grow plan. The volume on Subscribers is unchanged.</p>}
         </Card>
       )}
 

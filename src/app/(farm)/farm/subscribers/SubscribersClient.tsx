@@ -41,6 +41,8 @@ import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data
 import { pickupPointParticipation } from '@/engine/participation';
 import { copyCycleToPlan, flatPlansOf, savedCycles } from '@/engine/flat-plans';
 import { normalizePicks, volumeOn } from '@/engine/services';
+import { SubscriptionsSection } from '@/components/SubscriptionsSection';
+import type { DateRange } from '@/engine/periods';
 import { FORECAST_HORIZON_OPTIONS, type ForecastHorizonYears, type ResolvedServiceForecast, type ResolvedPickupPointForecast } from '@/engine/demand';
 
 /**
@@ -80,6 +82,7 @@ export function SubscribersClient({
   distributionPickupPoints,
   actualUnitsByPickupPointId,
   actualUnitsByPickupPointName,
+  closures,
 }: {
   canEdit: boolean;
   today: string;
@@ -90,6 +93,8 @@ export function SubscribersClient({
   distributionPickupPoints: { id: string; name: string }[];
   actualUnitsByPickupPointId: Record<string, number>;
   actualUnitsByPickupPointName: Record<string, number>;
+  /** Farm closures: no distribution falls on one, and sow dates move off them. */
+  closures: DateRange[];
 }) {
   const { resolved, setForecast } = useScenario();
   const router = useRouter();
@@ -610,6 +615,7 @@ export function SubscribersClient({
                     );
                   })}
                   {c.pickupPoints.length === 0 && <p className="farm-kpi-sub">No pickup points. This subscriber adds no demand until a pickup point is added.</p>}
+                  <SubscriptionsSection subscriber={c} growPlans={resolved.growPlans} unitPriceCents={c.pricePerUnitCents ?? Math.round(ch.price * 100)} closures={closures} today={today} canEdit={recordMode} />
                   {renderPlans(c, included)}
                 </div>
               );

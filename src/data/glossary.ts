@@ -24,7 +24,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
   { key: 'blend', term: 'Blend', tier: 1, definition: 'Two or more varieties grown together in one tray, composed to a nutrition target and named for the benefits it is grown for.', rows: [] },
   { key: 'nutrition-target', term: 'Nutrition target', tier: 1, definition: 'What a subscriber wants more of: iron, protein, vitamin C, sulforaphane, fiber. A flat plan is composed against it.', rows: [] },
   { key: 'flat-plan', term: 'Flat plan', tier: 1, definition: 'A subscriber\'s standing order: which varieties, which formats, how often.', rows: [] },
-  { key: 'subscription-cycle', term: 'Subscription cycle', tier: 1, definition: 'The cadence flats arrive: every two weeks or every month.', rows: [] },
+  { key: 'subscription-cycle', term: 'Subscription cycle', tier: 1, definition: 'The cadence flats arrive: every week, every two weeks or every month.', rows: [] },
   { key: 'pickup-point', term: 'Pickup point', tier: 1, definition: 'Where a subscriber collects: the farm, a shared location, or their own address on a delivery route.', rows: [] },
   { key: 'harvest-window', term: 'Harvest window', tier: 1, definition: 'The days a live tray is at its best for eating. Microgreens are cut when the cotyledons are full and the first true leaves appear.', rows: [] },
   { key: 'cotyledon', term: 'Cotyledon', tier: 1, definition: 'The seed leaves, the first pair to open. Microgreens are harvested at the cotyledon stage or just after.', rows: [] },

@@ -22,6 +22,7 @@ import type { ResolvedPickupPointForecast } from '@/engine/demand';
 import type { DateRange } from '@/engine/periods';
 import { flatPlanGrowPlanOn, flatPlansOf } from '@/engine/flat-plans';
 import { normalizePicks, serviceRunsOn, volumeOn } from '@/engine/services';
+import { subscriptionDistributions } from '@/engine/subscriptions';
 
 // ── Dates (UTC arithmetic on ISO strings; no time zone in play) ─────────────
 
@@ -89,6 +90,8 @@ export interface BookOrder {
   /** The service the order is for; null on a stored row typed before services existed. */
   subscriberServiceId: string | null;
   serviceName: string | null;
+  /** The subscription the order is a distribution of; null on an order from a service or typed. */
+  subscriptionId: string | null;
   /** distribution-pickup-point id when the subscriber pickup point is linked. */
   distributionPickupPointId: string | null;
   channel: number;
@@ -106,8 +109,9 @@ export interface BookOrder {
   notes: string | null;
 }
 
-export const orderKey = (date: string, subscriberPickupPointId: string, growPlanCode: string, subscriberServiceId: string | null = null): string =>
-  `${date}|${subscriberPickupPointId}|${subscriberServiceId ?? ''}|${growPlanCode}`;
+/** The identity a stored row replaces a derived one by; the stream is the order's service or subscription. */
+export const orderKey = (date: string, subscriberPickupPointId: string, growPlanCode: string, streamId: string | null = null): string =>
+  `${date}|${subscriberPickupPointId}|${streamId ?? ''}|${growPlanCode}`;
 
 export interface OrderBookInput {
   /** Pickup points with their services, calendars and the forecast's edits applied (`resolveSubscriberPickupPoints`). */
@@ -170,6 +174,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
           pickupPointName: s.name,
           subscriberServiceId: sv.id,
           serviceName: sv.name,
+          subscriptionId: null,
           distributionPickupPointId: s.pickupPointId,
           channel: s.channel,
           growPlanCode,
@@ -188,6 +193,47 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
     }
   }
 
+  // Derived forecast orders from subscriptions: every distribution the cadence carries, one per flat plan line.
+  for (const c of input.subscribers) {
+    if (c.status === 'inactive') continue;
+    for (const sub of c.subscriptions ?? []) {
+      const pp = c.pickupPoints.find((p) => p.id === sub.subscriberPickupPointId);
+      if (!pp || pp.status === 'inactive') continue;
+      const price = priceFor(null, c.pricePerUnitCents, input.channelPriceCents[c.channel]);
+      for (const d of subscriptionDistributions(sub, input.from, input.to, input.closures)) {
+        if (!d.carried) continue;
+        for (const line of d.lines) {
+          const key = orderKey(d.date, pp.id, line.growPlanCode, sub.id);
+          byKey.set(key, {
+            key,
+            id: null,
+            orderDate: d.date,
+            subscriberId: c.id,
+            subscriberName: c.name,
+            subscriberPickupPointId: pp.id,
+            pickupPointName: pp.name,
+            subscriberServiceId: null,
+            serviceName: null,
+            subscriptionId: sub.id,
+            distributionPickupPointId: pp.pickupPointId,
+            channel: c.channel,
+            growPlanCode: line.growPlanCode,
+            growPlanName: names[line.growPlanCode] ?? line.growPlanCode,
+            units: line.units,
+            status: 'forecast',
+            basis: 'derived',
+            source: 'subscription',
+            pricePerUnitCents: price.cents,
+            priceBasis: price.basis,
+            distributionId: null,
+            subscriptionCycleId: null,
+            notes: null,
+          });
+        }
+      }
+    }
+  }
+
   // Stored rows replace derived ones with the same key.
   const pickupPointIndex = new Map<string, { subscriber: SubscriberDef; pickupPoint: SubscriberDef['pickupPoints'][number] }>();
   for (const c of input.subscribers) for (const s of c.pickupPoints) pickupPointIndex.set(s.id, { subscriber: c, pickupPoint: s });
@@ -197,7 +243,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
     if (o.orderDate < input.from || o.orderDate > input.to) continue;
     const hit = pickupPointIndex.get(o.subscriberPickupPointId);
     const price = priceFor(o.pricePerUnitCents, hit?.subscriber.pricePerUnitCents ?? null, input.channelPriceCents[o.channel]);
-    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriberServiceId);
+    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriberServiceId ?? o.subscriptionId);
     byKey.set(key, {
       key,
       id: o.id,
@@ -208,6 +254,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       pickupPointName: hit?.pickupPoint.name ?? 'Pickup point removed',
       subscriberServiceId: o.subscriberServiceId,
       serviceName: o.subscriberServiceId ? serviceName.get(o.subscriberServiceId) ?? 'Service removed' : null,
+      subscriptionId: o.subscriptionId,
       distributionPickupPointId: hit?.pickupPoint.pickupPointId ?? null,
       channel: o.channel,
       growPlanCode: o.growPlanCode,

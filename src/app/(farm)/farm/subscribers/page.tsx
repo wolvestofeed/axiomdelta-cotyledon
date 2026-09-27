@@ -5,6 +5,7 @@ import { listSubscriptionCycles, listOrders } from '@/server/orders';
 import { pickupPoints as seedPickupPoints } from '@/data/seed-invented';
 import { SubscribersClient } from '@/app/(farm)/farm/subscribers/SubscribersClient';
 import { withWorkspace } from '@/server/workspace';
+import { loadCalendar } from '@/server/periods';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function SubscribersPage() {
 }
 
 async function SubscribersPageInner() {
-  const [access, actuals, cycles, orders] = await Promise.all([getFarmAccess(), loadActuals(), listSubscriptionCycles(), listOrders()]);
+  const [access, actuals, cycles, orders, calendar] = await Promise.all([getFarmAccess(), loadActuals(), listSubscriptionCycles(), listOrders(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
 
   // Actual units distributed to date, by distribution-pickup-point id and by pickup point name, so a
@@ -30,7 +31,7 @@ async function SubscribersPageInner() {
       <PageHeader
         title="Subscribers"
         purpose="Set who is served, where, when and on what, since all demand starts here."
-        functions={['Service calendar', 'Services', 'Units per service', 'Flat plan', 'Editing']}
+        functions={['Subscriptions', 'Service calendar', 'Services', 'Units per service', 'Flat plan']}
         connects={[
           { href: '/farm/prospects', dir: 'from' },
           { href: '/farm/orders', dir: 'to' },
@@ -39,6 +40,8 @@ async function SubscribersPageInner() {
         ]}
         howItWorks={
           <ul>
+            <li>A subscription is a subscriber&rsquo;s standing order at one pickup point: weekly, every two weeks, or monthly on the same weekday of the same week of the month, from its first distribution. Each distribution carries the flat plan in force on its date and is billed as it is handed over.</li>
+            <li>A distribution is skipped only before its sow date, the earliest of its grow plans&rsquo; sow dates; a pause and a flat plan change start at the first distribution not yet sown.</li>
             <li>Each pickup point has its own service calendar. One service is one loading and one harvest.</li>
             <li>Units per service change on the dates entered.</li>
             <li>Each subscriber has its own flat plan.</li>
@@ -57,6 +60,7 @@ async function SubscribersPageInner() {
         distributionPickupPoints={seedPickupPoints.map((s) => ({ id: s.id, name: s.name }))}
         actualUnitsByPickupPointId={actualById}
         actualUnitsByPickupPointName={actualByName}
+        closures={calendar.closures}
       />
     </>
   );
