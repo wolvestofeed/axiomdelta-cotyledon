@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { purchaseLines } from '@/engine/grow-purchase';
 import { phases, assumptions } from '@/data/plan-data';
-import { deriveCapacity, componentCosting } from '@/engine';
+import { deriveCapacity } from '@/engine';
 import {
   periodOf,
   periodEnd,
@@ -37,16 +37,13 @@ function sowingDoc(overrides: Partial<SowingRecordDoc> = {}): SowingRecordDoc {
 }
 
 function receiptDoc(priceFactor = 1): ReceiptDoc {
-  const k = componentCosting(cropPlan);
-  const lines = k.flatMap((c) =>
-    c.lines.map((l) => ({
-      input: l.name,
-      qty: (l.seedQtyPerSowing * sowingSize) / cropPlan.sowingUnits,
-      unit: l.unit,
-      lotCode: `SUP-${l.name.slice(0, 3).toUpperCase()}-01`,
-      unitPriceCents: Math.round(l.seedUnitCost * 100 * priceFactor),
-    })),
-  );
+  const lines = purchaseLines(cropPlan).map((l) => ({
+    input: l.name,
+    qty: l.qtyPerTray * sowingSize,
+    unit: l.unit,
+    lotCode: `SUP-${l.name.slice(0, 3).toUpperCase()}-01`,
+    unitPriceCents: Math.round(l.unitCost * 100 * priceFactor),
+  }));
   return {
     id: 'r1000000-0000-0000-0000-000000000001',
     poId: null,

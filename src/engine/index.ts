@@ -10,12 +10,14 @@
  */
 
 import { costPlan } from '@/engine/grow-costing';
-import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine } from '@/data/plan-data';
+import { capacityInputs as defaultCapacityInputs, assumptions } from '@/data/plan-data';
+import type { GrowPlanDef } from '@/data/grow-plan';
+import { VARIETY_BY_KEY } from '@/data/varieties';
+import { GRAMS_PER_OZ } from '@/data/tray-formats';
+import type { GrowLineCost } from '@/engine/grow-costing';
 import { equipmentSeed } from '@/data/capex';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
-import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
-
-type CropPlan = GrowPlanCarrier;
+type CropPlan = GrowPlanDef;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
  * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
@@ -31,187 +33,71 @@ export function roundDownToNearest(n: number, step: number): number {
   return Math.floor(n / step) * step;
 }
 
-// ── Crop plan costing: dollars are conserved, weight is not ───────────────────
+// ── The cost card per unit ──────────────────────────────────────────────────
 
 /**
- * The four weights one unit of an input passes through, and the cost
- * rate at each. This is the control the model was missing.
- *
- * Growing CONSERVES dollars and CHANGES mass — rice and beans take on water, trim
- * and growing loss remove it — so a single extended cost divided by four
- * different weights gives four different rates. With no rate at any intermediate
- * stage, a packed unit can drift 30% while every dollar on the page stays
- * correct, which is exactly what happened here.
- *
- *   SOWN cost/lb     = SEED cost/lb / trim yield      (trim removes mass, cost stays)
- *   harvested cost/lb = SEED cost/lb / yield to harvest (water adds mass, cost stays)
+ * One line of the cost card at a channel's unit: what it costs per unit, and on a seed line the
+ * weights it carries (seed issued, harvested, packed as harvested on a live tray). The medium,
+ * nutrient and light lines carry cost and no mass.
  */
-export interface InputCost extends InputLine {
-  extCostPerSowing: number; // seedQtyPerSowing x seedUnitCost, at the crop plan's authored sowing
-  costPerUnit: number; // extCostPerSowing / sowingUnits
-  /** As-purchased quantity of one unit, in the line's own unit (lb or each). */
-  seedPerUnit: number;
-  // Weights of one unit, ounces, at each stage of the chain.
+export interface CostedLine extends GrowLineCost {
+  costPerUnit: number;
   seedOz: number;
-  sownOz: number;
   harvestedOz: number;
-  blackoutOz: number;
-  /** What the subscriber receives from this line. */
   packedOz: number;
-  // Cost rates. Null where the line is an each-unit item with no weight basis.
-  seedCostPerLb: number | null;
-  sownCostPerLb: number | null;
-  harvestedCostPerLb: number | null;
-  costPerPackedOz: number | null;
-  /** True when a separate trim observation exists; otherwise SOWN equals SEED. */
-  trimObserved: boolean;
-  /** True when a separate blackout-stage observation exists; otherwise blackout equals harvested. */
-  blackoutObserved: boolean;
 }
 
 export interface CropPlanCosting {
-  lines: InputCost[];
-  /** The units the quantities and the sowing figures below are written for. */
-  sowingUnits: number;
-  inputCostPerSowing: number;
-  inputCostPerUnit: number; // before shrink
+  lines: CostedLine[];
+  /** Line costs and the consumables, per unit, before shrink. */
+  inputCostPerUnit: number;
   shrinkPerUnit: number;
   totalInputCostPerUnit: number; // with shrink
   /** Weight chain for the whole unit, ounces. */
   seedOzPerUnit: number;
-  sownOzPerUnit: number;
   harvestedOzPerUnit: number;
-  blackoutOzPerUnit: number;
   packedOzPerUnit: number;
-  /** The rate the Crop plans page was missing. Includes the shrink allowance. */
+  /** Cost per packed ounce, the shrink allowance included. */
   costPerPackedOz: number;
-  costPerHarvestedLb: number;
-  costPerSeedLb: number;
 }
 
 const OZ_PER_LB = 16;
 
+/**
+ * A grow plan's cost card per unit (`grow-costing.ts`): one tray is the unit, scaled by the
+ * channel's unit factor; the seed lines carry the weight chain (seed grams → harvest grams, packed
+ * as harvested on a live tray), the other lines and the consumables carry cost and no mass; the
+ * shrink allowance on top.
+ */
 export function costCropPlan(
-  cropPlan: CropPlan,
+  plan: GrowPlanDef,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): CropPlanCosting {
-  return costGrowCarrier(cropPlan, shrinkAllowance, unitFactor);
-}
-
-/**
- * A grow plan costed on its four line kinds (`grow-costing.ts`), rendered in the crop plan
- * costing's shape: one tray is the unit, the seed lines carry the weight chain (seed grams →
- * harvest grams, packed as harvested on a live tray), and the medium, nutrient, light and
- * consumable lines carry cost and no mass.
- */
-function costGrowCarrier(cropPlan: GrowPlanCarrier, shrinkAllowance: number, unitFactor: number): CropPlanCosting {
-  const g = costPlan(cropPlan);
-  const rate = (costPerUnit: number, oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
-  const lines: InputCost[] = cropPlan.inputs.map((ing, i) => {
-    const gl = g.lines[i];
-    const costPerUnit = (gl?.costPerTray ?? 0) * unitFactor;
-    const seedOz = ing.unit === 'lb' ? ing.seedQtyPerSowing * OZ_PER_LB * unitFactor : 0;
-    const harvestedOz = ing.unit === 'lb' ? ing.harvestedYieldPerSowing * OZ_PER_LB * unitFactor : 0;
-    return {
-      ...ing,
-      extCostPerSowing: costPerUnit,
-      costPerUnit,
-      seedPerUnit: ing.seedQtyPerSowing * unitFactor,
-      seedOz,
-      sownOz: seedOz,
-      harvestedOz,
-      blackoutOz: harvestedOz,
-      packedOz: harvestedOz,
-      seedCostPerLb: ing.unit === 'lb' ? ing.seedUnitCost : rate(costPerUnit, seedOz),
-      sownCostPerLb: rate(costPerUnit, seedOz),
-      harvestedCostPerLb: rate(costPerUnit, harvestedOz),
-      costPerPackedOz: harvestedOz > 0 ? costPerUnit / harvestedOz : null,
-      trimObserved: false,
-      blackoutObserved: false,
-    };
+  const g = costPlan(plan);
+  const density = g.format.kind === 'sprout' ? 1 : g.format.densityFactor.value;
+  const lines: CostedLine[] = g.lines.map((l) => {
+    const seed = l.line.kind === 'seed';
+    const v = seed ? VARIETY_BY_KEY[(l.line as { varietyKey: string }).varietyKey] : undefined;
+    const seedOz = seed ? (l.quantity / GRAMS_PER_OZ) * unitFactor : 0;
+    const harvestedOz = seed && v ? ((v.harvestGramsPer1020.value * density * (l.line as { share: number }).share) / GRAMS_PER_OZ) * unitFactor : 0;
+    return { ...l, costPerUnit: l.costPerTray * unitFactor, seedOz, harvestedOz, packedOz: harvestedOz };
   });
-  const consumables = g.perTray.consumables * unitFactor;
-  const inputCostPerUnit = lines.reduce((t, l) => t + l.costPerUnit, 0) + consumables;
+  const inputCostPerUnit = lines.reduce((t, l) => t + l.costPerUnit, 0) + g.perTray.consumables * unitFactor;
   const shrinkPerUnit = inputCostPerUnit * shrinkAllowance;
   const totalInputCostPerUnit = inputCostPerUnit + shrinkPerUnit;
   const seedOzPerUnit = lines.reduce((t, l) => t + l.seedOz, 0);
   const harvestedOzPerUnit = lines.reduce((t, l) => t + l.harvestedOz, 0);
   return {
     lines,
-    sowingUnits: 1,
-    inputCostPerSowing: inputCostPerUnit,
     inputCostPerUnit,
     shrinkPerUnit,
     totalInputCostPerUnit,
     seedOzPerUnit,
-    sownOzPerUnit: seedOzPerUnit,
     harvestedOzPerUnit,
-    blackoutOzPerUnit: harvestedOzPerUnit,
     packedOzPerUnit: harvestedOzPerUnit,
     costPerPackedOz: harvestedOzPerUnit > 0 ? totalInputCostPerUnit / harvestedOzPerUnit : 0,
-    costPerHarvestedLb: harvestedOzPerUnit > 0 ? totalInputCostPerUnit / (harvestedOzPerUnit / OZ_PER_LB) : 0,
-    costPerSeedLb: seedOzPerUnit > 0 ? totalInputCostPerUnit / (seedOzPerUnit / OZ_PER_LB) : 0,
   };
-}
-
-// ── Served components: the unit of growing, blackout, lot coding and costing ─
-
-export interface ComponentCosting {
-  name: string;
-  isHot: boolean;
-  /** Stage weights for one unit of this component, ounces. */
-  seedOz: number;
-  sownOz: number;
-  harvestedOz: number;
-  blackoutOz: number;
-  packedOz: number;
-  costPerUnit: number;
-  seedCostPerLb: number | null;
-  harvestedCostPerLb: number | null;
-  costPerPackedOz: number | null;
-  lines: InputCost[];
-}
-
-/** Roll the costed lines up into the components that are actually harvested and packed. */
-export function componentCosting(
-  cropPlan: CropPlan,
-  shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
-  unitFactor = 1,
-): ComponentCosting[] {
-  const costed = costCropPlan(cropPlan, shrinkAllowance, unitFactor).lines;
-  const order: string[] = [];
-  const groups = new Map<string, InputCost[]>();
-  for (const l of costed) {
-    if (!groups.has(l.component)) {
-      groups.set(l.component, []);
-      order.push(l.component);
-    }
-    groups.get(l.component)!.push(l);
-  }
-  return order.map((name) => {
-    const ls = groups.get(name)!;
-    const s = (pick: (l: InputCost) => number) => ls.reduce((a, l) => a + pick(l), 0);
-    const seedOz = s((l) => l.seedOz);
-    const harvestedOz = s((l) => l.harvestedOz);
-    const packedOz = s((l) => l.packedOz);
-    const costPerUnit = s((l) => l.costPerUnit);
-    const perLb = (oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
-    return {
-      name,
-      isHot: ls.some((l) => l.isHotComponent),
-      seedOz,
-      sownOz: s((l) => l.sownOz),
-      harvestedOz,
-      blackoutOz: s((l) => l.blackoutOz),
-      packedOz,
-      costPerUnit,
-      seedCostPerLb: perLb(seedOz),
-      harvestedCostPerLb: perLb(harvestedOz),
-      costPerPackedOz: packedOz > 0 ? costPerUnit / packedOz : null,
-      lines: ls,
-    };
-  });
 }
 
 // ── Fixed overhead absorption on NORMAL CAPACITY (ASC 330-10-30-3) ──────────
@@ -313,60 +199,22 @@ export function absorbOverhead(
 
 // ── Capacity & the derived sowing size ───────────────────────────────────────
 
-/**
- * Canopy mass per unit: the harvested yield of the lines flagged `isHotComponent`,
- * over the authored sowing, per crop plan. The sowing is sized off the grow unit,
- * never off this.
- */
-export function canopyMassPerUnit(
-  cropPlan: CropPlan,
-  unitFactor = 1,
-): number {
-  const hotHarvestedYieldPerSowing = cropPlan.inputs
-    .filter((i) => i.isHotComponent)
-    .reduce((s, i) => s + i.harvestedYieldPerSowing, 0);
-  return (hotHarvestedYieldPerSowing / cropPlan.sowingUnits) * unitFactor;
+/** Canopy mass per unit, pounds: the harvest weight of one tray at the unit factor. The sowing is sized off the grow unit, never off this. */
+export function canopyMassPerUnit(plan: GrowPlanDef, unitFactor = 1): number {
+  return costCropPlan(plan, 0, unitFactor).harvestedOzPerUnit / OZ_PER_LB;
 }
 
-/**
- * Packed unit weight, DERIVED from the crop plan's harvested yields.
- *
- * This is never typed. The weight a subscriber receives is the sum of the HARVESTED
- * component weights — dry beans and dry rice take on water and finish at roughly
- * twice and nearly three times their as-purchased weight, so the as-purchased
- * column is not the packed bowl and must never be presented as it.
- */
+/** Packed unit weight, derived from the harvest weight: a live tray packs what it harvests. */
 export interface PackedUnit {
-  /** Blast-blackout hot components. Drives sowing size. */
-  hotOz: number;
-  /** Cold-packed components sold by weight (cheese). */
-  coldOz: number;
-  /** Each-unit components (tortilla), at their stated unit mass. */
-  eachOz: number;
   /** What the subscriber receives. */
   totalOz: number;
-  /** As-purchased weight per unit — a procurement figure, NOT the packed weight. */
+  /** Seed issued per unit — a procurement figure, not the packed weight. */
   seedOz: number;
 }
 
-export function packedUnitOz(
-  cropPlan: CropPlan,
-  unitFactor = 1,
-): PackedUnit {
-  // One derivation, not two: the weight chain is `costCropPlan`'s; this is the
-  // hot / cold / each split of its packed column.
-  const { lines } = costCropPlan(cropPlan, 0, unitFactor);
-  let hotOz = 0;
-  let coldOz = 0;
-  let eachOz = 0;
-  let seedOz = 0;
-  for (const l of lines) {
-    seedOz += l.seedOz;
-    if (l.unit === 'each') eachOz += l.packedOz;
-    else if (l.isHotComponent) hotOz += l.packedOz;
-    else coldOz += l.packedOz;
-  }
-  return { hotOz, coldOz, eachOz, totalOz: hotOz + coldOz + eachOz, seedOz };
+export function packedUnitOz(plan: GrowPlanDef, unitFactor = 1): PackedUnit {
+  const c = costCropPlan(plan, 0, unitFactor);
+  return { totalOz: c.packedOzPerUnit, seedOz: c.seedOzPerUnit };
 }
 
 export interface CapacityProfile {
@@ -561,22 +409,12 @@ export function costPerUnit(
  * Cost to serve is the management figure that includes it.
  */
 export interface SowingCosting {
-  /** The derived sowing, units — one unit of each Phase 1 grow unit. */
+  /** The derived sowing, trays: what one grow unit takes. */
   sowingUnits: number;
-  /** The units the crop plan's quantities are written for. */
-  authoredUnits: number;
-  /** Sowing ÷ authored: what every authored quantity is multiplied by. */
-  scale: number;
   seedLb: number;
-  sownLb: number;
   harvestedLb: number;
-  blackoutLb: number;
   packedLb: number;
-  /** Harvested pounds over purchased pounds. */
-  yieldHarvestedOverSeed: number;
-  /** Packed pounds over purchased pounds. */
-  yieldPackedOverSeed: number;
-  /** Bulk inputs at as-purchased prices, for the sowing. */
+  /** The sowing's lines and consumables at their prices, before shrink. */
   sowingInputCost: number;
   shrinkAllowance: number;
   sowingInputCostWithShrink: number;
@@ -584,29 +422,20 @@ export interface SowingCosting {
 }
 
 export function sowingCosting(
-  cropPlan: CropPlan,
+  plan: GrowPlanDef,
   cap: CapacityInputs = defaultCapacityInputs,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): SowingCosting {
-  const c = costCropPlan(cropPlan, shrinkAllowance, unitFactor);
-  const sowing = deriveCapacity(cropPlan, cap, unitFactor).sowingSize;
+  const c = costCropPlan(plan, shrinkAllowance, unitFactor);
+  const sowing = deriveCapacity(plan, cap, unitFactor).sowingSize;
   const lb = (ozPerUnit: number) => (ozPerUnit * sowing) / OZ_PER_LB;
-  const seedLb = lb(c.seedOzPerUnit);
-  const harvestedLb = lb(c.harvestedOzPerUnit);
-  const packedLb = lb(c.packedOzPerUnit);
   const sowingInputCost = c.inputCostPerUnit * sowing;
   return {
     sowingUnits: sowing,
-    authoredUnits: cropPlan.sowingUnits,
-    scale: cropPlan.sowingUnits > 0 ? sowing / cropPlan.sowingUnits : 0,
-    seedLb,
-    sownLb: lb(c.sownOzPerUnit),
-    harvestedLb,
-    blackoutLb: lb(c.blackoutOzPerUnit),
-    packedLb,
-    yieldHarvestedOverSeed: seedLb > 0 ? harvestedLb / seedLb : 0,
-    yieldPackedOverSeed: seedLb > 0 ? packedLb / seedLb : 0,
+    seedLb: lb(c.seedOzPerUnit),
+    harvestedLb: lb(c.harvestedOzPerUnit),
+    packedLb: lb(c.packedOzPerUnit),
     sowingInputCost,
     shrinkAllowance,
     sowingInputCostWithShrink: sowingInputCost * (1 + shrinkAllowance),

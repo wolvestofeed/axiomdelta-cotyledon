@@ -291,7 +291,6 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     const g = costPlan(lib);
     const c = costCropPlan(lib, 0);
     expect(c.totalInputCostPerUnit).toBeCloseTo(g.perTray.total, 9);
-    expect(c.inputCostPerSowing).toBeCloseTo(g.perTray.total, 9);
     expect(c.lines[0]!.costPerUnit).toBeCloseTo(g.perTray.seed, 9);
     expect(c.seedOzPerUnit).toBeCloseTo(40 / 28.349523125, 9);
     expect(c.packedOzPerUnit).toBeCloseTo(250 / 28.349523125, 9);

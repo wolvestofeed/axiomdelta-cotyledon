@@ -1,4 +1,5 @@
 import 'server-only';
+import { lineLabel } from '@/data/grow-plan';
 import { getResolvedActiveInputs } from '@/server/scenarios';
 import { listSubscriptionCycles, listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
@@ -40,6 +41,6 @@ export async function nextRunNet(today: string): Promise<{ kind: 'plan' | 'actua
   const stock = rawStockOnHand({ receipts: isPlan ? [] : actuals.receipts, sowings: isPlan ? [] : actuals.sowings, asOf: productionDate });
   const onOrder = openOrders({ purchaseOrders: isPlan ? [] : pos.map((po) => ({ id: po.id, poNumber: po.poNumber, status: po.status, orderedFor: po.orderedFor, supplierId: po.supplierId, supplierName: po.supplierName, lines: po.lines.map((l) => ({ input: l.input, qty: l.qty, unit: l.unit, unitPriceCents: l.unitPriceCents })) })), receipts: isPlan ? [] : actuals.receipts });
   const net = netRequirements({ days: [{ productionDate, lines: day.purchase.lines }], stock, onOrder });
-  const inputNames = [...new Set(inputs.cropPlans.filter((r) => r.status === 'in_service').flatMap((r) => r.inputs.map((i) => i.name)))].sort();
+  const inputNames = [...new Set(inputs.cropPlans.filter((r) => r.status === 'in_service').flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort();
   return { kind, distributionDate, productionDate, lines: net.lines, inputs: inputNames };
 }

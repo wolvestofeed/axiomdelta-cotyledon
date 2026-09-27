@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { phases } from '@/data/plan-data';
-import { componentCosting, deriveCapacity } from '@/engine';
+import { deriveCapacity, purchaseLines } from '@/engine';
 import {
   addMonths,
   agingBucket,
@@ -282,8 +282,7 @@ describe('Phase K — actuals', () => {
   const R0 = resolveScenarioInputs();
   const cropPlan = R0.cropPlan;
   const sowingSize = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
-  const k = componentCosting(cropPlan);
-  const lines = k.flatMap((c) => c.lines.map((l) => ({ input: l.name, qty: (l.seedQtyPerSowing * sowingSize) / cropPlan.sowingUnits, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.seedUnitCost * 100) })));
+  const lines = purchaseLines(cropPlan).map((l) => ({ input: l.name, qty: l.qtyPerTray * sowingSize, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.unitCost * 100) }));
   const r1: ReceiptDoc = { ...receipt('r1', lines, null), receivedOn: '2027-02-02' };
   const pre = standardSowingRecordPrefill('2027-02-03', 1, sowingSize, cropPlan);
   const base: ActualsBundle = {
