@@ -296,15 +296,21 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Yield chain.** Seed weight in, sown weight after soak, harvest weight out, packed weight or unit count. Replaces the kitchen's as-purchased to plated chain.
 
-**Rolling seed cost.** The variety's cost per pound as a weighted average of receipts in force on a date.
+**Last price paid.** A variety's price per pound on its most recent accepted receipt. The plan's price for its seed line.
+
+**Rolling 12-month average.** The dollars over the quantity on the accepted receipt lines of the last twelve months, per variety, medium and nutrient. A key figure; no plan, order or posting uses it.
 
 **Yield per pound.** Observed units, or harvest grams, per pound of seed by format, from closed sowings. The other half of the cost basis.
 
-**Standard cost.** The approved, effective-dated cost a sowing is valued at: seed at rolling cost per pound, medium, nutrients and light energy per the grow plan's lines, over yield per pound, plus consumables and labor.
+**Standard.** An approved, effective-dated version of a grow plan's labor standard, its variable overhead per tray and the fixed overhead rate. A sowing with no crew recorded takes its labor from it; materials are always at the cost of the lots drawn.
 
 **Plan of record.** The one saved forecast the workspace reports against.
 
-**Forecast.** Any saved scenario. Only "forecast" appears on screen.
+**Forecast.** Any saved scenario: business planning over the data already in the system, with labor, costs, packaging, transport and prices adjusted to see revenue and profit. Only "forecast" appears on screen.
+
+**R&D.** The section where new grow plans, mixed trays first, are composed and tested before they go in service.
+
+**Experiment.** A titled run in R&D: one sowing of a developing grow plan, recording harvest grams per variety, the stage checks and its time study. Its cost is Research and Development, not inventory.
 
 **Plan and Actual.** The two ledgers: the forecast's own run, and the recorded facts.
 

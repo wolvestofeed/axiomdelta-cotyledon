@@ -51,6 +51,7 @@ an article to its existing condition and location.
 | Abnormal spoilage | ASC 330-10-30-7 — a current-period charge |
 | Unabsorbed fixed overhead | ASC 330-10-30-3 — expensed as incurred |
 | General and administrative expense | ASC 330-10-30-8 |
+| Research and development: an experiment's sowing, finished or lost | ASC 730-10-25-1 — expensed as incurred (§14) |
 
 Distribution is a selling cost: it is deducted after the
 **cost of a unit** (food, labor, packaging) to reach contribution, and it is excluded
@@ -90,6 +91,7 @@ Staffing surface keeps the accounts it has.
 | 5195 | Variable Manufacturing Overhead Applied | Contra for light, tray wear and sanitizer applied at their standard per tray; the electricity, trays and sanitizer are expensed as billed |
 | 5910 | Abnormal Spoilage | Its own P&L line, never buried in cost of goods sold |
 | 7910 | Marketplace Commissions | Retained by a marketplace on ghost-farm orders; a selling cost (§16) |
+| 7920 | Research and Development | An experiment's sowing at its full cost: materials, labor, overhead applied and absorbed, and any loss (§14) |
 
 **Three WIP stages, not one.** A tray is sown on one day, sits on its grow unit for its
 cycle and is harvested and packed at the end of it. Making each a costing boundary means
@@ -327,6 +329,7 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Record | Posts |
 |---|---|
 | Sowing record | Issue → apply → labor → overhead → sow → grow → pack → finished goods: the seed, medium and nutrient issued at the cost of the lots drawn, labor at the recorded hours and rate (the approved standard where no crew is recorded), variable overhead at its standard per tray and fixed overhead at the rate in force, on the trays sown; abnormal spoilage for trays removed at the check. The sowing's cost per packed unit is kept by element (materials, labor, overhead). No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
+| Experiment | A sowing record of a developing grow plan, run as an experiment in R&D. It posts the sowing chain above, drawing its lots, charging its labor and applying and absorbing overhead as any sowing does, so its cost is built the same way and the lot register and payroll stay whole. At pack its finished goods go to Research and Development (7920) at their cost, and a loss at any stage goes there too rather than to Abnormal Spoilage (5910): a failed experiment is the cost of the research (ASC 730-10-25-1). A tray given away from it is not a distribution and is not revenue. |
 | Receipt | Accepted lines: raw materials by lot at the price received, against goods received not invoiced (2015) at the same amount. A rejected line posts nothing. |
 | Supplier bill | Recorded only when it equals its receipts, line for line in quantity and value; it clears goods received not invoiced and credits the payable at the same amount (§16). |
 | Absorption | A sowing with no approved version in force absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); a version absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
