@@ -47,6 +47,8 @@ const GrowPlanInput = z.object({
   channels: z.array(z.number().int().min(1).max(3)).default([]),
   format: z.enum(['flat-1020', 'tray-7x11', 'insert-5x5', 'pint-jar']),
   note: z.string().max(2000).default(''),
+  allergensPresent: z.string().trim().max(500).default(''),
+  allergenFreeClaims: z.string().trim().max(500).default(''),
   /** Null = the varieties' own days. */
   stageDays: StageDaysIn.nullable().default(null),
   lines: z.array(LineIn).min(1, 'A grow plan needs at least one line'),
@@ -74,6 +76,8 @@ function toGrowPlan(d: z.infer<typeof GrowPlanInput>): GrowPlanDef {
     lines,
     stageDays: d.stageDays === null ? null : tagged(d.stageDays, 'STATED', 'days', TYPED),
     note: d.note,
+    allergensPresent: d.allergensPresent,
+    allergenFreeClaims: d.allergenFreeClaims,
   };
 }
 

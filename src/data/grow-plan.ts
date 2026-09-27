@@ -81,6 +81,10 @@ export interface GrowPlanDef {
   /** Days per stage when the plan departs from its varieties'; null = the varieties' own. */
   stageDays: Tagged<StageDays> | null;
   note: string;
+  /** The allergens the plan's varieties carry, as stated; blank until stated. */
+  allergensPresent: string;
+  /** The allergen-free claims the plan makes, as stated; blank until stated. */
+  allergenFreeClaims: string;
   /**
    * The workspace's Nutrients & Supplements records its nutrient lines name, attached when the
    * library is read so the plan is costed against them; absent, the costing reads the seed list.
@@ -191,6 +195,8 @@ export function singleVarietyPlan(variety: VarietyDef, format: TrayFormatKey = v
     lines,
     stageDays: null,
     note: sprout ? 'Sprouted in a jar on the sprout schedule.' : '',
+    allergensPresent: '',
+    allergenFreeClaims: '',
   };
 }
 

@@ -40,6 +40,8 @@ interface Draft {
   channels: number[];
   format: TrayFormatKey;
   note: string;
+  allergensPresent: string;
+  allergenFreeClaims: string;
   lines: DraftLine[];
 }
 
@@ -68,6 +70,8 @@ function toPlan(d: Draft): GrowPlanDef {
     format: d.format,
     stageDays: null,
     note: d.note,
+    allergensPresent: d.allergensPresent,
+    allergenFreeClaims: d.allergenFreeClaims,
     lines: d.lines.map((l): GrowPlanLine => {
       switch (l.kind) {
         case 'seed':
@@ -111,8 +115,8 @@ export function CropPlanEditor({
   const initial: Draft = useMemo(() => {
     const first = VARIETIES[0]!;
     const base: Draft = plan
-      ? { code: plan.code, name: plan.name, status: plan.status, channels: [...plan.channels], format: plan.format, note: plan.note, lines: plan.lines.map(toDraftLine) }
-      : { code: '', name: first.name, status: 'developing', channels: [1], format: 'flat-1020', note: '', lines: [toDraftLine(seedLineFor(first, 'flat-1020')), { kind: 'medium', mediumKey: first.media.defaultMedium, qtyPerTray: null }, { kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' }, { kind: 'light', regimeKey: first.light.defaultRegime, ppfd: null, startsAt: 'light' }] };
+      ? { code: plan.code, name: plan.name, status: plan.status, channels: [...plan.channels], format: plan.format, note: plan.note, allergensPresent: plan.allergensPresent, allergenFreeClaims: plan.allergenFreeClaims, lines: plan.lines.map(toDraftLine) }
+      : { code: '', name: first.name, status: 'developing', channels: [1], format: 'flat-1020', note: '', allergensPresent: '', allergenFreeClaims: '', lines: [toDraftLine(seedLineFor(first, 'flat-1020')), { kind: 'medium', mediumKey: first.media.defaultMedium, qtyPerTray: null }, { kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' }, { kind: 'light', regimeKey: first.light.defaultRegime, ppfd: null, startsAt: 'light' }] };
     if (mode === 'edit') return base;
     const prefix = codePrefixFor(toPlan(base));
     return { ...base, code: nextCropPlanCode(codes, prefix), name: plan ? `${plan.name} (copy)` : base.name, status: 'developing' };
@@ -203,6 +207,10 @@ export function CropPlanEditor({
         </div>
       </div>
       <label className="farm-kpi-sub block mb-3!">Note<br /><input className="farm-input w-full!" value={d.note} onChange={(e) => set('note', e.target.value)} /></label>
+      <div className="grid gap-3 mb-3! farm-autofit-20">
+        <label className="farm-kpi-sub block">Allergens present<br /><input className="farm-input w-full!" value={d.allergensPresent} placeholder="none stated" onChange={(e) => set('allergensPresent', e.target.value)} /></label>
+        <label className="farm-kpi-sub block">Allergen-free claims<br /><input className="farm-input w-full!" value={d.allergenFreeClaims} placeholder="none stated" onChange={(e) => set('allergenFreeClaims', e.target.value)} /></label>
+      </div>
 
       <div className="flex gap-2 items-center flex-wrap mb-2!">
         <span className="farm-card-title m-0!">Lines — one {TRAY_FORMAT_BY_KEY[d.format].name}</span>

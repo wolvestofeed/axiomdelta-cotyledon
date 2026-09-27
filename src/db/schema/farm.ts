@@ -831,7 +831,7 @@ export const farmSowingRecords = farmSchema.table(
     // @classification: Internal
     sowingId: text('sowing_id').notNull(),
     // @classification: Internal
-    cropPlanCode: text('crop_plan_code').notNull(),
+    cropPlanCode: text('grow_plan_code').notNull(),
     // @classification: Internal
     productionDate: date('production_date').notNull(),
     /** The crop plan standard in force on the production date. */
@@ -1120,7 +1120,7 @@ export const farmStandardVersions = farmSchema.table(
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    cropPlanCode: text('crop_plan_code').notNull(),
+    cropPlanCode: text('grow_plan_code').notNull(),
     // @classification: Internal
     version: integer('version').notNull(),
     // @classification: Internal
@@ -1155,7 +1155,7 @@ export type FarmPeriodBillInsert = typeof farmPeriodBills.$inferInsert;
  * it serves. The code constant in the web app is the seed row, not the source.
  */
 export const farmCropPlans = farmSchema.table(
-  'crop_plans',
+  'grow_plans',
   {
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
@@ -1165,26 +1165,15 @@ export const farmCropPlans = farmSchema.table(
     // @classification: Internal
     name: text('name').notNull(),
     // @classification: Internal
-    category: text('category').notNull().default(''),
-    // @classification: Internal
     status: text('status').notNull().default('developing'),
     /** Expansion phases served, e.g. [1] or [2, 3]. */
     // @classification: Internal
     channels: jsonb('channels').notNull().default([]),
-    // @classification: Internal
-    components: text('components').notNull().default(''),
-    // @classification: Internal
-    productionMethod: text('production_method').notNull().default(''),
+    /** Free text, blank until stated (0014). */
     // @classification: Internal
     allergensPresent: text('allergens_present').notNull().default(''),
     // @classification: Internal
     allergenFreeClaims: text('allergen_free_claims').notNull().default(''),
-    /** The units the input quantities are written for (0065). The production sowing is derived. */
-    // @classification: Internal
-    sowingUnits: integer('sowing_units').notNull().default(100),
-    /** The unit spec block, tagged values, as the engine reads it. */
-    // @classification: Internal
-    spec: jsonb('spec').notNull().default({}),
     /** The grow plan's tray format key (0003). */
     // @classification: Internal
     format: text('format').notNull().default('flat-1020'),
@@ -1207,18 +1196,18 @@ export const farmCropPlans = farmSchema.table(
     // @classification: Internal
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('farm_crop_plans_status_idx').on(t.status)],
+  (t) => [index('farm_grow_plans_status_idx').on(t.status)],
 );
 
 /** One grow plan line; `line` is the typed GrowPlanLine document (seed, medium, nutrient or light). */
 export const farmCropPlanLines = farmSchema.table(
-  'crop_plan_lines',
+  'grow_plan_lines',
   {
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    cropPlanId: uuid('crop_plan_id')
+    cropPlanId: uuid('grow_plan_id')
       .notNull()
       .references(() => farmCropPlans.id, { onDelete: 'cascade' }),
     // @classification: Internal
@@ -1232,7 +1221,7 @@ export const farmCropPlanLines = farmSchema.table(
     // @classification: Internal
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('farm_crop_plan_lines_crop_plan_idx').on(t.cropPlanId, t.position)],
+  (t) => [index('farm_grow_plan_lines_grow_plan_idx').on(t.cropPlanId, t.position)],
 );
 
 export type FarmCropPlanRow = typeof farmCropPlans.$inferSelect;
@@ -1513,7 +1502,7 @@ export const farmSubscriptionCycleDays = farmSchema.table(
     // @classification: Internal
     day: integer('day').notNull(),
     // @classification: Internal
-    cropPlanCode: text('crop_plan_code'),
+    cropPlanCode: text('grow_plan_code'),
     // @classification: Internal
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1544,7 +1533,7 @@ export const farmOrders = farmSchema.table(
     // @classification: Internal
     channel: integer('channel').notNull(),
     // @classification: Internal
-    cropPlanCode: text('crop_plan_code').notNull(),
+    cropPlanCode: text('grow_plan_code').notNull(),
     // @classification: Confidential
     units: doublePrecision('units').notNull(),
     /** 'forecast' | 'confirmed' | 'distributed' */
@@ -2061,13 +2050,13 @@ export const farmPackages = farmSchema.table(
 
 /** The packages a crop plan picks and how many per unit (Roadmap N1, 0059). */
 export const farmCropPlanPackages = farmSchema.table(
-  'crop_plan_packages',
+  'grow_plan_packages',
   {
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    cropPlanId: uuid('crop_plan_id')
+    cropPlanId: uuid('grow_plan_id')
       .notNull()
       .references(() => farmCropPlans.id, { onDelete: 'cascade' }),
     // @classification: Internal
@@ -2081,7 +2070,7 @@ export const farmCropPlanPackages = farmSchema.table(
     // @classification: Internal
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('farm_crop_plan_packages_unique').on(t.cropPlanId, t.packageId), index('farm_crop_plan_packages_package_idx').on(t.packageId)],
+  (t) => [uniqueIndex('farm_grow_plan_packages_unique').on(t.cropPlanId, t.packageId), index('farm_grow_plan_packages_package_idx').on(t.packageId)],
 );
 
 /**
@@ -2134,7 +2123,7 @@ export const farmTimeStudies = farmSchema.table(
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Internal
-    cropPlanId: uuid('crop_plan_id')
+    cropPlanId: uuid('grow_plan_id')
       .notNull()
       .references(() => farmCropPlans.id, { onDelete: 'cascade' }),
     /** Null only on a study recorded without a date (the seeded estimate). */
@@ -2171,7 +2160,7 @@ export const farmTimeStudies = farmSchema.table(
     // @classification: Internal
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('farm_time_studies_crop_plan_idx').on(t.cropPlanId, t.studiedOn)],
+  (t) => [index('farm_time_studies_grow_plan_idx').on(t.cropPlanId, t.studiedOn)],
 );
 
 /** The task lines of a time study (Roadmap O2, 0061). */
@@ -2211,7 +2200,7 @@ export const farmTimeStudyLines = farmSchema.table(
 export const farmTimeStudyIntervals = farmSchema.table('time_study_intervals', {
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal
-  cropPlanId: uuid('crop_plan_id')
+  cropPlanId: uuid('grow_plan_id')
     .primaryKey()
     .references(() => farmCropPlans.id, { onDelete: 'cascade' }),
   // @classification: Internal

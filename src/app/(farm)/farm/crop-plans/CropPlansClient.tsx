@@ -239,6 +239,9 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
             {varietyNamesOf(selected)}
           </div>
         </div>
+        <div className="farm-kpi-sub mt-2!">
+          Allergens present: {selected.allergensPresent || 'none stated'} · Allergen-free claims: {selected.allergenFreeClaims || 'none stated'}
+        </div>
       </Card>
 
       {growCosting && cap.grow && (

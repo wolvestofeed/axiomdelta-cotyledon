@@ -255,7 +255,7 @@ describe('the library: rows round-trip the plan', () => {
   it('a stored plan comes back as written, lines in position order even when stored out of order', () => {
     const { header, lines } = cropPlanToRows(broccoli());
     expect(header.format).toBe('flat-1020');
-    expect(header.sowingUnits).toBe(1);
+    expect(header.allergensPresent).toBe('');
     expect(lines.map((l) => l.name)).toEqual(broccoli().lines.map((l) => lineLabel(l)));
     const back = rowsToGrowPlan({ ...header, id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, [...lines].reverse());
     expect(back).toEqual(broccoli());

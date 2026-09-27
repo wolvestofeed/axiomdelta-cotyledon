@@ -36,6 +36,8 @@ export interface CropPlanHeaderRow {
   format: string;
   stageDays: unknown;
   note: string;
+  allergensPresent: string;
+  allergenFreeClaims: string;
   source: string;
   version: number;
   effectiveFrom: string | Date | null;
@@ -79,6 +81,8 @@ export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPl
     lines: planLines,
     stageDays,
     note: header.note ?? '',
+    allergensPresent: header.allergensPresent ?? '',
+    allergenFreeClaims: header.allergenFreeClaims ?? '',
     ...(nutrients ? { nutrients: nutrientsForPlan({ lines: planLines }, nutrients) } : {}),
   };
 }
@@ -97,7 +101,7 @@ export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPl
 
 /** The header + lines a grow plan writes. Lines keep their order as positions. */
 export function cropPlanToRows(plan: GrowPlanDef): {
-  header: Omit<CropPlanHeaderRow, 'id' | 'version' | 'effectiveFrom' | 'updatedAt'> & { category: string; components: string; productionMethod: string; allergensPresent: string; allergenFreeClaims: string; sowingUnits: number; spec: Record<string, never> };
+  header: Omit<CropPlanHeaderRow, 'id' | 'version' | 'effectiveFrom' | 'updatedAt'>;
   lines: CropPlanLineRow[];
 } {
   return {
@@ -109,14 +113,8 @@ export function cropPlanToRows(plan: GrowPlanDef): {
       format: plan.format,
       stageDays: plan.stageDays,
       note: plan.note,
-      // Phase 1-era columns, kept empty until part 10 drops them.
-      category: '',
-      components: '',
-      productionMethod: '',
-      allergensPresent: '',
-      allergenFreeClaims: '',
-      sowingUnits: 1,
-      spec: {},
+      allergensPresent: plan.allergensPresent,
+      allergenFreeClaims: plan.allergenFreeClaims,
       source: 'user_built',
     },
     lines: plan.lines.map((line, position) => ({ position, name: lineLabel(line), line })),
