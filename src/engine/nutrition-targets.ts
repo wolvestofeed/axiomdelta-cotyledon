@@ -59,6 +59,12 @@ export function scoreFlat(targetKeys: readonly string[], flat: readonly GrowPlan
   return { targets, covered, uncovered: targets.length - covered, share: targets.length > 0 ? covered / targets.length : 1, claims };
 }
 
+/** The catalog keys among those a request names, in catalog order; a key not in the catalog is dropped. */
+export function targetKeysIn(keys: readonly string[]): string[] {
+  const named = new Set(keys);
+  return NUTRITION_TARGETS.filter((t) => named.has(t.key)).map((t) => t.key);
+}
+
 /** The targets a single plan carries, for the plan's own card. */
 export function targetsOfPlan(plan: GrowPlanDef, varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): NutritionTargetDef[] {
   const keys = new Set(planVarieties(plan, varieties).map((v) => v.key));

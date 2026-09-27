@@ -9,6 +9,8 @@ import { VARIETY_BY_KEY, growthFor } from '@/data/varieties';
 import { growPlanProblems, planStageDays, seedLines, GROW_PLAN_CODE_RX } from '@/data/grow-plan';
 import { costPlan } from '@/engine/grow-costing';
 import { purchaseLines } from '@/engine/grow-purchase';
+import { scoreFlat, targetKeysIn } from '@/engine/nutrition-targets';
+import { NUTRITION_TARGETS } from '@/data/nutrition-targets';
 
 const byCode = (code: string) => blendSeed.find((p) => p.code === code)!;
 
@@ -76,5 +78,33 @@ describe('the twelve blends', () => {
     expect(byCode('BLEND-11').note).toContain('UV-C');
     expect(byCode('BLEND-06').lines.find((l) => l.kind === 'light')).toMatchObject({ regimeKey: 'biofortify-far-red' });
     expect(byCode('BLEND-08').lines.find((l) => l.kind === 'light')).toMatchObject({ ppfd: { value: 175, status: 'STATED' } });
+  });
+});
+
+describe('a blend read against a chosen target set', () => {
+  it('keeps the catalog keys a request names, in catalog order, and drops the rest', () => {
+    expect(targetKeysIn(['zinc', 'not-a-target', 'iron'])).toEqual(NUTRITION_TARGETS.filter((t) => t.key === 'iron' || t.key === 'zinc').map((t) => t.key));
+    expect(targetKeysIn([])).toEqual([]);
+  });
+
+  it('is the blend scored as a flat of one: a target is carried when one of its varieties names it', () => {
+    const keys = NUTRITION_TARGETS.map((t) => t.key);
+    for (const p of blendSeed) {
+      const onBlend = new Set(seedLines(p).map((s) => s.varietyKey));
+      const score = scoreFlat(keys, [p], librarySeed);
+      for (const c of score.targets) {
+        expect(c.covered, `${p.code} ${c.target.key}`).toBe(c.target.varieties.some((k) => onBlend.has(k)));
+        expect(c.by.every((b) => onBlend.has(b.variety.key) && b.planCodes.includes(p.code))).toBe(true);
+        expect(c.carriedBy.some((r) => r.code === p.code)).toBe(false);
+      }
+    }
+  });
+
+  it('names the library plans that carry a target the blend does not', () => {
+    const score = scoreFlat(['iron', 'zinc', 'copper', 'diosgenin'], [byCode('BLEND-09')], librarySeed);
+    expect(score.covered).toBe(3);
+    const diosgenin = score.targets.find((c) => c.target.key === 'diosgenin')!;
+    expect(diosgenin.covered).toBe(false);
+    expect(diosgenin.carriedBy.map((r) => r.code)).toContain('FEN-01');
   });
 });
