@@ -2,7 +2,7 @@
  * MicroFarm — the grow plan library's seed: one single-variety plan per variety, built from the
  * variety records (`singleVarietyPlan`), so every figure on a seed plan is the variety's own with
  * its own tag. Microgreens are planned on the 1020 flat, the reference format; sprouts in the pint
- * jar. Mixed trays are composed to nutrition targets and are added when the targets exist (Phase 2
+ * jar. Blends are composed to nutrition targets and are added when the targets exist (Phase 2
  * part 7).
  *
  * The library (`farm.grow_plans`) is the source from first read; this list is inserted when the

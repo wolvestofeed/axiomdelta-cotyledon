@@ -12,7 +12,7 @@
 import { costPlan } from '@/engine/grow-costing';
 import { capacityInputs as defaultCapacityInputs, assumptions } from '@/data/plan-data';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { VARIETY_BY_KEY } from '@/data/varieties';
+import { VARIETY_BY_KEY, growthFor } from '@/data/varieties';
 import { GRAMS_PER_OZ } from '@/data/tray-formats';
 import type { GrowLineCost } from '@/engine/grow-costing';
 import { equipmentSeed } from '@/data/capex';
@@ -80,7 +80,7 @@ export function costPlanPerUnit(
     const seed = l.line.kind === 'seed';
     const v = seed ? VARIETY_BY_KEY[(l.line as { varietyKey: string }).varietyKey] : undefined;
     const seedOz = seed ? (l.quantity / GRAMS_PER_OZ) * unitFactor : 0;
-    const harvestedOz = seed && v ? ((v.harvestGramsPer1020.value * density * (l.line as { share: number }).share) / GRAMS_PER_OZ) * unitFactor : 0;
+    const harvestedOz = seed && v ? ((growthFor(v, g.format.kind !== 'sprout').harvestGramsPer1020.value * density * (l.line as { share: number }).share) / GRAMS_PER_OZ) * unitFactor : 0;
     return { ...l, costPerUnit: l.costPerTray * unitFactor, seedOz, harvestedOz, packedOz: harvestedOz };
   });
   const inputCostPerUnit = lines.reduce((t, l) => t + l.costPerUnit, 0) + g.perTray.consumables * unitFactor;

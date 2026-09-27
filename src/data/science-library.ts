@@ -3,15 +3,16 @@
  *
  * One register keyed by URL. Rows 1–56 are the works cited by the nutritional research review
  * (document A) in its own order; rows 57–60 are the program's other sources; rows 61 onward are
- * the works the agronomy review (document B) adds. `DOCUMENT_ROWS` maps each document's inline
- * superscript numbers to rows, so a claim taken from either document cites the register.
+ * the works the agronomy review (document B) adds; rows 76–92 the clinical and blend review's
+ * (document C) and rows 93–103 the hemp and coir review's (document D). `DOCUMENT_ROWS` maps each
+ * document's inline superscript numbers to rows, so a claim taken from any of them cites the register.
  * Every row is registered on the Sources page through `sources-registry.ts`; a benefit stated
  * to a subscriber names its row (`varieties.ts`).
  */
 
 import type { ReferenceSource } from '@/data/sources-registry';
 
-/** P primary study, R review or meta-analysis, T trial registry, S seed supplier statement, C commercial page (context only). */
+/** P primary study, R review or meta-analysis, T trial registry, S a supplier's statement about its own seed or product, C commercial page (context only). */
 export type SourceGrade = 'P' | 'R' | 'T' | 'S' | 'C';
 
 export interface ScienceSource {
@@ -102,6 +103,36 @@ export const SCIENCE_SOURCES: readonly ScienceSource[] = [
   { row: 73, title: 'Effect of Low Light Intensity With Supplemental Far-Red Light on Broccoli Microgreens', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12208883/' },
   { row: 74, title: 'Effects of LED lighting on the nutritional properties and microbial quality of microgreens', grade: 'P', url: 'https://www.frontiersin.org/journals/nutrition/articles/10.3389/fnut.2026.1869208/full' },
   { row: 75, title: 'Continuous LED Lighting Enhances Yield and Nutritional Value of Brassica Microgreens', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8781578/' },
+  // ── Document C: Clinical Research and Blend Optimization for Specific Microgreen Varieties ──
+  { row: 76, title: 'Metabolomics and bioactive attributes of fenugreek microgreens: antioxidant, antibacterial and antibiofilm potential', grade: 'P', url: 'https://www.researchgate.net/publication/381002330_Metabolomics_and_bioactive_attributes_of_fenugreek_microgreens_Insights_into_antioxidant_antibacterial_and_antibiofilm_potential' },
+  { row: 77, title: 'Bioactive Potential and Health Benefits of Trigonella foenum-graecum', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12411738/' },
+  { row: 78, title: 'Antioxidant and Antimicrobial Effects of Baby Leaves of Amaranthus tricolor in Correlation with Their Phytochemical Composition', grade: 'P', url: 'https://www.researchgate.net/publication/368079287_Antioxidant_and_Antimicrobial_Effects_of_Baby_Leaves_of_Amaranthus_tricolor_L_Harvested_as_Vegetable_in_Correlation_with_Their_Phytochemical_Composition' },
+  { row: 79, title: 'Recent Advances in the Therapeutic Potential of Bioactive Compounds', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12157067/' },
+  { row: 80, title: 'Extraction of Antioxidants from Borage (Borago officinalis L.) Leaves', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC4665488/' },
+  { row: 81, title: 'Phenolic Profile and Comparison of the Antioxidant, Anti-Ageing Activities', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC9865334/' },
+  { row: 82, title: 'Pressurized Liquid Extraction of Bioactive Compounds from Seeds', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12191721/' },
+  { row: 83, title: 'Boost Your Health with Borage Microgreens: A Nutritional Guide', grade: 'C', url: 'https://microgreensworld.com/borage-microgreens-nutrition/' },
+  { row: 84, title: 'Borage (PubMed)', grade: 'R', url: 'https://pubmed.ncbi.nlm.nih.gov/30000849/' },
+  { row: 85, title: 'Borago officinalis seed oil (BSO), a natural source of omega-6 fatty acids', grade: 'P', url: 'https://pubmed.ncbi.nlm.nih.gov/30043014/' },
+  { row: 86, title: 'Protective Effect of Borage Seed Oil and Gamma Linolenic Acid on DNA', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3584109/' },
+  { row: 87, title: 'Protective effect of borage seed oil and gamma linolenic acid on DNA (PubMed copy of row 86)', grade: 'P', url: 'https://pubmed.ncbi.nlm.nih.gov/23460824/' },
+  { row: 88, title: 'Cancer Prevention and Health Benefices of Traditionally Consumed Borago officinalis', grade: 'P', url: 'https://pubmed.ncbi.nlm.nih.gov/26797631/' },
+  { row: 89, title: 'The protective effects of omega-6 fatty acids (PubMed)', grade: 'P', url: 'https://pubmed.ncbi.nlm.nih.gov/11122253/' },
+  { row: 90, title: 'Multifunctional Edible Amaranths: A Review of Nutritional Benefits', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12785712/' },
+  { row: 91, title: 'Botany, ethnomedicine, phytochemistry and pharmacology of Amaranthus spp.: a review', grade: 'R', url: 'https://www.researchgate.net/publication/389401145_Botany_ethnomedicine_phytochemistry_and_pharmacology_of_Amaranthus_spp-_a_review' },
+  { row: 92, title: 'The amaranth seeds as a source of nutrients and bioactive substances in human diet', grade: 'R', url: 'https://www.researchgate.net/publication/348138296_THE_AMARANTH_SEEDS_AS_A_SOURCE_OF_NUTRIENTS_AND_BIOACTIVE_SUBSTANCES_IN_HUMAN_DIET' },
+  // ── Document D: Comparative Analysis of Hemp Mats and Coco Coir ──
+  { row: 93, title: '(Comparison) Best Growing Mediums for Microgreens — HerbSpeak', grade: 'C', url: 'https://herbspeak.com/microgreens-growing-mediums/' },
+  { row: 94, title: 'Coco Coir vs Hemp Grow Mats: An Honest Comparison — TerraFibre', grade: 'S', url: 'https://terrafibre.ca/pages/coco-coir-vs-hemp-grow-mats/' },
+  { row: 95, title: 'Multipurpose Biodegradable Fiber Mats and Mulch Sheets in Agriculture — PlantArc', grade: 'C', url: 'https://plantarc.com/multipurpose-biodegradable-fiber-mats-and-mulch-sheets-in-agriculture-applications-in-microgreen-production-and-weed-suppression/' },
+  { row: 96, title: 'Microgreen Growing Mediums: What We Found to be the Best — Home Microgreens', grade: 'C', url: 'https://homemicrogreens.com/microgreen-growing-mediums-2/' },
+  { row: 97, title: 'Microgreen Mats — FAQ and Guidance (microgreen-mats.com)', grade: 'S', url: 'https://microgreen-mats.com/microgreen-mats-faq-guidance/' },
+  { row: 98, title: 'Best Growing Mats for Microgreens: A Handy Comparison — RusticWise', grade: 'C', url: 'https://rusticwise.com/best-growing-mats-for-microgreens/' },
+  { row: 99, title: 'Biodegradable Grow Mats for Microgreens: A Complete Guide — Microgreens World', grade: 'C', url: 'https://microgreensworld.com/biodegradable-grow-mats-for-microgreens/' },
+  { row: 100, title: 'Coco Coir vs. Reusable Grow Medium: 35% Yield Test — On The Grow', grade: 'C', url: 'https://onthegrow.net/blogs/microgreens/case-study-coco-coir-vs-reusable-microgreen-grow-medium-high-seeding-density/' },
+  { row: 101, title: 'Hemp fiber mats, coco coir and nutrients (YouTube)', grade: 'C', url: 'https://www.youtube.com/watch?v=FXBUp7J-mYo' },
+  { row: 102, title: 'Hemp Grow Pads Vs Coco Coir Mats for Clean Indoor Microgreens — Indoor Leaf Grow', grade: 'C', url: 'https://indoorleafgrow.com/hemp-grow-pads-vs-coco-coir-mats-for-clean-indoor-microgreens/' },
+  { row: 103, title: 'Hydroponic Fiber Mats Altered Shoot Growth and Mineral Nutrient Concentration of Microgreens', grade: 'P', url: 'https://www.mdpi.com/2311-7524/10/12/1298/' },
 ];
 
 export const SCIENCE_SOURCE_BY_ROW: Readonly<Record<number, ScienceSource>> = Object.fromEntries(SCIENCE_SOURCES.map((s) => [s.row, s]));
@@ -110,13 +141,15 @@ export const SCIENCE_SOURCE_BY_ROW: Readonly<Record<number, ScienceSource>> = Ob
  * Each document's own works-cited numbering, mapped to register rows, so an inline
  * superscript in either document resolves. Document A is the identity for 1–56.
  */
-export const DOCUMENT_ROWS: Readonly<Record<'A' | 'B', readonly number[]>> = {
+export const DOCUMENT_ROWS: Readonly<Record<'A' | 'B' | 'C' | 'D', readonly number[]>> = {
   A: Array.from({ length: 56 }, (_, i) => i + 1),
   B: [1, 61, 5, 6, 25, 62, 8, 63, 2, 64, 3, 11, 9, 50, 4, 10, 13, 65, 66, 67, 51, 52, 53, 21, 22, 55, 68, 69, 70, 71, 72, 73, 74, 75, 14, 20, 23, 24, 26, 27, 30, 28, 29, 38, 19, 41, 42, 43, 44, 45, 36, 33, 31, 32, 34, 16, 17, 18, 49],
+  C: [2, 5, 3, 11, 64, 53, 65, 31, 34, 26, 22, 23, 76, 77, 9, 78, 79, 80, 81, 68, 70, 71, 82, 83, 13, 10, 84, 85, 86, 87, 88, 89, 90, 91, 92, 72, 74, 61],
+  D: [5, 61, 9, 65, 64, 53, 93, 2, 3, 11, 13, 10, 94, 95, 96, 97, 98, 99, 100, 101, 102, 68, 72, 70, 103, 23, 22, 26, 31, 34, 84, 86, 80, 83, 89, 85, 87, 88, 76, 77, 82, 78, 90, 79, 92],
 };
 
 /** The register row a document's inline number cites. */
-export function rowFor(doc: 'A' | 'B', n: number): number {
+export function rowFor(doc: 'A' | 'B' | 'C' | 'D', n: number): number {
   const row = DOCUMENT_ROWS[doc][n - 1];
   if (row === undefined) throw new Error(`Document ${doc} has no citation ${n}`);
   return row;
@@ -135,6 +168,7 @@ export interface ScienceClaim {
 }
 
 const B = (n: number) => rowFor('B', n);
+const D = (n: number) => rowFor('D', n);
 
 export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
   // ── Nutrient density and composition (document A) ──
@@ -191,6 +225,11 @@ export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
   { id: 'peat-vermiculite-aeration', topic: 'media', text: 'Peat and vermiculite blends aerate the root zone and prevent the hypoxia behind damping-off.', varieties: ['all'], evidence: 'review', rows: [B(9)] },
   { id: 'substrate-elicitation', topic: 'media', text: 'Green and red basil grown on vermiculite and jute fiber carried augmented antioxidant concentrations; a resistive substrate acts as a mild stressor.', varieties: ['basil'], evidence: 'review', rows: [B(7)] },
   { id: 'alternative-media', topic: 'media', text: 'Sugarcane filter cake, white sphagnum and vermicompost work as media but must be monitored for microbial load and nitrate accumulation.', varieties: ['all'], evidence: 'review', rows: [B(7)] },
+  // ── Media (document D): the hemp mat, from its makers' published specifications and one primary study ──
+  { id: 'hemp-mat-specification', topic: 'media', text: 'Needle-punched hemp fiber mats use no binders or chemical treatment; they come pH-neutral and salt-free, need no buffering or rinsing, and are sold pre-cut for 1020 and 1010 trays.', varieties: ['all'], evidence: 'supplier', rows: [D(13), D(16)] },
+  { id: 'hemp-mat-retention', topic: 'media', text: 'Hemp holds up to 1,050% of its weight in water; mat density sets retention: 400 g/m² (0.3 cm) low, 600 g/m² (0.5 cm) medium, 1,300 g/m² (1.0 cm) high.', varieties: ['all'], evidence: 'supplier', rows: [D(13), D(16)] },
+  { id: 'hemp-mat-stratification', topic: 'media', text: 'Bottom-watered, a hemp mat holds its water inside the fiber and keeps a drier surface than coir, which its maker ties to less damping-off and surface mold.', varieties: ['all'], evidence: 'supplier', rows: [D(13)] },
+  { id: 'fiber-mat-minerals', topic: 'media', text: 'Grown on hemp mats, basil and dill microgreens carried more potassium; jute mats gave the highest iron and manganese in some species.', varieties: ['basil', 'dill'], evidence: 'human', rows: [D(25)] },
   { id: 'sulfur-glucosinolates', topic: 'media', text: 'Controlled sulfur supplementation in a hydroponic reservoir raises glucosinolate biosynthesis in Brassicaceae microgreens.', varieties: ['broccoli', 'red-cabbage', 'radish'], evidence: 'review', rows: [B(24)] },
   // ── Light (document B) ──
   { id: 'red-biomass', topic: 'light', text: 'Red light (600 to 700 nm) drives photosynthesis and biomass through phytochrome, but monochromatic red gives the lowest antioxidant and secondary-metabolite concentrations.', varieties: ['all'], evidence: 'human', rows: [B(27)] },

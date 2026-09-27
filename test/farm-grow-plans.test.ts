@@ -19,6 +19,7 @@ import {
   nextGrowPlanCode,
   planStageDays,
   seedLineFor,
+  singleVarietyPlan,
   formatNameOf,
   varietyNamesOf,
   type GrowPlanDef,
@@ -49,15 +50,15 @@ describe('codes', () => {
     }
   });
 
-  it('a plan code is the lead variety code and a serial; a mixed tray is MIX; the next serial is one past the highest', () => {
+  it('a plan code is the lead variety code and a serial; a blend is BLEND; the next serial is one past the highest', () => {
     expect(broccoli().code).toBe('BROC-01');
     expect(GROW_PLAN_CODE_RX.test('BROC-01')).toBe(true);
     expect(GROW_PLAN_CODE_RX.test('AMK-E-001')).toBe(false);
     expect(nextGrowPlanCode([], 'BROC')).toBe('BROC-01');
     expect(nextGrowPlanCode(['BROC-01', 'BROC-07', 'RAD-02'], 'BROC')).toBe('BROC-08');
-    expect(nextGrowPlanCode(['MIX-01'], 'MIX')).toBe('MIX-02');
+    expect(nextGrowPlanCode(['BLEND-01'], 'BLEND')).toBe('BLEND-02');
     const mixed: GrowPlanDef = { ...broccoli(), lines: [seedLineFor(VARIETY_BY_KEY['broccoli']!, 'flat-1020', 0.5), seedLineFor(VARIETY_BY_KEY['radish']!, 'flat-1020', 0.5)] };
-    expect(codePrefixFor(mixed)).toBe('MIX');
+    expect(codePrefixFor(mixed)).toBe('BLEND');
     expect(codePrefixFor(broccoli())).toBe('BROC');
   });
 
@@ -98,7 +99,7 @@ describe('the seed: one plan per variety from the variety record', () => {
     if (light.kind === 'light') expect(light.regimeKey).toBe(VARIETY_BY_KEY['broccoli']!.light.defaultRegime);
   });
 
-  it('a plan runs on its varieties\' stage days; a mixed tray runs on the slowest at each stage; an override wins', () => {
+  it('a plan runs on its varieties\' stage days; a blend runs on the slowest at each stage; an override wins', () => {
     expect(planStageDays(broccoli())).toEqual(VARIETY_BY_KEY['broccoli']!.stageDays.value);
     const mixed: GrowPlanDef = { ...broccoli(), lines: [seedLineFor(VARIETY_BY_KEY['broccoli']!, 'flat-1020', 0.5), seedLineFor(VARIETY_BY_KEY['pea']!, 'flat-1020', 0.5)] };
     const d = planStageDays(mixed);
@@ -130,8 +131,9 @@ describe('costing on the four line kinds', () => {
     expect(c.perTray.seed).toBeCloseTo(seed.costPerTray, 9);
   });
 
-  it('medium: the catalog quantity per 1020 scaled to the format, at the catalog price', () => {
-    const m = MEDIUM_BY_KEY['coco-coir'];
+  it('medium: the library quantity per 1020 scaled to the format, at the library price; hemp mat is the default', () => {
+    const m = MEDIUM_BY_KEY['hemp-mat'];
+    expect(broccoli().lines.find((l) => l.kind === 'medium')).toMatchObject({ mediumKey: 'hemp-mat' });
     const line = c.lines[1]!;
     expect(line.quantity).toBeCloseTo(m.qtyPer1020.value, 9);
     expect(line.costPerTray).toBeCloseTo(m.qtyPer1020.value * m.costPerUnit.value, 9);
@@ -347,5 +349,31 @@ describe('the library: rows round-trip the plan', () => {
     expect(formatNameOf(lib)).toBe('1020 flat');
     expect(varietyNamesOf(lib)).toBe(VARIETY_BY_KEY['broccoli']!.name);
     expect(SPROUT_STAGES.length).toBeLessThan(STAGES.length);
+  });
+});
+
+describe('a sprout variety grown as a microgreen in a blend', () => {
+  const lentil = VARIETY_BY_KEY['red-lentil']!;
+  const mungBean = VARIETY_BY_KEY['mung-bean']!;
+  const wheat = VARIETY_BY_KEY['wheat']!;
+
+  it('lentil, mung and wheat stay sprouts, their jar plans unchanged, and carry a tray record for a 1020', () => {
+    for (const v of [lentil, mungBean, wheat]) {
+      expect(v.kind).toBe('sprout');
+      expect(v.tray).toBeDefined();
+      expect(byCode(`${v.code}-01`).format).toBe('pint-jar');
+      expect(seedLineFor(v, 'pint-jar').gramsPerTray.value).toBe(v.seedGramsPer1020.value);
+      expect(seedLineFor(v, 'flat-1020').gramsPerTray.value).toBe(v.tray!.seedGramsPer1020.value);
+    }
+    expect(seedLineFor(lentil, 'flat-1020').gramsPerTray.status).toBe('STATED');
+    expect(seedLineFor(mungBean, 'flat-1020').gramsPerTray.status).toBe('PLACEHOLDER');
+  });
+
+  it('a tray plan runs on the tray stage days and harvest weight; a jar plan on the sprout record', () => {
+    const tray = { ...singleVarietyPlan(lentil, 'flat-1020'), format: 'flat-1020' as const };
+    expect(planStageDays(tray)).toEqual(lentil.tray!.stageDays.value);
+    expect(planStageDays(byCode('LEN-01'))).toEqual(lentil.stageDays.value);
+    expect(costGrowPlan(tray).harvestGramsPerTray).toBeCloseTo(lentil.tray!.harvestGramsPer1020.value, 9);
+    expect(costGrowPlan(byCode('LEN-01')).harvestGramsPerTray).toBeCloseTo(lentil.harvestGramsPer1020.value, 9);
   });
 });

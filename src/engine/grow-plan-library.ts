@@ -136,7 +136,7 @@ export function growPlanToRows(plan: GrowPlanDef): {
 /** The seed the library starts from when it is empty: one plan per variety. */
 export const SEED_GROW_PLANS: readonly GrowPlanDef[] = growPlanSeed;
 
-/** The next code under a variety code (or `MIX`), one past the highest serial already in the library. */
+/** The next code under a variety code (or `BLEND`), one past the highest serial already in the library. */
 
 export const isGrowPlanCode = (code: string): boolean => GROW_PLAN_CODE_RX.test(code);
 

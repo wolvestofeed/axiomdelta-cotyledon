@@ -42,10 +42,10 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 |---|---|---|
 | Muse Kitchen · Impact OS, Muse, the OS | MicroFarm | Origin may be cited in docs only |
 | kitchen, commissary | farm, grow room | |
-| recipe | grow plan | One per variety, or a mixed tray of varieties |
+| recipe | grow plan | One per variety, or a blend of varieties |
 | recipe code | crop code | |
 | ingredient line | seed line, medium line, nutrient line, light line | What the lines buy are the plan's inputs, the farming term. Water is a stage, never a line |
-| component (served) | variety | The unit of sowing, lot coding and nutrient profiling inside a mixed tray |
+| component (served) | variety | The unit of sowing, lot coding and nutrient profiling inside a blend |
 | portion, meal | unit | A unit is a flat, tray, insert, jar or cut ounce; the format is a property of the grow plan |
 | batchPortions | batchUnits | |
 | batch | sowing | A sowing record is one sow of one grow plan = one lot |
@@ -91,13 +91,13 @@ Words that must not survive the swap anywhere but this table: recipe, portion, m
 
 **Tray format.** 1020 flat, 7x11 large tray, 5x5 insert, pint jar, cut ounce. A format names its dimensions, its grow-unit footprint (four 1020s per 48-inch shelf), and each variety's seeding density in grams.
 
-**Grow plan.** How a variety, or a mixed tray, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
-- **Seed line**: a variety, its grams per tray, and its share of a mixed tray. Costed at the variety's last price paid per pound. The only line that carries provenance and nutrition.
-- **Medium line**: coconut coir, jute fiber, hemp mat, vermiculite, or a hydroponic pad, with quantity per tray. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
+**Grow plan.** How a variety, or a blend, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
+- **Seed line**: a variety, its grams per tray, and its share of a blend. Costed at the variety's last price paid per pound. The only line that carries provenance and nutrition.
+- **Medium line**: a row of the workspace's Media library, with quantity per tray: the hemp fiber mat by default (stated by Rob), or coconut coir, jute fiber, vermiculite or a hydroponic pad. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
 - **Nutrient line**: a nutrient solution or supplement from the workspace's Nutrients & Supplements library, its concentration in ml per gallon, and the stage it starts. Costed at concentration times water volume times price.
 - **Light line**: the light spec for the light stage: spectrum (fixture or wavelength mix), photoperiod in hours per day, intensity as PPFD at canopy or fixture height, and the stage it starts. Costed as fixture watts times hours times the energy rate, per tray per day, plus the fixture's amortized cost. Varieties are grown under different spectra and configurations, and light changes nutrient content (science library rows 2, 8), so light belongs to the plan.
 
-A plan also carries the allergens present and the allergen-free claims, as stated. A single-variety flat is a grow plan with one seed line. A mixed tray is a grow plan with two or more, composed to a nutrition target; it is developed through experiments (below) and goes in service only once they show it grows to a stable yield. A plan's code is its lead variety's code and a serial (`BROC-01`, `BROC-02`); a mixed tray is `MIX-01`. The unit a subscriber buys is a customer SKU: the plan code and the packaged format (`BROC-01-1020`, `BROC-01-7X11`), so one plan packed in two formats is two SKUs. Tray sets, labels, inserts and sanitizer are consumables costed per tray by format, not lines. Watering is never a line; it is a stage. A light line is a requirement the scheduler matches against grow units: a sowing is placed only on a shelf whose fixture meets the plan's spectrum and intensity.
+A plan also carries the allergens present and the allergen-free claims, as stated. A single-variety flat is a grow plan with one seed line. A blend is a grow plan with two or more, composed to a nutrition target; it is developed through experiments (below) and goes in service only once they show it grows to a stable yield. A plan's code is its lead variety's code and a serial (`BROC-01`, `BROC-02`); a blend is `BLEND-01`. The unit a subscriber buys is a customer SKU: the plan code and the packaged format (`BROC-01-1020`, `BROC-01-7X11`), so one plan packed in two formats is two SKUs. Tray sets, labels, inserts and sanitizer are consumables costed per tray by format, not lines. Watering is never a line; it is a stage. A light line is a requirement the scheduler matches against grow units: a sowing is placed only on a shelf whose fixture meets the plan's spectrum and intensity.
 
 **Stage schedule.** The process of a grow plan: soak → sow and weight → germination → blackout → light → harvest window → packed. Each stage carries its days, its watering method, a control point where one exists, and a labor basis. Watering repeats daily and changes shape across the cycle: misting from above through germination and blackout, bottom watering once roots reach through the perforated tray under light. A nutrient line names the stage it starts, and the watering step at that stage reads it. The schedule is what the grow calendar, the time study and the scheduler run on.
 
@@ -111,7 +111,7 @@ A plan also carries the allergens present and the allergen-free claims, as state
 
 **Nutrition targets.** Per subscriber: named targets (iron, protein, sulforaphane, vitamin C, folate, omega-3, fiber, …). The Flat Builder scores a flat plan against the targets from the variety nutrient profiles, and every benefit it shows cites its source row. This is the reason the facility exists.
 
-**Experiment.** A titled run in R&D: one sowing of a developing grow plan, most often a mixed tray, sown to find out whether it is feasible. Composing it reads two sets of facts side by side: how its varieties grow together, from the variety records (days to harvest, soak, blackout days, medium, light regime, seeding density), and what it carries nutritionally against a target set, every benefit citing its science-library row. An experiment records what the sowing record records (harvest grams per variety, the stage checks) and its time study, and takes its place on the grow units like any sowing. Across a plan's experiments the yield per variety is read as its mean and spread. When Rob judges the yield stable, the plan goes in service: its approved time studies are its labor standard, and it enters forecasts and production. A forecast is business planning over the data already in the system; an experiment is research on a plan not yet in it.
+**Experiment.** A titled run in R&D: one sowing of a developing grow plan, most often a blend, sown to find out whether it is feasible. Composing it reads two sets of facts side by side: how its varieties grow together, from the variety records (days to harvest, soak, blackout days, medium, light regime, seeding density), and what it carries nutritionally against a target set, every benefit citing its science-library row. An experiment records what the sowing record records (harvest grams per variety, the stage checks) and its time study, and takes its place on the grow units like any sowing. Across a plan's experiments the yield per variety is read as its mean and spread. When Rob judges the yield stable, the plan goes in service: its approved time studies are its labor standard, and it enters forecasts and production. A forecast is business planning over the data already in the system; an experiment is research on a plan not yet in it.
 
 **Order.** From a subscription cycle, derived on read until confirmed; confirmed and distributed orders are rows. Distribution is pickup or delivery on a distribution day; live trays carry a tray-return expectation.
 
@@ -164,7 +164,7 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 | Subscriber portal | Subscriber Portal, Flat Builder | swap (from Customer Portal, Order Builder) |
 | Supplier portal | Supplier Portal | port |
 | Parent portal | — | drop |
-| R&D | Experiments | new: composing a mixed tray from the variety records and the nutrition targets, running it as titled experiments on the grow units, yield per variety read across its experiments, and the plan's promotion to in service; experiment cost to Research and Development |
+| R&D | Experiments | new: composing a blend from the variety records and the nutrition targets, running it as titled experiments on the grow units, yield per variety read across its experiments, and the plan's promotion to in service; experiment cost to Research and Development |
 | Workspace | Workspace admin, members, plan and billing for the software | new |
 
 ## 7. Tenancy

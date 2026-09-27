@@ -30,7 +30,7 @@ A sprout in a jar runs a shorter schedule: soak, then rinse and drain, then its 
 
 ## 2. Days per stage, by variety
 
-The days are each variety's, on its record; a grow plan may override them, and a mixed tray runs on the slowest of its varieties at each stage. Days to harvest is the sow day through the last day before the harvest window; the cycle adds the window.
+The days are each variety's, on its record; a grow plan may override them, and a blend runs on the slowest of its varieties at each stage. Days to harvest is the sow day through the last day before the harvest window; the cycle adds the window.
 
 | Variety | Soak | Sow | Germination | Blackout | Light | Harvest window | Days to harvest | Cycle | Tag | Basis |
 |---|---|---|---|---|---|---|---|---|---|---|

@@ -2,16 +2,18 @@
 
 Every benefit MicroFarm states about a variety traces to a row here. This file is the register the Sources module is seeded from in Phase 2; the glossary ([`glossary.md`](glossary.md)) cites rows by number. Nothing is stated to a subscriber without a citation, and a citation that is a company page or a blog is marked as such and never carries a clinical claim.
 
-Two source documents, both Rob's compilations, Sept 2026:
+Four source documents, all Rob's compilations, Sept 2026:
 
 - **A** — *The Clinical and Scientific Efficacy of Microgreens and Sprouts* (`docs/Microgreens Nutritional Research Data.docx`): what the compounds do in the body. Rows 1–56 are its works cited in its own order, so its inline superscripts map one for one.
-- **B** — *Optimal Agronomic Practices for Microgreens: Growth Media and Lighting Optimization* (`docs/Optimal Agronomic Practices for Microgreens_ Growth Media and Lighting Optimization.docx`): how growing conditions change what is in the crop. It shares 44 works with A; its 15 new works are rows 61–75, and §1b maps its own numbering onto the register.
+- **B** — *Optimal Agronomic Practices for Microgreens: Growth Media and Lighting Optimization* (`docs/Optimal Agronomic Practices for Microgreens_ Growth Media and Lighting Optimization.docx`; the file ending in 2 is the same text): how growing conditions change what is in the crop. It shares 44 works with A; its 15 new works are rows 61–75, and §1b maps its own numbering onto the register.
+- **C** — *Clinical Research and Blend Optimization for Specific Microgreen Varieties* (`docs/Clinical Research and Blend Optimization for Specific Microgreen Varieties.docx`): five blends of the twelve varieties, and the clinical and phytochemical profiles of fenugreek, borage, amaranth, chia and wheat. Its 17 new works are rows 76–92; §1c maps its numbering.
+- **D** — *Comparative Analysis of Hemp Mats and Coco Coir: Sustainability, Hydroponics, and Agronomic Outcomes* (`docs/Comparative Analysis of Hemp Mats and Coco Coir_ Sustainability, Hydroponics, and Agronomic Outcomes.docx`): the hemp mat against coir in an Austin grow room. Its 11 new works are rows 93–103; §1d maps its numbering. Most of its agronomic statements cite commercial pages (grade C), which carry no claim; the hemp mat's specifications are its makers' published statements (grade S) and one study is primary (row 103).
 
 The register in code is `apps/web/src/app/(farm)/farm/_data/science-library.ts`; `rowFor('B', n)` resolves a document B superscript.
 
 ## 1. Works cited
 
-Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial registry, **S** seed supplier's published variety summary or packaging (nutrient and flavor statements, no clinical claim), **C** commercial or advocacy page (context only, no clinical claim).
+Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial registry, **S** a supplier's published statement about its own seed or product: a seed supplier's variety summary or packaging (nutrient and flavor statements), a medium maker's product specification (no clinical claim either way), **C** commercial or advocacy page (context only, no clinical claim).
 
 | # | Work | Grade | URL |
 |---|---|---|---|
@@ -90,10 +92,46 @@ Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial 
 | 73 | Effect of Low Light Intensity With Supplemental Far-Red Light on Broccoli Microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC12208883/ |
 | 74 | Effects of LED lighting on the nutritional properties and microbial quality of microgreens | P | https://www.frontiersin.org/journals/nutrition/articles/10.3389/fnut.2026.1869208/full |
 | 75 | Continuous LED Lighting Enhances Yield and Nutritional Value of Brassica Microgreens | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC8781578/ |
+| 76 | Metabolomics and bioactive attributes of fenugreek microgreens: antioxidant, antibacterial and antibiofilm potential | P | https://www.researchgate.net/publication/381002330_Metabolomics_and_bioactive_attributes_of_fenugreek_microgreens_Insights_into_antioxidant_antibacterial_and_antibiofilm_potential |
+| 77 | Bioactive Potential and Health Benefits of Trigonella foenum-graecum | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC12411738/ |
+| 78 | Antioxidant and Antimicrobial Effects of Baby Leaves of Amaranthus tricolor in Correlation with Their Phytochemical Composition | P | https://www.researchgate.net/publication/368079287_Antioxidant_and_Antimicrobial_Effects_of_Baby_Leaves_of_Amaranthus_tricolor_L_Harvested_as_Vegetable_in_Correlation_with_Their_Phytochemical_Composition |
+| 79 | Recent Advances in the Therapeutic Potential of Bioactive Compounds | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC12157067/ |
+| 80 | Extraction of Antioxidants from Borage (Borago officinalis L.) Leaves | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC4665488/ |
+| 81 | Phenolic Profile and Comparison of the Antioxidant, Anti-Ageing Activities | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC9865334/ |
+| 82 | Pressurized Liquid Extraction of Bioactive Compounds from Seeds | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC12191721/ |
+| 83 | Boost Your Health with Borage Microgreens: A Nutritional Guide | C | https://microgreensworld.com/borage-microgreens-nutrition/ |
+| 84 | Borage (PubMed) | R | https://pubmed.ncbi.nlm.nih.gov/30000849/ |
+| 85 | Borago officinalis seed oil (BSO), a natural source of omega-6 fatty acids | P | https://pubmed.ncbi.nlm.nih.gov/30043014/ |
+| 86 | Protective Effect of Borage Seed Oil and Gamma Linolenic Acid on DNA | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC3584109/ |
+| 87 | Protective effect of borage seed oil and gamma linolenic acid on DNA (PubMed copy of row 86) | P | https://pubmed.ncbi.nlm.nih.gov/23460824/ |
+| 88 | Cancer Prevention and Health Benefices of Traditionally Consumed Borago officinalis | P | https://pubmed.ncbi.nlm.nih.gov/26797631/ |
+| 89 | The protective effects of omega-6 fatty acids (PubMed) | P | https://pubmed.ncbi.nlm.nih.gov/11122253/ |
+| 90 | Multifunctional Edible Amaranths: A Review of Nutritional Benefits | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC12785712/ |
+| 91 | Botany, ethnomedicine, phytochemistry and pharmacology of Amaranthus spp.: a review | R | https://www.researchgate.net/publication/389401145_Botany_ethnomedicine_phytochemistry_and_pharmacology_of_Amaranthus_spp-_a_review |
+| 92 | The amaranth seeds as a source of nutrients and bioactive substances in human diet | R | https://www.researchgate.net/publication/348138296_THE_AMARANTH_SEEDS_AS_A_SOURCE_OF_NUTRIENTS_AND_BIOACTIVE_SUBSTANCES_IN_HUMAN_DIET |
+| 93 | (Comparison) Best Growing Mediums for Microgreens — HerbSpeak | C | https://herbspeak.com/microgreens-growing-mediums/ |
+| 94 | Coco Coir vs Hemp Grow Mats: An Honest Comparison — TerraFibre | S | https://terrafibre.ca/pages/coco-coir-vs-hemp-grow-mats/ |
+| 95 | Multipurpose Biodegradable Fiber Mats and Mulch Sheets in Agriculture — PlantArc | C | https://plantarc.com/multipurpose-biodegradable-fiber-mats-and-mulch-sheets-in-agriculture-applications-in-microgreen-production-and-weed-suppression/ |
+| 96 | Microgreen Growing Mediums: What We Found to be the Best — Home Microgreens | C | https://homemicrogreens.com/microgreen-growing-mediums-2/ |
+| 97 | Microgreen Mats — FAQ and Guidance (microgreen-mats.com) | S | https://microgreen-mats.com/microgreen-mats-faq-guidance/ |
+| 98 | Best Growing Mats for Microgreens: A Handy Comparison — RusticWise | C | https://rusticwise.com/best-growing-mats-for-microgreens/ |
+| 99 | Biodegradable Grow Mats for Microgreens: A Complete Guide — Microgreens World | C | https://microgreensworld.com/biodegradable-grow-mats-for-microgreens/ |
+| 100 | Coco Coir vs. Reusable Grow Medium: 35% Yield Test — On The Grow | C | https://onthegrow.net/blogs/microgreens/case-study-coco-coir-vs-reusable-microgreen-grow-medium-high-seeding-density/ |
+| 101 | Hemp fiber mats, coco coir and nutrients (YouTube) | C | https://www.youtube.com/watch?v=FXBUp7J-mYo |
+| 102 | Hemp Grow Pads Vs Coco Coir Mats for Clean Indoor Microgreens — Indoor Leaf Grow | C | https://indoorleafgrow.com/hemp-grow-pads-vs-coco-coir-mats-for-clean-indoor-microgreens/ |
+| 103 | Hydroponic Fiber Mats Altered Shoot Growth and Mineral Nutrient Concentration of Microgreens | P | https://www.mdpi.com/2311-7524/10/12/1298/ |
 
 ### 1b. Document B's numbering
 
 Document B's inline superscript *n* cites the register row in position *n* of this list: 1, 61, 5, 6, 25, 62, 8, 63, 2, 64, 3, 11, 9, 50, 4, 10, 13, 65, 66, 67, 51, 52, 53, 21, 22, 55, 68, 69, 70, 71, 72, 73, 74, 75, 14, 20, 23, 24, 26, 27, 30, 28, 29, 38, 19, 41, 42, 43, 44, 45, 36, 33, 31, 32, 34, 16, 17, 18, 49.
+
+### 1c. Document C's numbering
+
+Document C's inline superscript *n* cites the register row in position *n* of this list: 2, 5, 3, 11, 64, 53, 65, 31, 34, 26, 22, 23, 76, 77, 9, 78, 79, 80, 81, 68, 70, 71, 82, 83, 13, 10, 84, 85, 86, 87, 88, 89, 90, 91, 92, 72, 74, 61.
+
+### 1d. Document D's numbering
+
+Document D's inline superscript *n* cites the register row in position *n* of this list: 5, 61, 9, 65, 64, 53, 93, 2, 3, 11, 13, 10, 94, 95, 96, 97, 98, 99, 100, 101, 102, 68, 72, 70, 103, 23, 22, 26, 31, 34, 84, 86, 80, 83, 89, 85, 87, 88, 76, 77, 82, 78, 90, 79, 92.
 
 ## 2. Headline studies
 
@@ -195,6 +233,15 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 | Hydroponic mats with monitored water drastically reduce the pathogen vectors of soil and organic media. | all | review | 65, 50, 53 |
 | Sulfur supplementation in a hydroponic reservoir raises glucosinolate biosynthesis in brassicas. | brassicas | review | 21 |
 
+### Media (document D): the hemp mat
+
+| Claim | Varieties | Evidence | Rows |
+|---|---|---|---|
+| Needle-punched hemp fiber mats use no binders or chemical treatment; they come pH-neutral and salt-free, need no buffering or rinsing, and are sold pre-cut for 1020 and 1010 trays. | all | supplier | 94, 97 |
+| Hemp holds up to 1,050% of its weight in water; mat density sets retention: 400 g/m² (0.3 cm) low, 600 g/m² (0.5 cm) medium, 1,300 g/m² (1.0 cm) high. | all | supplier | 94, 97 |
+| Bottom-watered, a hemp mat holds its water inside the fiber and keeps a drier surface than coir, which its maker ties to less damping-off and surface mold. | all | supplier | 94 |
+| Grown on hemp mats, basil and dill microgreens carried more potassium; jute mats gave the highest iron and manganese in some species. | basil, dill | primary | 103 |
+
 ### Light (document B)
 
 | Claim | Varieties | Evidence | Rows |
@@ -235,12 +282,12 @@ What the grow plan editor shows beside the light and medium lines. Each response
 
 | Variety | Light response | Media response | Rows |
 |---|---|---|---|
-| Broccoli | PPFD 50 to 70, damage above 100; 5:1 red-to-blue for balance; 25:75 for iron; 20% far-red at 50 to 75 µmol for vitamin C and glucosinolates; continuous light for weight and antioxidant enzymes | cocopeat default; sulfur in hydroponic water raises glucosinolates | 68, 73, 75, 21 |
-| Red cabbage | brassica: blue-rich for anthocyanins and phenolics; continuous light | cocopeat default; sulfur as broccoli | 68, 75, 21 |
-| Radish | 100% blue for a 16.3% antioxidant rise; continuous light | cocopeat; soilless media give superior shoot height and width in Sango | 68, 75, 66 |
-| Pea | blue maximizes phenolics | cocopeat, soil preferred by the supplier | 70, 59 |
+| Broccoli | PPFD 50 to 70, damage above 100; 5:1 red-to-blue for balance; 25:75 for iron; 20% far-red at 50 to 75 µmol for vitamin C and glucosinolates; continuous light for weight and antioxidant enzymes | hemp mat default; sulfur in hydroponic water raises glucosinolates | 68, 73, 75, 21 |
+| Red cabbage | brassica: blue-rich for anthocyanins and phenolics; continuous light | hemp mat default; sulfur as broccoli | 68, 75, 21 |
+| Radish | 100% blue for a 16.3% antioxidant rise; continuous light | hemp mat default; soilless media give superior shoot height and width in Sango | 68, 75, 66 |
+| Pea | blue maximizes phenolics | hemp mat default; soil preferred by the supplier | 70, 59 |
 | Basil | — | more antioxidants on vermiculite and jute | 8 |
-| Sunflower, fenugreek, borage, amaranth, chia, lentil, mung bean, wheat | no studied response on file; the default regime applies | cocopeat default; sprouts take no medium | — |
+| Sunflower, fenugreek, borage, amaranth, chia, lentil, mung bean, wheat | no studied response on file; the default regime applies | hemp mat default; sprouts take no medium | — |
 
 ## 5. Rules for stating a benefit
 

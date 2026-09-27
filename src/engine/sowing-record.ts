@@ -13,7 +13,7 @@ import type { GrowPlanDef } from '@/data/grow-plan';
 import { purchaseName, planStages, seedLines } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID, STAGE_CONTROL_POINTS, type ControlPointDef } from '@/data/produce-safety';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
-import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
+import { VARIETY_BY_KEY, growthFor, type VarietyDef } from '@/data/varieties';
 import type { SowingRecordDoc } from '@/engine/actuals';
 import { controlPointsForPlan, evaluateSpentWaterTest, type SpentWaterTest, type SpentWaterVerdict } from '@/engine/produce-safety';
 import type { SowingIssue, VarietyLot } from '@/engine/sowing';
@@ -102,7 +102,7 @@ export function growSowingPrefill(
   const lots: VarietyLot[] = seedLines(plan).map((line, i) => {
     const v = varieties[line.varietyKey];
     const seedG = line.gramsPerTray.value * trays;
-    const harvestG = v ? v.harvestGramsPer1020.value * (sprout ? 1 : costing.format.densityFactor.value) * line.share * trays : 0;
+    const harvestG = v ? growthFor(v, !sprout).harvestGramsPer1020.value * (sprout ? 1 : costing.format.densityFactor.value) * line.share * trays : 0;
     const allowanceG = seedG * shrinkAllowance;
     return {
       varietyKey: line.varietyKey,

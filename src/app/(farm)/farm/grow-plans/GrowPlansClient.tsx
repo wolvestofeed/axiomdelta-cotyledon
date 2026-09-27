@@ -93,7 +93,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
         ]}
         howItWorks={
           <ul>
-            <li>Every plan that can be costed, sowing-sized or planned is a library row with a status: one seed line per variety, or a mixed tray, with its medium, nutrient and light lines.</li>
+            <li>Every plan that can be costed, sowing-sized or planned is a library row with a status: one seed line per variety, or a blend, with its medium, nutrient and light lines.</li>
             <li>The twelve seed plans are built from the variety records; the library is the source from first read.</li>
             <li>Editing a seed price here is a forecast edit measured against the library. Edit in the library changes the plan.</li>
             <li>The standard a sowing is costed at changes only when a super admin approves a version with an effective date.</li>
@@ -176,7 +176,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
         )}
         <p className="farm-kpi-sub mt-2">
           Production Planning plans grow plans In Service; Planned and Developing plans can be run singly. A plan lists
-          the channels it is offered on. The code of a plan is the lead variety code and a serial; a mixed tray is MIX.
+          the channels it is offered on. The code of a plan is the lead variety code and a serial; a blend is BLEND.
         </p>
       </Card>
 
@@ -294,7 +294,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
                 </tbody>
               </table>
             </div>
-            <p className="farm-kpi-sub mt-2">The days are the varieties&rsquo; ({leadVarietyOf?.stageDays.note ?? ''}) unless the plan overrides them; a mixed tray runs on the slowest variety at each stage. A nutrient line names the stage it enters the water; the light line the stage the lights come on. The control points are on <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>.</p>
+            <p className="farm-kpi-sub mt-2">The days are the varieties&rsquo; ({leadVarietyOf?.stageDays.note ?? ''}) unless the plan overrides them; a blend runs on the slowest variety at each stage. A nutrient line names the stage it enters the water; the light line the stage the lights come on. The control points are on <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>.</p>
           </Card>
         </>
       )}

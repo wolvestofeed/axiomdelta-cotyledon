@@ -51,6 +51,17 @@ export interface MediaResponse {
   notes: { text: string; rows: number[] }[];
 }
 
+/**
+ * How a sprout variety grows as a microgreen in a 1020 blend: its seed per 1020, soak, stage days
+ * and harvest weight. Its own record stays the jar sprout, a separate product.
+ */
+export interface TrayRecord {
+  seedGramsPer1020: Tagged;
+  soakHours: Tagged;
+  stageDays: Tagged<StageDays>;
+  harvestGramsPer1020: Tagged;
+}
+
 export interface VarietyDef {
   key: string;
   /** The short code a grow plan's code starts with (`grow-plan.ts`): `BROC-01` is the first broccoli plan. */
@@ -72,6 +83,8 @@ export interface VarietyDef {
   stageDays: Tagged<StageDays>;
   /** Harvest grams per 1020 flat when cut; the observed yield replaces it. */
   harvestGramsPer1020: Tagged;
+  /** A sprout variety grown as a microgreen in a blend: its tray figures. Absent, the record above serves a tray too. */
+  tray?: TrayRecord;
   flavor: string;
   color: string;
   light: LightResponse;
@@ -82,6 +95,12 @@ export interface VarietyDef {
 const TL = 'True Leaf Market, 5 lb tier, Vallecito purchase Jan 2024';
 const microDays = (germination: number, blackout: number, light: number, window: number): StageDays => ({ soak: 0, sow: 1, germination, blackout, light, 'harvest-window': window });
 const sproutDays = (rinseDays: number): StageDays => ({ soak: 1, sow: 0, germination: rinseDays, blackout: 0, light: 0, 'harvest-window': 1 });
+
+/** The figures a variety grows on in a format: its tray record on a tray where it has one, else its own record. */
+export function growthFor(v: VarietyDef, onTray: boolean): TrayRecord {
+  if (onTray && v.tray) return v.tray;
+  return { seedGramsPer1020: v.seedGramsPer1020, soakHours: v.soakHours, stageDays: v.stageDays, harvestGramsPer1020: v.harvestGramsPer1020 };
+}
 
 export const VARIETIES: readonly VarietyDef[] = [
   {
@@ -110,7 +129,7 @@ export const VARIETIES: readonly VarietyDef[] = [
         { text: 'Continuous light raises weight and antioxidant enzymes.', rows: [75] },
       ],
     },
-    media: { defaultMedium: 'coco-coir', notes: [{ text: 'Sulfur in hydroponic water raises glucosinolates.', rows: [21] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'Sulfur in hydroponic water raises glucosinolates.', rows: [21] }] },
     profile: {
       compounds: ['glucoraphanin', 'sulforaphane', 'phenolics'],
       nutrients: ['iron', 'manganese', 'vitamin C', 'vitamin K', 'sulforaphane'],
@@ -149,7 +168,7 @@ export const VARIETIES: readonly VarietyDef[] = [
         { text: 'Continuous light raises weight and antioxidant enzymes.', rows: [75] },
       ],
     },
-    media: { defaultMedium: 'coco-coir', notes: [{ text: 'Soilless media gave Sango radish superior shoot height and width.', rows: [66] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'Soilless media gave Sango radish superior shoot height and width.', rows: [66] }] },
     profile: {
       compounds: ['anthocyanins', 'glucosinolates', 'lutein', 'beta-carotene'],
       nutrients: ['vitamin A', 'B vitamins', 'vitamin C', 'vitamin E', 'vitamin K', 'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'amino acids'],
@@ -179,7 +198,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Nutty, sweet, savory, oily',
     color: 'Even green shoots',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [] },
-    media: { defaultMedium: 'coco-coir', notes: [{ text: 'Soil-based media such as coir preferred by the supplier.', rows: [59] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'Soil-based media such as coir preferred by the supplier.', rows: [59] }] },
     profile: {
       compounds: ['fumaric acid', 'phenolic acids'],
       nutrients: ['calcium', 'potassium', 'protein', 'iron', 'phosphorus', 'magnesium', 'vitamin A', 'vitamin C', 'B vitamins', 'vitamin E'],
@@ -208,7 +227,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Sweet, fresh pea',
     color: 'Green',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [{ text: 'Blue light maximizes total phenolics in pea.', rows: [70] }] },
-    media: { defaultMedium: 'coco-coir', notes: [{ text: 'Soil preferred by the supplier; hydroponic is harder.', rows: [59] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'Soil preferred by the supplier; hydroponic is harder.', rows: [59] }] },
     profile: {
       compounds: ['flavonoids', 'organic acids'],
       nutrients: ['phosphorus', 'copper', 'vitamin C', 'protein', 'fiber', 'omega-3', 'vitamin A', 'vitamin E', 'B vitamins'],
@@ -236,7 +255,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Bitter, maple, nutty',
     color: 'Green',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [] },
-    media: { defaultMedium: 'coco-coir', notes: [] },
+    media: { defaultMedium: 'hemp-mat', notes: [] },
     profile: {
       compounds: ['saponins'],
       nutrients: ['iron', 'protein', 'fiber', 'magnesium', 'vitamin B6'],
@@ -264,7 +283,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Strong cucumber and melon, light bitter finish',
     color: 'Green, slightly furry',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [] },
-    media: { defaultMedium: 'coco-coir', notes: [] },
+    media: { defaultMedium: 'hemp-mat', notes: [] },
     profile: {
       compounds: ['gamma-linolenic acid'],
       nutrients: ['vitamin C', 'B vitamins', 'vitamin K', 'folate', 'fiber', 'iron', 'calcium', 'magnesium'],
@@ -289,7 +308,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Mild, sweet',
     color: 'The most vibrant red and pink of any microgreen',
     light: { defaultRegime: 'nutrition-forward', ppfdRange: null, notes: [] },
-    media: { defaultMedium: 'coco-coir', notes: [] },
+    media: { defaultMedium: 'hemp-mat', notes: [] },
     profile: {
       compounds: ['carotenoids', 'betalains'],
       nutrients: ['vitamin K', 'vitamin E', 'vitamin C', 'protein', 'lysine', 'calcium', 'iron', 'manganese', 'zinc', 'copper'],
@@ -324,7 +343,7 @@ export const VARIETIES: readonly VarietyDef[] = [
         { text: 'Continuous light raises weight and antioxidant enzymes.', rows: [75] },
       ],
     },
-    media: { defaultMedium: 'coco-coir', notes: [{ text: 'Sulfur in hydroponic water raises glucosinolates.', rows: [21] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'Sulfur in hydroponic water raises glucosinolates.', rows: [21] }] },
     profile: {
       compounds: ['anthocyanins', 'glucosinolates', 'polyphenols'],
       nutrients: ['vitamin C', 'calcium', 'magnesium', 'beta-carotene', 'vitamin E', 'vitamin K'],
@@ -354,7 +373,7 @@ export const VARIETIES: readonly VarietyDef[] = [
     flavor: 'Mild bitterness',
     color: 'Green',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [] },
-    media: { defaultMedium: 'jute-mat', notes: [{ text: 'A mat suits a gelling seed sown on the surface.', rows: [] }] },
+    media: { defaultMedium: 'hemp-mat', notes: [{ text: 'A mat suits a gelling seed sown on the surface.', rows: [] }] },
     profile: {
       compounds: ['omega-3', 'antioxidants'],
       nutrients: ['omega-3', 'fiber', 'protein', 'calcium', 'iron', 'magnesium'],
@@ -376,6 +395,12 @@ export const VARIETIES: readonly VarietyDef[] = [
     soakHours: tagged(5, 'DATED', 'h', '4 to 6 hours'),
     stageDays: tagged(sproutDays(3), 'DATED', 'days', '2 to 4 days to harvest, rinsed 2 to 3 times a day'),
     harvestGramsPer1020: tagged(256, 'DATED', 'g', 'Supplier yield ratio: one part seed to two parts sprouts'),
+    tray: {
+      seedGramsPer1020: tagged(200, 'PLACEHOLDER', 'g', 'No tray density on file; a starting value for the experiments'),
+      soakHours: tagged(5, 'DATED', 'h', 'As the sprout: 4 to 6 hours'),
+      stageDays: tagged(microDays(2, 2, 4, 2), 'PLACEHOLDER', 'days', 'No microgreen schedule on file; document C harvests its mung-led blend in 7 to 9 days'),
+      harvestGramsPer1020: tagged(400, 'PLACEHOLDER', 'g', 'No harvest weight observed; a starting value for the experiments'),
+    },
     flavor: 'Mild, nutty, creamy, earthy',
     color: 'White tail and flesh as the green shell sheds',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [{ text: 'Sprouts grow in the dark; no light line.', rows: [] }] },
@@ -405,6 +430,12 @@ export const VARIETIES: readonly VarietyDef[] = [
     soakHours: tagged(6, 'DATED', 'h', '4 to 8 hours'),
     stageDays: tagged(sproutDays(3), 'DATED', 'days', '2 to 4 days to harvest, rinsed 2 to 3 times a day'),
     harvestGramsPer1020: tagged(100, 'PLACEHOLDER', 'g', 'No yield observed'),
+    tray: {
+      seedGramsPer1020: tagged(225, 'STATED', 'g', 'As a microgreen in a blend: 200 to 250 g per tray (Vallecito research database, True Leaf)'),
+      soakHours: tagged(10, 'STATED', 'h', '8 to 12 hours (Vallecito research database)'),
+      stageDays: tagged(microDays(2, 3, 3, 2), 'STATED', 'days', 'Blackout 2 to 3 days, 6 to 9 days to grow (Vallecito research database)'),
+      harvestGramsPer1020: tagged(400, 'PLACEHOLDER', 'g', 'No harvest weight observed; a starting value for the experiments'),
+    },
     flavor: 'Smooth, creamy, peppery',
     color: 'Orange seed, white shoot',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [{ text: 'Sprouts grow in the dark; no light line.', rows: [] }] },
@@ -433,6 +464,12 @@ export const VARIETIES: readonly VarietyDef[] = [
     soakHours: tagged(8, 'DATED', 'h', ''),
     stageDays: tagged(sproutDays(4), 'DATED', 'days', '4 to 5 days to maturity'),
     harvestGramsPer1020: tagged(120, 'PLACEHOLDER', 'g', 'No yield observed'),
+    tray: {
+      seedGramsPer1020: tagged(250, 'PLACEHOLDER', 'g', 'No tray density on file; a starting value for the experiments'),
+      soakHours: tagged(8, 'DATED', 'h', 'As the sprout: an 8-hour soak'),
+      stageDays: tagged(microDays(2, 2, 4, 2), 'PLACEHOLDER', 'days', 'No microgreen schedule on file; document C harvests wheat microgreens 7 to 10 days after germination'),
+      harvestGramsPer1020: tagged(350, 'PLACEHOLDER', 'g', 'No harvest weight observed; a starting value for the experiments'),
+    },
     flavor: 'Fresh and sweet',
     color: 'Tan seed, white shoot',
     light: { defaultRegime: 'balanced', ppfdRange: null, notes: [{ text: 'Sprouts grow in the dark; no light line.', rows: [] }] },

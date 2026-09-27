@@ -13,6 +13,7 @@ import { costPerUnitFrom, mediaForPlan, mediumDeleteRefusal, mediumFromRow, medi
 
 const broccoli = (): GrowPlanDef => growPlanSeed.find((p) => p.code === 'BROC-01')!;
 const coir = MEDIUM_BY_KEY['coco-coir']!;
+const hemp = MEDIUM_BY_KEY['hemp-mat']!;
 const row = (over: Record<string, unknown> = {}) => ({ id: 'r1', ...mediumToRow(coir, 0, 'seed'), ...over });
 
 describe('Media: rows to records', () => {
@@ -48,30 +49,30 @@ describe('Media: rows to records', () => {
 
   it('a row a plan names, and No medium, cannot be deleted', () => {
     const plans = [broccoli()];
-    expect(plansNamingMedium('coco-coir', plans)).toEqual(['BROC-01']);
-    expect(mediumDeleteRefusal('coco-coir', plans)).toContain('BROC-01');
+    expect(plansNamingMedium('hemp-mat', plans)).toEqual(['BROC-01']);
+    expect(mediumDeleteRefusal('hemp-mat', plans)).toContain('BROC-01');
     expect(mediumDeleteRefusal(NO_MEDIUM_KEY, [])).not.toBeNull();
-    expect(mediumDeleteRefusal('hemp-mat', plans)).toBeNull();
+    expect(mediumDeleteRefusal('coco-coir', plans)).toBeNull();
   });
 });
 
 describe('a plan is costed against its workspace Media library', () => {
-  const dearer = { ...coir, costPerUnit: tagged(2 * coir.costPerUnit.value, 'STATED', '$/gal', 'test') };
+  const dearer = { ...hemp, costPerUnit: tagged(2 * hemp.costPerUnit.value, 'STATED', '$/each', 'test') };
 
   it('the read attaches only the records the plan names, and never stores them', () => {
     const { header, lines } = growPlanToRows(broccoli());
-    const back = rowsToGrowPlan({ ...header, id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, lines, undefined, undefined, { 'coco-coir': dearer, 'hemp-mat': MEDIUM_BY_KEY['hemp-mat']! });
-    expect(Object.keys(back.media ?? {})).toEqual(['coco-coir']);
+    const back = rowsToGrowPlan({ ...header, id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, lines, undefined, undefined, { 'hemp-mat': dearer, 'coco-coir': coir });
+    expect(Object.keys(back.media ?? {})).toEqual(['hemp-mat']);
     expect(mediaForPlan(broccoli(), {})).toEqual({});
     expect(JSON.stringify(growPlanToRows(back))).not.toContain('"media"');
   });
 
   it("the plan's record stands over the seed list; with none, the seed list prices it", () => {
     const seedCost = costGrowPlan(broccoli()).lines.find((l) => l.line.kind === 'medium')!;
-    const withLibrary = costGrowPlan({ ...broccoli(), media: { 'coco-coir': dearer } }).lines.find((l) => l.line.kind === 'medium')!;
+    const withLibrary = costGrowPlan({ ...broccoli(), media: { 'hemp-mat': dearer } }).lines.find((l) => l.line.kind === 'medium')!;
     expect(withLibrary.costPerTray).toBeCloseTo(2 * seedCost.costPerTray, 12);
     expect(withLibrary.status).toBe('STATED');
-    const viaContext = costGrowPlan(broccoli(), defaultGrowCostContext({ media: { 'coco-coir': dearer } })).lines.find((l) => l.line.kind === 'medium')!;
+    const viaContext = costGrowPlan(broccoli(), defaultGrowCostContext({ media: { 'hemp-mat': dearer } })).lines.find((l) => l.line.kind === 'medium')!;
     expect(viaContext.costPerTray).toBeCloseTo(withLibrary.costPerTray, 12);
   });
 

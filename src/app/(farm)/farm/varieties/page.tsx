@@ -91,6 +91,15 @@ async function VarietiesPageInner() {
                 <div>{v.latinName} · {v.family} · {v.kind}. {v.supplier.name} ({v.supplier.code}){v.supplier.sku ? `, item ${v.supplier.sku}` : ''}{v.supplier.organic ? ', organic' : ''}{v.supplier.heirloom ? ', heirloom' : ''}{v.supplier.origin ? `, origin ${v.supplier.origin}` : ''}. {v.flavor}; {v.color}.</div>
                 <div className="farm-kpi-sub mt-2!">Density and stages</div>
                 <div>{num(v.seedGramsPer1020.value, 0)} g per {v.kind === 'sprout' ? 'jar' : '1020'} (supplier rates {v.supplierRate}); soak {num(v.soakHours.value, 0)} h; sow {d.sow}, germination {d.germination}, blackout {d.blackout}, light {d.light}, harvest window {d['harvest-window']} days: {daysToHarvest(d)} to harvest, {cycleDays(d)} on the shelf. <span className="farm-kpi-sub">{v.stageDays.note}</span></div>
+                {v.tray && (() => {
+                  const t = v.tray;
+                  const td = t.stageDays.value;
+                  return (
+                    <div className="mt-1!">
+                      As a microgreen in a blend: <StatusBadge status={t.seedGramsPer1020.status} title={t.seedGramsPer1020.note} /> {num(t.seedGramsPer1020.value, 0)} g per 1020; soak {num(t.soakHours.value, 0)} h; <StatusBadge status={t.stageDays.status} title={t.stageDays.note} /> {daysToHarvest(td)} days to harvest, {cycleDays(td)} on the shelf; <StatusBadge status={t.harvestGramsPer1020.status} title={t.harvestGramsPer1020.note} /> {num(t.harvestGramsPer1020.value, 0)} g harvest per 1020. The sprout in a jar is its own product.
+                    </div>
+                  );
+                })()}
                 <div className="farm-kpi-sub mt-2!">Light</div>
                 <ul className="list-disc pl-5">
                   <li>Default regime {REGIME_BY_KEY[v.light.defaultRegime].name}{v.light.ppfdRange ? `; own range ${v.light.ppfdRange.min} to ${v.light.ppfdRange.max} µmol/m²/s (rows ${v.light.ppfdRange.rows.join(', ')})` : ''}.</li>

@@ -22,7 +22,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Variety.** The specific seed: Di Cicco broccoli, black oil sunflower, speckled pea, red garnet amaranth. A variety carries its seed source, organic status, origin, cost, yield and nutrient profile. Everything in the program starts from the variety.
 
-**Mixed tray.** Two or more varieties grown together in one tray, composed to a nutrition target.
+**Blend.** Two or more varieties grown together in one tray, composed to a nutrition target and named for the benefits it is grown for.
 
 **Nutrition target.** What a subscriber wants more of: iron, protein, vitamin C, sulforaphane, fiber. A flat plan is composed against it.
 
@@ -56,7 +56,9 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Growing medium.** What the seed sits in: coconut coir, jute fiber mat, hemp mat, vermiculite, peat, or a hydroponic pad. The medium changes nitrate, dry matter and antioxidant levels in the crop. [8]
 
-**Coconut coir.** Shredded coconut husk fiber, the program's default medium. Holds water, drains, and composts.
+**Hemp mat.** A needle-punched mat of hemp fiber, the program's default medium. No binders or chemical treatment; pH-neutral and salt-free, so it needs no buffering or rinsing; holds its water inside the fiber. [94, 97]
+
+**Coconut coir.** Shredded coconut husk fiber. Holds water, drains, and composts.
 
 **Jute fiber.** A woven plant-fiber mat used as a soil-free medium. Some varieties, such as red basil, express more antioxidants on jute and vermiculite. [8]
 
@@ -84,7 +86,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Light regime.** A named light recipe on a grow plan: ratio, far-red share, intensity, hours, and any UV-C pulse. Yield, balanced, nutrition-forward, biofortify, and continuous are the catalog.
 
-**Cocopeat.** Coconut coir fiber, the default medium. pH 5.5 to 7.0, 90 to 95% porosity, naturally antifungal, more fresh weight than soil. [65]
+**Cocopeat.** Coconut coir fiber. pH 5.5 to 7.0, 90 to 95% porosity, naturally antifungal, more fresh weight than soil. [65]
 
 **Electrical conductivity (EC).** The strength of a nutrient solution, measured by how well it conducts. Set on the nutrient line for hydroponic plans.
 
@@ -260,9 +262,9 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 ## Tier 3 — Operating vocabulary (internal)
 
-**Grow plan.** The record of how a variety, or a mixed tray, is grown: seed lines, medium line, nutrient lines, light line, tray format, and the stage schedule. Every line feeds the costing formula. Replaces the kitchen's recipe.
+**Grow plan.** The record of how a variety, or a blend, is grown: seed lines, medium line, nutrient lines, light line, tray format, and the stage schedule. Every line feeds the costing formula. Replaces the kitchen's recipe.
 
-**Seed line.** A line on a grow plan naming a variety and its grams per tray by format, and its share of a mixed tray. The costing basis.
+**Seed line.** A line on a grow plan naming a variety and its grams per tray by format, and its share of a blend. The costing basis.
 
 **Medium line.** The growing medium and quantity per tray on a grow plan.
 
@@ -308,7 +310,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Forecast.** Any saved scenario: business planning over the data already in the system, with labor, costs, packaging, transport and prices adjusted to see revenue and profit. Only "forecast" appears on screen.
 
-**R&D.** The section where new grow plans, mixed trays first, are composed and tested before they go in service.
+**R&D.** The section where new grow plans, blends first, are composed and tested before they go in service.
 
 **Experiment.** A titled run in R&D: one sowing of a developing grow plan, recording harvest grams per variety, the stage checks and its time study. Its cost is Research and Development, not inventory.
 

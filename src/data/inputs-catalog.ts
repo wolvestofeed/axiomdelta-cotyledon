@@ -51,7 +51,7 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     qtyPer1020: tagged(0.66, 'PLACEHOLDER', 'gal', 'About one inch of expanded coir in a 1020; no fill volume observed'),
     unit: 'gal',
     costPerUnit: tagged(23.19 / 18.5, 'DATED', '$/gal', 'Mother Earth 5 kg compressed coco bale, $23.19, expands to about 18.5 gal (Vallecito, Jan 2024)'),
-    traits: { ph: '5.5 to 7.0', porosity: '90 to 95%', note: 'High cation exchange capacity, low bulk density, naturally antifungal; more fresh and dry weight than field soil mixes. The default medium.' },
+    traits: { ph: '5.5 to 7.0', porosity: '90 to 95%', note: 'High cation exchange capacity, low bulk density, naturally antifungal; more fresh and dry weight than field soil mixes.' },
     rows: [65],
   },
   {
@@ -68,11 +68,14 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     key: 'hemp-mat',
     name: 'Hemp fiber mat',
     form: 'mat',
-    qtyPer1020: tagged(1, 'STATED', 'each', 'One cut mat per tray'),
+    qtyPer1020: tagged(1, 'STATED', 'each', 'One pre-cut mat per 1020 tray'),
     unit: 'each',
-    costPerUnit: tagged(1.75, 'PLACEHOLDER', '$/each', 'No receipt yet'),
-    traits: { note: 'Soil-free mat, holds more water than jute.' },
-    rows: [],
+    costPerUnit: tagged(241 / 140, 'STATED', '$/each', '$241 for 140 mats, no shipping, from Bootstrap Farmer, Paris TX (Rob)'),
+    traits: {
+      ph: 'Neutral',
+      note: 'Needle-punched hemp fiber, no binders or chemical treatment; salt-free, so no buffering or rinsing. Holds up to 1,050% of its weight in water; 400, 600 and 1,300 g/m² grades set the retention. Raised potassium in basil and dill. The default medium.',
+    },
+    rows: [94, 97, 103],
   },
   {
     key: 'vermiculite',

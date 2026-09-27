@@ -98,3 +98,16 @@ describe('vocabulary — the grow plan has one name', () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe('vocabulary — a blend has one name', () => {
+  it('a tray of two or more varieties is a blend everywhere, never by the name it replaced', () => {
+    const files = ROOTS.flatMap((r) => walk(join(REPO, r))).filter((f) => EXT.test(f) && !f.endsWith('farm-vocabulary.test.ts'));
+    const hits: string[] = [];
+    for (const f of files) {
+      readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+        if (/mixed[\s-]?trays?/i.test(line)) hits.push(`${relative(REPO, f)}:${i + 1}`);
+      });
+    }
+    expect(hits).toEqual([]);
+  });
+});

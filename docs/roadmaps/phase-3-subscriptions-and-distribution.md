@@ -6,6 +6,7 @@ What the facility needs to take its first paying subscriber. `outline.md` §4 (S
 
 - [ ] Subscriptions module: cadence (bi-weekly, monthly), Stripe recurring billing, pause and skip, a subscription cycle deriving orders
 - [ ] Subscriber Portal and Flat Builder: sign-in inside the portal, account linked to a subscriber record (the linking Phase 1b deferred), a flat plan composed against nutrition targets with every benefit citing its row
+- [ ] Hemp mat education in the Subscriber Portal: why the greens are grown on hemp mats, from the stated rows (`science-library.md`, document D: the makers' specifications, grade S, and the one primary study), never from the commercial pages that carry no claim
 - [ ] Pickup Points and Routes: the farm, shared pickup locations, delivery routes, distribution days
 - [ ] Tray returns: a live tray's set coming back for reuse, tracked per subscriber
 - [ ] Supplier Portal account linking on the same mechanism

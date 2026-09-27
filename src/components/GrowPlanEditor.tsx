@@ -20,7 +20,7 @@ import { money, num } from '@/components/ui';
  *
  * A plan saved here is a library plan from that moment: it can be selected on Unit Economics and
  * Capacity, costed and sowing-sized like any other. The code is the lead variety's code and the
- * next serial; a plan with two or more seed lines is a mixed tray under MIX. A blank quantity on a
+ * next serial; a plan with two or more seed lines is a blend under BLEND. A blank quantity on a
  * medium, nutrient or light line reads the catalog or the variety record and keeps that record's
  * tag; a typed figure is STATED by this editor. The variety's light and media notes sit beside the
  * light and medium lines.

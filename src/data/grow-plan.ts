@@ -1,10 +1,10 @@
 /**
- * MicroFarm — the grow plan (outline §4). How a variety, or a mixed tray, is grown.
+ * MicroFarm — the grow plan (outline §4). How a variety, or a blend, is grown.
  *
  * A plan names its tray format and carries lines of four kinds, every one of which feeds the
  * costing formula (`_engine/grow-costing.ts`):
  *
- *   seed      a variety, its grams per tray of the format, and its share of a mixed tray;
+ *   seed      a variety, its grams per tray of the format, and its share of a blend;
  *             the only line that carries provenance and nutrition
  *   medium    the growing medium and its quantity per tray (null = the catalog's, scaled to the format)
  *   nutrient  a solution, its concentration (null = the catalog's), and the stage it starts
@@ -12,11 +12,11 @@
  *             and the stage it starts
  *
  * Watering is never a line: it is a stage (`stage-schedule.ts`). A single-variety flat is one seed
- * line; a mixed tray is two or more whose shares sum to one. The stage days are the variety's
- * unless the plan overrides them; a mixed tray runs on the slowest variety at every stage.
+ * line; a blend is two or more whose shares sum to one. The stage days are the variety's
+ * unless the plan overrides them; a blend runs on the slowest variety at every stage.
  *
- * Codes. A plan's code is its lead variety's code and a serial: `BROC-01`, `BROC-02`; a mixed tray
- * is `MIX-01`. The unit a subscriber buys is the plan code and the packaged format
+ * Codes. A plan's code is its lead variety's code and a serial: `BROC-01`, `BROC-02`; a blend
+ * is `BLEND-01`. The unit a subscriber buys is the plan code and the packaged format
  * (`tray-formats.ts` `unitSku`): `BROC-01-1020`. The supplier's code is on the variety record.
  */
 
@@ -29,7 +29,7 @@ import type { StatusTag } from '@/data/tagged';
 import type { LastPricePaid } from '@/engine/seed-cost';
 import { STAGES, SPROUT_STAGES, type StageDays, type StageKey, type StageDef } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY, densityFactorOf, type TrayFormatKey } from '@/data/tray-formats';
-import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
+import { VARIETY_BY_KEY, growthFor, type VarietyDef } from '@/data/varieties';
 
 export type LineKind = 'seed' | 'medium' | 'nutrient' | 'light';
 
@@ -130,7 +130,7 @@ export interface LinePrice {
 }
 
 export const GROW_PLAN_CODE_RX = /^[A-Z]{2,5}-\d{2,3}$/;
-export const MIX_CODE_PREFIX = 'MIX';
+export const BLEND_CODE_PREFIX = 'BLEND';
 
 export const isSeedLine = (l: GrowPlanLine): l is SeedLine => l.kind === 'seed';
 export const isMediumLine = (l: GrowPlanLine): l is MediumLine => l.kind === 'medium';
@@ -165,26 +165,28 @@ export function planStages(plan: Pick<GrowPlanDef, 'format'>): readonly StageDef
  * The days per stage the plan runs on: its override, else the slowest of its varieties at each
  * stage. A plan with no varieties runs zero days everywhere.
  */
-export function planStageDays(plan: Pick<GrowPlanDef, 'lines' | 'stageDays'>, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): StageDays {
+export function planStageDays(plan: Pick<GrowPlanDef, 'lines' | 'stageDays'> & { format?: TrayFormatKey }, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): StageDays {
   if (plan.stageDays) return plan.stageDays.value;
+  const onTray = plan.format === undefined || TRAY_FORMAT_BY_KEY[plan.format]?.kind !== 'sprout';
   const out: Record<Exclude<StageKey, 'packed'>, number> = { soak: 0, sow: 0, germination: 0, blackout: 0, light: 0, 'harvest-window': 0 };
   for (const v of planVarieties(plan, byKey)) {
-    for (const k of Object.keys(out) as (keyof typeof out)[]) out[k] = Math.max(out[k], v.stageDays.value[k]);
+    for (const k of Object.keys(out) as (keyof typeof out)[]) out[k] = Math.max(out[k], growthFor(v, onTray).stageDays.value[k]);
   }
   return out;
 }
 
 /** The variety's seeding density in the format: its grams per 1020 by the format's area factor; per jar for a sprout. */
 export function defaultGramsPerTray(variety: VarietyDef, format: TrayFormatKey, share = 1): number {
-  return variety.seedGramsPer1020.value * densityFactorOf(TRAY_FORMAT_BY_KEY[format]) * share;
+  return growthFor(variety, TRAY_FORMAT_BY_KEY[format].kind !== 'sprout').seedGramsPer1020.value * densityFactorOf(TRAY_FORMAT_BY_KEY[format]) * share;
 }
 
 /** The default seed line for a variety in a format, at the variety's stated density. */
 export function seedLineFor(variety: VarietyDef, format: TrayFormatKey, share = 1): SeedLine {
+  const density = growthFor(variety, TRAY_FORMAT_BY_KEY[format].kind !== 'sprout').seedGramsPer1020;
   return {
     kind: 'seed',
     varietyKey: variety.key,
-    gramsPerTray: tagged(defaultGramsPerTray(variety, format, share), variety.seedGramsPer1020.status, 'g', `${variety.seedGramsPer1020.note ?? ''}${share < 1 ? ` × ${share} share of the tray` : ''}`.trim()),
+    gramsPerTray: tagged(defaultGramsPerTray(variety, format, share), density.status, 'g', `${density.note ?? ''}${share < 1 ? ` × ${share} share of the tray` : ''}`.trim()),
     share,
   };
 }
@@ -219,10 +221,10 @@ export function singleVarietyPlan(variety: VarietyDef, format: TrayFormatKey = v
 
 export const growPlanCode = (varietyCode: string, serial: number): string => `${varietyCode}-${String(serial).padStart(2, '0')}`;
 
-/** The code prefix of a plan: its lead variety's code, or `MIX` for a mixed tray. */
+/** The code prefix of a plan: its lead variety's code, or `BLEND` for a blend. */
 export function codePrefixFor(plan: Pick<GrowPlanDef, 'lines'>, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): string {
   const vs = planVarieties(plan, byKey);
-  return vs.length === 1 ? vs[0]!.code : MIX_CODE_PREFIX;
+  return vs.length === 1 ? vs[0]!.code : BLEND_CODE_PREFIX;
 }
 
 /** The next code under a prefix: one past the highest serial already in the library. */
