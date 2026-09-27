@@ -6,6 +6,7 @@
  * from the sums. Nothing is stored.
  */
 
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { SowingRecordDoc, DistributionDoc, ReceiptDoc } from '@/engine/actuals';
 import type { ProductionSowingLedger } from '@/engine/production-ledger';
 import type { IncomeStatement } from '@/engine/ledger-model';
@@ -15,7 +16,6 @@ import type { MixFoodFootprint, SustainabilityBasis } from '@/engine/sustainabil
 import { expiredMassKg, mixShrinkKg } from '@/engine/sustainability-basis';
 import { distributionRevenueCents } from '@/engine/working-capital';
 import type { MarkRating } from '@/data/mark';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export interface PvaOrder {
   orderDate: string;
@@ -43,7 +43,7 @@ export interface PvaSideInput {
   energy: EnergyActivity;
   waterGal: number;
   shrinkAllowance: number;
-  cropPlans: readonly GrowPlanCarrier[];
+  cropPlans: readonly GrowPlanDef[];
   /** The subscribers this side serves in the month, with the rating MicroFarm assigned. */
   subscribers: readonly { id: string; name: string; rating: MarkRating }[];
   /** The suppliers on this side's receipts in the month, with their ratings. */

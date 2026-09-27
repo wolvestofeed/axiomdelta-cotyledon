@@ -4,6 +4,7 @@
  * only. The library conversions themselves are in `farm-grow-plans.test.ts`.
  */
 
+import { purchaseLines } from '@/engine/grow-purchase';
 import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs, inputKey } from '@/engine/scenario';
 import { cropPlanToRows, rowsToCropPlan, referenceCropPlan, isGrowPlanCode, type LibraryCropPlan } from '@/engine/crop-plan-library';
@@ -38,9 +39,9 @@ describe('scenario resolver with a library', () => {
     const library = [lib('BROC-01'), lib('RAD-01')];
     const broc = VARIETY_BY_KEY['broccoli']!;
     const r = resolveScenarioInputs({ inputs: { [inputKey('BROC-01', broc.name)]: { seedUnitCost: 9 } } }, library);
-    const seedLine = (code: string) => r.cropPlans.find((x) => x.code === code)!.inputs[0]!;
-    expect(seedLine('BROC-01').seedUnitCost).toBe(9);
-    expect(seedLine('RAD-01').seedUnitCost).toBe(VARIETY_BY_KEY['radish']!.seedPricePerLb.value);
+    const seedLine = (code: string) => purchaseLines(r.cropPlans.find((x) => x.code === code)!)[0]!;
+    expect(seedLine('BROC-01').unitCost).toBe(9);
+    expect(seedLine('RAD-01').unitCost).toBe(VARIETY_BY_KEY['radish']!.seedPricePerLb.value);
     expect(costCropPlan(r.cropPlans[0]!, 0).lines[0]!.costPerUnit).toBeCloseTo((broc.seedGramsPer1020.value / 453.59237) * 9, 9);
   });
 

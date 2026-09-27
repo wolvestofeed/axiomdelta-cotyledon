@@ -2,8 +2,8 @@
  * MicroFarm — the grow plan library, engine-side.
  *
  * Ledger-free, database-free. Conversions between a library row pair (`farm.crop_plans` +
- * `farm.crop_plan_lines`) and the grow plan the engine reads, the next code under a variety, and
- * the library plan's legacy projection (`grow-plan-bridge.ts`). The read layer
+ * `farm.crop_plan_lines`) and the grow plan the engine reads, and the next code under a variety.
+ * The read layer
  * (`_lib/crop-plans.ts`) and the actions call these so the shape is defined once.
  */
 
@@ -15,12 +15,11 @@ import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type 
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import type { StageDays } from '@/data/stage-schedule';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 export const CROP_PLAN_STATUSES: CropPlanStatus[] = ['in_service', 'planned', 'developing'];
 
-/** A library plan: the grow plan, its legacy projection for the engine, and the row identity. */
-export interface LibraryCropPlan extends GrowPlanCarrier {
+/** A library plan: the grow plan and the row identity. */
+export interface LibraryCropPlan extends GrowPlanDef {
   id: string;
   source: 'seed' | 'user_built';
   version: number;
@@ -87,7 +86,7 @@ export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPl
 export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): LibraryCropPlan {
   const plan = rowsToGrowPlan(header, lines, nutrients);
   return {
-    ...projectCropPlan(plan),
+    ...plan,
     id: header.id,
     source: header.source === 'seed' ? 'seed' : 'user_built',
     version: header.version,
@@ -135,6 +134,6 @@ export function nextCropPlanCode(existing: readonly string[], prefix: string): s
 export const isGrowPlanCode = (code: string): boolean => GROW_PLAN_CODE_RX.test(code);
 
 /** The plan that stands for the facility where one is needed: the first In Service, else the first. */
-export function referenceCropPlan<T extends GrowPlanCarrier>(library: readonly T[]): T | undefined {
+export function referenceCropPlan<T extends GrowPlanDef>(library: readonly T[]): T | undefined {
   return library.find((r) => r.status === 'in_service') ?? library[0];
 }

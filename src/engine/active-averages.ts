@@ -10,7 +10,7 @@
  * row says so. No figure here belongs to one crop plan.
  */
 
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { assumptions as planAssumptions } from '@/data/plan-data';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { costCropPlan, costToServe, deriveCapacity, type CapacityInputs } from '@/engine';
@@ -63,7 +63,7 @@ export function sowingElapsedMinutes(study: Pick<TimeStudyDoc, 'sowingSize' | 'l
 }
 
 export function activeCropPlanAverages(
-  cropPlans: readonly GrowPlanCarrier[],
+  cropPlans: readonly GrowPlanDef[],
   cap: CapacityInputs,
   a: typeof planAssumptions,
   studies: readonly TimeStudyDoc[],

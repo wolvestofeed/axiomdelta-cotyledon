@@ -8,7 +8,6 @@ import { planSeedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, DEFAULT_WEEKDAYS, type SubscriptionCycleDef } from '@/data/subscription-cycles';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { cropPlanToRows, type LibraryCropPlan } from '@/engine/crop-plan-library';
 
 /**
@@ -338,7 +337,7 @@ export function dbSeedSubscribers(): SubscriberDef[] {
   return planSeedSubscribers();
 }
 
-export function dbSeedSubscriptionCycles(library: readonly (GrowPlanCarrier | LibraryCropPlan)[], today: string): SubscriptionCycleDef[] {
+export function dbSeedSubscriptionCycles(library: readonly (GrowPlanDef | LibraryCropPlan)[], today: string): SubscriptionCycleDef[] {
   return seedSubscriptionCycles(library, today);
 }
 

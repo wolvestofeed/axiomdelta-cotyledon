@@ -7,11 +7,11 @@
  * orders in the window. It replaces the typed 650 units a day on one crop plan.
  */
 
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { BookOrder } from '@/engine/orders';
 import type { CapacityInputs } from '@/engine';
 import { planHorizon, type FinishedLot } from '@/engine/production-plan';
 import type { DateRange } from '@/engine/periods';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { ResolvedInputs } from '@/engine/scenario';
 
 type Assumptions = ResolvedInputs['assumptions'];
@@ -37,7 +37,7 @@ export function dashboardToday(input: {
   /** Days ahead the book is read. */
   windowDays?: number;
   book: readonly BookOrder[];
-  cropPlans: readonly GrowPlanCarrier[];
+  cropPlans: readonly GrowPlanDef[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   cropPlanAssumptions?: Readonly<Record<string, Assumptions>>;

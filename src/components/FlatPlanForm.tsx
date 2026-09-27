@@ -1,6 +1,6 @@
 'use client';
 
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import { useState } from 'react';
 import { Card } from '@/components/ui';
 import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
@@ -62,7 +62,7 @@ export function FlatPlanForm({
 }: {
   title: string;
   initial: SequenceValues;
-  cropPlans: readonly GrowPlanCarrier[];
+  cropPlans: readonly GrowPlanDef[];
   /** The subscriber's channel: only crop plans listed on it are offered. Null = every crop plan (a saved cycle). */
   channel?: number | null;
   /** The subscriber's services, for a plan that serves one service only. Empty = no service scope offered. */

@@ -1,3 +1,4 @@
+import { purchaseLines } from '@/engine/grow-purchase';
 import { describe, it, expect } from 'vitest';
 import {
   isAvailableInMonth,
@@ -389,7 +390,7 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
   });
 
   it('the resolver writes the catalog price onto the line and says where it came from', () => {
-    const seedName = resolveScenarioInputs().cropPlan.inputs[0]!.name;
+    const seedName = purchaseLines(resolveScenarioInputs().cropPlan)[0]!.name;
     const beef = seedName;
     const catalog = { s1: [line({ item: seedName, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
@@ -398,8 +399,8 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
       catalog,
       '2026-09-13',
     );
-    const lineOut = R.cropPlan.inputs.find((i) => i.name === beef)!;
-    expect(lineOut.seedUnitCost).toBe(4.85);
+    const lineOut = purchaseLines(R.cropPlan).find((i) => i.name === beef)!;
+    expect(lineOut.unitCost).toBe(4.85);
     expect(lineOut.status).toBe('SOURCED');
     expect(lineOut.source).toContain('Supplier catalog');
     expect(R.inputPrices[`${R.cropPlan.code}::${beef}`].basis).toBe('catalog');
@@ -407,7 +408,7 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
 
   it('a price typed on the scenario outranks the catalog, and stops claiming its source', () => {
     const R0 = resolveScenarioInputs();
-    const beef = R0.cropPlan.inputs[0]!.name;
+    const beef = purchaseLines(R0.cropPlan)[0]!.name;
     const catalog = { s1: [line({ item: beef, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
       {
@@ -418,8 +419,8 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
       catalog,
       '2026-09-13',
     );
-    const lineOut = R.cropPlan.inputs.find((i) => i.name === beef)!;
-    expect(lineOut.seedUnitCost).toBe(6);
+    const lineOut = purchaseLines(R.cropPlan).find((i) => i.name === beef)!;
+    expect(lineOut.unitCost).toBe(6);
     expect(lineOut.status).toBe('STATED');
     expect(R.inputPrices[`${R.cropPlan.code}::${beef}`].basis).toBe('cropPlan');
   });

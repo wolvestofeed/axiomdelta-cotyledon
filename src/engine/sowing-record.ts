@@ -15,7 +15,6 @@ import { CONTROL_POINT_BY_ID, STAGE_CONTROL_POINTS, type ControlPointDef } from 
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import type { SowingRecordDoc } from '@/engine/actuals';
-import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { controlPointsForPlan, evaluateSpentWaterTest, type SpentWaterTest, type SpentWaterVerdict } from '@/engine/produce-safety';
 import type { SowingIssue, VarietyLot } from '@/engine/sowing';
 
@@ -84,7 +83,7 @@ export function growLotCode(planCode: string, sowDate: string, variety: VarietyD
  * stage record empty. The operator types what differed and signs.
  */
 export function growSowingPrefill(
-  carrier: GrowPlanCarrier,
+  carrier: GrowPlanDef,
   sowDate: string,
   sequence: number,
   trays: number,

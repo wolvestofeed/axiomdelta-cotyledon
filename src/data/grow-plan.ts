@@ -122,6 +122,12 @@ export const nutrientLines = (plan: Pick<GrowPlanDef, 'lines'>): NutrientLine[] 
 export const lightLine = (plan: Pick<GrowPlanDef, 'lines'>): LightLine | undefined => plan.lines.find(isLightLine);
 
 /** The varieties on the plan's seed lines, in line order. Unknown keys are skipped. */
+/** The name of the format a plan is grown and sold in: what the old header called its category. */
+export const formatNameOf = (plan: Pick<GrowPlanDef, 'format'>): string => TRAY_FORMAT_BY_KEY[plan.format].name;
+
+/** The varieties a plan sows, by name, in line order. */
+export const varietyNamesOf = (plan: Pick<GrowPlanDef, 'lines'>): string => planVarieties(plan).map((v) => v.name).join(', ');
+
 export function planVarieties(plan: Pick<GrowPlanDef, 'lines'>, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): VarietyDef[] {
   return seedLines(plan).map((l) => byKey[l.varietyKey]).filter((v): v is VarietyDef => v !== undefined);
 }

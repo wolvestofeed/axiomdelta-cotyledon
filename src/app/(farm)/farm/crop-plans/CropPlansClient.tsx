@@ -1,5 +1,6 @@
 'use client';
 
+import { formatNameOf, varietyNamesOf } from '@/data/grow-plan';
 import { costPlan } from '@/engine/grow-costing';
 import { PageControls } from '@/components/PageControls';
 import { useEffect, useMemo } from 'react';
@@ -120,7 +121,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
                 return (
                   <tr key={r.code} className={`${isSel ? 'bg-[color:var(--farm-surface-2)]!' : ''}`}>
                     <td className="farm-mono farm-fs-xs">{r.code}</td>
-                    <td className={`${(isSel ? 'font-semibold!' : 'font-medium!')}`}>{r.name}<div className="farm-c-faint farm-fs-xs">{r.category}</div></td>
+                    <td className={`${(isSel ? 'font-semibold!' : 'font-medium!')}`}>{r.name}<div className="farm-c-faint farm-fs-xs">{formatNameOf(r)}</div></td>
                     <td>
                       {isSuperAdmin && lib?.id ? (
                         <select className="farm-select" value={r.status} disabled={statusPending} onChange={(e) => { const status = e.target.value as CropPlanStatus; startStatus(async () => { await setCropPlanStatus({ id: lib.id, status }); router.refresh(); }); }}>
@@ -231,11 +232,11 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           <div>
             <div className="farm-page-title farm-fs-lg">{selected.name}</div>
             <div className="farm-kpi-sub mt-1!">
-              {selected.code} · {selected.category}
+              {selected.code} · {formatNameOf(selected)}
             </div>
           </div>
           <div className="text-sm farm-c-soft max-w-120!">
-            {selected.components}
+            {varietyNamesOf(selected)}
           </div>
         </div>
       </Card>

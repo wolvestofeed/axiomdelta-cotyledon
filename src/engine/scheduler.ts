@@ -37,9 +37,9 @@
  * harvest order that does not fit inside the day is unplaced, whole.
  */
 
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { EquipmentLine } from '@/data/capex';
 import { clock, type CrewShift } from '@/data/crews';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import type { SchedulePolicy } from '@/data/schedule-policy';
 import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
 import type { CapacityInputs } from '@/engine';
@@ -601,7 +601,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
 export function scheduleInputsForDay(input: {
   productionRuns?: readonly { cropPlanCode: string; sowingsScheduled: number; produced: number }[];
   shipments?: readonly { cropPlanCode: string; filledBase: number }[];
-  cropPlans: readonly GrowPlanCarrier[];
+  cropPlans: readonly GrowPlanDef[];
   studies: readonly TimeStudyDoc[];
   equipment: readonly EquipmentLine[];
   routing: Readonly<Record<string, RouteStepOverlay>>;

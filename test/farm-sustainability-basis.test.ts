@@ -1,3 +1,4 @@
+import { purchaseLines } from '@/engine/grow-purchase';
 import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { standardSowingRecordPrefill, type ActualsBundle, type DistributionDoc } from '@/engine/actuals';
@@ -10,7 +11,7 @@ import { isoAddDays } from '@/engine/orders';
 const R = resolveScenarioInputs({});
 const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
 const channel = cropPlan.channels[0];
-const seedName = cropPlan.inputs.find((i) => i.unit === 'lb')!.name;
+const seedName = purchaseLines(cropPlan).find((i) => i.unit === 'lb')!.name;
 // A grow sowing is stock from its first harvest day: each lot ships on its harvest date.
 const harvest = (sown: string) => isoAddDays(sown, leadDaysFor(cropPlan));
 const pf = Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;

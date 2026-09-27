@@ -1,8 +1,9 @@
+import { formatNameOf } from '@/data/grow-plan';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import 'server-only';
 import { supplierOperations } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
 import { listCropPlans } from '@/server/crop-plans';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { listEquipment } from '@/server/equipment';
 import type { EquipmentLine } from '@/data/capex';
 import { EQUIPMENT_STATUS_LABELS } from '@/engine/equipment';
@@ -72,12 +73,12 @@ function prospectToEntity(s: (typeof prospectRecords)[number]): LeanEntity {
   };
 }
 
-function cropPlanToEntity(r: GrowPlanCarrier): LeanEntity {
+function cropPlanToEntity(r: GrowPlanDef): LeanEntity {
   return {
     kind: 'cropPlan',
     id: r.code,
     name: r.name,
-    subtitle: `${r.code} · ${r.category}`,
+    subtitle: `${r.code} · ${formatNameOf(r)}`,
     pills: [{ label: `${r.lines.length} lines`, tone: 'plain' }],
     href: '/farm/crop-plans',
     lat: null,
@@ -202,7 +203,7 @@ async function searchKind(kind: EntityKind, q: string): Promise<LeanEntity[]> {
     }
     case 'cropPlan':
       return (await listCropPlans())
-        .filter((r) => matches([r.name, r.code, r.category].join(' '), needle))
+        .filter((r) => matches([r.name, r.code, formatNameOf(r)].join(' '), needle))
         .slice(0, LIMIT)
         .map(cropPlanToEntity);
     case 'equipment':

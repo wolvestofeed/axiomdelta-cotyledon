@@ -1,3 +1,4 @@
+import { formatNameOf } from '@/data/grow-plan';
 import { PageControls } from '@/components/PageControls';
 import Link from 'next/link';
 import { PageHeader, Kpi, Notice, num } from '@/components/ui';
@@ -48,7 +49,7 @@ async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
   const cropPlanMatches: CropPlanMatchView[] = cropPlans.map((r) => ({
     code: r.code,
     name: r.name,
-    category: r.category,
+    category: formatNameOf(r),
     lines: matchCropPlanToSuppliers(supplierOperations, region, r).map((m) => ({
       input: m.input,
       count: m.matches.length,

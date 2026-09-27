@@ -23,7 +23,6 @@ import { assumptions } from '@/data/plan-data';
 import { productionSowingLedger } from '@/engine/production-ledger';
 import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { traceabilityLotCode, traceabilityGaps } from '@/engine/traceability';
-import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { lineLabel } from '@/data/grow-plan';
 
@@ -31,7 +30,6 @@ const DATE = '2026-09-14';
 // A sowing of the seed grow plans' reference plan: one grow unit's trays.
 const R0 = resolveScenarioInputs();
 const cropPlan = R0.cropPlan;
-if (!isGrowPlanCarrier(cropPlan)) throw new Error('the reference plan is a grow plan');
 const card = costPlan(cropPlan);
 const trays = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
 const shrink = assumptions.yield.shrinkAllowance.value;

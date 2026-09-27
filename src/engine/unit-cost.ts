@@ -25,7 +25,7 @@
  * freezes the crop plan's labor and packaging with them — no second snapshot shape.
  */
 
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PackagingLibrary } from '@/data/packaging';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
@@ -72,7 +72,7 @@ export interface CropPlanLaborStandard {
  * crop plan is a gap: the record says there is none, so none is reported.
  */
 export function laborStandardFor(
-  cropPlan: GrowPlanCarrier,
+  cropPlan: GrowPlanDef,
   studies: readonly TimeStudyDoc[] | null,
   sowingSize: number,
 ): CropPlanLaborStandard {
@@ -137,7 +137,7 @@ export interface CropPlanCostInputs {
 
 /** A crop plan's labor standard and its packaging per unit. */
 export function cropPlanCostInputs(
-  cropPlan: GrowPlanCarrier,
+  cropPlan: GrowPlanDef,
   studies: readonly TimeStudyDoc[] | null,
   sowingSize: number,
   packaging: PackagingLibrary,

@@ -11,7 +11,6 @@ import { FL_OZ_PER_GAL, WATER_PER_WATERING_OZ, cycleDays } from '@/data/stage-sc
 import { NUTRIENT_BY_KEY } from '@/data/inputs-catalog';
 import { averageStudies, consumptionFrom, inStandard, laborStandard, measuredConsumption, summarizeStudy, wateringDays } from '@/engine/time-studies';
 import { costGrowPlan } from '@/engine/grow-costing';
-import { projectCropPlan, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { measuredRows } from '@/engine/measured-consumption';
 
@@ -135,13 +134,13 @@ describe('the costing reads the measured figures', () => {
   });
 
   it('the resolver attaches what the approved studies measured to the plan, and the plan costs from it', () => {
-    const library = growPlanSeed.map((p) => projectCropPlan(p));
+    const library = growPlanSeed;
     const approved = study({ consumption: { water: [], supplements: [{ day: '2026-10-06', stage: 'light', nutrientKey: 'floragrow-npk', ml: 30, trays: 10 }] } });
     const resolved = resolveScenarioInputs({}, library, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, [approved]);
     const broc = resolved.cropPlans.find((r) => r.code === 'BROC-01')!;
-    expect(isGrowPlanCarrier(broc) && broc.plan.measured?.mlPerTray['floragrow-npk']).toBeCloseTo(3, 9);
-    const other = resolved.cropPlans.find((r) => r.code !== 'BROC-01' && isGrowPlanCarrier(r))!;
-    expect(isGrowPlanCarrier(other) && other.plan.measured).toBeUndefined();
+    expect(broc.measured?.mlPerTray['floragrow-npk']).toBeCloseTo(3, 9);
+    const other = resolved.cropPlans.find((r) => r.code !== 'BROC-01')!;
+    expect(other.measured).toBeUndefined();
   });
 
   it('Actuals lists each plan with an approved study, measured beside before', () => {

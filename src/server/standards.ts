@@ -15,6 +15,17 @@ export async function loadStandards(): Promise<StandardVersionDoc[]> {
     approvedBy: r.approvedBy,
     approvedAt: r.approvedAt.toISOString(),
     notes: r.notes,
-    snapshot: r.snapshot as StandardSnapshot,
+    snapshot: snapshotFrom(r.snapshot),
   }));
+}
+
+/**
+ * A stored snapshot as the engine reads it. A snapshot frozen before the library held plain grow
+ * plans carries the grow plan inside the old projected shape, as `cropPlan.plan`; the grow plan is
+ * read from there. Its frozen line prices were on the projected lines and are not carried over.
+ */
+function snapshotFrom(raw: unknown): StandardSnapshot {
+  const snap = raw as StandardSnapshot & { cropPlan: { lines?: unknown; plan?: StandardSnapshot['cropPlan'] } };
+  if (!Array.isArray(snap.cropPlan.lines) && snap.cropPlan.plan) return { ...snap, cropPlan: snap.cropPlan.plan };
+  return snap;
 }

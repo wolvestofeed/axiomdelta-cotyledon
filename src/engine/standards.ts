@@ -9,14 +9,14 @@
  * only an approval does.
  */
 
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import { stableStringify } from '@/engine/periods';
 
 export type StandardAssumptions = typeof defaultAssumptions;
 
 export interface StandardSnapshot {
-  cropPlan: GrowPlanCarrier;
+  cropPlan: GrowPlanDef;
   /**
    * The assumptions the crop plan was costed at — its OWN, carrying its labor
    * standard and packaging (Roadmap N3). A snapshot taken before N3 froze the

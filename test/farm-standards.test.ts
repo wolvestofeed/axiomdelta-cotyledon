@@ -1,3 +1,4 @@
+import { purchaseLines } from '@/engine/grow-purchase';
 import { describe, it, expect } from 'vitest';
 import { assumptions } from '@/data/plan-data';
 import { deriveCapacity } from '@/engine';
@@ -47,13 +48,14 @@ describe('approved standard versions (Roadmap J5)', () => {
     const live = { cropPlan: structuredClone(cropPlan), assumptions: structuredClone(ownAssumptions) };
     expect(standardDiffers(versions[0]!.snapshot, live)).toBe(false);
     const dearer = structuredClone(live);
-    dearer.cropPlan.inputs[0]!.seedUnitCost *= 1.1;
+    const first = purchaseLines(cropPlan)[0]!;
+    dearer.cropPlan.prices = { [first.name]: { unitCost: first.unitCost * 1.1, status: 'STATED', source: 'test' } };
     expect(standardDiffers(versions[0]!.snapshot, dearer)).toBe(true);
   });
 
   it('the ledger costs a sowing at the version in force, not at the live library', () => {
-    const first = cropPlan.inputs[0]!;
-    const dearer = resolveScenarioInputs({ inputs: { [inputKey(cropPlan.code, first.name)]: { seedUnitCost: first.seedUnitCost * 2 } } });
+    const first = purchaseLines(cropPlan)[0]!;
+    const dearer = resolveScenarioInputs({ inputs: { [inputKey(cropPlan.code, first.name)]: { seedUnitCost: first.unitCost * 2 } } });
     const std = version(1, '2026-09-01');
     const atStandard = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std]), dearer);
     const atLibrary = postActuals(bundle([sowing('2026-09-14')]), dearer);

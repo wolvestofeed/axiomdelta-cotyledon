@@ -36,13 +36,13 @@ import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, ty
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
-import { isGrowPlanCarrier, projectCropPlan, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { purchaseLines } from '@/engine/grow-purchase';
 import { measuredConsumption, studiesForCropPlan } from '@/engine/time-studies';
-import type { LinePrice } from '@/data/grow-plan';
+import type { GrowPlanDef, LinePrice } from '@/data/grow-plan';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
-const seedCropPlans: readonly GrowPlanCarrier[] = growPlanSeed.map((p) => projectCropPlan(p));
+const seedCropPlans: readonly GrowPlanDef[] = growPlanSeed;
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price';
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
@@ -90,10 +90,15 @@ export const inputKey = (cropPlanCode: string, name: string) => `${cropPlanCode}
 export function assumptionsFor(inputs: Pick<ResolvedInputs, 'assumptions' | 'cropPlanAssumptions'>, cropPlanCode: string): ResolvedInputs['assumptions'] {
   return inputs.cropPlanAssumptions[cropPlanCode] ?? inputs.assumptions;
 }
+/** A what-if on one purchase line, keyed by `inputKey(plan code, line label)`. */
 export interface InputOverlay {
+  /** The price typed on the scenario; it stands over the line's own and any catalog price. */
   seedUnitCost?: number;
+  /** @deprecated A grow line's quantity is the plan's; a saved value is ignored. */
   seedQtyPerSowing?: number;
+  /** @deprecated A grow plan's yield is its variety's harvest weight; a saved value is ignored. */
   yieldToHarvest?: number;
+  /** @deprecated Pack sizes are one until a supplier's is on file; a saved value is ignored. */
   packSize?: number;
 }
 
@@ -383,9 +388,9 @@ export interface ResolvedInputs {
    * planning loop, the ledger, capacity) read it until orders carry a crop plan
    * each (Roadmap Phase H3/H4).
    */
-  cropPlan: GrowPlanCarrier;
+  cropPlan: GrowPlanDef;
   /** Every library crop plan with the scenario's input edits applied. */
-  cropPlans: GrowPlanCarrier[];
+  cropPlans: GrowPlanDef[];
   phases: typeof defaultPhases;
   phaseProfiles: typeof defaultPhaseProfiles;
   /** Proposed crews: checked against the labor requirement, never an input to capacity. */
@@ -476,7 +481,7 @@ function put<T>(target: { value: T }, override: T | undefined): void {
 export function resolveScenarioInputs(
   config: FarmScenarioConfig = {},
   /** The crop plan library. Omitted = the seed grow plans (tests, engine defaults). */
-  library: readonly GrowPlanCarrier[] = seedCropPlans,
+  library: readonly GrowPlanDef[] = seedCropPlans,
   /** The subscriber library. Omitted = the seed placeholders built from the channel constants. */
   subscribers: readonly SubscriberDef[] = seedSubscribers(),
   /** Farm closures from the production calendar (Roadmap J1). Omitted = none entered. */
@@ -569,63 +574,47 @@ export function resolveScenarioInputs(
   const inputSupplier = config.sustainability?.inputSupplier ?? {};
   const inputPrices: Record<string, ResolvedInputPrice> = {};
   const source = library.length > 0 ? library : seedCropPlans;
-  const cropPlans: GrowPlanCarrier[] = source.map((r) => {
+  const cropPlans: GrowPlanDef[] = source.map((r) => {
     // What the plan's approved time studies measured stands over the placeholder watering volumes
-    // and the nutrient strength; the plan is projected again so its lines carry the measured cost.
-    const measured = timeStudies && isGrowPlanCarrier(r) ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
-    const base = measured && isGrowPlanCarrier(r) ? { ...r, ...projectCropPlan({ ...r.plan, measured }) } : r;
-    const rec = structuredClone(base) as GrowPlanCarrier;
+    // and the nutrient strength (`GrowPlanDef.measured`).
+    const measured = timeStudies ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
+    const plan: GrowPlanDef = structuredClone({ ...r, prices: undefined, ...(measured ? { measured } : {}) });
+    delete plan.prices;
     // A catalog price or a typed what-if stands over the line's own price; the plan carries it for
-    // the cost card (`GrowPlanDef.prices`), keyed by the line's label.
+    // the cost card and the purchase lines (`GrowPlanDef.prices`), keyed by the line's label.
     const prices: Record<string, LinePrice> = {};
-    const notePrice = (ing: GrowPlanCarrier['inputs'][number], own: number) => {
-      if (Math.abs(ing.seedUnitCost - own) > 1e-12) prices[ing.name] = { unitCost: ing.seedUnitCost, status: ing.status, source: ing.source };
-    };
-    for (const ing of rec.inputs) {
-      const own = ing.seedUnitCost;
-      const supplierId = inputSupplier[ing.name] ?? null;
+    for (const line of purchaseLines(plan)) {
+      const key = inputKey(plan.code, line.name);
+      const supplierId = inputSupplier[line.name] ?? null;
       const priced = resolveInputPrice({
-        input: ing.name,
-        unit: ing.unit,
-        cropPlanUnitCost: ing.seedUnitCost,
+        input: line.name,
+        unit: line.unit,
+        cropPlanUnitCost: line.unitCost,
         supplierId,
         catalog: (supplierId ? catalog[supplierId] : undefined) ?? [],
         asOf: pricesAsOf,
       });
-      inputPrices[inputKey(rec.code, ing.name)] = priced;
-      if (priced.basis === 'catalog') {
-        ing.seedUnitCost = priced.unitPrice;
-        ing.status = 'SOURCED';
-        ing.source = `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.`;
-      }
-      const o = ingOverlay[inputKey(rec.code, ing.name)];
-      if (!o) {
-        notePrice(ing, own);
-        continue;
-      }
-      if (o.seedUnitCost !== undefined) {
-        ing.seedUnitCost = o.seedUnitCost;
+      inputPrices[key] = priced;
+      let price: LinePrice | null =
+        priced.basis === 'catalog' ? { unitCost: priced.unitPrice, status: 'SOURCED', source: `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.` } : null;
+      const typed = ingOverlay[key]?.seedUnitCost;
+      if (typed !== undefined) {
         // A typed what-if outranks the catalog, and stops claiming its source.
-        if (priced.basis === 'catalog') {
-          ing.status = 'STATED';
-          ing.source = `Typed on this scenario, over the catalog price of ${priced.unitPrice} from ${priced.effectiveFrom}.`;
-        }
-        inputPrices[inputKey(rec.code, ing.name)] = {
+        price =
+          priced.basis === 'catalog'
+            ? { unitCost: typed, status: 'STATED', source: `Typed on this scenario, over the catalog price of ${priced.unitPrice} from ${priced.effectiveFrom}.` }
+            : { unitCost: typed, status: line.status, source: line.source };
+        inputPrices[key] = {
           ...priced,
-          unitPrice: o.seedUnitCost,
+          unitPrice: typed,
           basis: 'cropPlan',
           gap: priced.basis === 'catalog' ? 'A price typed on this scenario stands over the catalog.' : priced.gap,
         };
       }
-      if (o.seedQtyPerSowing !== undefined) ing.seedQtyPerSowing = o.seedQtyPerSowing;
-      if (o.yieldToHarvest !== undefined) ing.yieldToHarvest = o.yieldToHarvest;
-      if (o.packSize !== undefined) ing.packSize = o.packSize;
-      // Derived: harvested yield recomputes when SEED qty or yield factor changes.
-      ing.harvestedYieldPerSowing = ing.seedQtyPerSowing * ing.yieldToHarvest;
-      notePrice(ing, own);
+      if (price && Math.abs(price.unitCost - line.unitCost) > 1e-12) prices[line.name] = price;
     }
-    if (Object.keys(prices).length > 0) rec.prices = prices;
-    return rec;
+    if (Object.keys(prices).length > 0) plan.prices = prices;
+    return plan;
   });
   // The library is never empty here: an empty one falls back to the seed grow plans above.
   const cropPlan = cropPlans.find((r) => r.status === 'in_service') ?? cropPlans[0]!;

@@ -10,7 +10,7 @@
  * orders with stored rows in their place.
  */
 
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { assumptions as planAssumptions } from '@/data/plan-data';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { costCropPlan, deriveCapacity, type CapacityInputs } from '@/engine';
@@ -49,7 +49,7 @@ export interface OrderWeek {
  * belongs to another crop plan.
  */
 export function unitCostsFor(
-  cropPlan: GrowPlanCarrier,
+  cropPlan: GrowPlanDef,
   channel: number,
   cap: CapacityInputs,
   a: typeof planAssumptions,
@@ -80,7 +80,7 @@ export function orderWeek(input: {
   from: string;
   days?: number;
   channels: readonly number[];
-  cropPlans: readonly GrowPlanCarrier[];
+  cropPlans: readonly GrowPlanDef[];
   cap: CapacityInputs;
   assumptions: typeof planAssumptions;
   studies: readonly TimeStudyDoc[];

@@ -25,7 +25,7 @@ import {
 import { growPlanSeed, GROW_PLAN_SEED_CODES } from '@/data/grow-plans-seed';
 import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor, costPlan, costContextFor } from '@/engine/grow-costing';
 import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
-import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { cropPlanToRows, rowsToCropPlan, rowsToGrowPlan, nextCropPlanCode, SEED_GROW_PLANS } from '@/engine/crop-plan-library';
 import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
@@ -268,22 +268,11 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     expect(rowsToGrowPlan({ ...header, format: 'weird', status: 'odd', id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, [{ position: 0, name: 'x', line: { kind: 'nope' } }])).toMatchObject({ format: 'flat-1020', status: 'developing', lines: [] });
   });
 
-  it('the library plan carries the grow plan and its projection: one input line per grow line, one tray', () => {
+  it('the library plan is the grow plan with its row identity', () => {
     const lib = rows(broccoli());
-    expect(isGrowPlanCarrier(lib)).toBe(true);
-    expect(lib.plan).toEqual(broccoli());
-    expect(lib.inputs).toHaveLength(4);
-    expect(lib.sowingUnits).toBe(1);
-    const seed = lib.inputs[0]!;
-    expect(seed.varietyKey).toBe('broccoli');
-    expect(seed.unit).toBe('lb');
-    expect(seed.seedQtyPerSowing).toBeCloseTo(40 / 453.59237, 9);
-    expect(seed.yieldToHarvest).toBeCloseTo(250 / 40, 9);
-    expect(seed.isHotComponent).toBe(true);
-    expect(seed.component).toBe(VARIETY_BY_KEY['broccoli']!.name);
-    expect(lib.inputs.slice(1).every((l) => l.unit === 'each' && l.yieldToHarvest === 0)).toBe(true);
-    // The yield chain holds on every line: seed × yield = harvested.
-    for (const l of lib.inputs) expect(l.seedQtyPerSowing * l.yieldToHarvest, l.name).toBeCloseTo(l.harvestedYieldPerSowing, 9);
+    const { id, source, version, effectiveFrom, updatedAt, ...plan } = lib;
+    expect(plan).toEqual(broccoli());
+    expect([id, source, version, effectiveFrom, typeof updatedAt]).toEqual(['x', 'user_built', 1, '2026-09-25', 'string']);
   });
 
   it('the engine costs a library plan on its grow costing: the same total, the mass on the seed line', () => {
@@ -304,14 +293,11 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     const lib = rows(broccoli());
     const r = resolveScenarioInputs({ inputs: { [`BROC-01::${VARIETY_BY_KEY['broccoli']!.name}`]: { seedUnitCost: 30 } } }, [lib]);
     const edited = r.cropPlans[0]!;
-    expect(isGrowPlanCarrier(edited)).toBe(true);
-    if (isGrowPlanCarrier(edited)) {
-      expect(costContextFor(edited).seedPricePerLb).toEqual({ broccoli: 30 });
-      expect(edited.prices?.[VARIETY_BY_KEY['broccoli']!.name]?.unitCost).toBe(30);
-      expect(costPlan(edited).lines[0]!.costPerTray).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
-      expect(resolveScenarioInputs({}, [lib]).cropPlans[0]!.prices).toBeUndefined();
-      expect(costCropPlan(edited, 0).lines[0]!.costPerUnit).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
-    }
+    expect(costContextFor(edited).seedPricePerLb).toEqual({ broccoli: 30 });
+    expect(edited.prices?.[VARIETY_BY_KEY['broccoli']!.name]?.unitCost).toBe(30);
+    expect(costPlan(edited).lines[0]!.costPerTray).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
+    expect(resolveScenarioInputs({}, [lib]).cropPlans[0]!.prices).toBeUndefined();
+    expect(costCropPlan(edited, 0).lines[0]!.costPerUnit).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
   });
 
   it('the engine sizes a library plan in trays on the grow units, never off mass', () => {

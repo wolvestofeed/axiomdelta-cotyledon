@@ -78,9 +78,8 @@ import {
 } from '@/data/coa-farm';
 import { costPlan } from '@/engine/grow-costing';
 import { laborForDay, type OverheadAbsorption } from '@/engine';
-import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
-import { lineLabel } from '@/data/grow-plan';
+import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
 import type { TimeStudyDoc } from '@/data/time-studies';
@@ -255,7 +254,7 @@ export interface ProductionLedgerOptions {
 export function productionSowingLedger(
   sowing: SowingExecution,
   opts: ProductionLedgerOptions,
-  cropPlan: GrowPlanCarrier,
+  cropPlan: GrowPlanDef,
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;

@@ -11,6 +11,7 @@
  *   C6  every Plan ledger month balances, and its cash flow direct equals indirect.
  */
 
+import { purchaseLines } from '@/engine/grow-purchase';
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -168,9 +169,10 @@ describe('C5 — the audit findings of §5 are gone', () => {
   });
 
   it('A5: a receipt of another crop plan’s input posts at that input’s standard, with its price variance', () => {
-    const other = L.cropPlans.find((r) => r.code !== L.cropPlan.code && r.inputs.some((i) => i.unit === 'lb' && !L.cropPlan.inputs.some((x) => x.name === i.name)))!;
-    const line = other.inputs.find((i) => i.unit === 'lb' && !L.cropPlan.inputs.some((x) => x.name === i.name))!;
-    const std = Math.round(line.seedUnitCost * 100);
+    const own = purchaseLines(L.cropPlan);
+    const other = L.cropPlans.find((r) => r.code !== L.cropPlan.code && purchaseLines(r).some((i) => i.unit === 'lb' && !own.some((x) => x.name === i.name)))!;
+    const line = purchaseLines(other).find((i) => i.unit === 'lb' && !own.some((x) => x.name === i.name))!;
+    const std = Math.round(line.unitCost * 100);
     const receipt = { id: 'R', poId: null, supplierId: null, supplierName: null, receivedOn: DATE, invoiceNumber: null, invoiceTotalCents: 0, receivedBy: null, notes: null, lines: [{ input: line.name, qty: 10, unit: 'lb' as const, lotCode: 'L', unitPriceCents: std + 50 }] };
     const posted = postActuals({ ...EMPTY_BUNDLE, receipts: [receipt] }, L);
     const ppv = posted.entries.flatMap((e) => e.lines).filter((l) => l.accountCode === '5110').reduce((t, l) => t + l.debitCents - l.creditCents, 0);

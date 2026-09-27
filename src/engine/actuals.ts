@@ -10,6 +10,7 @@
  * and prices.
  */
 
+import type { GrowPlanDef } from '@/data/grow-plan';
 import type { PurchaseLine } from '@/engine/grow-purchase';
 import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import type { SowingExecution, SowingIssue, VarietyLot } from '@/engine/sowing';
@@ -19,9 +20,8 @@ import type { InvoiceDoc, SubscriberPaymentDoc, SupplierBillDoc, SupplierPayment
 import type { StaffDoc, PunchDoc, ClosedPayrollPeriodDoc } from '@/engine/payroll';
 import type { TrayFormatKey } from '@/data/tray-formats';
 import { growSowingPrefill, type StageRecords } from '@/engine/sowing-record';
-import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
-type CropPlan = GrowPlanCarrier;
+type CropPlan = GrowPlanDef;
 
 // ── Documents ───────────────────────────────────────────────────────────────
 
