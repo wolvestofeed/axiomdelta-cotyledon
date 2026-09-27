@@ -38,6 +38,7 @@ export function GrowSowingCloseForm({
   sowingCountByDate,
   growUnits,
   planName,
+  experiment,
   onDone,
   onCancel,
 }: {
@@ -46,6 +47,8 @@ export function GrowSowingCloseForm({
   sowingCountByDate: Record<string, number>;
   growUnits: readonly GrowUnit[];
   planName?: string;
+  /** The experiment the sowing ran, when it closes one: its record names it and its weights are sorted by variety. */
+  experiment?: { id: string; title: string };
   onDone: () => void;
   onCancel?: () => void;
 }) {
@@ -136,6 +139,7 @@ export function GrowSowingCloseForm({
         growUnitKey: growUnitKey || null,
         packedOn: packedOn || null,
         stageRecords,
+        experimentId: experiment?.id ?? null,
       });
       if (res.ok) {
         setMsg({ kind: 'ok', text: `Closed ${sowingId}: ${num(traysPacked)} ${unitWord} packed.` });
@@ -151,6 +155,7 @@ export function GrowSowingCloseForm({
     <div className="farm-card">
       <div className="farm-card-title">Close {sowingId}{planName ? ` — ${planName}` : ''} · one lot per variety, the stage records, the harvest check</div>
       {msg && <div className={`farm-scenariobar-msg ${msg.kind} mb-[0.6rem]!`} role="status">{msg.text}</div>}
+      {experiment && <p className="farm-kpi-sub mb-2">Experiment: {experiment.title}. Each variety&rsquo;s harvest is weighed sorted from the trays; the yield per variety on R&amp;D Experiments is read from these weights.</p>}
 
       <div className="flex flex-wrap gap-3 items-end mb-3!">
         <label className="farm-kpi-sub">Sow date<br /><input type="date" className="farm-input" value={sowDate} onChange={(e) => setSowDate(e.target.value)} /></label>

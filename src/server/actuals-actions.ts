@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { farmSowingRecords, farmReceipts, farmDistributions, farmPeriodBills, farmPurchaseOrders, farmPurchaseOrderLines } from '@/db';
+import { farmExperiments, farmSowingRecords, farmReceipts, farmDistributions, farmPeriodBills, farmPurchaseOrders, farmPurchaseOrderLines } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/server/access';
 import { BILL_ACCOUNTS, laborFromCrew, periodOf, periodStart } from '@/engine/actuals';
@@ -99,6 +99,8 @@ const SowingInput = z.object({
   growUnitKey: z.string().max(200).nullable().default(null),
   packedOn: isoDate.nullable().default(null),
   stageRecords: StageRecordsSchema.nullable().default(null),
+  /** The experiment the sowing ran (R&D). */
+  experimentId: z.string().uuid().nullable().default(null),
 });
 
 export async function recordSowing(...args: Parameters<typeof recordSowingInner>): ReturnType<typeof recordSowingInner> {
@@ -130,6 +132,14 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
   const locked = await refuseIfLocked(d.productionDate);
   if (locked) return { ok: false, error: locked };
 
+  if (d.experimentId) {
+    const e = (await db.select({ growPlanCode: farmExperiments.growPlanCode, title: farmExperiments.title }).from(farmExperiments).where(eq(farmExperiments.id, d.experimentId)).limit(1))[0];
+    if (!e) return { ok: false, error: 'The experiment is not on file.' };
+    if (e.growPlanCode !== d.growPlanCode) return { ok: false, error: `The experiment "${e.title}" runs ${e.growPlanCode}, not ${d.growPlanCode}.` };
+    const already = await db.select({ sowingId: farmSowingRecords.sowingId }).from(farmSowingRecords).where(eq(farmSowingRecords.experimentId, d.experimentId)).limit(1);
+    if (already[0]) return { ok: false, error: `The experiment "${e.title}" is already closed by ${already[0].sowingId}.` };
+  }
+
   const inserted = await db.transaction(async (tx) => {
     const rows = await tx
     .insert(farmSowingRecords)
@@ -156,6 +166,7 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
       growUnitKey: d.growUnitKey,
       packedOn: d.packedOn,
       stageRecords: d.stageRecords,
+      experimentId: d.experimentId,
       createdBy: access.userId,
     })
     .returning({ id: farmSowingRecords.id });

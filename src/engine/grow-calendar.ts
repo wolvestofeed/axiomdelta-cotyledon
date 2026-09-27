@@ -97,8 +97,10 @@ export interface CalendarSowing {
   harvestFrom: string;
   /** Last day of the harvest window. */
   harvestTo: string;
-  /** The distribution date the sowing was planned for; null on a recorded sowing. */
+  /** The distribution date the sowing was planned for; null on a recorded sowing or an experiment. */
   distributionDate: string | null;
+  /** The experiment's title, when the sowing is an open experiment in R&D. */
+  experiment?: string;
   trays: number;
   cycleDays: number;
   /** The grow unit the sowing sits on; null when none could hold it. */
@@ -135,7 +137,7 @@ export class ShelfLedger {
   }
 
   /** Place one sowing; returns it, placed or not. */
-  place(plan: GrowPlanDef, sowDate: string, trays: number, distributionDate: string | null = null): CalendarSowing {
+  place(plan: GrowPlanDef, sowDate: string, trays: number, distributionDate: string | null = null, experiment?: string): CalendarSowing {
     const days = planStageDays(plan);
     const cycle = cycleDaysOf(days);
     const window = days['harvest-window'];
@@ -148,6 +150,7 @@ export class ShelfLedger {
       harvestFrom,
       harvestTo: isoAddDays(harvestFrom, Math.max(0, window - 1)),
       distributionDate,
+      ...(experiment ? { experiment } : {}),
       trays,
       cycleDays: cycle,
       unitKey: null,

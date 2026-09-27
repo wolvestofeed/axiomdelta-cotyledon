@@ -4,7 +4,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0015` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. `main` is pushed to `origin` on GitHub.
+- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0016` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. `main` is pushed to `origin` on GitHub.
 - Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.
@@ -19,6 +19,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - The first real time study to approve: until one is, every plan runs on its estimated labor and the placeholder watering (mist 1 fl oz, bottom 14 fl oz per 1020).
 - Allergens present and allergen-free claims on each grow plan, typed in the grow plan editor: blank on all 12 until stated.
 - The first seed receipts: until one is recorded, each variety is priced at its record's opening price (True Leaf, January 2024), or a supplier's catalog price once one is linked on Procurement.
+- The home rack's Mars Hydro VG80 delivers the balanced regime and not the three the blend documents name for BLEND-02 and BLEND-09 (nutrition-forward blue), BLEND-03 (yield) and BLEND-06 (far-red biofortify): an experiment on any of the four has no grow unit that takes it until a fixture that delivers its regime is on Grow Units, or its light line is changed in the grow plan editor. Which is yours to state.
 - Buckwheat for the Cardio-Lipid Shield (BLEND-07, held in R&D): its seed supplier, price per pound and grams per 1020, so it can join the seed library as a variety.
 - Where Bootstrap Farmer's hemp mats (Paris TX, $241 for 140, no shipping) are grown and made: the origin the Phase 5 footprint of coir against a US-made hemp mat reads. A receipt date on the price makes it DATED.
 - The energy rate the cost card prices light at is a code constant, $0.13/kWh (PLACEHOLDER, Austin Energy blended residential; Vallecito paid $0.1256). No page edits it; it can become a forecast input on the Home running costs panel when you want to state yours.

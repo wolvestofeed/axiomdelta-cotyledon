@@ -8,6 +8,8 @@ import { routeCompletion } from '@/engine/working-capital';
 import { resolveSubscriberPickupPoints } from '@/engine/demand';
 import { GrowRoomClient } from '@/app/(farm)/(grow-room)/farm/grow-room/GrowRoomClient';
 import { withWorkspace } from '@/server/workspace';
+import { listExperiments } from '@/server/experiments';
+import { experimentsOnShelves, recordOf } from '@/engine/experiments';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +35,7 @@ async function FloorPageInner() {
     listPurchaseOrders(),
     loadCalendar(),
   ]);
+  const experiments = await listExperiments();
   const today = new Date().toISOString().slice(0, 10);
   // Today's routes waiting to be added to invoices (Roadmap K1), by subscriber.
   const route = routeCompletion(actuals.distributions, today);
@@ -62,6 +65,8 @@ async function FloorPageInner() {
       sowings={actuals.sowings}
       standards={actuals.standards ?? []}
       distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units }))}
+      experimentSowings={experimentsOnShelves(experiments, actuals.sowings, inputs.growPlans, today)}
+      experimentsToday={experiments.filter((e) => e.sowDate === today && !recordOf(e, actuals.sowings)).map((e) => ({ title: e.title, growPlanCode: e.growPlanCode, trays: e.trays }))}
       purchaseOrders={pos.map((po) => ({
         id: po.id,
         poNumber: po.poNumber,

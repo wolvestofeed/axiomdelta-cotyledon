@@ -532,8 +532,8 @@ export function planHorizon(input: {
   closures?: readonly DateRange[];
   /** The grow units sowings are placed on for their cycle days. Omitted = the capacity inputs', else the seed. */
   growUnits?: readonly GrowUnit[];
-  /** Sowings already on the shelves when the window opens (recorded sowings inside their cycle). */
-  openingSowings?: readonly { growPlanCode: string; sowDate: string; trays: number }[];
+  /** Sowings already on the shelves when the window opens (recorded sowings inside their cycle, open experiments with their title). */
+  openingSowings?: readonly { growPlanCode: string; sowDate: string; trays: number; experiment?: string }[];
   /** The time studies a grow plan's sowing-stream labor is read from; passed through to each day. */
   studies?: readonly TimeStudyDoc[];
 }): HorizonPlan {
@@ -545,7 +545,7 @@ export function planHorizon(input: {
   const ledger = new ShelfLedger(growUnits);
   for (const o of input.openingSowings ?? []) {
     const growPlan = input.growPlans.find((r) => r.code === o.growPlanCode);
-    if (growPlan && o.trays > 0) ledger.place(growPlan, o.sowDate, o.trays, null);
+    if (growPlan && o.trays > 0) ledger.place(growPlan, o.sowDate, o.trays, null, o.experiment);
   }
   // A placed sowing carries the first distribution date it serves, so a day page can list its own sowings.
   const placeSowingFor = (servesFrom: string) => (growPlan: GrowPlanDef, productionDate: string, trays: number): boolean =>

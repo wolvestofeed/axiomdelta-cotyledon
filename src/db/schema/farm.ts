@@ -881,6 +881,9 @@ export const farmSowingRecords = farmSchema.table(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     // @classification: Internal
     notes: text('notes'),
+    /** The experiment the sowing ran (0016); null on a production sowing. */
+    // @classification: Internal
+    experimentId: uuid('experiment_id'),
     // @classification: Internal
     createdBy: text('created_by'),
     // @classification: Internal
@@ -2363,3 +2366,32 @@ export const farmMedia = farmSchema.table(
 );
 
 export type FarmMediumRow = typeof farmMedia.$inferSelect;
+
+/** Experiments in R&D (migration 0016): a titled run of a developing grow plan, closed when a sowing record names it. */
+export const farmExperiments = farmSchema.table(
+  'experiments',
+  {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
+    // @classification: Internal
+    id: uuid('id').primaryKey().defaultRandom(),
+    // @classification: Internal
+    title: text('title').notNull(),
+    // @classification: Internal
+    growPlanCode: text('grow_plan_code').notNull(),
+    // @classification: Internal
+    sowDate: date('sow_date').notNull(),
+    // @classification: Internal
+    trays: doublePrecision('trays').notNull(),
+    // @classification: Internal
+    note: text('note'),
+    // @classification: Internal
+    createdBy: text('created_by'),
+    // @classification: Internal
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // @classification: Internal
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('farm_experiments_plan_idx').on(t.growPlanCode)],
+);
+
+export type FarmExperimentRow = typeof farmExperiments.$inferSelect;

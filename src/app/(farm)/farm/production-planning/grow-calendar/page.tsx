@@ -4,6 +4,8 @@ import { loadActuals } from '@/server/actuals';
 import { loadCalendar } from '@/server/periods';
 import { GrowCalendarClient } from '@/app/(farm)/farm/production-planning/grow-calendar/GrowCalendarClient';
 import { withWorkspace } from '@/server/workspace';
+import { experimentSowings } from '@/server/experiments';
+import { listGrowPlans } from '@/server/grow-plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,7 @@ export default async function GrowCalendarPage() {
 async function GrowCalendarPageInner() {
   const [cycles, orders, actuals, calendar] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
+  const onShelves = await experimentSowings(actuals.sowings, await listGrowPlans(), today);
   return (
     <>
       <PageHeader
@@ -43,6 +46,7 @@ async function GrowCalendarPageInner() {
         closures={calendar.closures}
         sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, growPlanCode: b.growPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits }))}
         distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units }))}
+        experimentSowings={onShelves}
       />
     </>
   );

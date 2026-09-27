@@ -65,6 +65,7 @@ export function ProductionPlanningClient({
   rawSowings: recordedRawSowings,
   purchaseOrders: recordedPurchaseOrders,
   studies,
+  experimentSowings,
   today,
 }: {
   canEdit: boolean;
@@ -82,6 +83,8 @@ export function ProductionPlanningClient({
   purchaseOrders: PoLike[];
   /** The time studies a grow plan's sow-day labor is read from. */
   studies: TimeStudyDoc[];
+  /** Open experiments in R&D, on the grow units from their sow dates. */
+  experimentSowings: { growPlanCode: string; sowDate: string; trays: number; experiment: string }[];
   today: string;
 }) {
   const { resolved, library } = useScenario();
@@ -120,17 +123,19 @@ export function ProductionPlanningClient({
     const r = resolved.growPlans.find((x) => x.code === code);
     return r ?? null;
   }, [resolved.growPlans]);
-  // Recorded sowings still inside their cycle are on the shelves when a window opens.
+  // Recorded sowings still inside their cycle, and open experiments, are on the shelves when a window opens.
   const openingSowings = useMemo(
-    () =>
-      sowings
+    () => [
+      ...sowings
         .filter((b) => b.goodUnits > 0)
         .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
         .filter((b) => {
           const plan = planOf(b.growPlanCode);
           return plan !== null && stageOn(plan, b.sowDate, today).stage !== 'off';
         }),
-    [sowings, planOf, today],
+      ...experimentSowings,
+    ],
+    [sowings, planOf, today, experimentSowings],
   );
   const stageToday = (s: CalendarSowing) => {
     const plan = planOf(s.growPlanCode);
@@ -524,7 +529,7 @@ export function ProductionPlanningClient({
               <label className="farm-kpi-sub inline-flex items-center gap-2">To<input className="farm-input" type="date" value={hTo} onChange={(e) => e.target.value && setHTo(e.target.value)} /></label>
             </PageControls>
             <div className="flex flex-wrap gap-3 items-end">
-              <span className="farm-kpi-sub">{horizon.distributionDays.length} distribution date{horizon.distributionDays.length === 1 ? '' : 's'} · {horizon.productionDays.length} sow day{horizon.productionDays.length === 1 ? '' : 's'} · opening stock {num(Math.round(openingLots.reduce((s, l) => s + l.remaining, 0)))} trays from records{openingSowings.length ? ` · ${num(openingSowings.reduce((s, x) => s + x.trays, 0))} recorded trays on the shelves` : ''}</span>
+              <span className="farm-kpi-sub">{horizon.distributionDays.length} distribution date{horizon.distributionDays.length === 1 ? '' : 's'} · {horizon.productionDays.length} sow day{horizon.productionDays.length === 1 ? '' : 's'} · opening stock {num(Math.round(openingLots.reduce((s, l) => s + l.remaining, 0)))} trays from records{openingSowings.length ? ` · ${num(openingSowings.reduce((s, x) => s + x.trays, 0))} trays on the shelves from records and experiments` : ''}</span>
             </div>
             <p className="farm-kpi-sub mt-2">
               The order book for the period, rolled through the shelves: each order is sown on its plan&rsquo;s sow date, the sowing holds its grow unit for the plan&rsquo;s cycle, whole sowings overshoot into stock inside the {shelfLife}-day shelf life, and a distribution date draws its orders from stock oldest first. A sowing no unit can hold is an unfilled order, shared equally across the channels on that plan — the same rule as equal distribution on the annual allocation.

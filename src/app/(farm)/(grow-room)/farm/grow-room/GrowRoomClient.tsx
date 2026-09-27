@@ -76,6 +76,8 @@ export function GrowRoomClient({
   standards,
   distributions,
   purchaseOrders,
+  experimentSowings,
+  experimentsToday,
 }: {
   today: string;
   /** Active staff on the register, for the time clock (Roadmap K5). */
@@ -94,6 +96,10 @@ export function GrowRoomClient({
   standards: StandardVersionDoc[];
   distributions: { id: string; distributedOn: string; units: number }[];
   purchaseOrders: ReceivePo[];
+  /** Open experiments in R&D, on the grow units from their sow dates. */
+  experimentSowings: { growPlanCode: string; sowDate: string; trays: number; experiment: string }[];
+  /** Experiments whose sow date is today, not yet closed. */
+  experimentsToday: { title: string; growPlanCode: string; trays: number }[];
 }) {
   const [receivingPoId, setReceivingPoId] = useState<string | null>(null);
   const [closing, setClosing] = useState<{ seq: number; growPlanCode: string; units: number; growUnitKey?: string | null } | null>(null);
@@ -143,14 +149,17 @@ export function GrowRoomClient({
   const growQueue = useMemo<CalendarSowing[]>(() => {
     const to = isoAddDays(today, 28);
     const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, growPlans: inputs.growPlans });
-    const openingSowings = sowings
-      .filter((b) => b.goodUnits > 0)
-      .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
-      .filter((b) => { const r = inputs.growPlans.find((x) => x.code === b.growPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; });
+    const openingSowings = [
+      ...sowings
+        .filter((b) => b.goodUnits > 0)
+        .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+        .filter((b) => { const r = inputs.growPlans.find((x) => x.code === b.growPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; }),
+      ...experimentSowings,
+    ];
     const h = planHorizon({ from: today, to, book: bookFor(today, to), growPlans: inputs.growPlans, capacityInputs: inputs.capacityInputs, assumptions: A, growPlanAssumptions: inputs.growPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
     return h.growCalendar.sowings.filter((x) => x.sowDate === today && x.distributionDate !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A, closures]);
+  }, [inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A, closures, experimentSowings]);
   const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
   const rawStock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: today }), [receipts, sowings, today]);
   const closingGrowPlan = closing ? inputs.growPlans.find((r) => r.code === closing.growPlanCode) : undefined;
@@ -239,6 +248,9 @@ export function GrowRoomClient({
               <GrowSowingCloseForm prefill={closingPrefill} plan={closingGrowPlan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingGrowPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
             )}
           </div>
+        )}
+        {experimentsToday.length > 0 && (
+          <p className="farm-kpi-sub mt-2">Experiments to sow today: {experimentsToday.map((e) => `${e.title} (${e.growPlanCode}, ${num(e.trays)} trays)`).join('; ')}. Each closes on <Link className="farm-link" href="/farm/rd/experiments">R&amp;D Experiments</Link>.</p>
         )}
         {closedToday.length > 0 && (
           <p className="farm-kpi-sub mt-2">Closed today: {closedToday.map((b) => `${b.sowingId} (${num(Math.round(b.goodUnits))} ${isGrowSowing(b) ? 'trays' : 'units'})`).join(', ')}.</p>

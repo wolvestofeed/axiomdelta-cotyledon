@@ -78,6 +78,8 @@ export interface SowingRecordDoc {
   growUnitKey?: string | null;
   packedOn?: string | null;
   stageRecords?: StageRecords | null;
+  /** The experiment the sowing ran (R&D); null or absent on a production sowing. */
+  experimentId?: string | null;
 }
 
 /** What the receiver found at the dock. A rejected line is on the record and out of stock. */

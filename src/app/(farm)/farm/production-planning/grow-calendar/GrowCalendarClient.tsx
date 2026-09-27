@@ -35,6 +35,7 @@ export function GrowCalendarClient({
   closures,
   sowings: recordedSowings,
   distributions: recordedDistributions,
+  experimentSowings,
 }: {
   today: string;
   cycles: SubscriptionCycleDef[];
@@ -42,6 +43,8 @@ export function GrowCalendarClient({
   closures: DateRange[];
   sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
   distributions: { id: string; distributedOn: string; units: number }[];
+  /** Open experiments in R&D, on the grow units from their sow dates. */
+  experimentSowings: { growPlanCode: string; sowDate: string; trays: number; experiment: string }[];
 }) {
   const { resolved } = useScenario();
   const world = useOperationsWorld({ orders: recordedOrders, sowings: recordedSowings, distributions: recordedDistributions });
@@ -81,17 +84,19 @@ export function GrowCalendarClient({
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
   const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
-  // Recorded sowings still inside their cycle are on the shelves when the window opens.
+  // Recorded sowings still inside their cycle, and open experiments, are on the shelves when the window opens.
   const openingSowings = useMemo(
-    () =>
-      sowings
+    () => [
+      ...sowings
         .filter((b) => b.goodUnits > 0)
         .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
         .filter((b) => {
           const r = resolved.growPlans.find((x) => x.code === b.growPlanCode);
           return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off';
         }),
-    [sowings, resolved.growPlans, today],
+      ...experimentSowings,
+    ],
+    [sowings, resolved.growPlans, today, experimentSowings],
   );
   const horizon = useMemo(
     () =>
@@ -227,7 +232,7 @@ export function GrowCalendarClient({
                         <td>{s.growPlanCode} · {s.growPlanName}</td>
                         <td className="whitespace-nowrap!">{s.sowDate}</td>
                         <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
-                        <td className="whitespace-nowrap!">{s.distributionDate ?? 'recorded'}</td>
+                        <td className="whitespace-nowrap!">{s.experiment ? `experiment: ${s.experiment}` : s.distributionDate ?? 'recorded'}</td>
                         <td className="num">{num(s.trays)}</td>
                         <td>{s.placed ? s.unitItem : 'no room on any unit'}</td>
                         <td>{st && st.stage !== 'off' ? `${STAGE_BY_KEY[st.stage].name}, day ${st.dayOfCycle}` : '—'}</td>

@@ -57,6 +57,7 @@ const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   growUnitKey: r.growUnitKey ?? null,
   packedOn: iso(r.packedOn),
   stageRecords: r.stageRecords ? { ...EMPTY_STAGE_RECORDS, ...(r.stageRecords as Partial<StageRecords>) } : null,
+  experimentId: r.experimentId ?? null,
 });
 
 /** A distribution names its grow plan through the order it was recorded against (Roadmap N9). */
