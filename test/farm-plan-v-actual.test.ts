@@ -36,10 +36,6 @@ function side(): PvaSideInput {
     waterGal: 5000,
     shrinkAllowance: 0.05,
     growPlans: R.growPlans,
-    subscribers: [
-      { id: 'C1', name: 'One', rating: { status: 'rated', stars: 3 } },
-      { id: 'C2', name: 'Two', rating: { status: 'not_rated' } },
-    ],
     suppliers: [{ id: 'S1', rating: { status: 'rated', stars: 1 } }],
   };
 }
@@ -72,8 +68,7 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
     expect(sumMeasures([withStatement, withStatement]).cogsLaborCents).toBe(600);
   });
 
-  it('tallies ratings by stars and carries the sustainability quantities', () => {
-    expect(m.subscribersByStars).toEqual({ 1: 0, 2: 0, 3: 1 });
+  it('tallies supplier ratings by stars and carries the sustainability quantities', () => {
     expect(m.suppliersByStars).toEqual({ 1: 1, 2: 0, 3: 0 });
     expect(m.electricityKwh).toBe(1200);
     expect(m.waterGal).toBe(5000);
@@ -83,10 +78,10 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
   });
 
   it('a quarter sums flows and reads ratings at its last month', () => {
-    const later = { ...m, subscribersByStars: { 1: 2, 2: 0, 3: 0 } as const };
+    const later = { ...m, suppliersByStars: { 1: 2, 2: 0, 3: 0 } as const };
     const q = sumMeasures([m, emptyMeasures(), later]);
     expect(q.units).toBe(600);
-    expect(q.subscribersByStars).toEqual({ 1: 2, 2: 0, 3: 0 });
+    expect(q.suppliersByStars).toEqual({ 1: 2, 2: 0, 3: 0 });
   });
 
   it('breaks units, revenue, input cost and orders down by subscriber, input cost following the units', () => {

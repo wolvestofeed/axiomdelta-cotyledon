@@ -19,11 +19,10 @@ import { fullInventory } from '@/engine/inventory';
 import { mixFoodFootprint, sustainabilityBasis } from '@/engine/sustainability-basis';
 import { energyInWindow, flowInWindow, serviceFromRecords } from '@/engine/sustainability-records';
 import { planOfRecordAtMonthEnd, type PlanInForce } from '@/engine/plan-of-record';
-import { includedSubscribers } from '@/engine/demand';
 import { pvaBreakdown, pvaMeasures, type PvaBreakdownRow, type PvaMeasures, type PvaOrder, type PvaSideInput } from '@/engine/plan-v-actual';
 import type { FarmScenarioConfig, ResolvedInputs } from '@/engine/scenario';
 import { lcaOptions as curatedOptions } from '@/data/lca-options';
-import { NOT_RATED, ratingFor, supplierRatings } from '@/data/mark';
+import { ratingFor, supplierRatings } from '@/data/mark';
 
 /**
  * MicroFarm — Plan v Actual, assembled (Roadmap N7). Each month posts the plan of
@@ -121,8 +120,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
   const actualInputs = resolveWithDefinitions(current.config, definitions);
   const actualLedger: ActualLedger = postActualLedger(bundle, actualInputs, today, undefined, { absorption: planFor(current.config).ledger.absorption });
   const confirmed = storedOrders.filter((o) => o.status === 'confirmed' || o.status === 'distributed');
-  const ratingOf = new Map(definitions.subscribers.map((c) => [c.id, c.rating ?? NOT_RATED]));
-  const nameOf = new Map(definitions.subscribers.map((c) => [c.id, c.name]));
 
   const firstOrders = (orders: readonly PvaOrder[], through: string) => {
     const m = new Map<string, string>();
@@ -143,7 +140,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     statement: IncomeStatement | null;
     orders: readonly PvaOrder[];
     firstOrderOn: Map<string, string>;
-    subscriberIds: readonly string[];
     energy: PvaSideInput['energy'];
     waterGal: number;
     refrigerantService: Record<string, { date: string; lbAdded: number }[]>;
@@ -179,7 +175,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       waterGal: input.waterGal,
       shrinkAllowance: inputs.assumptions.yield.shrinkAllowance.value,
       growPlans: inputs.growPlans,
-      subscribers: input.subscriberIds.map((id) => ({ id, name: nameOf.get(id) ?? id, rating: ratingOf.get(id) ?? NOT_RATED })),
       suppliers: supplierIds.map((id) => ({ id, rating: ratingFor(supplierRatings, id) })),
     };
     const r = pvaBreakdown(sideInput, 'growPlan');
@@ -234,9 +229,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     const share = plan.firstYearUnits > 0 ? planMonthUnits / plan.firstYearUnits : 0;
     const e = plan.inputs.sustainability.energy;
     const planEnergy = { ...e, naturalGasTherms: e.naturalGasTherms * share, propaneGal: e.propaneGal * share, fleetGasolineGal: e.fleetGasolineGal * share, fleetDieselGal: e.fleetDieselGal * share, electricityKwh: e.electricityKwh * share };
-    const planSubscriberIds = includedSubscribers(plan.inputs.subscribers, plan.inputs.forecast)
-      .map((c) => c.id)
-      .filter((id) => plan.timeline.documents.orders.some((o) => o.subscriberId === id && o.orderDate >= from && o.orderDate <= to));
 
     const planSide = side({
       kind: 'plan',
@@ -247,13 +239,11 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       statement: statementOf(plan.ledger, period),
       orders: planOrders,
       firstOrderOn: firstOrders(planOrders, to),
-      subscriberIds: planSubscriberIds,
       energy: planEnergy,
       waterGal: plan.inputs.sustainability.water.meteredGalPerMonth * 12 * share,
       refrigerantService: {},
     });
 
-    const actualSubscriberIds = [...new Set(bundle.distributions.filter((d) => d.distributedOn >= from && d.distributedOn <= to && d.subscriberId).map((d) => d.subscriberId!))];
     const actualSide = side({
       kind: 'actual',
       period,
@@ -263,7 +253,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       statement: statementOf(actualLedger, period),
       orders: confirmed,
       firstOrderOn: firstOrders(confirmed, to),
-      subscriberIds: actualSubscriberIds,
       energy: energyInWindow(readings, from, to),
       waterGal: flowInWindow(readings, 'water_metered_gal', from, to),
       refrigerantService: serviceFromRecords(service.filter((x) => x.servicedOn >= from && x.servicedOn <= to)),
@@ -295,7 +284,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       statement: rollingStatement,
       orders: rollingOrders,
       firstOrderOn: firstOrders(rollingOrders, to),
-      subscriberIds: [...new Set(rollingDocs.distributions.filter((d) => d.distributedOn >= from && d.distributedOn <= to && d.subscriberId).map((d) => d.subscriberId!))],
       energy: rollingEnergy,
       waterGal: flowInWindow(readings, 'water_metered_gal', from, cut ?? '0000-00-00') + rp.inputs.sustainability.water.meteredGalPerMonth * 12 * rpShare,
       refrigerantService: serviceFromRecords(service.filter((x) => x.servicedOn >= from && x.servicedOn <= (cut ?? '0000-00-00'))),

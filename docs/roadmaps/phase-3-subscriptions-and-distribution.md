@@ -1,4 +1,4 @@
-# Phase 3 — Subscriptions and distribution  status: NOT STARTED
+# Phase 3 — Subscriptions and distribution  status: IN PROGRESS (the rating leftovers removed; the subscription design under agreement with Rob)
 
 What the facility needs to take its first paying subscriber. `outline.md` §4 (Subscriber, Order), §6 (Sales, Distribution, Subscriber portal).
 
@@ -11,4 +11,4 @@ What the facility needs to take its first paying subscriber. `outline.md` §4 (S
 - [ ] Pickup Points and Routes: the farm, shared pickup locations, delivery routes, distribution days
 - [ ] Tray returns: a live tray's set coming back for reuse, tracked per subscriber
 - [ ] Supplier Portal account linking on the same mechanism
-- [ ] Rating columns and copy carried from the source client's mark removed from subscribers
+- [x] Rating columns and copy carried from the source client's mark removed from subscribers (migration `0018`): no rating on the subscriber record, the Subscribers page or Plan v Actual, whose rating rows are the suppliers' alone; supplier ratings are untouched

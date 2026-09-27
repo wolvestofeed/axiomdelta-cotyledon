@@ -45,8 +45,6 @@ export interface PvaSideInput {
   waterGal: number;
   shrinkAllowance: number;
   growPlans: readonly GrowPlanDef[];
-  /** The subscribers this side serves in the month, with the rating MicroFarm assigned. */
-  subscribers: readonly { id: string; name: string; rating: MarkRating }[];
   /** The suppliers on this side's receipts in the month, with their ratings. */
   suppliers: readonly { id: string; rating: MarkRating }[];
 }
@@ -75,7 +73,6 @@ export interface PvaMeasures {
   emissionsKg: { total: number; scope1: number; scope2: number; scope3: number };
   /** Purchased-food emissions (reference basis): all, on inputs received from a named supplier, and on a supplier's own figure. */
   food: { referenceKg: number; onNamedSupplierKg: number; onSupplierDataKg: number };
-  subscribersByStars: Record<1 | 2 | 3, number>;
   suppliersByStars: Record<1 | 2 | 3, number>;
 }
 
@@ -120,7 +117,6 @@ export function pvaMeasures(side: PvaSideInput): PvaMeasures {
       onNamedSupplierKg: side.food.byInput.filter((i) => namedSupplierInputs.has(i.name)).reduce((t, i) => t + i.referenceKg, 0),
       onSupplierDataKg: side.food.byInput.filter((i) => i.selectedKind === 'supplier').reduce((t, i) => t + i.referenceKg, 0),
     },
-    subscribersByStars: byStars(side.subscribers),
     suppliersByStars: byStars(side.suppliers),
   };
 }
@@ -136,7 +132,6 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
     for (const k of ['referenceKg', 'onNamedSupplierKg', 'onSupplierDataKg'] as const) z.food[k] += m.food[k];
   }
   const last = months[months.length - 1];
-  z.subscribersByStars = { ...last.subscribersByStars };
   z.suppliersByStars = { ...last.suppliersByStars };
   return z;
 }
@@ -147,7 +142,6 @@ export function emptyMeasures(): PvaMeasures {
     wasteKg: 0, waterGal: 0, electricityKwh: 0, naturalGasTherms: 0, fuelGal: 0,
     emissionsKg: { total: 0, scope1: 0, scope2: 0, scope3: 0 },
     food: { referenceKg: 0, onNamedSupplierKg: 0, onSupplierDataKg: 0 },
-    subscribersByStars: { 1: 0, 2: 0, 3: 0 },
     suppliersByStars: { 1: 0, 2: 0, 3: 0 },
   };
 }

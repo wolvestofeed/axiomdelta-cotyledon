@@ -25,10 +25,7 @@ import {
   deleteVolumePick,
   createPickupPointCalendarRange,
   deletePickupPointCalendarRange,
-  setSubscriberRating,
 } from '@/server/subscriber-actions';
-import { RatingPill } from '@/components/MarkRating';
-import { MARK, NOT_RATED } from '@/data/mark';
 import { assignSubscriptionCycle, createSubscriptionCycle, updateSubscriptionCycle, deleteSubscriptionCycle } from '@/server/order-actions';
 import {
   SUBSCRIBER_KIND_LABELS,
@@ -561,26 +558,6 @@ export function SubscribersClient({
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <div>
                       <span className="font-semibold">{c.name}</span>
-                      <span className="ml-2!"><RatingPill rating={c.rating ?? NOT_RATED} /></span>
-                      {canEdit && (
-                        <select
-                          className="farm-select ml-[0.4rem]! farm-fs-xs py-[0.05rem]! px-[0.3rem]!"
-                          aria-label={`${MARK.label} rating MicroFarm assigns ${c.name}`}
-                          value={c.rating?.status === 'rated' ? String(c.rating.stars) : c.rating?.status ?? 'not_rated'}
-                          disabled={pending}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            const stars = v === '1' || v === '2' || v === '3' ? (Number(v) as 1 | 2 | 3) : null;
-                            run(() => setSubscriberRating({ id: c.id, status: stars ? 'rated' : v, stars, ratedOn: v === 'not_rated' ? null : today }), `${c.name}: ${MARK.label} rating set.`);
-                          }}
-                        >
-                          <option value="not_rated">Not yet rated</option>
-                          <option value="in_review">In review</option>
-                          <option value="1">1 star</option>
-                          <option value="2">2 stars</option>
-                          <option value="3">3 stars</option>
-                        </select>
-                      )}
                       <span className="farm-kpi-sub ml-[0.6rem]!">
                         {SUBSCRIBER_KIND_LABELS[c.kind]} · {SUBSCRIBER_STATUS_LABELS[c.status]} ·{' '}
                         {c.pricePerUnitCents === null ? `channel price ${money(ch.price)}` : `${money(c.pricePerUnitCents / 100)} contracted`}

@@ -1,5 +1,4 @@
 import 'server-only';
-import { NOT_RATED, type MarkRating } from '@/data/mark';
 import { asc, inArray } from 'drizzle-orm';
 import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges } from '@/db';
 import { db } from '@/lib/db';
@@ -88,7 +87,6 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
     notes: r.notes,
     nutritionTargets: Array.isArray(r.nutritionTargets) ? (r.nutritionTargets as unknown[]).filter((k): k is string => typeof k === 'string') : [],
     source: r.source === 'seed' ? 'seed' : 'user_built',
-    rating: subscriberRating(r.ratingStatus, r.ratingStars, r.ratingRatedOn),
     pickupPoints: (bySubscriber.get(r.id) ?? []).map((s) => ({
       id: s.id,
       pickupPointId: s.pickupPointId,
@@ -104,12 +102,4 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
       calendar: calendarByPickupPoint.get(s.id) ?? [],
     })),
   }));
-}
-
-/** A stored rating as the mark's rating: stars 1–3 when rated; anything else reads not rated. */
-function subscriberRating(status: string | null, stars: number | null, ratedOn: string | Date | null): MarkRating {
-  const on = ratedOn === null ? undefined : typeof ratedOn === 'string' ? ratedOn : ratedOn.toISOString().slice(0, 10);
-  if (status === 'rated' && (stars === 1 || stars === 2 || stars === 3)) return { status: 'rated', stars, ratedOn: on };
-  if (status === 'in_review') return { status: 'in_review', since: on };
-  return NOT_RATED;
 }

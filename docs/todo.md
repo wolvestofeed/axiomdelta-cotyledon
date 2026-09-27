@@ -4,7 +4,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0017` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. `main` is pushed to `origin` on GitHub.
+- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0018` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. `main` is pushed to `origin` on GitHub.
 - Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.

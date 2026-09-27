@@ -84,35 +84,6 @@ async function updateSubscriberInner(input: unknown): Promise<Result> {
   return { ok: true };
 }
 
-const RatingInput = z.object({
-  id: z.string().uuid(),
-  status: z.enum(['rated', 'in_review', 'not_rated']),
-  stars: z.union([z.literal(1), z.literal(2), z.literal(3)]).nullable().default(null),
-  ratedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').nullable().default(null),
-}).refine((v) => v.status !== 'rated' || v.stars !== null, { message: 'A rating carries one, two or three stars.' });
-
-/** The RATING rating MicroFarm assigns a subscriber (Roadmap N7). Super admin. */
-export async function setSubscriberRating(...args: Parameters<typeof setSubscriberRatingInner>): ReturnType<typeof setSubscriberRatingInner> {
-  return withWorkspace(() => setSubscriberRatingInner(...args));
-}
-
-async function setSubscriberRatingInner(input: unknown): Promise<Result> {
-  const parsed = RatingInput.safeParse(input);
-  if (!parsed.success) return fail(parsed.error.issues);
-  try {
-    await requireFarmSuperAdmin();
-  } catch (e) {
-    return refuse(e);
-  }
-  const d = parsed.data;
-  await db
-    .update(farmSubscribers)
-    .set({ ratingStatus: d.status === 'not_rated' ? null : d.status, ratingStars: d.status === 'rated' ? d.stars : null, ratingRatedOn: d.status === 'not_rated' ? null : d.ratedOn, updatedAt: new Date() })
-    .where(eq(farmSubscribers.id, d.id));
-  revalidatePath('/farm', 'layout');
-  return { ok: true };
-}
-
 export async function deleteSubscriber(...args: Parameters<typeof deleteSubscriberInner>): ReturnType<typeof deleteSubscriberInner> {
   return withWorkspace(() => deleteSubscriberInner(...args));
 }

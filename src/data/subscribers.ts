@@ -117,8 +117,6 @@ export interface SubscriberDef {
   /** Named nutrition targets (outline §4): keys from `nutrition-targets.ts`. Absent = none named. */
   nutritionTargets?: string[];
   pickupPoints: SubscriberPickupPointDef[];
-  /** The RATING rating MicroFarm assigns (Roadmap N7, 0073). Absent = not rated. */
-  rating?: import('@/data/mark').MarkRating;
 }
 
 /** The current prospect subscriber: 125 units a day, five days a week. STATED. */

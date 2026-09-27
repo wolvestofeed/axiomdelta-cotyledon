@@ -1260,13 +1260,6 @@ export const farmSubscribers = farmSchema.table(
     /** 'due_on_receipt' | 'net_15' | 'net_30'; null = not set, no default (0057). */
     // @classification: Internal
     paymentTerms: text('payment_terms'),
-    /** RATING rating MicroFarm assigns (0073): 'rated' | 'in_review' | 'not_rated'; null = not rated. */
-    // @classification: Internal
-    ratingStatus: text('rating_status'),
-    // @classification: Internal
-    ratingStars: integer('rating_stars'),
-    // @classification: Internal
-    ratingRatedOn: date('rating_rated_on'),
     // @classification: Internal
     notes: text('notes'),
     /** Named nutrition targets (0007): keys from src/data/nutrition-targets.ts. */

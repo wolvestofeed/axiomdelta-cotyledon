@@ -88,9 +88,8 @@ function rowsFor(p: PvaMeasures, a: PvaMeasures, r: PvaMeasures, cash: { plan: n
       ],
     },
     {
-      group: `${MARK.label} ratings`,
+      group: `Supplier ${MARK.label.toLowerCase()}s`,
       rows: [
-        ...([3, 2, 1] as const).map((s): Row => ({ label: `Subscribers, ${s}-star`, plan: p.subscribersByStars[s], actual: a.subscribersByStars[s], rolling: r.subscribersByStars[s], fmt: (v) => num(v), level: true, note: s === 3 ? 'Plan: the plan’s subscribers ordering in the period. Actual: subscribers distributed to. At the period end.' : undefined })),
         ...([3, 2, 1] as const).map((s): Row => ({ label: `Suppliers, ${s}-star`, plan: p.suppliersByStars[s], actual: a.suppliersByStars[s], rolling: r.suppliersByStars[s], fmt: (v) => num(v), level: true, note: s === 3 ? 'Suppliers on the period’s receipts.' : undefined })),
       ],
     },
@@ -292,7 +291,7 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
         </div>
         <p className="farm-kpi-sub mt-2">
           The rolling forecast is budget-based: the records through {report.asOf}, and the plan of record set now ({report.rollingPlanLabel ?? 'plan defaults'}) as planned for the days after it; nothing is re-estimated, and the plan of record itself does not change. A month wholly before today is the records, a month wholly after it is the plan, and this month is both, split at today.
-          {' '}Difference is actual less plan. A rating is assigned by MicroFarm on Subscribers; a supplier with no rating on file is not counted. {report.trailEntries === 0 ? 'No change of the plan of record is on the trail yet, so every month reads the plan of record set now.' : `${report.trailEntries} change${report.trailEntries === 1 ? '' : 's'} of the plan of record on the trail.`}
+          {' '}Difference is actual less plan. A supplier with no rating on file is not counted. {report.trailEntries === 0 ? 'No change of the plan of record is on the trail yet, so every month reads the plan of record set now.' : `${report.trailEntries} change${report.trailEntries === 1 ? '' : 's'} of the plan of record on the trail.`}
         </p>
       </Card>
 
