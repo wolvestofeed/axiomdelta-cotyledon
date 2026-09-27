@@ -39,7 +39,7 @@ import {
 import { cycleDays, daysToHarvest, lightDaysFrom, FL_OZ_PER_GAL, waterOzFrom, type StageDays } from '@/data/stage-schedule';
 import { GRAMS_PER_OZ, GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
-import { leadVariety, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
+import { leadVariety, lineLabel, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 
 export { GRAMS_PER_LB };
 
@@ -262,4 +262,25 @@ export function fixtureFor(plan: GrowPlanDef, fixtures: readonly LightFixtureDef
   const ppfd = light.ppfd?.value ?? lead?.light.ppfdRange?.max ?? regime?.ppfdTarget.value ?? 0;
   const able = regime ? fixtures.find((f) => fixtureDelivers(f, regime, ppfd)) : undefined;
   return able ?? fixtures[0]!;
+}
+
+/**
+ * The context a plan is costed in: the fixture its light line needs, and each seed line's price
+ * standing over the variety record where the plan carries one that differs (a supplier catalog
+ * price or a what-if the resolver attached, `GrowPlanDef.prices`).
+ */
+export function costContextFor(plan: GrowPlanDef, over: Partial<GrowCostContext> = {}): GrowCostContext {
+  const seedPricePerLb: Record<string, number> = {};
+  for (const line of plan.lines) {
+    if (line.kind !== 'seed') continue;
+    const v = VARIETY_BY_KEY[line.varietyKey];
+    const price = plan.prices?.[lineLabel(line)];
+    if (v && price && Math.abs(price.unitCost - v.seedPricePerLb.value) > 1e-9) seedPricePerLb[line.varietyKey] = price.unitCost;
+  }
+  return defaultGrowCostContext({ fixture: fixtureFor(plan), seedPricePerLb, ...over });
+}
+
+/** Cost one tray of a plan in its own context: the cost card. */
+export function costPlan(plan: GrowPlanDef, over: Partial<GrowCostContext> = {}): GrowPlanCosting {
+  return costGrowPlan(plan, costContextFor(plan, over));
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { costPlan } from '@/engine/grow-costing';
 import { PageControls } from '@/components/PageControls';
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -16,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
 import { assumptionsFor } from '@/engine/scenario';
 import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
-import { costCarrier } from '@/engine/grow-plan-bridge';
+
 import { LINE_KIND_LABELS, leadVariety, planStageDays, planStages } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID } from '@/data/produce-safety';
 import { targetsOfPlan } from '@/engine/nutrition-targets';
@@ -43,7 +44,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   const current = Math.min(page, pageCount - 1);
   const pageRows = resolved.cropPlans.slice(current * pageSize, current * pageSize + pageSize);
 
-  const growCosting = useMemo(() => costCarrier(selected), [selected]);
+  const growCosting = useMemo(() => costPlan(selected), [selected]);
   const growPlan = selected;
   const leadVarietyOf = growPlan ? leadVariety(growPlan) : undefined;
   const planTargets = useMemo(() => targetsOfPlan(selected), [selected]);
@@ -81,7 +82,6 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
     });
   }
 
-
   return (
     <>
       <PageHeader
@@ -114,7 +114,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
               {pageRows.map((r) => {
                 const c = costCropPlan(r, resolved.assumptions.yield.shrinkAllowance.value);
                 const k = deriveCapacity(r, resolved.capacityInputs);
-                const g = costCarrier(r);
+                const g = costPlan(r);
                 const lib = library.find((x) => x.code === r.code) as (typeof library)[number] & { id?: string } | undefined;
                 const isSel = r.code === selected.code;
                 return (
@@ -298,7 +298,6 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </>
       )}
 
-
       {growCosting && leadVarietyOf && (
         <Card title={`Nutrient profile — ${leadVarietyOf.name}`} className="mt-4">
           <p className="farm-kpi-sub mb-2">What the variety record states, each benefit citing its rows of the science library. The targets this plan carries are what the Flat Builder reads it against.</p>
@@ -326,7 +325,6 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         cropPlanId={(libraryCropPlan as { id?: string } | undefined)?.id}
         cropPlanChannels={selected.channels ?? []}
       />
-
 
       <Card title={`Standard in force — ${selected.code}`} className="mt-4">
         {stdMsg && <div className={`farm-scenariobar-msg ${stdMsg.kind} mb-[0.6rem]!`} role="status">{stdMsg.text}</div>}

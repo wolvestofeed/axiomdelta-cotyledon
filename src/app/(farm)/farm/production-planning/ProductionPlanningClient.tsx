@@ -29,8 +29,8 @@ import {
   type HorizonProductionDay,
 } from '@/engine/production-plan';
 import { stageOn, type CalendarSowing } from '@/engine/grow-calendar';
-import { costCarrier } from '@/engine/grow-plan-bridge';
-import { GRAMS_PER_LB } from '@/engine/grow-costing';
+
+import { GRAMS_PER_LB, costPlan } from '@/engine/grow-costing';
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
 import { rawStockOnHand, openOrders, netRequirements, netToRequirementLines, type PoLike, type NetRequirements } from '@/engine/net-requirements';
 import type { DateRange } from '@/engine/periods';
@@ -165,7 +165,7 @@ export function ProductionPlanningClient({
   );
   const runRequirement = useMemo(() => toRequirementLines(run.purchase.lines), [run.purchase.lines]);
   // A grow plan's run: the sowing in trays of one grow unit, the cycle, and the cost per tray by line kind.
-  const runGrow = useMemo(() => (run.cap.grow ? { grow: run.cap.grow, costing: costCarrier(runCropPlan) } : null), [runCropPlan, run.cap.grow]);
+  const runGrow = useMemo(() => (run.cap.grow ? { grow: run.cap.grow, costing: costPlan(runCropPlan) } : null), [runCropPlan, run.cap.grow]);
   const runLabor = resolved.laborStandards[runCropPlan.code];
   const runAssumptions = resolved.cropPlanAssumptions[runCropPlan.code] ?? A;
 
@@ -664,7 +664,6 @@ export function ProductionPlanningClient({
     </>
   );
 }
-
 
 /** The net requirement table: gross at standard, stock applied, on order applied, net, packs. */
 function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { title: string; net: NetRequirements; stock: ReturnType<typeof rawStockOnHand>; gross: number; shrink: number; runs: number; onOrderDrafts: Record<string, number> }) {

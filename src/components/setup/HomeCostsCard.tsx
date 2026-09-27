@@ -1,5 +1,6 @@
 'use client';
 
+import { costPlan } from '@/engine/grow-costing';
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -7,7 +8,7 @@ import { Card, Kpi, StatusBadge, money, num, pct } from '@/components/ui';
 import { EditableNumber } from '@/components/EditableNumber';
 import { FIXED_COST_TREATMENT_LABELS, FIXED_COST_TREATMENT_NOTES, FIXED_COST_TREATMENTS, HOME_LINE_QUANTITY_UNITS, type FixedCostTreatment } from '@/data/finance';
 import { ENERGY_RATE_PER_KWH } from '@/data/inputs-catalog';
-import { costCarrier } from '@/engine/grow-plan-bridge';
+
 import { createFixedCostLine, deleteFixedCostLine } from '@/server/finance-actions';
 import { useScenario } from '@/state/scenario-store';
 
@@ -39,7 +40,7 @@ export function HomeCostsCard({ className }: { className?: string }) {
   const monthly = lines.reduce((s, l) => s + l.monthlyAmountCents / 100, 0);
   // The grow lights, from each in-service plan's cost card.
   const light = useMemo(() => {
-    const cards = resolved.cropPlans.filter((r) => r.status === 'in_service').map((r) => costCarrier(r));
+    const cards = resolved.cropPlans.filter((r) => r.status === 'in_service').map((r) => costPlan(r));
     const perTray = cards.map((c) => c.perTray.light);
     const fixtures = [...new Set(cards.map((c) => `${c.fixture.name}, ${c.fixture.watts.value} W`))];
     return { min: perTray.length ? Math.min(...perTray) : 0, max: perTray.length ? Math.max(...perTray) : 0, plans: cards.length, fixtures };

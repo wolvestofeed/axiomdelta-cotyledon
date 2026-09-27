@@ -6,7 +6,7 @@ The library stores grow plans and the engine costs and sizes them on the grow mo
 
 **How a session on this phase starts.** Read this file, then `docs/roadmap.md` and `docs/todo.md`. Run `pnpm typecheck` and `pnpm test` (67 files, 868 tests green). Start the app with `pnpm dev` from the repo root; `.env.local` carries the Neon string and `FARM_DEV_BYPASS_AUTH=1`, so `http://localhost:3000/farm` opens on the local admin with no sign-in. A migration runs with `pnpm db:migrate`; a change to the equipment or fixed-cost seed reaches the local workspace with `FARM_WORKSPACE=org_local_dev pnpm farm:sync-setup` (seed rows only; rows edited in the app are left alone). Commit at each completed step with a roadmap update (CLAUDE.md §6), only on Rob's approval; never push.
 
-**Where the work stands.** The deep cut is done through step (5e) and step (6) is under way through (6b): every module that needed only the grow plan reads it directly. Next is (6c), catalog prices and price what-ifs on the grow plan, then (6d) to (6h) as listed under part 10, then the rename. No study has been approved on the local workspace yet; the first real approval is Rob's.
+**Where the work stands.** The deep cut is done through step (5e) and step (6) is under way through (6c): every module that needed only the grow plan reads it directly, and the cost card reads the prices the resolver attaches to the plan. Next is (6d), the purchase requirement on the grow lines, then (6e) to (6h) as listed under part 10, then the rename. No study has been approved on the local workspace yet; the first real approval is Rob's.
 
 ## Part 1 — Data foundations  DONE (commit `026742c`)
 
@@ -119,7 +119,7 @@ Tested by `test/farm-produce-safety.test.ts`.
   - [ ] (6) `grow-plan-bridge.ts` deleted, in steps, each keeping the suite green:
     - [x] (6a) The projected plan is the grow plan: the carrier carries the grow plan's fields at the top level beside the legacy ones; the resolver, the store, the selector and Compare are typed on it
     - [x] (6b) Every module that needed only the grow plan reads it directly and every library plan is typed as the carrier: routing, the estimate and the scaffold, staff demand, the grow calendar and its shelf ledger, production planning, capacity, the sowing prefill, the time-study reads, reports and every page; the non-grow branches are gone (the kitchen costing branch, the empty prefill and estimate, the route and calendar findings for a plan that is not a grow plan, which is now a code not in the library)
-    - [ ] (6c) Catalog prices and forecast price what-ifs on the grow plan (`prices`, attached by the resolver); the cost card from the plan; `costCarrier` and `contextFor` gone
+    - [x] (6c) Catalog prices and forecast price what-ifs on the grow plan: the resolver attaches every line price that stands over the line's own (`GrowPlanDef.prices`, keyed by the line's label, with its tag and source, never stored); the cost card is `costPlan(plan)` in `costContextFor(plan)`, a seed line's price standing over its variety record as before; `costCarrier` and `contextFor` are gone. The purchase order and receipt standards still read the line prices on the projected inputs until (6d). A catalog price on a medium or nutrient line reaches the purchase order and not the cost card, as before
     - [ ] (6d) The purchase requirement and receipt standards on the grow lines (`purchaseLines`)
     - [ ] (6e) The unit-cost engine on the grow plan; the kitchen costing types gone
     - [ ] (6f) The carbon module on the grow lines

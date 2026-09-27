@@ -1,3 +1,4 @@
+import { costPlan } from '@/engine/grow-costing';
 import { describe, it, expect } from 'vitest';
 import { journalIsBalanced } from '@/ledger';
 import { phases } from '@/data/plan-data';
@@ -22,7 +23,7 @@ import { assumptions } from '@/data/plan-data';
 import { productionSowingLedger } from '@/engine/production-ledger';
 import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { traceabilityLotCode, traceabilityGaps } from '@/engine/traceability';
-import { costCarrier, isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { isGrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { lineLabel } from '@/data/grow-plan';
 
@@ -31,7 +32,7 @@ const DATE = '2026-09-14';
 const R0 = resolveScenarioInputs();
 const cropPlan = R0.cropPlan;
 if (!isGrowPlanCarrier(cropPlan)) throw new Error('the reference plan is a grow plan');
-const card = costCarrier(cropPlan);
+const card = costPlan(cropPlan);
 const trays = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
 const shrink = assumptions.yield.shrinkAllowance.value;
 const nc = normalCapacity(phases);

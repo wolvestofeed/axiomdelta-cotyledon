@@ -76,8 +76,9 @@ import {
   ACC_AR,
   ACC_FOOD_SALES,
 } from '@/data/coa-farm';
+import { costPlan } from '@/engine/grow-costing';
 import { laborForDay, type OverheadAbsorption } from '@/engine';
-import { costCarrier, isGrowPlanCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { lineLabel } from '@/data/grow-plan';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
@@ -259,7 +260,7 @@ export function productionSowingLedger(
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;
   const notes: string[] = [];
-  const costing = isGrowPlanCarrier(cropPlan) ? costCarrier(cropPlan) : null;
+  const costing = costPlan(cropPlan);
   if (!costing) notes.push(`${cropPlan.code} is not a grow plan: it has no cost card per tray, so its material, light and consumables post at zero.`);
   const perTray = costing?.perTray ?? { seed: 0, medium: 0, nutrient: 0, light: 0, consumables: 0, total: 0 };
 

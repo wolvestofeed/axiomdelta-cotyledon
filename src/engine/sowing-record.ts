@@ -8,13 +8,14 @@
  * journals (`production-ledger.ts`).
  */
 
+import { costPlan } from '@/engine/grow-costing';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import { lineLabel, planStages, seedLines } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID, STAGE_CONTROL_POINTS, type ControlPointDef } from '@/data/produce-safety';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
 import type { SowingRecordDoc } from '@/engine/actuals';
-import { costCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { controlPointsForPlan, evaluateSpentWaterTest, type SpentWaterTest, type SpentWaterVerdict } from '@/engine/produce-safety';
 import type { SowingIssue, VarietyLot } from '@/engine/sowing';
 
@@ -94,7 +95,7 @@ export function growSowingPrefill(
   varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY,
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> & GrowSowingFields {
   const plan: GrowPlanDef = carrier;
-  const costing = costCarrier(carrier);
+  const costing = costPlan(carrier);
   const sprout = TRAY_FORMAT_BY_KEY[plan.format].kind === 'sprout';
   const issues: SowingIssue[] = costing.lines
     .filter((l): l is typeof l & { line: { kind: 'medium' | 'nutrient' } } => (l.line.kind === 'medium' || l.line.kind === 'nutrient') && l.quantity > 0)

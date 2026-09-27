@@ -23,9 +23,9 @@ import {
   type GrowPlanDef,
 } from '@/data/grow-plan';
 import { growPlanSeed, GROW_PLAN_SEED_CODES } from '@/data/grow-plans-seed';
-import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor } from '@/engine/grow-costing';
+import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor, costPlan, costContextFor } from '@/engine/grow-costing';
 import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
-import { contextFor, costCarrier, isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { isGrowPlanCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
 import { cropPlanToRows, rowsToCropPlan, rowsToGrowPlan, nextCropPlanCode, SEED_GROW_PLANS } from '@/engine/crop-plan-library';
 import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
@@ -288,7 +288,7 @@ describe('the library: rows round-trip the plan and project it for the engine', 
 
   it('the engine costs a library plan on its grow costing: the same total, the mass on the seed line', () => {
     const lib = rows(broccoli());
-    const g = costCarrier(lib);
+    const g = costPlan(lib);
     const c = costCropPlan(lib, 0);
     expect(c.totalInputCostPerUnit).toBeCloseTo(g.perTray.total, 9);
     expect(c.inputCostPerSowing).toBeCloseTo(g.perTray.total, 9);
@@ -307,7 +307,10 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     const edited = r.cropPlans[0]!;
     expect(isGrowPlanCarrier(edited)).toBe(true);
     if (isGrowPlanCarrier(edited)) {
-      expect(contextFor(edited.plan, edited).seedPricePerLb).toEqual({ broccoli: 30 });
+      expect(costContextFor(edited).seedPricePerLb).toEqual({ broccoli: 30 });
+      expect(edited.prices?.[VARIETY_BY_KEY['broccoli']!.name]?.unitCost).toBe(30);
+      expect(costPlan(edited).lines[0]!.costPerTray).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
+      expect(resolveScenarioInputs({}, [lib]).cropPlans[0]!.prices).toBeUndefined();
       expect(costCropPlan(edited, 0).lines[0]!.costPerUnit).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
     }
   });
@@ -323,7 +326,7 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     expect(cap.cyclesPerDay).toBeLessThanOrEqual(1);
     const s = sowingCosting(lib, R.capacityInputs, 0);
     expect(s.sowingUnits).toBe(20);
-    expect(s.sowingInputCost).toBeCloseTo(20 * costCarrier(lib).perTray.total, 6);
+    expect(s.sowingInputCost).toBeCloseTo(20 * costPlan(lib).perTray.total, 6);
     const u = costPerUnit(lib, R.assumptions, R.capacityInputs);
     expect(u.food).toBeCloseTo(costCropPlan(lib, R.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 9);
     expect(u.total).toBeGreaterThanOrEqual(u.food);

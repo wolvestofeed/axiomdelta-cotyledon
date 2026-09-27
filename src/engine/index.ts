@@ -9,10 +9,11 @@
  *   - production runs in whole sowings only
  */
 
+import { costPlan } from '@/engine/grow-costing';
 import { capacityInputs as defaultCapacityInputs, assumptions, type InputLine } from '@/data/plan-data';
 import { equipmentSeed } from '@/data/capex';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
-import { costCarrier, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import { type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 
 type CropPlan = GrowPlanCarrier;
 /**
@@ -105,7 +106,7 @@ export function costCropPlan(
  * consumable lines carry cost and no mass.
  */
 function costGrowCarrier(cropPlan: GrowPlanCarrier, shrinkAllowance: number, unitFactor: number): CropPlanCosting {
-  const g = costCarrier(cropPlan);
+  const g = costPlan(cropPlan);
   const rate = (costPerUnit: number, oz: number) => (oz > 0 ? costPerUnit / (oz / OZ_PER_LB) : null);
   const lines: InputCost[] = cropPlan.inputs.map((ing, i) => {
     const gl = g.lines[i];

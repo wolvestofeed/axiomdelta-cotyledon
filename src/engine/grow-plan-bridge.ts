@@ -14,7 +14,7 @@ import type { CropPlanDef, InputLine, CropPlanSpec } from '@/data/plan-data';
 import { tagged } from '@/data/tagged';
 import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
-import { costGrowPlan, defaultGrowCostContext, fixtureFor, type GrowCostContext, type GrowPlanCosting } from '@/engine/grow-costing';
+import { costPlan, type GrowPlanCosting } from '@/engine/grow-costing';
 
 /**
  * A crop plan that is also the grow plan it was projected from: the grow plan's own fields at the
@@ -46,7 +46,7 @@ function emptySpec(): CropPlanSpec {
  * and whose yield is zero (its mass is not the tray's). Every line is hot and rolls up into its
  * variety, so the stage and lot code read the variety as the component.
  */
-export function projectCropPlan(plan: GrowPlanDef, costing: GrowPlanCosting = costGrowPlan(plan, contextFor(plan)), varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): GrowPlanCarrier {
+export function projectCropPlan(plan: GrowPlanDef, costing: GrowPlanCosting = costPlan(plan), varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): GrowPlanCarrier {
   const lead = costing.lines.find((l) => l.line.kind === 'seed');
   const leadName = lead?.label ?? plan.name;
   const inputs: InputLine[] = costing.lines.map((c): InputLine => {
@@ -107,26 +107,4 @@ export function projectCropPlan(plan: GrowPlanDef, costing: GrowPlanCosting = co
     inputs,
     plan,
   };
-}
-
-/**
- * The cost context a carrier is costed in: the plan's fixture, and any price standing on a
- * projected seed line over the variety record (a scenario what-if or a catalog price applied
- * by the resolver).
- */
-export function contextFor(plan: GrowPlanDef, carrier?: CropPlanDef, over: Partial<GrowCostContext> = {}): GrowCostContext {
-  const seedPricePerLb: Record<string, number> = {};
-  if (carrier) {
-    for (const l of carrier.inputs) {
-      if (!l.varietyKey) continue;
-      const v = VARIETY_BY_KEY[l.varietyKey];
-      if (v && Math.abs(l.seedUnitCost - v.seedPricePerLb.value) > 1e-9) seedPricePerLb[l.varietyKey] = l.seedUnitCost;
-    }
-  }
-  return defaultGrowCostContext({ fixture: fixtureFor(plan), seedPricePerLb, ...over });
-}
-
-/** Cost a carrier's grow plan with the prices its projected lines carry. */
-export function costCarrier(carrier: GrowPlanCarrier, over: Partial<GrowCostContext> = {}): GrowPlanCosting {
-  return costGrowPlan(carrier.plan, contextFor(carrier.plan, carrier, over));
 }

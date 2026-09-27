@@ -25,6 +25,7 @@ import { tagged } from '@/data/tagged';
 import type { CropPlanStatus } from '@/data/plan-data';
 import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
 import type { MeasuredConsumption } from '@/data/time-studies';
+import type { StatusTag } from '@/data/tagged';
 import { STAGES, SPROUT_STAGES, type StageDays, type StageKey, type StageDef } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY, densityFactorOf, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
@@ -92,6 +93,19 @@ export interface GrowPlanDef {
    * nutrient line's strength. Absent until a study that recorded consumption is approved. Never stored.
    */
   measured?: MeasuredConsumption;
+  /**
+   * Prices standing over a line's own price, keyed by the line's label (`lineLabel`): a supplier
+   * catalog price or a what-if typed on the scenario, attached by the resolver with its tag and
+   * its source. The cost card reads a seed line's. Never stored.
+   */
+  prices?: Readonly<Record<string, LinePrice>>;
+}
+
+/** A price standing over a line's own: what it is, and where it came from. */
+export interface LinePrice {
+  unitCost: number;
+  status: StatusTag;
+  source: string;
 }
 
 export const GROW_PLAN_CODE_RX = /^[A-Z]{2,5}-\d{2,3}$/;

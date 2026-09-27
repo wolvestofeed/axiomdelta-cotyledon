@@ -38,6 +38,7 @@ import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
 import { isGrowPlanCarrier, projectCropPlan, type GrowPlanCarrier } from '@/engine/grow-plan-bridge';
 import { measuredConsumption, studiesForCropPlan } from '@/engine/time-studies';
+import type { LinePrice } from '@/data/grow-plan';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
@@ -574,7 +575,14 @@ export function resolveScenarioInputs(
     const measured = timeStudies && isGrowPlanCarrier(r) ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
     const base = measured && isGrowPlanCarrier(r) ? { ...r, ...projectCropPlan({ ...r.plan, measured }) } : r;
     const rec = structuredClone(base) as GrowPlanCarrier;
+    // A catalog price or a typed what-if stands over the line's own price; the plan carries it for
+    // the cost card (`GrowPlanDef.prices`), keyed by the line's label.
+    const prices: Record<string, LinePrice> = {};
+    const notePrice = (ing: GrowPlanCarrier['inputs'][number], own: number) => {
+      if (Math.abs(ing.seedUnitCost - own) > 1e-12) prices[ing.name] = { unitCost: ing.seedUnitCost, status: ing.status, source: ing.source };
+    };
     for (const ing of rec.inputs) {
+      const own = ing.seedUnitCost;
       const supplierId = inputSupplier[ing.name] ?? null;
       const priced = resolveInputPrice({
         input: ing.name,
@@ -591,7 +599,10 @@ export function resolveScenarioInputs(
         ing.source = `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.`;
       }
       const o = ingOverlay[inputKey(rec.code, ing.name)];
-      if (!o) continue;
+      if (!o) {
+        notePrice(ing, own);
+        continue;
+      }
       if (o.seedUnitCost !== undefined) {
         ing.seedUnitCost = o.seedUnitCost;
         // A typed what-if outranks the catalog, and stops claiming its source.
@@ -611,7 +622,9 @@ export function resolveScenarioInputs(
       if (o.packSize !== undefined) ing.packSize = o.packSize;
       // Derived: harvested yield recomputes when SEED qty or yield factor changes.
       ing.harvestedYieldPerSowing = ing.seedQtyPerSowing * ing.yieldToHarvest;
+      notePrice(ing, own);
     }
+    if (Object.keys(prices).length > 0) rec.prices = prices;
     return rec;
   });
   // The library is never empty here: an empty one falls back to the seed grow plans above.

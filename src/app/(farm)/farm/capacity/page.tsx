@@ -1,5 +1,6 @@
 'use client';
 
+import { costPlan } from '@/engine/grow-costing';
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, num } from '@/components/ui';
@@ -7,7 +8,7 @@ import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
 import { deriveGrowCapacity, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
 import { defaultGrowUnits } from '@/engine';
-import { costCarrier, projectCropPlan } from '@/engine/grow-plan-bridge';
+import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
 import { lightLine, planStageDays, type GrowPlanDef } from '@/data/grow-plan';
@@ -43,7 +44,7 @@ export default function CapacityPage() {
   const plan: GrowPlanDef | null = selected;
 
   const cap = useMemo(() => (plan ? deriveGrowCapacity(plan, units) : null), [plan, units]);
-  const costing = useMemo(() => costCarrier(selected), [selected]);
+  const costing = useMemo(() => costPlan(selected), [selected]);
   const days = plan ? planStageDays(plan) : null;
   const light = plan ? lightLine(plan) : undefined;
   const regime = light ? REGIME_BY_KEY[light.regimeKey] : null;
