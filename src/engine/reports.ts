@@ -108,6 +108,17 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
     sourceHref: '/farm/grow-plans',
   },
 
+  // ── R&D ─────────────────────────────────────────────────────────────────
+  {
+    id: 'blends-rd',
+    section: 'R&D',
+    title: 'Blends under development',
+    blurb: 'Each blend in R&D: what it is composed for, its varieties and shares, its days to harvest against the document\'s, its light, and its cost per tray; each seed line at its density and days.',
+    themes: ['performance'],
+    world: 'reference',
+    sourceHref: '/farm/rd/blends',
+  },
+
   // ── Financials & Accounting ─────────────────────────────────────────────
   {
     id: 'income-by-period',

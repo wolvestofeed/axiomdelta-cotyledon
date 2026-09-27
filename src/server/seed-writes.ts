@@ -6,7 +6,7 @@ import type { PackageSeed } from '@/data/packaging';
 import type { TimeStudySeed } from '@/data/time-studies';
 import { planSeedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, DEFAULT_WEEKDAYS, type SubscriptionCycleDef } from '@/data/subscription-cycles';
-import { growPlanSeed } from '@/data/grow-plans-seed';
+import { librarySeed } from '@/data/grow-plans-seed';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import { growPlanToRows, type LibraryGrowPlan } from '@/engine/grow-plan-library';
 
@@ -124,7 +124,7 @@ export async function insertPackages(db: SeedDb, rows: readonly PackageSeed[]): 
 }
 
 /** Insert every seed grow plan whose code is not in the library. Idempotent on the code. */
-export async function seedMissingGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
+export async function seedMissingGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = librarySeed, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
   const codes = library.map((r) => r.code);
   const have = new Set((await db.select({ code: farmGrowPlans.code }).from(farmGrowPlans).where(inArray(farmGrowPlans.code, codes))).map((r) => r.code));
   const added: string[] = [];
@@ -150,7 +150,7 @@ export async function seedMissingGrowPlans(db: SeedDb, library: readonly GrowPla
  * row someone has edited is `user_built` and is not touched. Used by the reset script only; the
  * read path inserts and never rewrites.
  */
-export async function syncSeedGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed): Promise<string[]> {
+export async function syncSeedGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = librarySeed): Promise<string[]> {
   const rows = await db.select({ id: farmGrowPlans.id, code: farmGrowPlans.code, source: farmGrowPlans.source, version: farmGrowPlans.version }).from(farmGrowPlans).where(inArray(farmGrowPlans.code, library.map((r) => r.code)));
   const synced: string[] = [];
   for (const row of rows) {

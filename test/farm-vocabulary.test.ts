@@ -105,7 +105,8 @@ describe('vocabulary — a blend has one name', () => {
     const hits: string[] = [];
     for (const f of files) {
       readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
-        if (/mixed[\s-]?trays?/i.test(line)) hits.push(`${relative(REPO, f)}:${i + 1}`);
+        // The one exception is the title of Rob's blend document, MIXED TRAY R&D, cited as it is titled.
+        if (/mixed[\s-]?trays?/i.test(line.replace(/MIXED TRAY R&D/g, ''))) hits.push(`${relative(REPO, f)}:${i + 1}`);
       });
     }
     expect(hits).toEqual([]);

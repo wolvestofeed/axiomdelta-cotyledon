@@ -164,7 +164,8 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 | Subscriber portal | Subscriber Portal, Flat Builder | swap (from Customer Portal, Order Builder) |
 | Supplier portal | Supplier Portal | port |
 | Parent portal | — | drop |
-| R&D | Experiments | new: composing a blend from the variety records and the nutrition targets, running it as titled experiments on the grow units, yield per variety read across its experiments, and the plan's promotion to in service; experiment cost to Research and Development |
+| R&D | Blends | new: the blends under development as developing grow plans, each with its varieties' growing fit and the nutrition targets they carry |
+| | Experiments | new: running a blend as titled experiments on the grow units, yield per variety read across its experiments, and the plan's promotion to in service; experiment cost to Research and Development |
 | Workspace | Workspace admin, members, plan and billing for the software | new |
 
 ## 7. Tenancy

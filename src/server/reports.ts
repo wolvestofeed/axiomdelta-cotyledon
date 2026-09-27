@@ -19,7 +19,12 @@ import { toSowingExecution } from '@/engine/actuals';
 import { massBalance } from '@/engine/sowing';
 import { receivedUnitWord, rollingCosts, rollingWindowFrom } from '@/engine/seed-cost';
 import { purchaseLines } from '@/engine/grow-purchase';
-import { MEDIUM_BY_KEY } from '@/data/inputs-catalog';
+import { MEDIUM_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
+import { BLENDS, blendCode } from '@/data/blends';
+import { VARIETY_BY_KEY, growthFor } from '@/data/varieties';
+import { planStageDays, seedLines } from '@/data/grow-plan';
+import { daysToHarvest } from '@/data/stage-schedule';
+import { costPlan } from '@/engine/grow-costing';
 import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
 import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
@@ -393,6 +398,30 @@ const unitCost: Builder = (ctx) => {
       avg.growPlans.map((r) => row([r.name, num(r.sowing), money(r.asPurchasedPerUnit), money(r.inputCostPerUnit), num(r.laborMinutesPerUnit, 2), money(r.laborCostPerUnit), money(r.costToServePerUnit), num(r.sowingMinutes, 0)]))),
     basis: 'Each active grow plan at its own derived sowing, its own labor standard and its packaging picks, at the prices in force. Storage is excluded from the cost to serve.',
     empty: avg.count === 0 ? 'No grow plan is In Service.' : undefined,
+  };
+};
+
+// ── R&D ─────────────────────────────────────────────────────────────────────
+
+const blendsRd: Builder = (ctx) => {
+  const plans = ctx.selected.inputs.growPlans;
+  const found = BLENDS.map((b) => ({ b, code: blendCode(b), plan: plans.find((p) => p.code === blendCode(b)) ?? null }));
+  const summary = table([{ label: 'Code' }, { label: 'Blend' }, { label: 'Composed for' }, { label: 'Varieties' }, { label: 'To harvest', num: true }, { label: 'As stated' }, { label: 'Light' }, { label: 'Cost per tray', num: true }],
+    found.map(({ b, code, plan }) => {
+      if (!plan) return row([code, b.name, b.focus, `Held: ${b.held ?? 'not in the library'}`, '—', b.harvestAsStated ?? '—', '—', '—'], 'faint');
+      const light = plan.lines.find((l) => l.kind === 'light');
+      return row([code, plan.name, b.focus, seedLines(plan).map((s) => `${VARIETY_BY_KEY[s.varietyKey]?.name ?? s.varietyKey} ${num(s.share * 100, 0)}%`).join(', '), `${daysToHarvest(planStageDays(plan))} d`, b.harvestAsStated ?? '—', light && light.kind === 'light' ? REGIME_BY_KEY[light.regimeKey]?.name ?? light.regimeKey : '—', money(costPlan(plan).perTray.total)]);
+    }));
+  const detail = table([{ label: 'Code' }, { label: 'Variety' }, { label: 'Share', num: true }, { label: 'Seed per tray', num: true }, { label: 'Tag' }, { label: 'Soak h', num: true }, { label: 'To harvest', num: true }],
+    found.flatMap(({ code, plan }) => (plan ? seedLines(plan).map((s) => {
+      const t = growthFor(VARIETY_BY_KEY[s.varietyKey]!, true);
+      return row([code, VARIETY_BY_KEY[s.varietyKey]?.name ?? s.varietyKey, `${num(s.share * 100, 0)}%`, `${num(s.gramsPerTray.value, 0)} g`, s.gramsPerTray.status, num(t.soakHours.value, 0), `${daysToHarvest(t.stageDays.value)} d`]);
+    }) : [])));
+  return {
+    summary,
+    detail,
+    basis: 'The blends in R&D as developing grow plans in the library: each seed line at the variety\'s tray density times its share of the tray, the plan on the slowest variety at each stage, the cost card before labor. As stated is the blend document\'s harvest window.',
+    empty: found.every((f) => !f.plan) ? 'No blend is in the library.' : undefined,
   };
 };
 
@@ -1049,6 +1078,7 @@ const BUILDERS: Record<string, Builder> = {
   'capacity-utilisation': capacityUtilisation,
   'labor-standards': laborStandards,
   'unit-cost': unitCost,
+  'blends-rd': blendsRd,
   'income-by-period': incomeByPeriod,
   'cost-trend': costTrend,
   variances,

@@ -19,6 +19,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - The first real time study to approve: until one is, every plan runs on its estimated labor and the placeholder watering (mist 1 fl oz, bottom 14 fl oz per 1020).
 - Allergens present and allergen-free claims on each grow plan, typed in the grow plan editor: blank on all 12 until stated.
 - The first seed receipts: until one is recorded, each variety is priced at its record's opening price (True Leaf, January 2024), or a supplier's catalog price once one is linked on Procurement.
+- Buckwheat for the Cardio-Lipid Shield (BLEND-07, held in R&D): its seed supplier, price per pound and grams per 1020, so it can join the seed library as a variety.
 - Where Bootstrap Farmer's hemp mats (Paris TX, $241 for 140, no shipping) are grown and made: the origin the Phase 5 footprint of coir against a US-made hemp mat reads. A receipt date on the price makes it DATED.
 - The energy rate the cost card prices light at is a code constant, $0.13/kWh (PLACEHOLDER, Austin Energy blended residential; Vallecito paid $0.1256). No page edits it; it can become a forecast input on the Home running costs panel when you want to state yours.
 

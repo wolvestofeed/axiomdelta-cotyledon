@@ -45,6 +45,8 @@ export const MODULES: NavItem[] = [
   { label: 'Packaging', href: '/farm/packaging', section: 'Production', status: 'live' },
   { label: 'Grow Room', href: '/farm/grow-room', section: 'Production', status: 'live' },
 
+  { label: 'Blends', href: '/farm/rd/blends', section: 'R&D', status: 'partial' },
+
   { label: 'Unit Economics', href: '/farm/financials/unit-economics', section: 'Financials & Accounting', status: 'live', adminOnly: true },
   { label: 'Profit & Loss', href: '/farm/financials/pnl', section: 'Financials & Accounting', status: 'live', adminOnly: true },
   { label: 'Balance Sheet', href: '/farm/financials/balance-sheet', section: 'Financials & Accounting', status: 'live', adminOnly: true },
