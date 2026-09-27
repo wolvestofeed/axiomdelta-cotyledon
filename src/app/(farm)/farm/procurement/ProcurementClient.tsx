@@ -83,13 +83,13 @@ export function ProcurementClient({
 
   // Every distinct input across the library, in service first.
   const inputs = useMemo(() => {
-    const seen = new Map<string, { name: string; unit: string; seedUnitCost: number; inService: boolean; growPlans: number; price: ResolvedInputPrice | undefined }>();
+    const seen = new Map<string, { name: string; unit: string; unitCost: number; inService: boolean; growPlans: number; price: ResolvedInputPrice | undefined }>();
     for (const r of [...resolved.growPlans].sort((a, b) => (a.status === 'in_service' ? 0 : 1) - (b.status === 'in_service' ? 0 : 1))) {
       for (const l of purchaseLines(r)) {
         const row = seen.get(l.name) ?? {
           name: l.name,
           unit: l.unit,
-          seedUnitCost: l.unitCost,
+          unitCost: l.unitCost,
           inService: r.status === 'in_service',
           growPlans: 0,
           // The first grow plan to carry the line sets the price shown; the
@@ -204,7 +204,7 @@ export function ProcurementClient({
                       <SupplierPicker input={ing.name} linked={links[ing.name] ? suppliers[links[ing.name]] ?? null : null} canEdit={canEdit && world.forecastEditing} onLink={(id) => setLink(ing.name, id)} />
                     </td>
                     <td className="num">
-                      {money(ing.seedUnitCost, ing.seedUnitCost < 1 ? 4 : 2)} / {ing.unit}
+                      {money(ing.unitCost, ing.unitCost < 1 ? 4 : 2)} / {ing.unit}
                       <div className="farm-c-faint farm-fs-2xs" title={ing.price?.gap ?? undefined}>
                         {ing.price?.basis === 'catalog' ? `catalog, from ${ing.price.effectiveFrom}` : 'grow plan figure'}
                       </div>

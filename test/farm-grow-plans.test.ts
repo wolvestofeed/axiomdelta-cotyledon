@@ -285,7 +285,7 @@ describe('the library: rows round-trip the plan', () => {
 
   it('a scenario what-if price on the projected seed line reaches the grow costing', () => {
     const lib = rows(broccoli());
-    const r = resolveScenarioInputs({ inputs: { [`BROC-01::${VARIETY_BY_KEY['broccoli']!.name}`]: { seedUnitCost: 30 } } }, [lib]);
+    const r = resolveScenarioInputs({ inputs: { [`BROC-01::${VARIETY_BY_KEY['broccoli']!.name}`]: { unitCost: 30 } } }, [lib]);
     const edited = r.growPlans[0]!;
     expect(costContextFor(edited).seedPricePerLb).toEqual({ broccoli: 30 });
     expect(edited.prices?.[VARIETY_BY_KEY['broccoli']!.name]?.unitCost).toBe(30);

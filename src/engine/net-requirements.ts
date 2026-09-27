@@ -226,7 +226,7 @@ export interface NetLine {
   input: string;
   unit: string;
   packSize: number;
-  seedUnitCost: number;
+  unitCost: number;
   gross: number;
   /** Stock on hand applied to the days. */
   onHandApplied: number;
@@ -265,7 +265,7 @@ export function netRequirements(input: { days: readonly GrossDay[]; stock: RawSt
         input: l.name,
         unit: l.unit,
         packSize: l.packSize,
-        seedUnitCost: l.seedUnitCost,
+        unitCost: l.unitCost,
         gross: 0,
         onHandApplied: 0,
         onHand: input.stock.byInput[l.name]?.onHand ?? 0,
@@ -302,11 +302,11 @@ export function netRequirements(input: { days: readonly GrossDay[]; stock: RawSt
   const lines = [...acc.values()].map((r) => {
     const casesToOrder = r.packSize > 0 ? Math.max(0, Math.ceil(r.net / r.packSize - 1e-9)) : 0;
     const qtyToOrder = casesToOrder * r.packSize;
-    return { ...r, casesToOrder, qtyToOrder, extendedCost: qtyToOrder * r.seedUnitCost };
+    return { ...r, casesToOrder, qtyToOrder, extendedCost: qtyToOrder * r.unitCost };
   });
   return {
     lines,
-    grossTotal: lines.reduce((s, l) => s + l.gross * l.seedUnitCost, 0),
+    grossTotal: lines.reduce((s, l) => s + l.gross * l.unitCost, 0),
     netTotal: lines.reduce((s, l) => s + l.extendedCost, 0),
     toBuy: lines.filter((l) => l.casesToOrder > 0),
   };
@@ -320,7 +320,7 @@ export function netToRequirementLines(net: NetRequirements): RequirementLine[] {
     unit: l.unit,
     packSize: l.packSize,
     casesToOrder: l.casesToOrder,
-    fallbackUnitCost: l.seedUnitCost,
+    fallbackUnitCost: l.unitCost,
   }));
 }
 

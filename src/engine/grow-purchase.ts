@@ -59,11 +59,11 @@ export interface PurchaseOrderLine {
   name: string;
   unit: string;
   /** What one tray takes. */
-  seedPerSowing: number;
+  qtyPerTray: number;
   requiredForProduction: number; // per tray × trays
   packSize: number;
   casesToOrder: number; // ceil(required / packSize)
-  seedUnitCost: number;
+  unitCost: number;
   extendedCost: number; // cases × packSize × unitCost (what you actually spend)
 }
 
@@ -82,11 +82,11 @@ export function buildPurchaseOrder(trays: number, plan: GrowPlanDef): PurchaseOr
       return {
         name: l.name,
         unit: l.unit,
-        seedPerSowing: l.qtyPerTray,
+        qtyPerTray: l.qtyPerTray,
         requiredForProduction,
         packSize: l.packSize,
         casesToOrder,
-        seedUnitCost: l.unitCost,
+        unitCost: l.unitCost,
         extendedCost: casesToOrder * l.packSize * l.unitCost,
       };
     });

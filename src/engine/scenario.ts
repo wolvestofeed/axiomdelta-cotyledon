@@ -92,8 +92,8 @@ export function assumptionsFor(inputs: Pick<ResolvedInputs, 'assumptions' | 'gro
 }
 /** A what-if on one purchase line, keyed by `inputKey(plan code, line label)`. */
 export interface InputOverlay {
-  /** The price typed on the scenario; it stands over the line's own and any catalog price. */
-  seedUnitCost?: number;
+  /** The price typed on the scenario for a line; it stands over the line's own and any catalog price. */
+  unitCost?: number;
   /** @deprecated A grow line's quantity is the plan's; a saved value is ignored. */
   seedQtyPerSowing?: number;
   /** @deprecated A grow plan's yield is its variety's harvest weight; a saved value is ignored. */
@@ -597,7 +597,7 @@ export function resolveScenarioInputs(
       inputPrices[key] = priced;
       let price: LinePrice | null =
         priced.basis === 'catalog' ? { unitCost: priced.unitPrice, status: 'SOURCED', source: `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.` } : null;
-      const typed = ingOverlay[key]?.seedUnitCost;
+      const typed = ingOverlay[key]?.unitCost;
       if (typed !== undefined) {
         // A typed what-if outranks the catalog, and stops claiming its source.
         price =

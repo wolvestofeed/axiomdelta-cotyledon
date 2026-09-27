@@ -273,11 +273,11 @@ export function mergePurchaseLines(all: readonly PurchaseOrderLine[]): { lines: 
       continue;
     }
     cur.requiredForProduction += l.requiredForProduction;
-    cur.seedPerSowing = 0;
+    cur.qtyPerTray = 0;
   }
   const lines = [...m.values()].map((l) => {
     const casesToOrder = Math.max(0, Math.ceil(l.requiredForProduction / l.packSize - 1e-9));
-    return { ...l, casesToOrder, extendedCost: casesToOrder * l.packSize * l.seedUnitCost };
+    return { ...l, casesToOrder, extendedCost: casesToOrder * l.packSize * l.unitCost };
   });
   return { lines, total: lines.reduce((s, l) => s + l.extendedCost, 0) };
 }
@@ -289,7 +289,7 @@ export function toRequirementLines(lines: readonly PurchaseOrderLine[]): Require
     unit: l.unit,
     packSize: l.packSize,
     casesToOrder: l.casesToOrder,
-    fallbackUnitCost: l.seedUnitCost,
+    fallbackUnitCost: l.unitCost,
   }));
 }
 

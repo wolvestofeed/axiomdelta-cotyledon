@@ -413,7 +413,7 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
     const R = resolveScenarioInputs(
       {
         sustainability: { inputSupplier: { [beef]: 's1' } },
-        inputs: { [`${R0.growPlan.code}::${beef}`]: { seedUnitCost: 6 } },
+        inputs: { [`${R0.growPlan.code}::${beef}`]: { unitCost: 6 } },
       },
       undefined, undefined, undefined, undefined, undefined, undefined,
       catalog,

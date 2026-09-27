@@ -38,7 +38,7 @@ describe('scenario resolver with a library', () => {
   it('a seed price edit keyed by plan code applies to that plan only', () => {
     const library = [lib('BROC-01'), lib('RAD-01')];
     const broc = VARIETY_BY_KEY['broccoli']!;
-    const r = resolveScenarioInputs({ inputs: { [inputKey('BROC-01', broc.name)]: { seedUnitCost: 9 } } }, library);
+    const r = resolveScenarioInputs({ inputs: { [inputKey('BROC-01', broc.name)]: { unitCost: 9 } } }, library);
     const seedLine = (code: string) => purchaseLines(r.growPlans.find((x) => x.code === code)!)[0]!;
     expect(seedLine('BROC-01').unitCost).toBe(9);
     expect(seedLine('RAD-01').unitCost).toBe(VARIETY_BY_KEY['radish']!.seedPricePerLb.value);

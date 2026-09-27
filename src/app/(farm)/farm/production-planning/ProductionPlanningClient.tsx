@@ -674,8 +674,8 @@ function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { ti
     <Card title={title} className="mt-4">
       <div className="grid gap-3 farm-autofit-11 mb-3!">
         <Kpi value={money(gross)} label="Gross at the plan standard" sub={`Pack-rounded, incl. the ${(shrink * 100).toFixed(0)}% allowance, ${runs} ${runWord}${runs === 1 ? '' : 's'}`} />
-        <Kpi value={money(net.lines.reduce((s, l) => s + l.onHandApplied * l.seedUnitCost, 0))} label="Covered by stock on hand" sub={`${Object.keys(stock.byInput).length} input${Object.keys(stock.byInput).length === 1 ? '' : 's'} on hand from receipts, ${money(stockValue)} at invoice`} />
-        <Kpi value={money(net.lines.reduce((s, l) => s + l.onOrderApplied * l.seedUnitCost, 0))} label="Covered by orders arriving in time" sub={drafts > 0 ? `${drafts} line${drafts === 1 ? '' : 's'} also on a draft order, not counted` : 'Issued orders less receipts against them'} />
+        <Kpi value={money(net.lines.reduce((s, l) => s + l.onHandApplied * l.unitCost, 0))} label="Covered by stock on hand" sub={`${Object.keys(stock.byInput).length} input${Object.keys(stock.byInput).length === 1 ? '' : 's'} on hand from receipts, ${money(stockValue)} at invoice`} />
+        <Kpi value={money(net.lines.reduce((s, l) => s + l.onOrderApplied * l.unitCost, 0))} label="Covered by orders arriving in time" sub={drafts > 0 ? `${drafts} line${drafts === 1 ? '' : 's'} also on a draft order, not counted` : 'Issued orders less receipts against them'} />
         <Kpi value={money(net.netTotal)} label="Net to buy" sub={`${net.toBuy.length} line${net.toBuy.length === 1 ? '' : 's'}, pack-rounded on the net`} />
       </div>
       {net.lines.length === 0 ? <p className="farm-kpi-sub">Nothing to make, nothing to buy.</p> : (

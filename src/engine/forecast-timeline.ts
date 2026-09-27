@@ -284,7 +284,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       const supplier = supplierOf.get(l.name) ?? null;
       const s = supplier ?? '';
       const lines = bySupplier.get(s) ?? [];
-      lines.push({ input: l.name, qty, unit: receiptUnit(l.unit), unitPriceCents: Math.round(l.seedUnitCost * 100), cases, packSize: l.packSize });
+      lines.push({ input: l.name, qty, unit: receiptUnit(l.unit), unitPriceCents: Math.round(l.unitCost * 100), cases, packSize: l.packSize });
       bySupplier.set(s, lines);
     }
     let n = 0;

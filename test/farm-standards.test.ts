@@ -55,7 +55,7 @@ describe('approved standard versions (Roadmap J5)', () => {
 
   it('the ledger costs a sowing at the version in force, not at the live library', () => {
     const first = purchaseLines(growPlan)[0]!;
-    const dearer = resolveScenarioInputs({ inputs: { [inputKey(growPlan.code, first.name)]: { seedUnitCost: first.unitCost * 2 } } });
+    const dearer = resolveScenarioInputs({ inputs: { [inputKey(growPlan.code, first.name)]: { unitCost: first.unitCost * 2 } } });
     const std = version(1, '2026-09-01');
     const atStandard = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std]), dearer);
     const atLibrary = postActuals(bundle([sowing('2026-09-14')]), dearer);
