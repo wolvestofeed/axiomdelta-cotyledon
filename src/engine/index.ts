@@ -498,60 +498,8 @@ export function fixedLaborShareOfFullSowing(
 
 // ── Purchase order — driven by UNITS PRODUCED, not the forecast ──────────
 
-export interface PurchaseOrderLine {
-  name: string;
-  unit: string;
-  /** SEED quantity for the crop plan's authored sowing. */
-  seedPerSowing: number;
-  requiredForProduction: number; // seedPerSowing × units / sowingUnits
-  packSize: number;
-  casesToOrder: number; // ceil(required / packSize)
-  seedUnitCost: number;
-  extendedCost: number; // cases × packSize × unitCost (what you actually spend)
-}
-
-export interface PurchaseOrder {
-  lines: PurchaseOrderLine[];
-  total: number;
-}
-
-export function buildPurchaseOrder(
-  unitsProduced: number,
-  cropPlan: CropPlan,
-): PurchaseOrder {
-  // Light is overhead (the fixture's electricity), never bought into raw stock.
-  const lines: PurchaseOrderLine[] = cropPlan.inputs.filter((ing) => ing.lineKind !== 'light').map((ing) => {
-    const requiredForProduction = (ing.seedQtyPerSowing * unitsProduced) / cropPlan.sowingUnits;
-    const casesToOrder = Math.ceil(requiredForProduction / ing.packSize);
-    const extendedCost = casesToOrder * ing.packSize * ing.seedUnitCost;
-    return {
-      name: ing.name,
-      unit: ing.unit,
-      seedPerSowing: ing.seedQtyPerSowing,
-      requiredForProduction,
-      packSize: ing.packSize,
-      casesToOrder,
-      seedUnitCost: ing.seedUnitCost,
-      extendedCost,
-    };
-  });
-  return { lines, total: lines.reduce((s, l) => s + l.extendedCost, 0) };
-}
-
-/**
- * The purchase order for a production run INCLUDING the normal-spoilage
- * allowance. The shrink allowance is trim, over-packing and spoilage — pounds
- * that are bought and never packed — so the run buys `units × (1 + shrink)`
- * units' worth of inputs. This is what keeps raw-material inventory from
- * being relieved by more dollars than were ever received.
- */
-export function purchaseOrderForRun(
-  unitsProduced: number,
-  cropPlan: CropPlan,
-  shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
-): PurchaseOrder {
-  return buildPurchaseOrder(unitsProduced * (1 + shrinkAllowance), cropPlan);
-}
+// What a plan buys lives with the grow lines (`grow-purchase.ts`).
+export { buildPurchaseOrder, purchaseOrderForRun, purchaseLines, type PurchaseOrder, type PurchaseOrderLine, type PurchaseLine } from '@/engine/grow-purchase';
 
 // ── Cost per unit build-up + contribution by phase ──────────────────────────
 

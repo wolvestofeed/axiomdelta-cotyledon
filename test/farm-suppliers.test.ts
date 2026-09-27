@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { lineLabel } from '@/data/grow-plan';
 import { supplierOperations, supplierDataset } from '@/data/suppliers';
 import {
   queryOperations,
@@ -50,7 +51,7 @@ describe('farm suppliers — filters', () => {
 describe('farm suppliers — crop plan match', () => {
   it('returns a match set for every line of a grow plan; a line with no keywords on file matches none', () => {
     const m = matchCropPlanToSuppliers(supplierOperations, 'all', cropPlan);
-    expect(m.map((line) => line.input)).toEqual(cropPlan.inputs.map((i) => i.name));
+    expect(m.map((line) => line.input)).toEqual(cropPlan.lines.map((l) => lineLabel(l)));
     expect(m.every((line) => Array.isArray(line.matches))).toBe(true);
     // No keywords are on file for the grow plan lines yet (`todo.md`), so nothing matches.
     expect(m.every((line) => line.keywords.length === 0 && line.matches.length === 0)).toBe(true);

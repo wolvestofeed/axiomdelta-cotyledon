@@ -1,5 +1,6 @@
 'use server';
 
+import { lineLabel } from '@/data/grow-plan';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
@@ -55,7 +56,7 @@ async function createSupplierLcaOptionInner(input: unknown): Promise<Result> {
   }
   const d = parsed.data;
   // Any input on a crop plan in the library (Roadmap N9), not the reference crop plan's lines only.
-  if (!(await listCropPlans()).some((r) => r.inputs.some((i) => i.name === d.input))) return { ok: false, error: 'Unknown input.' };
+  if (!(await listCropPlans()).some((r) => r.lines.some((l) => lineLabel(l) === d.input))) return { ok: false, error: 'Unknown input.' };
   const sup = leanSuppliersById([d.supplierId])[d.supplierId];
   if (!sup) return { ok: false, error: 'Supplier not found in the directory.' };
 

@@ -28,6 +28,7 @@
  * Receivables and payables stay open until a payment record applies to them.
  */
 
+import { purchaseLines, type PurchaseLine } from '@/engine/grow-purchase';
 import {
   journalIsBalanced,
   type Account,
@@ -374,12 +375,12 @@ export function postActuals(
     //    received against standard to PPV, and GR/IR until the bill arrives.
     //    An input's standard is read from any crop plan in the library that
     //    uses it, at the version in force on the receipt date (audit A5).
-    const receiptStandard = (date: string) => {
-      const byName = new Map<string, (typeof inputs.cropPlan.inputs)[number]>();
+    const receiptStandard = (date: string): PurchaseLine[] => {
+      const byName = new Map<string, PurchaseLine>();
       for (const r of inputs.cropPlans) {
-        for (const ing of standardFor(r.code, date).cropPlan.inputs) if (!byName.has(ing.name)) byName.set(ing.name, ing);
+        for (const ing of purchaseLines(standardFor(r.code, date).cropPlan)) if (!byName.has(ing.name)) byName.set(ing.name, ing);
       }
-      return { ...inputs.cropPlan, inputs: [...byName.values()] };
+      return [...byName.values()];
     };
     const receiptStandards = new Map<string, ReturnType<typeof receiptStandard>>();
     let ppvCents = 0;

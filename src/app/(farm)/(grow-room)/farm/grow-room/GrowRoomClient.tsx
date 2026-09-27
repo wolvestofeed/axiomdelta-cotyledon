@@ -1,5 +1,6 @@
 'use client';
 
+import { purchaseLines } from '@/engine/grow-purchase';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -116,9 +117,9 @@ export function GrowRoomClient({
   const receiveInputs = useMemo<ReceiveInput[]>(() => {
     const seen = new Map<string, ReceiveInput>();
     for (const r of inputs.cropPlans) {
-      for (const l of r.inputs) {
-        const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.seedUnitCost * 100), onFoodTraceabilityList: false };
-        if (l.foodTraceabilityList) row.onFoodTraceabilityList = true;
+      for (const l of purchaseLines(r)) {
+        if (l.kind === 'light') continue;
+        const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.unitCost * 100), onFoodTraceabilityList: false };
         seen.set(l.name, row);
       }
     }

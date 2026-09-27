@@ -6,6 +6,7 @@
  * testable and keeps the ~600KB JSON out of any client bundle.
  */
 
+import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
 import type { SupplierOperation, Region } from '@/data/suppliers';
 
 export interface SupplierFilters {
@@ -78,13 +79,8 @@ export interface CropPlanLineMatch {
   matches: SupplierOperation[];
 }
 
-// Minimal shape the matcher needs — any crop plan from `crop_plans` satisfies it.
-export interface MatchableCropPlan {
-  code: string;
-  name: string;
-  category: string;
-  inputs: readonly { name: string }[];
-}
+/** Minimal shape the matcher needs: a grow plan's lines, each matched by its label. */
+export type MatchableCropPlan = Pick<GrowPlanDef, 'lines'>;
 
 // Keyword sets that map each crop plan line to product/type text in the dataset.
 const LINE_KEYWORDS: Record<string, string[]> = {
@@ -105,7 +101,8 @@ export function matchCropPlanToSuppliers(
   targetCropPlan: MatchableCropPlan,
 ): CropPlanLineMatch[] {
   const pool = region === 'all' ? ops : ops.filter((o) => o.region === region);
-  return targetCropPlan.inputs.map((ing) => {
+  return targetCropPlan.lines.map((line) => {
+    const ing = { name: lineLabel(line) };
     const keywords = LINE_KEYWORDS[ing.name] ?? [];
     const matches = keywords.length
       ? pool.filter((o) => {

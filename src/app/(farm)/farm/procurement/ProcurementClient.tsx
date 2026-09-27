@@ -1,5 +1,6 @@
 'use client';
 
+import { purchaseLines } from '@/engine/grow-purchase';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, Kpi, money, num, pct } from '@/components/ui';
@@ -84,11 +85,11 @@ export function ProcurementClient({
   const inputs = useMemo(() => {
     const seen = new Map<string, { name: string; unit: string; seedUnitCost: number; inService: boolean; cropPlans: number; price: ResolvedInputPrice | undefined }>();
     for (const r of [...resolved.cropPlans].sort((a, b) => (a.status === 'in_service' ? 0 : 1) - (b.status === 'in_service' ? 0 : 1))) {
-      for (const l of r.inputs) {
+      for (const l of purchaseLines(r)) {
         const row = seen.get(l.name) ?? {
           name: l.name,
           unit: l.unit,
-          seedUnitCost: l.seedUnitCost,
+          seedUnitCost: l.unitCost,
           inService: r.status === 'in_service',
           cropPlans: 0,
           // The first crop plan to carry the line sets the price shown; the
@@ -105,9 +106,9 @@ export function ProcurementClient({
   const receiveInputs = useMemo<ReceiveInput[]>(() => {
     const seen = new Map<string, ReceiveInput>();
     for (const r of resolved.cropPlans) {
-      for (const l of r.inputs) {
-        const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.seedUnitCost * 100), onFoodTraceabilityList: false };
-        if (l.foodTraceabilityList) row.onFoodTraceabilityList = true;
+      for (const l of purchaseLines(r)) {
+        if (l.kind === 'light') continue;
+        const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.unitCost * 100), onFoodTraceabilityList: false };
         seen.set(l.name, row);
       }
     }

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { purchaseLines } from '@/engine/grow-purchase';
 import { phases, assumptions } from '@/data/plan-data';
 import { deriveCapacity, componentCosting } from '@/engine';
 import {
@@ -124,13 +125,13 @@ describe('actuals — documents and periods', () => {
   });
 
   it('receipt lines are costed against the crop plan standard', () => {
-    const c = costReceiptLines(receiptDoc(1.04).lines, cropPlan);
+    const c = costReceiptLines(receiptDoc(1.04).lines, purchaseLines(cropPlan));
     const std = c.reduce((s, x) => s + x.standardCents, 0);
     const inv = c.reduce((s, x) => s + x.invoiceCents, 0);
     // Invoice prices are whole cents, so a line priced in fractions of a cent rounds; the premium is 4% within that.
     expect(inv).toBeGreaterThan(std);
     expect(inv / std).toBeCloseTo(1.04, 1);
-    const unknown = costReceiptLines([{ input: 'Saffron', qty: 1, unit: 'lb', lotCode: 'x', unitPriceCents: 500000 }], cropPlan);
+    const unknown = costReceiptLines([{ input: 'Saffron', qty: 1, unit: 'lb', lotCode: 'x', unitPriceCents: 500000 }], purchaseLines(cropPlan));
     expect(unknown[0].standardUnitPriceCents).toBeNull();
     expect(unknown[0].purchasePriceVarianceCents).toBe(0);
   });

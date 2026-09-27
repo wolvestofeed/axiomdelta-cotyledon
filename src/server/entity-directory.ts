@@ -78,7 +78,7 @@ function cropPlanToEntity(r: GrowPlanCarrier): LeanEntity {
     id: r.code,
     name: r.name,
     subtitle: `${r.code} · ${r.category}`,
-    pills: [{ label: `${r.inputs.length} lines`, tone: 'plain' }],
+    pills: [{ label: `${r.lines.length} lines`, tone: 'plain' }],
     href: '/farm/crop-plans',
     lat: null,
     lng: null,

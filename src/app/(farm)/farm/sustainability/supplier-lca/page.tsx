@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { lineLabel } from '@/data/grow-plan';
 import { PageHeader, Card, Kpi, StatusBadge, num } from '@/components/ui';
 import { Cite } from '@/components/Cite';
 import { SupplierLcaForm, DeleteSupplierLcaButton } from '@/components/SupplierLcaForm';
@@ -20,7 +21,7 @@ export default async function SupplierLcaPage() {
 async function SupplierLcaPageInner() {
   const [access, rows, sources, library] = await Promise.all([getFarmAccess(), listSupplierLcaRows(), listSources(), listCropPlans()]);
   // Every input across the in-service crop plans (Roadmap N9).
-  const inputs = [...new Set(library.filter((r) => r.status === 'in_service').flatMap((r) => r.inputs.map((i) => i.name)))].sort();
+  const inputs = [...new Set(library.filter((r) => r.status === 'in_service').flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort();
   const withDoc = rows.filter((r) => r.sourceId).length;
 
   return (

@@ -10,6 +10,7 @@
  * and prices.
  */
 
+import type { PurchaseLine } from '@/engine/grow-purchase';
 import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import type { SowingExecution, SowingIssue, VarietyLot } from '@/engine/sowing';
 import { libraryLabel, type StandardVersionDoc } from '@/engine/standards';
@@ -447,10 +448,11 @@ export interface ReceiptLineCost {
   purchasePriceVarianceCents: number;
 }
 
-export function costReceiptLines(lines: readonly ReceiptLine[], cropPlan: CropPlan): ReceiptLineCost[] {
+/** Receipt lines against the standard: `standard` is the purchase lines of the plans in force (`purchaseLines`). */
+export function costReceiptLines(lines: readonly ReceiptLine[], standard: readonly PurchaseLine[]): ReceiptLineCost[] {
   return lines.map((line) => {
-    const ing = cropPlan.inputs.find((i) => i.name === line.input);
-    const stdUnit = ing ? Math.round(ing.seedUnitCost * 100) : null;
+    const ing = standard.find((i) => i.name === line.input);
+    const stdUnit = ing ? Math.round(ing.unitCost * 100) : null;
     const invoiceCents = Math.round(line.qty * line.unitPriceCents);
     const standardCents = stdUnit === null ? invoiceCents : Math.round(line.qty * stdUnit);
     return {
