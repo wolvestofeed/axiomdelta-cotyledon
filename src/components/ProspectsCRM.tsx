@@ -373,7 +373,7 @@ function LinksPanel({ prospect }: { prospect: ClientProspect }) {
         onLink={(code) => { if (code) addGrowPlan(code); }}
       />
       <p className="farm-kpi-sub mt-2">
-        Input cost per unit comes from the open forecast for each growPlan quoted, so the Quote of service
+        Input cost per unit comes from the open forecast for each grow plan quoted, so the Quote of service
         tab shows margin over input cost rather than revenue alone. Links are part of the scenario.
       </p>
     </div>

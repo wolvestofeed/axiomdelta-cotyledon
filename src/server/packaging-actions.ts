@@ -108,7 +108,7 @@ async function deletePackageInner(input: unknown): Promise<Result> {
     .select({ used: sql<number>`count(*)::int` })
     .from(farmGrowPlanPackages)
     .where(eq(farmGrowPlanPackages.packageId, parsed.data.id));
-  if (Number(used) > 0) return { ok: false, error: `${used} grow plan${Number(used) === 1 ? '' : 's'} pick this package; remove it from ${Number(used) === 1 ? 'that growPlan' : 'those growPlans'} first.` };
+  if (Number(used) > 0) return { ok: false, error: `${used} grow plan${Number(used) === 1 ? '' : 's'} pick this package; remove it from ${Number(used) === 1 ? 'that grow plan' : 'those grow plans'} first.` };
   await db.delete(farmPackages).where(eq(farmPackages.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };

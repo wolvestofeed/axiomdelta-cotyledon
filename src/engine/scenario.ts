@@ -37,6 +37,7 @@ import type { TimeStudyDoc } from '@/data/time-studies';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
 import { purchaseLines } from '@/engine/grow-purchase';
+import { lastPricePaidSource } from '@/engine/seed-cost';
 import { measuredConsumption, studiesForGrowPlan } from '@/engine/time-studies';
 import type { GrowPlanDef, LinePrice } from '@/data/grow-plan';
 import { growPlanSeed } from '@/data/grow-plans-seed';
@@ -427,11 +428,13 @@ export interface ResolvedInputs {
   /** Payment terms on file per supplier id (Roadmap K3). A supplier with none is absent. */
   supplierTerms: Record<string, PaymentTerms>;
   /**
-   * What each input costs and where the figure came from, keyed by
-   * `inputKey(growPlanCode, name)` (Roadmap N1, decision 7). Every line has
-   * an entry — a line still on its grow plan figure carries the reason why.
+   * The plan's price for each input and where it came from, keyed by
+   * `inputKey(growPlanCode, name)`: a what-if, the last price paid, the catalog or the line's own.
+   * Every line has an entry — a line still on its grow plan figure carries the reason why.
    */
   inputPrices: Record<string, ResolvedInputPrice>;
+  /** The price a purchase order pays for each input, same keys: a what-if, the catalog, the last price paid or the line's own. */
+  orderLinePrices: Record<string, ResolvedInputPrice>;
   /** The biweekly pay calendar (Roadmap K5). */
   payCalendar: PayCalendar;
   /** Farm closures from the production calendar (Roadmap J1). */
@@ -573,16 +576,21 @@ export function resolveScenarioInputs(
   const ingOverlay = config.inputs ?? {};
   const inputSupplier = config.sustainability?.inputSupplier ?? {};
   const inputPrices: Record<string, ResolvedInputPrice> = {};
+  const orderLinePrices: Record<string, ResolvedInputPrice> = {};
   const source = library.length > 0 ? library : seedGrowPlans;
   const growPlans: GrowPlanDef[] = source.map((r) => {
     // What the plan's approved time studies measured stands over the placeholder watering volumes
     // and the nutrient strength (`GrowPlanDef.measured`).
     const measured = timeStudies ? measuredConsumption(studiesForGrowPlan(timeStudies, r.code)) : null;
-    const plan: GrowPlanDef = structuredClone({ ...r, prices: undefined, ...(measured ? { measured } : {}) });
+    const plan: GrowPlanDef = structuredClone({ ...r, ...(measured ? { measured } : {}) });
     delete plan.prices;
-    // A catalog price or a typed what-if stands over the line's own price; the plan carries it for
-    // the cost card and the purchase lines (`GrowPlanDef.prices`), keyed by the line's label.
+    delete plan.orderPrices;
+    // Two prices per line (`accounting-policy.md` §10), each keyed by the line's label. The plan's:
+    // a what-if typed on the forecast, else the last price paid, else the supplier's catalog price,
+    // else the line's own. The order's: a what-if, else the catalog, else the last price paid, else
+    // the line's own.
     const prices: Record<string, LinePrice> = {};
+    const orderPrices: Record<string, LinePrice> = {};
     for (const line of purchaseLines(plan)) {
       const key = inputKey(plan.code, line.name);
       const supplierId = inputSupplier[line.name] ?? null;
@@ -594,26 +602,30 @@ export function resolveScenarioInputs(
         catalog: (supplierId ? catalog[supplierId] : undefined) ?? [],
         asOf: pricesAsOf,
       });
-      inputPrices[key] = priced;
-      let price: LinePrice | null =
+      const fromCatalog: LinePrice | null =
         priced.basis === 'catalog' ? { unitCost: priced.unitPrice, status: 'SOURCED', source: `Supplier catalog: ${priced.item}, in force from ${priced.effectiveFrom}.` } : null;
+      const paid = line.kind === 'seed' && line.varietyKey ? plan.lastPaid?.[line.varietyKey] : undefined;
+      const fromPaid: LinePrice | null = paid ? { unitCost: paid.pricePerLb, status: 'DATED', source: lastPricePaidSource(paid) } : null;
       const typed = ingOverlay[key]?.unitCost;
-      if (typed !== undefined) {
-        // A typed what-if outranks the catalog, and stops claiming its source.
-        price =
-          priced.basis === 'catalog'
-            ? { unitCost: typed, status: 'STATED', source: `Typed on this scenario, over the catalog price of ${priced.unitPrice} from ${priced.effectiveFrom}.` }
-            : { unitCost: typed, status: line.status, source: line.source };
-        inputPrices[key] = {
-          ...priced,
-          unitPrice: typed,
-          basis: 'growPlan',
-          gap: priced.basis === 'catalog' ? 'A price typed on this scenario stands over the catalog.' : priced.gap,
-        };
-      }
-      if (price && Math.abs(price.unitCost - line.unitCost) > 1e-12) prices[line.name] = price;
+      const fromTyped = (under: LinePrice | null): LinePrice =>
+        under ? { unitCost: typed!, status: 'STATED', source: `Typed on this scenario, over ${under.source.replace(/\.$/, '')}.` } : { unitCost: typed!, status: line.status, source: line.source };
+      const planUnder = fromPaid ?? fromCatalog;
+      const orderUnder = fromCatalog ?? fromPaid;
+      const planPrice = typed !== undefined ? fromTyped(planUnder) : planUnder;
+      const orderPrice = typed !== undefined ? fromTyped(orderUnder) : orderUnder;
+      if (planPrice) prices[line.name] = planPrice;
+      if (orderPrice) orderPrices[line.name] = orderPrice;
+      const describe = (price: LinePrice | null, basisOf: LinePrice | null): ResolvedInputPrice =>
+        typed !== undefined
+          ? { ...priced, unitPrice: typed, basis: 'growPlan', gap: basisOf ? `A price typed on this scenario stands over ${basisOf.source.replace(/\.$/, '')}.` : priced.gap }
+          : basisOf === fromPaid && fromPaid
+            ? { ...priced, unitPrice: fromPaid.unitCost, basis: 'lastPaid', itemId: null, item: null, effectiveFrom: paid!.receivedOn, gap: priced.basis === 'catalog' ? `The last price paid stands over the catalog price of ${priced.unitPrice} on the plan.` : null }
+            : priced;
+      inputPrices[key] = describe(planPrice, planUnder);
+      orderLinePrices[key] = describe(orderPrice, orderUnder);
     }
     if (Object.keys(prices).length > 0) plan.prices = prices;
+    if (Object.keys(orderPrices).length > 0) plan.orderPrices = orderPrices;
     return plan;
   });
   // The library is never empty here: an empty one falls back to the seed grow plans above.
@@ -827,6 +839,7 @@ export function resolveScenarioInputs(
     },
     supplierTerms: { ...supplierTerms },
     inputPrices,
+    orderLinePrices,
     payCalendar: { ...DEFAULT_PAY_CALENDAR },
     closures: closures.map((c) => ({ startDate: c.startDate, endDate: c.endDate })),
     pickupPoints: structuredClone(config.pickupPoints ?? {}),

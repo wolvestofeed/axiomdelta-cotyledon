@@ -4,7 +4,7 @@ import { farmGrowPlans, farmGrowPlanLines } from '@/db';
 import { db } from '@/lib/db';
 import { rowsToLibraryPlan, type LibraryGrowPlan } from '@/engine/grow-plan-library';
 import { withSeedLock, seedMissingGrowPlans } from '@/server/seed-writes';
-import { listGrowPlansWith } from '@/server/grow-plan-rows';
+import { listGrowPlansWith, lastPaidWith } from '@/server/grow-plan-rows';
 import { listNutrientsWith } from '@/server/nutrient-rows';
 
 /**
@@ -38,5 +38,6 @@ export async function getGrowPlanByCode(code: string): Promise<LibraryGrowPlan |
     .where(eq(farmGrowPlanLines.growPlanId, h[0].id))
     .orderBy(asc(farmGrowPlanLines.position));
   const nutrients = Object.fromEntries((await listNutrientsWith(db)).map((n) => [n.key, n]));
-  return rowsToLibraryPlan(h[0], lines, nutrients);
+  const lastPaid = await lastPaidWith(db);
+  return rowsToLibraryPlan(h[0], lines, nutrients, lastPaid);
 }

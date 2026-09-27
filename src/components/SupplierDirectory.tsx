@@ -112,7 +112,7 @@ export default function SupplierDirectory({
           Map
         </TabButton>
         <TabButton active={tab === 'growPlan'} onClick={() => setTab('growPlan')}>
-          Match to growPlan
+          Match to grow plan
         </TabButton>
         <TabButton active={tab === 'linked'} onClick={() => setTab('linked')}>
           Linked lines{reverse.length > 0 ? ` (${reverse.length})` : ''}
@@ -277,7 +277,7 @@ export default function SupplierDirectory({
             </label>
             {growPlanMatches.length <= 1 && (
               <span className="farm-fs-xs farm-c-faint pb-[0.4rem]">
-                One growPlan on file — the list grows as growPlans are added.
+                One grow plan on file — the list grows as grow plans are added.
               </span>
             )}
           </div>
@@ -322,7 +322,7 @@ export default function SupplierDirectory({
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{num(Object.keys(links).length)}</div>
               <div className="farm-kpi-label">Lines with a supplier</div>
-              <div className="farm-kpi-sub">of {num(inputNames.length)} growPlan lines</div>
+              <div className="farm-kpi-sub">of {num(inputNames.length)} grow plan lines</div>
             </div>
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{money(reverse.reduce((t, r) => t + r.orderedSpend, 0), 0)}</div>

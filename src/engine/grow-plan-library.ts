@@ -9,6 +9,7 @@
 
 import type { NutrientSolutionDef } from '@/data/inputs-catalog';
 import { nutrientsForPlan } from '@/engine/nutrients';
+import type { LastPricePaid } from '@/engine/seed-cost';
 import type { GrowPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
 import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
@@ -62,8 +63,16 @@ export function lineFromStored(raw: unknown): GrowPlanLine | null {
   return typeof kind === 'string' && LINE_KINDS.has(kind) ? (raw as GrowPlanLine) : null;
 }
 
+/** The last prices paid of the varieties a plan sows, when any has one. */
+function lastPaidFor(lines: readonly GrowPlanLine[], lastPaid?: Readonly<Record<string, LastPricePaid>>): { lastPaid?: Record<string, LastPricePaid> } {
+  if (!lastPaid) return {};
+  const own: Record<string, LastPricePaid> = {};
+  for (const l of lines) if (l.kind === 'seed' && lastPaid[l.varietyKey]) own[l.varietyKey] = lastPaid[l.varietyKey]!;
+  return Object.keys(own).length > 0 ? { lastPaid: own } : {};
+}
+
 /** The stored grow plan. */
-export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): GrowPlanDef {
+export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>): GrowPlanDef {
   const status = GROW_PLAN_STATUSES.includes(header.status as GrowPlanStatus) ? (header.status as GrowPlanStatus) : 'developing';
   const format = (header.format in TRAY_FORMAT_BY_KEY ? header.format : 'flat-1020') as TrayFormatKey;
   const sd = header.stageDays;
@@ -84,11 +93,12 @@ export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPl
     allergensPresent: header.allergensPresent ?? '',
     allergenFreeClaims: header.allergenFreeClaims ?? '',
     ...(nutrients ? { nutrients: nutrientsForPlan({ lines: planLines }, nutrients) } : {}),
+    ...lastPaidFor(planLines, lastPaid),
   };
 }
 
-export function rowsToLibraryPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): LibraryGrowPlan {
-  const plan = rowsToGrowPlan(header, lines, nutrients);
+export function rowsToLibraryPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>): LibraryGrowPlan {
+  const plan = rowsToGrowPlan(header, lines, nutrients, lastPaid);
   return {
     ...plan,
     id: header.id,

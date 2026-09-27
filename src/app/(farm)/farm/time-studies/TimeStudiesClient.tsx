@@ -200,7 +200,7 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
 
       <Card title={`Time study log — ${growPlan.code} ${growPlan.name}`} className="mt-4">
         {studies.length === 0 ? (
-          <p className="farm-kpi-sub">No time study is logged for this growPlan.{canEdit ? ' Record one below.' : ''}</p>
+          <p className="farm-kpi-sub">No time study is logged for this grow plan.{canEdit ? ' Record one below.' : ''}</p>
         ) : (
           <div className="farm-scroll-x overflow-y-auto! border! border-[color:var(--farm-line)]! rounded-[0.4rem]!" style={{ maxHeight: `${LOG_ROW_REM * 10 + 2.6}rem` }}>
             <table className="farm-table compact">

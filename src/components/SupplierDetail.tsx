@@ -258,7 +258,7 @@ function CatalogPanel({
       <>
         <p className="farm-kpi-sub mt-0!">
           No catalog on file. Import the price sheet this operation sends — a pasted spreadsheet or a
-          CSV. Until then, a purchase order for them prices off the growPlan&apos;s own reference cost
+          CSV. Until then, a purchase order for them prices off the grow plan&apos;s own reference cost
           rather than their actual price.
         </p>
         {canEdit ? <CatalogImport supplierId={supplier.id} sources={sources} hasExisting={false} /> : null}

@@ -8,6 +8,10 @@ import { GLOSSARY_BY_KEY } from '@/data/glossary';
 import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { singleVarietyPlan } from '@/data/grow-plan';
 import { withWorkspace } from '@/server/workspace';
+import { db } from '@/lib/db';
+import { lastPaidWith } from '@/server/grow-plan-rows';
+import { lastPricePaidTagged } from '@/engine/seed-cost';
+import type { Tagged } from '@/data/tagged';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +21,9 @@ export default async function VarietiesPage() {
 }
 
 async function VarietiesPageInner() {
+  // A variety is priced at its last price paid once received; the record's opening price stands until then.
+  const lastPaid = await lastPaidWith(db);
+  const priceOf = (key: string, record: Tagged) => (lastPaid[key] ? lastPricePaidTagged(lastPaid[key]!) : record);
   const rowTitle = (r: number) => SCIENCE_SOURCE_BY_ROW[r]?.title ?? `row ${r}`;
   return (
     <>
@@ -30,7 +37,7 @@ async function VarietiesPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>A variety is the master record: its seed source and supplier code, its price per pound (the rolling cost from receipts once there are receipts), its grams per 1020 and per jar, its soak and stage days, and its harvest weight until a closed sowing observes one.</li>
+            <li>A variety is the master record: its seed source and supplier code, its price per pound (its last price paid once received, the record&rsquo;s opening price until then; a supplier&rsquo;s catalog price stands between them on the plan once a supplier is linked), its grams per 1020 and per jar, its soak and stage days, and its harvest weight until a closed sowing observes one.</li>
             <li>Every stated benefit and every light or media note cites rows of the science library, registered on Sources.</li>
             <li>The targets a variety carries are what the Flat Builder reads a subscriber&rsquo;s nutrition targets against.</li>
           </ul>
@@ -51,7 +58,7 @@ async function VarietiesPageInner() {
                   <td><a className="farm-link" href={`#${v.key}`}>{v.name}</a><div className="farm-kpi-sub">{v.latinName}</div></td>
                   <td>{v.kind}</td>
                   <td>{v.supplier.code}{v.supplier.sku ? ` ${v.supplier.sku}` : ''}{v.supplier.organic ? ' · organic' : ''}</td>
-                  <td className="num"><StatusBadge status={v.seedPricePerLb.status} title={v.seedPricePerLb.note} /> {money(v.seedPricePerLb.value)}</td>
+                  <td className="num"><StatusBadge status={priceOf(v.key, v.seedPricePerLb).status} title={priceOf(v.key, v.seedPricePerLb).note} /> {money(priceOf(v.key, v.seedPricePerLb).value)}</td>
                   <td className="num"><StatusBadge status={v.seedGramsPer1020.status} title={v.seedGramsPer1020.note} /> {num(v.seedGramsPer1020.value, 0)}</td>
                   <td className="num">{num(v.soakHours.value, 0)}</td>
                   <td className="num">{daysToHarvest(v.stageDays.value)} d</td>

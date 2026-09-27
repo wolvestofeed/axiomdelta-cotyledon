@@ -296,9 +296,9 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
       <Breakdown title="By channel" months={report.months} by="channel" nameOf={(k) => report.channelNames[k] ?? `Channel ${k}`} />
       <Breakdown title="By subscriber" months={report.months} by="subscriber" nameOf={(k) => report.subscriberNames[k] ?? k} />
       <p className="farm-kpi-sub mt-2">
-        Input cost by row is each growPlan&rsquo;s input cost per unit made in the month × its units distributed, so the rows follow the units.
+        Input cost by row is each grow plan&rsquo;s input cost per unit made in the month × its units distributed, so the rows follow the units.
         {noSowing.length > 0 && ` Distributed with no sowing of their own in the month, so no input cost on their rows: ${noSowing.join(', ')}.`}
-        {' '}Sowings by growPlan are on <Link className="farm-link" href="/farm/production-planning/calendar">Calendar</Link>.
+        {' '}Sowings by grow plan are on <Link className="farm-link" href="/farm/production-planning/calendar">Calendar</Link>.
       </p>
     </>
   );

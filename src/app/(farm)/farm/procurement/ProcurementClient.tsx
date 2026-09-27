@@ -1,6 +1,7 @@
 'use client';
 
 import { purchaseLines } from '@/engine/grow-purchase';
+import { costPlan } from '@/engine/grow-costing';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, Kpi, money, num, pct } from '@/components/ui';
@@ -30,6 +31,13 @@ const nextServiceDay = (d: string) => {
   for (let i = 0; i < 7 && !SERVICE_WEEKDAYS.includes(weekdayOf(x)); i++) x = isoAddDays(x, 1);
   return x;
 };
+
+/** Where a line's price came from, in a few words. */
+function basisLabel(p: ResolvedInputPrice | undefined): string {
+  if (p?.basis === 'catalog') return `catalog, from ${p.effectiveFrom}`;
+  if (p?.basis === 'lastPaid') return `last paid, ${p.effectiveFrom}`;
+  return 'grow plan figure';
+}
 
 export function ProcurementClient({
   canEdit,
@@ -83,25 +91,29 @@ export function ProcurementClient({
 
   // Every distinct input across the library, in service first.
   const inputs = useMemo(() => {
-    const seen = new Map<string, { name: string; unit: string; unitCost: number; inService: boolean; growPlans: number; price: ResolvedInputPrice | undefined }>();
+    const seen = new Map<string, { name: string; unit: string; unitCost: number; planCost: number; inService: boolean; growPlans: number; price: ResolvedInputPrice | undefined; planPrice: ResolvedInputPrice | undefined }>();
     for (const r of [...resolved.growPlans].sort((a, b) => (a.status === 'in_service' ? 0 : 1) - (b.status === 'in_service' ? 0 : 1))) {
-      for (const l of purchaseLines(r)) {
+      const planLines = purchaseLines(r);
+      for (const l of purchaseLines(r, costPlan(r), 'order')) {
         const row = seen.get(l.name) ?? {
           name: l.name,
           unit: l.unit,
+          // What a purchase order pays; the plan's price beside it where it differs.
           unitCost: l.unitCost,
+          planCost: planLines.find((p) => p.name === l.name)?.unitCost ?? l.unitCost,
           inService: r.status === 'in_service',
           growPlans: 0,
           // The first grow plan to carry the line sets the price shown; the
-          // resolver gives every grow plan's copy the same catalog answer.
-          price: resolved.inputPrices[inputKey(r.code, l.name)],
+          // resolver gives every grow plan's copy the same answer.
+          price: resolved.orderLinePrices[inputKey(r.code, l.name)],
+          planPrice: resolved.inputPrices[inputKey(r.code, l.name)],
         };
         row.growPlans += 1;
         seen.set(l.name, row);
       }
     }
     return [...seen.values()].sort((a, b) => Number(b.inService) - Number(a.inService) || a.name.localeCompare(b.name));
-  }, [resolved.growPlans, resolved.inputPrices]);
+  }, [resolved.growPlans, resolved.inputPrices, resolved.orderLinePrices]);
 
   const receiveInputs = useMemo<ReceiveInput[]>(() => {
     const seen = new Map<string, ReceiveInput>();
@@ -189,7 +201,7 @@ export function ProcurementClient({
           <table className="farm-table">
             <thead>
               <tr>
-                <th>Input</th><th>{ratingHeader()}</th><th>Supplier</th><th className="num">Price</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Next run gross</th><th className="num">Net</th><th className="num">Cases</th><th className="num">Net extended</th>
+                <th>Input</th><th>{ratingHeader()}</th><th>Supplier</th><th className="num">Order price</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Next run gross</th><th className="num">Net</th><th className="num">Cases</th><th className="num">Net extended</th>
               </tr>
             </thead>
             <tbody>
@@ -198,7 +210,7 @@ export function ProcurementClient({
                 const n = netBy.get(ing.name);
                 return (
                   <tr key={ing.name} className={`${ing.inService ? '' : 'farm-c-faint'}`}>
-                    <td className="font-medium!">{ing.name}<div className="farm-c-faint farm-fs-2xs font-normal">{ing.growPlans} growPlan{ing.growPlans === 1 ? '' : 's'}{ing.inService ? '' : ' · not in service'}</div></td>
+                    <td className="font-medium!">{ing.name}<div className="farm-c-faint farm-fs-2xs font-normal">{ing.growPlans} grow plan{ing.growPlans === 1 ? '' : 's'}{ing.inService ? '' : ' · not in service'}</div></td>
                     <td><RatingPill rating={ratingFor(inputRatings, ing.name)} /></td>
                     <td>
                       <SupplierPicker input={ing.name} linked={links[ing.name] ? suppliers[links[ing.name]] ?? null : null} canEdit={canEdit && world.forecastEditing} onLink={(id) => setLink(ing.name, id)} />
@@ -206,8 +218,11 @@ export function ProcurementClient({
                     <td className="num">
                       {money(ing.unitCost, ing.unitCost < 1 ? 4 : 2)} / {ing.unit}
                       <div className="farm-c-faint farm-fs-2xs" title={ing.price?.gap ?? undefined}>
-                        {ing.price?.basis === 'catalog' ? `catalog, from ${ing.price.effectiveFrom}` : 'grow plan figure'}
+                        {basisLabel(ing.price)}
                       </div>
+                      {Math.abs(ing.planCost - ing.unitCost) > 1e-9 && (
+                        <div className="farm-c-faint farm-fs-2xs">plan {money(ing.planCost, ing.planCost < 1 ? 4 : 2)} · {basisLabel(ing.planPrice)}</div>
+                      )}
                     </td>
                     <td className="num">{st ? `${num(st.onHand, 2)} ${st.unit}` : '—'}{st ? <div className="farm-c-faint farm-fs-2xs">{st.lots} lot{st.lots === 1 ? '' : 's'} · {money(st.valueCents / 100)}</div> : null}</td>
                     <td className="num">{(onOrder.byInput[ing.name] ?? 0) > 0 ? `${num(onOrder.byInput[ing.name], 2)} ${ing.unit}` : '—'}{(onOrder.draftsByInput[ing.name] ?? 0) > 0 ? <div className="farm-c-faint farm-fs-2xs">{num(onOrder.draftsByInput[ing.name], 2)} on a draft</div> : null}</td>
@@ -229,8 +244,10 @@ export function ProcurementClient({
           </p>
         )}
         <p className="farm-kpi-sub mt-2">
-          A line prices off its linked supplier&apos;s APPROVED catalog line, at the price in force
-          today; where it does not, the row says &ldquo;growPlan figure&rdquo; and carries the reason on
+          A purchase order prices each line at its linked supplier&apos;s APPROVED catalog line, at the price in force
+          today; a seed line with no catalog price takes the last price paid for its variety. The plan prices a seed line at the
+          last price paid first, and the row shows that price beside the order&apos;s where the two differ. Where neither applies,
+          the row says &ldquo;grow plan figure&rdquo; and carries the reason on
           hover — no supplier linked, no catalog on file, a candidate line, or a price stated per a
           different unit than the line is bought in. Purchase orders are raised from the net on <Link className="farm-link" href="/farm/production-planning?level=day">Production Planning</Link>, for a distribution day or the horizon, one per supplier with the catalog lead time giving each line an order-by date; they move to issued, received and closed on each supplier&apos;s page, and a receipt recorded here, on the order, that covers every line marks the order received. A line&apos;s supplier is set here, on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>, or on <Link className="farm-link" href="/farm/sustainability/inputs">Inputs (Scope 3)</Link> — all three write the same link, which is part of the scenario. Certifications and lead times live in <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
         </p>

@@ -50,7 +50,7 @@ export function GrowPlanPackagingCard({ growPlanCode, growPlanId, growPlanChanne
   return (
     <Card title={`Packaging — ${growPlanCode}`} className="mt-4">
       {cost.lines.length === 0 ? (
-        <p className="farm-kpi-sub">No packages picked for this growPlan. Packaging per unit: {money(0, 4)}.</p>
+        <p className="farm-kpi-sub">No packages picked for this grow plan. Packaging per unit: {money(0, 4)}.</p>
       ) : (
         <div className="farm-scroll-x">
           <table className="farm-table compact">
@@ -119,7 +119,7 @@ export function GrowPlanPackagingCard({ growPlanCode, growPlanId, growPlanChanne
       {isSuperAdmin && !growPlanId && <p className="farm-kpi-sub mt-2">This grow plan is not saved in the library yet; packages are picked once it is.</p>}
       {error && <p className="farm-kpi-sub mt-2 farm-c-accent">{error}</p>}
       <p className="farm-kpi-sub mt-2">
-        Packages come from the <Link className="farm-link" href="/farm/packaging">packaging library</Link>, each at its supplier price when one is on file, else its manual cost. A package with no cost entered counts as zero; enter its cost in the library and every growPlan that picks it updates. Packages on this growPlan&rsquo;s channels are listed first.
+        Packages come from the <Link className="farm-link" href="/farm/packaging">packaging library</Link>, each at its supplier price when one is on file, else its manual cost. A package with no cost entered counts as zero; enter its cost in the library and every grow plan that picks it updates. Packages on this grow plan&rsquo;s channels are listed first.
       </p>
     </Card>
   );

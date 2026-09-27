@@ -26,6 +26,7 @@ import type { GrowPlanStatus } from '@/data/plan-data';
 import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
 import type { MeasuredConsumption } from '@/data/time-studies';
 import type { StatusTag } from '@/data/tagged';
+import type { LastPricePaid } from '@/engine/seed-cost';
 import { STAGES, SPROUT_STAGES, type StageDays, type StageKey, type StageDef } from '@/data/stage-schedule';
 import { TRAY_FORMAT_BY_KEY, densityFactorOf, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
@@ -103,7 +104,18 @@ export interface GrowPlanDef {
    * its source. The cost card reads a seed line's. Never stored.
    */
   prices?: Readonly<Record<string, LinePrice>>;
-}
+  /**
+   * Each variety the plan sows that has been received: its last price paid per pound
+   * (`src/engine/seed-cost.ts`), attached when the library is read; the resolver prices the seed
+   * line at it on the plan. Never stored.
+   */
+  lastPaid?: Readonly<Record<string, LastPricePaid>>;
+  /**
+   * The price a purchase order pays per line, keyed by the line's label, where it differs from the
+   * line's own: the supplier's catalog price in force, else the last price paid; a what-if typed on
+   * the forecast over both. Attached by the resolver; `prices` is the plan's. Never stored.
+   */
+  orderPrices?: Readonly<Record<string, LinePrice>>;}
 
 /** A price standing over a line's own: what it is, and where it came from. */
 export interface LinePrice {

@@ -27,7 +27,7 @@ export function SustainabilityWorldNote({ world, children }: { world: ReturnType
       )}
       {world.pending && <> Recomputing…</>}
       {world.error && <span className="farm-c-over"> {world.error}</span>}
-      {food.unitsNotCosted > 0 && <div className="mt-1">{num(food.unitsNotCosted)} unit{food.unitsNotCosted === 1 ? '' : 's'} distributed with no growPlan named: counted in units, not in food or mass.</div>}
+      {food.unitsNotCosted > 0 && <div className="mt-1">{num(food.unitsNotCosted)} unit{food.unitsNotCosted === 1 ? '' : 's'} distributed with no grow plan named: counted in units, not in food or mass.</div>}
       {food.growPlansWithUnmappedLines.length > 0 && (
         <div className="mt-1">
           Inputs with no mapping to a study product carry no food footprint: {food.growPlansWithUnmappedLines.map((r) => `${r.code} (${r.unmapped.length} line${r.unmapped.length === 1 ? '' : 's'}, ${num(r.units)} units)`).join(' · ')}.

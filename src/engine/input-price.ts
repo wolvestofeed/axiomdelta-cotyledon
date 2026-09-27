@@ -25,7 +25,8 @@
 
 import { matchCatalogPrice, type CatalogLine } from '@/engine/catalog';
 
-export type PriceBasisSource = 'catalog' | 'growPlan';
+/** Where a line's price came from: a supplier catalog, the last price paid on a receipt (seed lines), or the grow plan's own figure. */
+export type PriceBasisSource = 'catalog' | 'lastPaid' | 'growPlan';
 
 export interface ResolvedInputPrice {
   /** The price to use, per the grow plan line's own unit. */

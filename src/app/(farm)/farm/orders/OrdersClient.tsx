@@ -229,7 +229,7 @@ export function OrdersClient({
 
       <Card title="Saved subscription cycles" className="mt-4">
         <p className="farm-kpi-sub">
-          A saved cycle is a growPlan sequence on the shared list. It serves nobody until it is assigned: assigning copies it
+          A saved cycle is a grow plan sequence on the shared list. It serves nobody until it is assigned: assigning copies it
           onto a subscriber as that subscriber&rsquo;s flat plan. A channel never decides what a subscriber is served. Flat plans,
           and a sequence programmed for one subscriber, are on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.
         </p>
@@ -438,7 +438,7 @@ export function OrdersClient({
         )}
         {day.orders.length === 0 && <p className="farm-kpi-sub mt-2">No orders on this date{dayDate < from || dayDate > to ? ' — it is outside the range above' : ''}.</p>}
         <p className="farm-kpi-sub mt-2">
-          The units by growPlan on a date are what <Link className="farm-link" href="/farm/production-planning">Production Planning</Link> explodes into production requirements. Services, volume and flat plans are edited on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>; distribution records are on <Link className="farm-link" href="/farm/actuals">Actuals</Link>.
+          The units by grow plan on a date are what <Link className="farm-link" href="/farm/production-planning">Production Planning</Link> explodes into production requirements. Services, volume and flat plans are edited on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>; distribution records are on <Link className="farm-link" href="/farm/actuals">Actuals</Link>.
         </p>
       </Card>
 

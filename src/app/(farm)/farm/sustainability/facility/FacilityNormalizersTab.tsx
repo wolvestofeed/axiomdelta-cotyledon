@@ -60,7 +60,7 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          {world.isPlan ? <>Units come from the forecast&rsquo;s subscribers, services and flat plans on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.</> : <>Units come from the distributions on record on <Link className="farm-link" href="/farm/orders">Orders</Link>.</>} Each unit is footprinted on its own growPlan at its channel&rsquo;s unit.
+          {world.isPlan ? <>Units come from the forecast&rsquo;s subscribers, services and flat plans on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.</> : <>Units come from the distributions on record on <Link className="farm-link" href="/farm/orders">Orders</Link>.</>} Each unit is footprinted on its own grow plan at its channel&rsquo;s unit.
         </p>
       </Card>
 

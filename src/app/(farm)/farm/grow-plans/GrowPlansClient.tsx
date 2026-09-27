@@ -365,7 +365,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
           </table>
         )}
         <p className="farm-kpi-sub mt-2">
-          A standard is the growPlan as resolved on the plan of record plus the cost assumptions, frozen with an effective date. The ledger costs each sowing at the version in force on its production date and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
+          A standard is the grow plan as resolved on the plan of record plus the cost assumptions, frozen with an effective date. The ledger costs each sowing at the version in force on its production date and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
         </p>
       </Card>
 

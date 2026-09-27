@@ -151,7 +151,7 @@ export function PurchaseOrderGenerator({
 
       {built.orders.length === 0 ? (
         <p className="farm-kpi-sub mt-0!">
-          No growPlan line is linked to a supplier, so there is nothing to order against. Link lines on{' '}
+          No grow plan line is linked to a supplier, so there is nothing to order against. Link lines on{' '}
           <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link> or{' '}
           <Link className="farm-link" href="/farm/procurement">Procurement</Link>.
         </p>

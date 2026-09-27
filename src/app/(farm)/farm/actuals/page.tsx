@@ -156,7 +156,7 @@ async function ActualsPageInner({
           <p className="farm-kpi-sub mt-2">
             The Plan column is the same month on the Plan ledger — the saved open forecast run day by day and posted
             through the same functions — {planMonth ? '' : `and ${period} is outside its window (${plan.ledger.from} to ${plan.ledger.to}), so it reads —`}. The
-            full comparison by period, growPlan, channel and subscriber is Roadmap N7.
+            full comparison by period, grow plan, channel and subscriber is Roadmap N7.
           </p>
         </Card>
 

@@ -188,7 +188,7 @@ export function ScheduleClient({
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Production and distribution days come from the order book rolled through production, the same plan as <Link className="farm-link" href="/farm/production-planning">Production Planning</Link>. Sowing lines fall on the production day: a fixed line counts once per sowing, a per-unit line scales with the units produced. Harvest lines fall on the distribution day: a per-unit line scales with the units shipped, a fixed line counts once that day. People is the most any growPlan&rsquo;s study names for the task; tasks are not yet placed on the clock, so the day&rsquo;s peak headcount is not stated. No positions and no pay.
+          Production and distribution days come from the order book rolled through production, the same plan as <Link className="farm-link" href="/farm/production-planning">Production Planning</Link>. Sowing lines fall on the production day: a fixed line counts once per sowing, a per-unit line scales with the units produced. Harvest lines fall on the distribution day: a per-unit line scales with the units shipped, a fixed line counts once that day. People is the most any grow plan&rsquo;s study names for the task; tasks are not yet placed on the clock, so the day&rsquo;s peak headcount is not stated. No positions and no pay.
         </p>
       </Card>
 
