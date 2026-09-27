@@ -42,13 +42,13 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 |---|---|---|
 | Muse Kitchen · Impact OS, Muse, the OS | MicroFarm | Origin may be cited in docs only |
 | kitchen, commissary | farm, grow room | |
-| recipe | grow plan | One per variety, or a mixed tray of varieties. Phase 1 code says `cropPlan`; Phase 2 renames it |
+| recipe | grow plan | One per variety, or a mixed tray of varieties |
 | recipe code | crop code | |
-| ingredient line | seed line, medium line, nutrient line, light line | Phase 1 code says `input`; Phase 2 splits it. Water is a stage, never a line |
+| ingredient line | seed line, medium line, nutrient line, light line | What the lines buy are the plan's inputs, the farming term. Water is a stage, never a line |
 | component (served) | variety | The unit of sowing, lot coding and nutrient profiling inside a mixed tray |
-| portion, meal | unit | A unit is a flat, tray, insert, jar or cut ounce; the format is a property of the crop plan |
+| portion, meal | unit | A unit is a flat, tray, insert, jar or cut ounce; the format is a property of the grow plan |
 | batchPortions | batchUnits | |
-| batch | sowing | A sowing record is one sow of one crop plan = one lot |
+| batch | sowing | A sowing record is one sow of one grow plan = one lot |
 | cook, cook day | sow, sow day | |
 | cooked | germinated | |
 | blast chill, chill | blackout | Stage rename only; see §4 stages |
@@ -137,7 +137,7 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 | Section | Module | Plan |
 |---|---|---|
 | Overview | Dashboard, Reports, Sources | port |
-| Production | Crop Plans | swap (from Recipes) |
+| Production | Grow plans | swap (from Recipes) |
 | | Nutrients & Supplements | new: the solutions and supplements a nutrient line names, with strength, price and what each is meant to elicit; seeded, editable |
 | | Time Studies | port |
 | | Production Planning, Sow Schedule, Compare, Calendar, Process | port (stages replace thermal in Process) |

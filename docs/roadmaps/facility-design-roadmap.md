@@ -35,7 +35,7 @@ the sustainability normalizers.
    the requirement from the library, so the number moves when a phase, quantity or status is edited.
 3. **Both boundaries are reported separately** (§1.2), because the gap between them is the finding.
 4. **Cumulative phasing, with the idle carry named** (§1.3).
-5. **Phase 1 production capacity target: 1,500 mixed-crop-plan units a day — a verbal placeholder,
+5. **Phase 1 production capacity target: 1,500 mixed-grow-plan units a day — a verbal placeholder,
    deliberately NOT wired to the platform**. It is the planning figure this
    document sizes the support program against, and nothing else. It is not entered in
    `plan-data.ts`, not in `capacityInputs`, not in `phases[].unitsPerDay`, and no engine reads it.
@@ -46,7 +46,7 @@ the sustainability normalizers.
 6. **Both blackout racks move to Phase 1**. The build-out split held one back
    for Phase 2. Two racks at Phase 1 is a concurrency decision, not a capacity decision — see 7.
 7. **Units of a grow unit are parallel streams, not a bigger sowing**. Two blast
-   blackout racks do not make a 400 lb sowing; they make two 200 lb sowings that can run different crop plans,
+   blackout racks do not make a 400 lb sowing; they make two 200 lb sowings that can run different grow plans,
    staggered. A sowing is bounded by ONE rack, one shelf, one sprouting rack. This corrects a defect in
    the engine, recorded as a finding (§11, finding 8) rather than acted on — this build plan changes
    no code.
@@ -354,7 +354,7 @@ The gap is the cold chain and the packaging room, and it is expected.
 
 ## 9. The capacity benchmark this is sized against
 
-Run 2026-09-17 against the live engine: `ceilingByCropPlan` over the ten student menu crop plans
+Run 2026-09-17 against the live engine: `ceilingByGrowPlan` over the ten student menu grow plans
 (AMK-E-002 … 011) with the resolved default capacity inputs — the same call the Capacity page makes.
 
 | Code | Blackout lb/unit | Sowing | Cycles/day | One-stream ceiling | Bound by |
@@ -374,26 +374,26 @@ Mean sowing **425** units, median 288. Mean one-stream ceiling **2,070** a day, 
 cycles 4.8.
 
 **The mean overstates it.** Two rows carry it, and they are the two least trustworthy in the library.
-E-005 chicken salad sits at 0.18 lb blackout per unit and is the only crop plan on the menu not bound
+E-005 chicken salad sits at 0.18 lb blackout per unit and is the only grow plan on the menu not bound
 by the blackout rack — it is a cold salad, and whether it passes through a rack at all is an open
 question. E-009 pulled pork sits at 0.207 lb and carries a sow-to-blackout time of **0 minutes** with a
-stage gap, which is missing data rather than a fast crop plan. Excluding those two, the other eight
+stage gap, which is missing data rather than a fast grow plan. Excluding those two, the other eight
 give **mean sowing 309, mean one-stream ceiling 1,478 a day**.
 
 **The defensible benchmark today is about 1,450–1,500 units a day**, which is what the 1,500
-placeholder in §2 decision 5 is set against. 2,070 becomes the honest figure once those two crop plans
+placeholder in §2 decision 5 is set against. 2,070 becomes the honest figure once those two grow plans
 are confirmed.
 
-**Nine of the ten crop plans are bound by the blackout rack.** Capacity here is one rack, not a
+**Nine of the ten grow plans are bound by the blackout rack.** Capacity here is one rack, not a
 farm. That is why the second blackout rack moved to Phase 1 — and it is worth being exact about what it
 buys, because the reason is not the obvious one:
 
 - It does **not** raise the sowing. A sowing is one rack load. Two racks are two 200 lb sowings,
   never one 400 lb sowing (§2 decision 7).
-- It buys **concurrency**: two crop plans blackout at once, staggered, so the day is not a single serial
+- It buys **concurrency**: two grow plans blackout at once, staggered, so the day is not a single serial
   queue through one rack. On the blackout rack alone, one rack at 4.8 cycles already covers 1,500
   units against either mean sowing size — 3.5 sowings at 425, 4.8 at 309. The second rack is bought
-  for parallel crop plans, for stagger, and for not having a single point of failure on the one control-point-2
+  for parallel grow plans, for stagger, and for not having a single point of failure on the one control-point-2
   asset in the plant.
 - Its ceiling is the sow side, not the racks. The Phase 1 hot line is one sprouting rack, one shelf and
   one jar stand, and it has to feed both racks. Two blackout racks do not double output; what they actually
@@ -668,7 +668,7 @@ or discarded within 30 days of packaging.
 
 **Sizing, and the finding inside it.** Shelf life is an expiry limit; **days of cover is what is
 actually kept**, and `daysOfCoverTarget` is 5 days (STATED). Mean canopy mass across the ten student
-crop plans is 0.5537 lb per unit, so at the 1,500 units/day placeholder:
+grow plans is 0.5537 lb per unit, so at the 1,500 units/day placeholder:
 
 | Days of cover | Finished goods held | Interior floor needed |
 |---|---|---|
@@ -1091,5 +1091,5 @@ dishwasher including its load and unload tables; the warewash room in §7 is der
 | 2026-09-17 | **Q4b shipped** (the two of its three bullets that are code): both blackout racks on Phase 1 — `PHASE_1_UNITS` no longer splits the blackout rack, migration `0075_farm_blast_blackoutRacks_phase_1` merges the seeded rows — and finding 8 fixed: `sowingBounds` / `deriveCapacity` bound on one unit, `growUnitForProcess` picks the largest single unit, the day plan's blackout ceiling is one rack's load across the lines in service, the `blackoutRackUnits` input retired. The Capacity page's headline is labelled the one-stream ceiling. Golden values that moved: Phase 1 equipment 589,200 → 625,200, Phase 2 add 527,775 → 491,775, `phase1Capex` 1,412,200; the forecast opens with two lines; the scheduler's rated day for AMK-E-001 finishes sooner on two slots. Not moved: any sowing size, bound or one-stream ceiling — the seed had one unit of every grow unit on Phase 1, so the defect was latent. The 1,500 placeholder is still out of the platform. Open: one lot code or two for a double sowing (ToDo). |
 | 2026-09-17 | **§10.8 added: current capability versus the build-out options**. Seven days is recorded as the current operational shelf life under Food Code 3-502.12(D)(c), and thirty days is retained as a build-out rather than withdrawn — the two were conflated before the actual-versus-planned separation was settled. Equipment is a definition with a status, not a ledger entry, so the split is plan of record versus saved forecasts, and `blackoutShelfLife` is already a scenario overlay field. §10.3 reclassified: the conditioned packaging room is **Option B, not a decision**, so the baseline reverts to ambient packaging and the headline figures return to production floor 1,693 / 2,889 / 3,037 and gross 6,038 / 7,466 / 7,629. Option A (34°F holding room, 8 × 10) adds 134 sq ft of gross; Option B adds 77.5; both together 251 sq ft, about 3% at full build. Finding 9 rewritten: **the 30-day path costs refrigeration duty and the second-stage blackout load, not floor** — days of cover is 5, not 30, so an 8 × 10 box covers it three times over. A row-by-row entry specification is given for the plan of record and three forecasts, to be entered through the OS rather than written to the database so plan-of-record changes post to the audit trail. **No code changed by this pass.** |
 | 2026-09-17 | **§10 added: zones, buffer spaces and conformance.** Texas adopts the FDA Food Code 2017 by reference (25 TAC §228.1, eff. 2021-08-08) with almost no construction amendments, so requirements are cited as Food Code sections as adopted, not as TFER sections. **Grow needs no variance** where Food Code 3-502.12(D) is met. 35-item conformance register (C-01…C-35), each marked CODE, SCHEME or CONVENTION with its spatial consequence; eleven zones with their adjacencies; the two-stream hot line geometry — one sprouting rack, one shelf, one jar stand feeding both racks without the streams crossing, Phase 2 positions reserved. **Packaging room is a conditioned enclosed space** at a ≤50°F design target — no US code sets one; ECFF §2.2.2's ≤12°C is the published benchmark — carrying 250.5 zone + 21.5 panel envelope + 56 gowning vestibule = 328 sq ft. Findings 9–11 added: the **30-day hold needs 34°F storage the equipment list does not contain** (at 41°F the legal shelf life is 7 days); **Austin prohibits the garbage disposer** on the Phase 1 pot sink; and the register found more convention than code, all of it now labelled. Figures restated: production floor **1,778 / 2,974 / 3,120 sq ft**, building gross **6,132 / 7,559 / 7,720 sq ft**, hood unchanged. Q6 partly done; the block plan will be drawn to the Austin Public Health submission standard, 1/4 in = 1 ft on an 11 × 14 in minimum sheet. |
-| 2026-09-17 | Decisions recorded (§2.5–2.7, Robert): Phase 1 production capacity target set to a **1,500 mixed-crop-plan units/day verbal placeholder, deliberately not wired to the platform** — it is not `phases[].unitsPerDay` (which holds 1,000 and means demand) and no engine reads it; **both blackout racks moved to Phase 1**; and **units of a grow unit are parallel streams, not a bigger sowing** — two racks are two 200 lb sowings, never one 400 lb sowing. Every 400 lb figure removed. New §9 records the capacity benchmark run against the live engine over the ten student crop plans: mean sowing 425 / median 288, mean one-stream ceiling 2,070/day, with the mean shown to be carried by two suspect rows (E-005 bound by the shelf at 0.18 lb blackout/unit; E-009 carrying a 0-minute sow-to-blackout) and the defensible benchmark stated as ~1,450–1,500/day. Nine of ten crop plans bind on the blackout rack. Finding 8 added: `sowingBounds` / `deriveCapacity` multiply `capacityLb × units`, contradicting both the operating model and the library's own `concurrentSowings: 1` — recorded, not fixed; this plan changes no code. Figures restated for the second blackout rack at Phase 1 and PSM 1,500: production floor **1,693 / 2,889 / 3,037 sq ft**, building gross **6,038 / 7,466 / 7,629 sq ft**, hood unchanged at 13.3 / 29.3 / 38.7 linear ft, idle at open 1,591 sq ft (21%). Dry food storage 500 → 750 sq ft is the only support line that moved. Step Q4b added. |
+| 2026-09-17 | Decisions recorded (§2.5–2.7, Robert): Phase 1 production capacity target set to a **1,500 mixed-grow-plan units/day verbal placeholder, deliberately not wired to the platform** — it is not `phases[].unitsPerDay` (which holds 1,000 and means demand) and no engine reads it; **both blackout racks moved to Phase 1**; and **units of a grow unit are parallel streams, not a bigger sowing** — two racks are two 200 lb sowings, never one 400 lb sowing. Every 400 lb figure removed. New §9 records the capacity benchmark run against the live engine over the ten student grow plans: mean sowing 425 / median 288, mean one-stream ceiling 2,070/day, with the mean shown to be carried by two suspect rows (E-005 bound by the shelf at 0.18 lb blackout/unit; E-009 carrying a 0-minute sow-to-blackout) and the defensible benchmark stated as ~1,450–1,500/day. Nine of ten grow plans bind on the blackout rack. Finding 8 added: `sowingBounds` / `deriveCapacity` multiply `capacityLb × units`, contradicting both the operating model and the library's own `concurrentSowings: 1` — recorded, not fixed; this plan changes no code. Figures restated for the second blackout rack at Phase 1 and PSM 1,500: production floor **1,693 / 2,889 / 3,037 sq ft**, building gross **6,038 / 7,466 / 7,629 sq ft**, hood unchanged at 13.3 / 29.3 / 38.7 linear ft, idle at open 1,591 sq ft (21%). Dry food storage 500 → 750 sq ft is the only support line that moved. Step Q4b added. |
 | 2026-09-17 | Build plan created. Full equipment library read at 60 post-split rows (31 Phase 1, 22 Phase 2, 7 Phase 3). Footprints sourced to named models for 21 rows carrying 63% of the equipment envelope; the remainder category-typical and tagged PLACEHOLDER. Five-layer method established (§3) with the aisle, hood, walk-in and program standards cited and separated into CODE and GUIDANCE (§4). Derived: production floor 1,668 / 2,889 / 3,037 sq ft and building gross 5,661 / 7,116 / 7,279 sq ft cumulative through Phases 1, 2 and 3, with 38.7 linear feet of Type I hood at full build (§8). Seven findings recorded (§9), including the tumble blackout rack and pump fill station sitting on Phase 2, cold storage at 37% of the Phase 1 floor, and the leasehold hood and HVAC lines having been authored without a hood length. `facility.sizeSqFt` = 5,000 excluded from the derivation as a verbal approximation and scheduled for replacement in Q5. Steps Q1–Q6 drafted; none started. |

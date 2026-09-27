@@ -7,7 +7,7 @@ deferred (§3.13); one open item (§6).
 
 ## 1. What the model serves
 
-1. **Planning.** Robert builds the business on paper — crop plans, equipment, subscribers, services,
+1. **Planning.** Robert builds the business on paper — grow plans, equipment, subscribers, services,
    prices, growth — and reads what the business looks like.
 2. **Operating.** From launch, recorded activity is the books. Before launch the books are zeros.
 
@@ -19,7 +19,7 @@ Both needs run on one model, with no mode switch between them.
 
 ### 2.1 Definitions — what the business is and will be
 
-Crop plans, inputs and supplier catalog prices, packaging, equipment, the leasehold schedule,
+Grow plans, inputs and supplier catalog prices, packaging, equipment, the leasehold schedule,
 subscribers, pickup points and services, subscription cycles and flat plans, suppliers, payment terms, loans,
 fixed-cost lines (lease, utilities, admin), the production calendar. Authored once on one master list
 per kind, shared by both ledgers.
@@ -30,7 +30,7 @@ Every definition carries a **real-world status**, so one list holds what exists 
 |---|---|---|
 | Equipment | Planned (in-service date) · No · – (not selected) | In service |
 | Subscriber | Prospect · Forecast Subscriber | Contracted |
-| Crop plan | In development | In service |
+| Grow plan | In development | In service |
 | Supplier catalog item | Candidate | Approved |
 | Loan | Planned (start date) | Funded |
 | Fixed-cost line | Planned (start date) | In force (a signed lease, an open utility account) |
@@ -88,7 +88,7 @@ Numbers are cited from code comments; they are stable.
 
 1. The model in §2.
 2. **One master list per kind; no forecast-only definitions.** Anything possible goes on the master
-   list carrying its real-world status — Planned equipment, a Developing crop plan, a Prospect subscriber, a
+   list carrying its real-world status — Planned equipment, a Developing grow plan, a Prospect subscriber, a
    Planned loan, a leasehold line On record only. Nothing reaches the books by being listed: the Actual
    ledger posts recorded events only. A forecast decides which planned items it uses and from what date,
    through its overlay. Three layers, kept distinct: **definitions** (the master list, read by both
@@ -112,10 +112,10 @@ Numbers are cited from code comments; they are stable.
 6. The equipment library is the master equipment list (under Production), with inline quantity and
    price, the status filter In service / Planned / No / –, rows with no quantity sorted last. Capital &
    Financing reads its totals from it.
-7. **Input price:** the supplier catalog item price is the source when one is on file; the crop plan
+7. **Input price:** the supplier catalog item price is the source when one is on file; the grow plan
    line price stands only until then.
 8. **People:** Staffing owns positions, wages and burden; Farm holds no pay (Phase O). Labor minutes
-   come from each crop plan's time study; the loaded labor rate is the blended loaded wage, a labelled
+   come from each grow plan's time study; the loaded labor rate is the blended loaded wage, a labelled
    PLACEHOLDER until Staffing's rates arrive (O4). The staff register drives the Actual ledger's
    punches.
 9. **What is real today:** one client — a private prospect (name not on file), Subscriptions, 125 units a
@@ -132,10 +132,10 @@ Numbers are cited from code comments; they are stable.
     - The ghost-farm lines are Planned at Phase 3. Service date is **TBD** on every planned row. The
       split is computed from the capex list; no line-by-line review.
 11. **Packaging library** — a Packaging page under Production: every package used, sorted by channel,
-    hot / cold, material, size and end-of-use rank, with a manual cost and a supplier-based cost. Crop plans
-    have a packaging card with a picker from the library. A package is picked (assigned to a crop plan) or
-    unpicked (in the library only). A crop plan's packaging per unit is the sum of its picks at the library's
-    cost; a package with no cost entered counts as zero, and a crop plan that picks nothing carries zero.
+    hot / cold, material, size and end-of-use rank, with a manual cost and a supplier-based cost. Grow plans
+    have a packaging card with a picker from the library. A package is picked (assigned to a grow plan) or
+    unpicked (in the library only). A grow plan's packaging per unit is the sum of its picks at the library's
+    cost; a package with no cost entered counts as zero, and a grow plan that picks nothing carries zero.
 12. **Forecast start date:** 2027-01-01, with the Phase K fiscal year and loan start.
 13. **Deferred:** where distribution and marketplace commission sit relative to contribution — the current
     treatment stands until raised.
@@ -158,12 +158,12 @@ Numbers are cited from code comments; they are stable.
     dates the operator picks; from each pick the volume extends until the next, and is zero before the
     first.
 19. **Channels, subscription cycles and flat plans.**
-    - A subscriber's **channel** groups it with that revenue channel and sets which crop plans are offered to it
-      (the crop plan's `channels`). It says nothing about what the subscriber is served.
-    - Every subscriber has its own **flat plan** — its crop plan schedule — set up one of two ways: a saved
-      **subscription cycle** assigned to the subscriber in one click, or a crop plan schedule programmed for that
+    - A subscriber's **channel** groups it with that revenue channel and sets which grow plans are offered to it
+      (the grow plan's `channels`). It says nothing about what the subscriber is served.
+    - Every subscriber has its own **flat plan** — its grow plan schedule — set up one of two ways: a saved
+      **subscription cycle** assigned to the subscriber in one click, or a grow plan schedule programmed for that
       subscriber alone. A programmed plan is not saved or offered to anyone else and can change at any time.
-    - **Subscription cycles** are a shared list of named, saved crop plan sequences, used only as a starting point for
+    - **Subscription cycles** are a shared list of named, saved grow plan sequences, used only as a starting point for
       a subscriber's flat plan. Channels are not assigned cycles.
     - Assigning a cycle copies it into the subscriber's flat plan. When a saved cycle is edited, a picker
       applies the change to **selected subscribers** or to **all subscribers** whose plan came from it; a
@@ -173,7 +173,7 @@ Numbers are cited from code comments; they are stable.
       once edited, the forecast holds its own. Subscriber records and recorded orders drive real operations;
       a forecast never writes to either.
     - Every service has a flat plan. Only recorded orders post to a subscriber's Actuals. The seeded
-      two-week prospect menu is the menu; the crop plan library and cycles are edited in place.
+      two-week prospect menu is the menu; the grow plan library and cycles are edited in place.
 20. **Service calendar and equipment dates.** Every pickup point has its own service calendar — term dates and
     breaks for a prospect — entered when the subscriber account is set up and held on the pickup point; no two are
     assumed alike. A pickup point with no term entered serves every service weekday the farm is open, and
@@ -204,12 +204,12 @@ Each step is built and reviewed on its own before the next starts.
       empty library. Demand carries the split — `contractedUnitsPerDay`, `contractedAnnualUnits`,
       `contractedSubscribers` per channel and `contractedAnnualUnits` in total — and the Subscribers page reads
       contracted against planned on every channel tile.
-- [x] `farm.packages` and `farm.cropPlan_packages` (migration 0059) — the packaging library: what a unit
+- [x] `farm.packages` and `farm.growPlan_packages` (migration 0059) — the packaging library: what a unit
       leaves the farm in (containers, lids, labels), never packaging equipment. Channels, hot / cold,
       material, size, end of use and its rank, a manual unit cost, and a supplier catalog item whose price
       is the supplier-based cost (per each, or per pack ÷ units per pack). `/farm/packaging` under
       Production, grouped by channel and collapsing one at a time, sorted hot / cold, material, size, rank.
-      Crop plan picks carry a per-unit count; the packaging card is on Crop plans. Seeded with three packages —
+      Grow plan picks carry a per-unit count; the packaging card is on Grow plans. Seeded with three packages —
       bowl, lid, label — and no cost. The in-table edit controls are shared (`_components/InlineCells`).
 - [x] Supplier catalog items carry candidate / approved and an effective-dated price (migration 0067).
       `status` is a decision about the line, not a property of the sheet it arrived on, so it survives a
@@ -221,16 +221,16 @@ Each step is built and reviewed on its own before the next starts.
       sheet's date; a new line arrives as a candidate. The Catalog tab carries the status pill, Approve /
       Set candidate, the price in force with its date, and the per-line price history with an
       in-force-from editor.
-- [x] Crop plan lines price from the input item (decision 7). `resolveInputPrice`
+- [x] Grow plan lines price from the input item (decision 7). `resolveInputPrice`
       (`_engine/input-price.ts`) is the one answer: the line's linked supplier → that supplier's
       APPROVED catalog line → the price in force on the date → and its basis must be the unit the line is
       bought in. A price per case against a line bought by the pound is not converted — the catalog's pack
       size is free text. Every refusal carries its reason, one entry per line in
       `ResolvedInputs.inputPrices`. Precedence: a price typed on the scenario, then the catalog, then
-      the crop plan line's own figure. Where the catalog prices a line the resolver writes it onto
+      the grow plan line's own figure. Where the catalog prices a line the resolver writes it onto
       `seedUnitCost` and tags the line SOURCED with the supplier, item and effective date, so costing, net
-      requirements, purchase orders and both ledgers read it. Crop plans and Procurement show the provenance
-      per line; with no catalog on file every line reads its crop plan figure and says no supplier is linked.
+      requirements, purchase orders and both ledgers read it. Grow plans and Procurement show the provenance
+      per line; with no catalog on file every line reads its grow plan figure and says no supplier is linked.
 - [x] `farm.loans` (planned / funded, principal, APR, term, start date) and `farm.fixed_cost_lines`
       (category, monthly amount, start and end dates, status, `treatment`) (migration 0068). A loan's
       principal is TYPED: a loan may be for less than the capex it finances or carry a deposit, so the
@@ -246,26 +246,26 @@ Each step is built and reviewed on its own before the next starts.
       is the figure of record; $/sq ft derives from it against the facility size. None of the rates is a
       quote, and the card says so.
 
-**N3 — the standard cost of a unit, per crop plan per date — DONE**
-- [x] One function per quantity: food (catalog price in force × the crop plan's SEED quantities, with shrink)
-      + labor (the crop plan's own labor standard: fixed minutes per sowing and variable minutes per unit
-      from its time study, at the loaded labor rate) + packaging (the sum of the crop plan's picked packages,
+**N3 — the standard cost of a unit, per grow plan per date — DONE**
+- [x] One function per quantity: food (catalog price in force × the grow plan's SEED quantities, with shrink)
+      + labor (the grow plan's own labor standard: fixed minutes per sowing and variable minutes per unit
+      from its time study, at the loaded labor rate) + packaging (the sum of the grow plan's picked packages,
       each at its supplier cost when on file, else its manual cost; zero where no cost is entered or
-      nothing is picked). The resolver writes each crop plan's own labor standard and packaging into
-      per-crop-plan assumptions (`cropPlanAssumptions`, read through `assumptionsFor`, built in
+      nothing is picked). The resolver writes each grow plan's own labor standard and packaging into
+      per-grow-plan assumptions (`growPlanAssumptions`, read through `assumptionsFor`, built in
       `_engine/unit-cost.ts`), so `costPerUnit`, `laborForDay` and the sowing ledger are the single
-      functions and receive the crop plan's inputs. `assumptions` is the reference crop plan's, so `crop_plan` and
-      `assumptions` always describe the same crop plan. Unit Economics, Crop plans, Production Planning, the
+      functions and receive the grow plan's inputs. `assumptions` is the reference grow plan's, so `grow_plan` and
+      `assumptions` always describe the same grow plan. Unit Economics, Grow plans, Production Planning, the
       order week, the dashboard averages and both ledgers call it.
-- [x] `laborSplit` is derived per crop plan from its labor standard (the adopted study, else its estimated
+- [x] `laborSplit` is derived per grow plan from its labor standard (the adopted study, else its estimated
       study), never typed. The time-study library is passed to every resolver, so an adopted OBSERVED
-      study reaches the books; with no library loaded (a test, a script) each crop plan carries the code
-      estimate the database is seeded with. A loaded library with no study for a crop plan is a gap: zero
+      study reaches the books; with no library loaded (a test, a script) each grow plan carries the code
+      estimate the database is seeded with. A loaded library with no study for a grow plan is a gap: zero
       minutes, tagged so, and counted. The 180 min/sowing and 1.5 min/unit in `plan-data.ts` are the
       fallback for a bare engine call only, labelled so. Labor per unit rests on ESTIMATED studies until an
       observed one is adopted, and is labelled so.
 - [x] An approved standard freezes food, labor, packaging **and** the overhead absorption rate. The
-      snapshot takes the crop plan's own assumptions and `overheadRatePerUnit`, the predetermined rate in force
+      snapshot takes the grow plan's own assumptions and `overheadRatePerUnit`, the predetermined rate in force
       at approval. A sowing costed at that standard absorbs at the frozen rate; a standard with no frozen
       rate absorbs at the live rate and the ledger says so. `standardDiffers` compares the rate only when
       both sides carry one.
@@ -278,7 +278,7 @@ Each step is built and reviewed on its own before the next starts.
       `from_cycle_id` naming the cycle it was copied from and `subscriber_service_id` scoping a plan to one
       service (it wins over the all-services plan). `assignSubscriptionCycle` copies a saved cycle onto one or many
       subscribers in one click; `updateSubscriptionCycle` on a saved cycle takes `applyToPlanIds`, the Orders page's
-      apply-to picker (this cycle only / all / selection). A programmed plan offers only the crop plans listed
+      apply-to picker (this cycle only / all / selection). A programmed plan offers only the grow plans listed
       on the subscriber's channel. `orderBook` reads each subscriber's plan (`_engine/flat-plans.ts`). Seeded
       saved cycles are the student and adult menus with no channel; a subscriber without a plan is given a
       copy by the seed writer (`insertMissingFlatPlans`).
@@ -306,7 +306,7 @@ Each step is built and reviewed on its own before the next starts.
       from its start date for its horizon (decision 3; the selector is beside the start date on Subscribers
       on Plan) and returns the documents in the actuals shapes — orders (`orderBook`), the rolling
       production horizon (`planHorizon`), sowing records at standard — one per sow, the sowings loaded at
-      the same minute, since the sow is the lot — distributions at the share each crop plan
+      the same minute, since the sow is the lot — distributions at the share each grow plan
       was filled, receipts, supplier bills and payments, monthly invoices and collections, biweekly pay
       periods split by account, fixed-cost bills, purchase orders (`PlanPurchaseOrderDoc`), capital
       purchases (`CapitalPurchaseDoc`), loan draws and payments (`LoanDrawDoc`, `LoanPaymentDoc`).
@@ -344,8 +344,8 @@ Each step is built and reviewed on its own before the next starts.
 - [x] Build-time calls: the overhead budget each month is the manufacturing-overhead lines in force that
       month; depreciation is straight-line per capital purchase from the month bought; the indirect cash
       flow classifies capital and debt by whether cash moved.
-- [x] A receipt's standard is each input's, from any crop plan that uses it. A distribution naming its crop plan
-      relieves that crop plan's standard per unit.
+- [x] A receipt's standard is each input's, from any grow plan that uses it. A distribution naming its grow plan
+      relieves that grow plan's standard per unit.
 - Measured: the engine-default forecast posts in about 115 ms for one year; five subscribers on the full menu
   for three years (16,811 entries) post in about 1.6 s, server-side.
 
@@ -389,8 +389,8 @@ edits included. Built in four slices, each reviewed before the next.
       selected world: Plan reads the saved open forecast's timeline (its sowings, receipts and distributions)
       as of the end of a month picked in the URL, with no trace or recorded links; Actual reads the
       records. Equipment's open-forecast column shows on Plan only. Capacity (plant inputs, crews), Process
-      (the route) and Crop plans (input lines, supplier links) are read-only on Actual (`EditableNumber`
-      takes `disabled`); the crop plan library, packaging and standard approval edit in both. HR: punches on
+      (the route) and Grow plans (input lines, supplier links) are read-only on Actual (`EditableNumber`
+      takes `disabled`); the grow plan library, packaging and standard approval edit in both. HR: punches on
       Actual only; the register edits in both. The Grow Room always runs Actual: its order book reads the
       subscriber records' pickup points with no forecast edit.
 - [x] Slice 4 — Sales and the Parent Portal. Sales' quote defaults are the open forecast's Subscriptions
@@ -400,9 +400,9 @@ edits included. Built in four slices, each reviewed before the next.
       date; Actual reads the calendar reporting year. Energy and water quantities are records on Actual;
       Plan runs what is loaded into the scenario. Refrigerant service is entered and shown on Actual only.
       The evidence pack follows the toggle. `sustainabilityBasis` (`_engine/sustainability-basis.ts`) turns
-      either ledger's documents into the period's units by crop plan and channel, production, receipts and
-      distributions by pickup point, and units past shelf life unshipped; the food footprint is crop plan by crop plan at
-      each channel's unit (`mixFoodFootprint`), with units naming no crop plan and inputs with no
+      either ledger's documents into the period's units by grow plan and channel, production, receipts and
+      distributions by pickup point, and units past shelf life unshipped; the food footprint is grow plan by grow plan at
+      each channel's unit (`mixFoodFootprint`), with units naming no grow plan and inputs with no
       food-factor mapping named, never given a factor. Migration 0072: `farm.sustainability_readings`
       (bills, lab results, grease-trap inspections) and `farm.refrigerant_service`, entered by an operator
       and removed by a super admin with the reason, both on the posting trail
@@ -423,11 +423,11 @@ edits included. Built in four slices, each reviewed before the next.
       table by group — operations, financial, sustainability, RATING ratings: units, revenue, orders, food
       cost, labor hours and cost, served cost per unit, sowings, new subscribers, waste, water, energy,
       emissions (total and by scope), Scope 3 coverage across suppliers, rating-rated suppliers and subscribers
-      by stars — and units, revenue, input cost and orders by crop plan, channel and subscriber.
+      by stars — and units, revenue, input cost and orders by grow plan, channel and subscriber.
       `_engine/plan-v-actual.ts` computes one side from its documents and postings — food, labor and
       packaging cost from each sowing's posting, distribution from the income statement, sustainability
       through `sustainabilityBasis` and `fullInventory` on the month; `_lib/plan-v-actual.ts` posts each
-      distinct plan applied once. A quarter sums its months; ratings read at the last month. Crop plans served
+      distinct plan applied once. A quarter sums its months; ratings read at the last month. Grow plans served
       with unmapped inputs are named, since their food emissions and waste mass read low.
 - [x] Rules: each month compares with the plan of record in force at its end; the Plan column of ratings
       tallies the plan's subscribers; a subscriber is new in the month of its first order; the plan's annual
@@ -455,23 +455,23 @@ edits included. Built in four slices, each reviewed before the next.
 **N9 — one source per figure — DONE, one item NOT STARTED**
 - [x] Dashboard "today" (`_engine/dashboard-today.ts`) from the order book on the selected world planned as a
       production day; days of cover as finished stock over the coming orders; input cost and sowing size as
-      active-crop-plan averages; the food footprint from the sustainability basis. The operator dashboard reads
+      active-grow-plan averages; the food footprint from the sustainability basis. The operator dashboard reads
       production records only (`loadProductionRecords`).
 - [x] The supplier directory's linked lines from the next run's net requirement (`_lib/next-run.ts`).
-- [x] Unit Economics on the selected crop plan's own standard, with a by-channel card on each channel's offered
-      crop plans (`channelCropPlanEconomics`).
+- [x] Unit Economics on the selected grow plan's own standard, with a by-channel card on each channel's offered
+      grow plans (`channelGrowPlanEconomics`).
 - [x] Produce Safety's cooling log and the lot directory from closed sowing records.
-- [x] Recorded distributions name their crop plan through their order; channel names come from the definitions;
+- [x] Recorded distributions name their grow plan through their order; channel names come from the definitions;
       no default price per unit.
 - [x] Normal capacity on the plan's own production; a bare engine call absorbs on the production it posts
       (`bundleAbsorption`).
-- [x] Volume is the selected world's orders, sowings and distributions, crop plan by crop plan.
+- [x] Volume is the selected world's orders, sowings and distributions, grow plan by grow plan.
       `accounting-policy.md` §2, §4, §14 and `CLAUDE.md` §9 state this.
 - [ ] NOT STARTED — drop `subscriber_pickupPoints.service_days_per_year` and `expected_units_per_day`. No demand
       reads them; the pickup point loader and seed writer still carry them.
 
 **N10 — conformance — DONE** — `test/farm-conformance.test.ts`
-- [x] C1 — a crop plan's cost per unit is identical on Unit Economics, Crop plans, Production Planning, the Plan
+- [x] C1 — a grow plan's cost per unit is identical on Unit Economics, Grow plans, Production Planning, the Plan
       ledger and the Actual ledger at the same standard.
 - [x] C2 — no page, component, state module or server library imports a figure from `plan-data.ts`; labels,
       the HACCP plan and named stated references (facility size, comparison capacities, the NSLP benchmark,
@@ -487,15 +487,15 @@ edits included. Built in four slices, each reviewed before the next.
 
 | # | Rule |
 |---|---|
-| A1 | Labor has one formula: the cost card and the active-crop-plan averages charge the same labor per unit |
-| A2 | Every crop plan carries its own labor standard |
+| A1 | Labor has one formula: the cost card and the active-grow-plan averages charge the same labor per unit |
+| A2 | Every grow plan carries its own labor standard |
 | A3 | Wage has one source: Staffing; the staff register holds no pay |
 | A4 | Payroll burden has one source: the timeline and the sowing posting read the resolved burden |
-| A5 | A receipt of any crop plan's input posts at that input's standard, with its price variance |
-| A6 | Packaging is each crop plan's own picks |
+| A5 | A receipt of any grow plan's input posts at that input's standard, with its price variance |
+| A6 | Packaging is each grow plan's own picks |
 | A7 | The cost of a unit is food, labor and packaging only; fixed cost is not in it |
-| A8 | The forecast is costed crop plan by crop plan, not as one crop plan for the year |
-| A9 | A distribution naming its crop plan relieves that crop plan's standard |
+| A8 | The forecast is costed grow plan by grow plan, not as one grow plan for the year |
+| A9 | A distribution naming its grow plan relieves that grow plan's standard |
 | A10 | Normal capacity reads the plan's own production, not a channel table |
 | A11 | No typed units-per-day figure drives any page |
 | A12 | The Actuals forecast month is the Plan ledger's own month |

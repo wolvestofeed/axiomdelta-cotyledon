@@ -16,7 +16,7 @@ per-page plans and the rules.
    *Amended 2026-09-18:* the Reports library is built on the tab bar by decision — one tab per section
    of the main menu, in the menu's order — with the search, lens and sort controls above the bar and the open tab
    in the URL hash, as §6 requires. It is the one page outside the active sections that carries tabs.
-   *Amended 2026-09-18:* Compare carries two tabs by decision, Day and Crop plan — two independent
+   *Amended 2026-09-18:* Compare carries two tabs by decision, Day and Grow plan — two independent
    comparisons on one page, not a length conversion (`agentic-assistance-roadmap.md` decision 1); the Day
    tab's own selectors sit inside it.
 5. No page is converted until Robert has confirmed the list (§4).
@@ -54,7 +54,7 @@ chrome ~60px, table rows ~34px), not measured renders. Several pages are short o
 - [x] Ledger — Journal · Trial balance · Statement of income · Posting basis (the last only when it has content); status, period picker and KPI strip above the bar; hash-linked (2026-09-17). Paging the journal is still open.
 - [ ] Actuals
 - [ ] Orders
-- [ ] Crop plans
+- [ ] Grow plans
 - [ ] Capacity
 - [ ] Production Planning (sub-tabs under Day and Horizon)
 
@@ -78,11 +78,11 @@ chrome ~60px, table rows ~34px), not measured renders. Several pages are short o
 | Page | Cards | Est. depth | Viewports | Verdict |
 |---|---|---|---|---|
 | **Production** | | | | |
-| Crop plans | 9 + KPI band | ~4,750 | 5.3 | CONVERT |
+| Grow plans | 9 + KPI band | ~4,750 | 5.3 | CONVERT |
 | Time Studies | 6 | ~2,100 (~2,750 form open) | 2.3–3.1 | BORDERLINE |
 | Production Planning | Day 7 · Horizon 7–8 · Run 3–4 | ~4,500 · ~5,000 · ~1,700 | 5.0 · 5.5 · 1.9 | CONVERT (Day, Horizon) |
 | Day Schedule | 4 | ~3,100 | 3.4 | BORDERLINE, lean keep |
-| Compare | 2 | ~1,630 | 1.8 | KEEP for length; tabbed by decision 2026-09-18 (Day · Crop plan) |
+| Compare | 2 | ~1,630 | 1.8 | KEEP for length; tabbed by decision 2026-09-18 (Day · Grow plan) |
 | Calendar | 2 | ~1,920 | 2.1 | KEEP |
 | Process | 4–5 | ~1,800–2,170 | 2.0–2.4 | KEEP |
 | Capacity | 7 | ~4,870 | 5.4 | CONVERT |
@@ -133,7 +133,7 @@ table names no risk for it. **Ledger** is the only such page and is converted.
 
 | Page | Today (vp) | Risk that holds it |
 |---|---|---|
-| Crop plans | 4.9 | `CropPlanEditor` draft lives inside the Library card; `CropPlanSelector.setCode` (`router.replace`, no fragment) drops the hash; `SectionSave` inside the input-lines card; ⌘P prints one tab |
+| Grow plans | 4.9 | `GrowPlanEditor` draft lives inside the Library card; `GrowPlanSelector.setCode` (`router.replace`, no fragment) drops the hash; `SectionSave` inside the input-lines card; ⌘P prints one tab |
 | Capacity | 4.4 | Two `SectionSave`s both claim `capacity` — Revert in one tab discards the other's edits; selector drops the hash; every input in Plant inputs is read in three other tabs |
 | Production Planning | 3.8 / 3.4 | Distribution day and Horizon cards are shared controls not lifted; Horizon Summary is empty for an operator; five `?level=day` links, not four |
 | Actuals | 2.8 → 7 | `OpeningBalanceForm` rendered outside `ActualsClient`; two server cards need slots; `?period=` links drop the hash; `msg` spans three tabs |
@@ -182,12 +182,12 @@ server cards need client-shell slots; "opening balance recorded below" copy; the
 **Orders** — Above: Range card, KPI row. Tabs: Order book (order form and ShipForm move inside) · Distribution
 day · Pickup points · Subscription cycles (with FlatPlanForm). Risk: from/to/channel shared by three tabs and the KPIs.
 
-**Crop plans** — Above: crop plan selector, name, 8-tile KPI band, `SectionSave`. Tabs: Library · Costing (sowing
+**Grow plans** — Above: grow plan selector, name, 8-tile KPI band, `SectionSave`. Tabs: Library · Costing (sowing
 costing, input lines) · Process (sow to blackout rack) · Unit & nutrition (with allergens) · Packaging ·
 Standard. Risk: "Select" in the Library should switch to a detail tab.
 
-**Capacity** — Above: header with crop plan selector, KPI band, one save control. Tabs: Constraint chain (with
-control-point-2 cooling) · Plant inputs (with other capacities) · By crop plan & unit · Staffing. Risks: "Propose a
+**Capacity** — Above: header with grow plan selector, KPI band, one save control. Tabs: Constraint chain (with
+control-point-2 cooling) · Plant inputs (with other capacities) · By grow plan & unit · Staffing. Risks: "Propose a
 crew on Capacity" links from Day Schedule and Production Planning need `?tab=staffing`; two `SectionSave`s
 overlap; "a staffing finding, below" copy.
 
@@ -213,7 +213,7 @@ both tables) · Payments · Aging. Risk: Aging is server-rendered outside the cl
 
 **Inventory** — Above: month bar, KPI row. Tabs: Finished goods · Raw materials.
 
-**Borderline notes** — Plan v Actual: Totals · By crop plan · By channel · By subscriber. Capital: Capex · Loans ·
+**Borderline notes** — Plan v Actual: Totals · By grow plan · By channel · By subscriber. Capital: Capex · Loans ·
 Fixed costs · On the ledger (the one `capex` save must move above the tabs). Unit Economics: Inputs · Cost
 build-up · Channels · Fixed cost & absorption. Time Studies: Standard & log · Trends · Record & schedule.
 Subscribers: one tab per channel, or a list/detail view as prospect pickup points grow. Logistics: Inbound · Outbound.
@@ -240,6 +240,6 @@ the bar to the page-level `farm-tabs` and trim the chrome above it. Keep `/farm/
 
 | Date | Change |
 |---|---|
-| 2026-09-18 | Decision 4 amended a second time: Compare tabs by decision (Day · Crop plan), per the agentic-assistance plan. |
+| 2026-09-18 | Decision 4 amended a second time: Compare tabs by decision (Day · Grow plan), per the agentic-assistance plan. |
 | 2026-09-17 | Plan opened. T0 built: the tab CSS polished in `farm.css`. T1 run: 40 pages audited by four sub-agents; 7 convert first, 6 second, 9 borderline, 2 in-card tab bars to raise, 16 kept. No page converted yet. |
 | 2026-09-17 | Final risk pass (§4a) over every convert and borderline page. Decision 6: no page with any risk indication converts. **Ledger converted** — the only risk-free page. Everything else in T2–T5 held. |

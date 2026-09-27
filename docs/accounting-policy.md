@@ -32,7 +32,7 @@ an article to its existing condition and location.
 | Element | Treatment |
 |---|---|
 | Purchased inputs | Seed, medium and nutrient at standard purchase price; freight-in and duties capitalise. Issued from raw materials to WIP-Sow on the trays sown |
-| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every crop plan; received into its own inventory at standard and charged at the pack stage |
+| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every grow plan; received into its own inventory at standard and charged at the pack stage |
 | Direct labor | Standard hours × standard loaded rate on the trays sown, absorbed by stream: the sowing stream to WIP-Sow, the daily stream to WIP-Grow, the harvest stream to WIP-Pack, split by the plan's study |
 | Variable manufacturing overhead | The light a tray takes (to WIP-Grow), its tray wear and the sanitizer (to WIP-Sow), applied at their standard per tray on the trays sown and credited to 5195. None of them is bought into raw materials |
 | Fixed manufacturing overhead | Absorbed at a predetermined rate set on **normal capacity** (§4) |
@@ -51,7 +51,7 @@ Distribution is a selling cost: it is deducted after the
 **cost of a unit** (food, labor, packaging) to reach contribution, and it is excluded
 from the **inventory** figure. Fixed cost is in neither; it is a period expense, with
 fixed cost per unit reported as a period metric (§4). The **cost to serve** shown on
-Crop plans is the management figure that adds distribution back to the
+Grow plans is the management figure that adds distribution back to the
 cost of a unit; storage stays out of it. The cost of a unit is built by sowing: the
 planned cost of one full-line sowing from bulk inputs, the sowing's yield, and the sowing
 cost divided into its units (`sowingCosting`).
@@ -162,7 +162,7 @@ recognised basis and is **revised at reasonably regular intervals** to reflect
 current conditions.
 
 - Standards are effective-dated and versioned (`farm.standard_versions`). A version is
-  the crop plan as resolved on the plan of record plus the cost assumptions, frozen when a
+  the grow plan as resolved on the plan of record plus the cost assumptions, frozen when a
   super admin approves it with an effective date. The ledger costs
   a sowing at the version in force on its production date and the sowing record names it,
   so a reviewer can reproduce the cost; a sowing dated before any approved version is
@@ -193,7 +193,7 @@ spoilage — pounds that are bought and never packed — so the quantity receive
 carries it and raw materials are relieved by no more than they were received.
 
 **Case-rounding is not a variance.** A purchase order rounded up to whole cases
-costs more than the crop plan standard for the run. That difference is *quantity*, not
+costs more than the grow plan standard for the run. That difference is *quantity*, not
 price: it is inventory on hand and it nets against the next run's requirement.
 Treating it as a purchase price variance would book a phantom unfavourable variance
 every production day. Purchase price variance is measured at receipt, on the **price received**
@@ -326,7 +326,7 @@ These are named rather than resolved. Nothing here is settled by the engine.
 - Ten of twelve input prices are placeholders.
 - The serving grow unit capacity is a placeholder. It is the cheapest physical check
   on any unit change and is a packaging quote, not a model output.
-- The packing utensil is not specified. A standardized crop plan states it by size.
+- The packing utensil is not specified. A standardized grow plan states it by size.
 - Budgeted fixed manufacturing overhead is the manufacturing-overhead fixed-cost
   lines (lease, utilities) plus straight-line depreciation, not a cost budget with
   maintenance and production supplies.
@@ -353,10 +353,10 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Record | Posts |
 |---|---|
 | Sowing record | Issue → apply → labor → overhead → sow → grow → pack → finished goods, at standard on the trays sown, with usage and labor variances from the actual grams, quantities and hours, and abnormal spoilage for trays removed at the check. No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
-| Receipt | Accepted lines: raw materials at standard — the input's standard from any crop plan in the library that uses it, at the version in force on the receipt date (Roadmap N5); the price received against standard to purchase price variance; goods received not invoiced (2015) at the price received. A rejected line posts nothing. An input on no crop plan is received at the price received with no variance and named in the notes. |
+| Receipt | Accepted lines: raw materials at standard — the input's standard from any grow plan in the library that uses it, at the version in force on the receipt date (Roadmap N5); the price received against standard to purchase price variance; goods received not invoiced (2015) at the price received. A rejected line posts nothing. An input on no grow plan is received at the price received with no variance and named in the notes. |
 | Supplier bill | Clears goods received not invoiced at what its receipts received; payable at the bill; any difference to purchase price variance while the bill is flagged (§16). |
 | Absorption | A sowing with no approved standard absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); an approved standard absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
-| Distribution | A recorded distribution names its crop plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the standard per unit of the crop plan distributed when the distribution names it (that crop plan's sowings in the period, else the last period that made it), otherwise the period's standard per unit (the period's own sowings, else the last period that had any; zero before any sowing has posted); distribution expense; retail commission deducted from the remittance. |
+| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the standard per unit of the grow plan distributed when the distribution names it (that grow plan's sowings in the period, else the last period that made it), otherwise the period's standard per unit (the period's own sowings, else the last period that had any; zero before any sowing has posted); distribution expense; retail commission deducted from the remittance. |
 | Subscriber / supplier payment | Cash against receivables / payables, applied to invoices / bills. |
 | Opening balance | Cash, the fit-out at cost, long-term debt and owners' equity as of its date. |
 | Payroll | At month end, loaded labor earned on the time clock less what the month's sowing records charged, to 5170 against the four payroll liabilities; on each pay date through today, the pay period's loaded labor paid in cash (§16). |
@@ -495,7 +495,7 @@ actuals (§14) — so actual against plan is the same report run twice. Nothing 
 | Overhead budget | Each month, the manufacturing-overhead fixed-cost lines in force that month, lease or utilities by the category their bill settles |
 | Depreciation | Straight-line on each capital purchase from the month it is bought over its class life (equipment and leasehold years) |
 | No terms on file | Invoices collected on the issue date; supplier bills — including inputs with no supplier linked — paid on the bill date; own-fleet distribution cost paid on the distribution date; fixed-cost bills paid on the first of the month; marketplace remittances, net of commission, deposited on the distribution date. Each is named in the timeline's gaps |
-| Statements | By month, calendar quarter and fiscal year (§15), clipped to the forecast window: classified income statement (revenue by channel, cost of goods sold at standard, manufacturing variances, gross margin, selling and distribution, general and administrative, operating income, interest, net income), classified balance sheet with inventory by stage, cash flow by the direct and the indirect method asserted equal, every period balanced. Each crop plan is costed on its own standard |
+| Statements | By month, calendar quarter and fiscal year (§15), clipped to the forecast window: classified income statement (revenue by channel, cost of goods sold at standard, manufacturing variances, gross margin, selling and distribution, general and administrative, operating income, interest, net income), classified balance sheet with inventory by stage, cash flow by the direct and the indirect method asserted equal, every period balanced. Each grow plan is costed on its own standard |
 
 The indirect cash flow classifies capital and debt by whether cash moved in the entry: capital bought
 for cash is investing, a loan drawn or repaid in cash is financing, and a fit-out capitalised and

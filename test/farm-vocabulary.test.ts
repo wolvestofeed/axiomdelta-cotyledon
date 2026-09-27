@@ -7,6 +7,10 @@
  *
  * The allowlist is the files that name the origin or cite a source as it is titled, the compiled
  * food factor table, and the Phase 1-era produce-safety module the deep cut has yet to replace.
+ *
+ * The grow plan has one name. Its former name fails in any spelling anywhere in the tree, the
+ * docs included, except in the two files whose job is to name it: the migration that renames the
+ * tables where they still exist, and the redirect from the page's former address.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -14,7 +18,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const REPO = join(__dirname, '..');
-const ROOTS = ['src', 'test', 'scripts', 'drizzle', 'docs', 'package.json', '.env.example', 'README.md', 'CLAUDE.md'];
+const ROOTS = ['src', 'test', 'scripts', 'drizzle', 'docs', 'package.json', '.env.example', 'README.md', 'CLAUDE.md', 'next.config.ts'];
 const EXT = /\.(ts|tsx|sql|md|css|json|py|mjs|html|example)$/;
 
 const WORDS = [
@@ -69,6 +73,26 @@ describe('vocabulary — no kitchen word survives', () => {
       lines.forEach((line, i) => {
         if (PHRASES_OK.some((p) => p.test(line))) return;
         for (const m of line.matchAll(RX)) hits.push(`${rel}:${i + 1}: ${m[0]}`);
+      });
+    }
+    expect(hits).toEqual([]);
+  });
+});
+
+/** The grow plan's former name, in every spelling: two words, snake, kebab, camel, any case. */
+const FORMER_NAME = /crop[ _-]?plan/i;
+const FORMER_NAME_ALLOWED = new Set(['drizzle/0014_farm_grow_plans.sql', 'next.config.ts', 'test/farm-vocabulary.test.ts']);
+
+describe('vocabulary — the grow plan has one name', () => {
+  const files = ROOTS.flatMap((r) => walk(join(REPO, r))).filter((f) => EXT.test(f));
+  it('finds its former name nowhere but the migration that renames it and the redirect', () => {
+    const hits: string[] = [];
+    for (const f of files) {
+      const rel = relative(REPO, f);
+      if (FORMER_NAME_ALLOWED.has(rel)) continue;
+      readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+        const m = line.match(FORMER_NAME);
+        if (m) hits.push(`${rel}:${i + 1}: ${m[0]}`);
       });
     }
     expect(hits).toEqual([]);

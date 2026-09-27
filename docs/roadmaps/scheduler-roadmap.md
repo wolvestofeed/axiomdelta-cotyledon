@@ -36,11 +36,11 @@ Code comments cite these by number.
     The blackout rack's cycles belong to the sowing stream alone.
 11. **Cold hold is a hold, not labor.** Staging is part of the component blackout line. control-point-3 is a
     monitoring point on the walk-in.
-12. **One study per crop plan, lines tagged by stream.** Each time-study line carries `stream`:
+12. **One study per grow plan, lines tagged by stream.** Each time-study line carries `stream`:
     `sowing` or `harvest` (a column on `farm.time_study_lines`). Sowing lines take the study's sowing
     size as their basis. Harvest lines are per unit shipped that day; a fixed harvest line
     (loading the vehicle) counts once per distribution day. The sheet and the log are one document per
-    crop plan.
+    grow plan.
 13. **Distribution time** is a scenario default (`schedulePolicy.distributionTimeMin`). The order carries
     an optional override once its shape is stated.
 14. **Blackout rack sanitation and defrost** (culinary-operations.md §1). The rack is sanitized
@@ -76,7 +76,7 @@ estimates that stand in until observed ones are adopted. What *is* known is the 
 constraints: whole sowings, a sowing bounded by every grow unit it passes through, fixed-plus-variable
 labor, a cooling CONTROL POINT with a hard clock, and a building nobody is in overnight.
 
-The module takes **a staffing shape + the Phase 1 units + each crop plan's route**, places the work in
+The module takes **a staffing shape + the Phase 1 units + each grow plan's route**, places the work in
 time against those constraints, and reports what comes out the other side: units placed, crew
 hours, idle crew hours, which unit binds, the makespan, and every rule the plan breaks. Run it
 again under a different scenario and put the two side by side.
@@ -96,7 +96,7 @@ through the `farm.scenarios` overlay.
 |---|---|
 | Equipment library (`farm.equipment`, `_engine/equipment.ts`) | The resource register. Phase 1 rows carry sowing capacities and the four resource attributes; planned build-outs never count. |
 | `deriveCapacity` / `sowingBounds` (`_engine/index.ts`) | The sowing, bounded by every grow unit it passes through. The scheduler places the result; it never re-derives it. |
-| Labor standards (`_engine/time-studies.ts`, `_engine/time-study-estimate.ts`) | Each crop plan's adopted study, or the estimated study that stands in. Its lines, in order and by stream, are the route. |
+| Labor standards (`_engine/time-studies.ts`, `_engine/time-study-estimate.ts`) | Each grow plan's adopted study, or the estimated study that stands in. Its lines, in order and by stream, are the route. |
 | Stage map (`_engine/stage.ts`, `_data/grow-stages.ts`) | Each sow's process and grow unit; the growing-clock start. |
 | Capacity inputs (`operatingOpenMin` / `operatingCloseMin`, rack load / blackout / unload minutes and staff) | The operating day and the rack on the clock. |
 | `planHorizon` (`_engine/production-plan.ts`) | The order book rolled through production day by day with lot-level FIFO and shelf-life expiry; supplies each date's sowings and shipments. |
@@ -129,7 +129,7 @@ observed. A unit's slots are units × concurrent sowings.
 
 ### 3.2 Routing — the process map (`_engine/routing.ts`)
 
-A route is derived from the crop plan's labor standard, never authored beside it. `deriveRoute` makes
+A route is derived from the grow plan's labor standard, never authored beside it. `deriveRoute` makes
 one `RouteStep` per study line, in study order, on the line's stream:
 
 - **kind** off the time-study scaffold, which is what precedence reads;
@@ -165,7 +165,7 @@ each step's precedence depth.
 overnight process, an unknown predecessor or a cycle comes back as a `RouteFinding`. Nothing is
 dropped or re-ordered to make the route fit.
 
-A scenario edit to a step (`RouteStepOverlay`, keyed `<crop plan code>::<step id>`) may set staff,
+A scenario edit to a step (`RouteStepOverlay`, keyed `<grow plan code>::<step id>`) may set staff,
 setup and run minutes, fixed and per-unit labor minutes, predecessors and resource; the step is
 marked edited.
 
@@ -191,7 +191,7 @@ across them on the service weekdays. No separate calendar register.
 
 ```ts
 crews?:          Record<string, CrewOverlay>;        // keyed by crew id, with adds and removes
-routing?:        Record<string, RouteStepOverlay>;   // keyed by '<crop plan code>::<step id>'
+routing?:        Record<string, RouteStepOverlay>;   // keyed by '<grow plan code>::<step id>'
 resources?:      Record<string, ResourceOverlay>;    // keyed by equipment key
 schedulePolicy?: SchedulePolicyOverlay;
 ```
@@ -222,14 +222,14 @@ sections; resource attributes are edited on Equipment.
 
 `schedule(input: ScheduleInput): ScheduleResult` places one operating day.
 
-**Input:** date; `ScheduleSowing[]` (one whole sowing of a crop plan with its route); `ScheduleHarvest[]`
-(one crop plan's shipment that day, in base units); resources; crews; the capacity inputs
+**Input:** date; `ScheduleSowing[]` (one whole sowing of a grow plan with its route); `ScheduleHarvest[]`
+(one grow plan's shipment that day, in base units); resources; crews; the capacity inputs
 (operating open and close, rack load / blackout / unload minutes, load and unload staff); the
 schedule policy.
 
 `scheduleInputsForDay` builds the sowings and dispatches for a date from a production day's runs
-and a distribution day's shipments, each on its crop plan's route (labor standard, stage map, Phase 1
-list, the scenario's step edits). A crop plan the library does not hold is listed, not placed.
+and a distribution day's shipments, each on its grow plan's route (labor standard, stage map, Phase 1
+list, the scenario's step edits). A grow plan the library does not hold is listed, not placed.
 
 **Algorithm: serial schedule generation (list scheduling).** Orders are taken in the policy's
 priority order and each step is placed at the earliest (or, placed backward, the latest) minute
@@ -242,7 +242,7 @@ crew mode, where the crew has the people free for its labor.
   clock — load, the unattended blackout stage and unload, their minutes and people from Capacity; the
   labor is the study's blackout line, placed at the load and the unload in proportion to their
   staff-minutes. Steps after it are placed forward.
-- **Harvest stream**, per crop plan shipped that day, from staged components. Placed backward from
+- **Harvest stream**, per grow plan shipped that day, from staged components. Placed backward from
   the distribution time by default or forward from opening. The vehicle load is placed once for the
   day. An order that cannot be placed backward inside the day is placed forward and reported
   against the distribution time.
@@ -251,7 +251,7 @@ crew mode, where the crew has the people free for its labor.
 A step's labor is placed as its study's people from the step's start for labor minutes ÷ people:
 the whole run for an attended step, the tending allowance for a tended one.
 
-**Output.** `ScheduledBlock[]` — order, crop plan, stream (`sowing`, `harvest` or `day`), step, kind
+**Output.** `ScheduledBlock[]` — order, grow plan, stream (`sowing`, `harvest` or `day`), step, kind
 (`step`, `rack-load`, `blackout-stage`, `rack-unload`, `closedown`), task, resource, start, end,
 staff, labor minutes, attended, CONTROL POINT.
 
@@ -319,7 +319,7 @@ as a prior-day step; the policy resolved and tagged), `farm-routing.test.ts`,
 - **`MonthGrid.tsx`** — a Monday-first month, text only; each day carries its lines, a utilisation
   bar and its finding count, and is outlined when it does not fit, expired stock or raised a
   finding.
-- **`ProcessMap.tsx`** — a crop plan's route as a DAG per stream: HTML nodes in columns by precedence
+- **`ProcessMap.tsx`** — a grow plan's route as a DAG per stream: HTML nodes in columns by precedence
   depth, each showing unit, crew and duration; SVG edges for precedence.
 
 Every chart has a table under it. No icons, no decorative SVG (CLAUDE.md §5). Status badges on
@@ -334,7 +334,7 @@ All under Production in `_components/nav.ts`, status `live`:
 /farm/production-planning/schedule   Day Schedule — one operating day by unit, with crew load
 /farm/production-planning/compare    Compare — the same day under two saved scenarios
 /farm/production-planning/calendar   Calendar — the horizon month by month
-/farm/production-planning/process    Process — a crop plan's route, edited step by step
+/farm/production-planning/process    Process — a grow plan's route, edited step by step
 ```
 
 - **Day Schedule** reads the selected world (Plan: the open forecast's own orders, sowings and
@@ -407,7 +407,7 @@ binds. NOT STARTED.
 | **L2** | Each grow unit's required volume per sowing against its capacity (`sowingBounds`, ISSUE-14) | DONE in the closed form |
 | **L3** | Two blackout rack racks as independent resources: the sowing binds to one rack, `units` are slots the scheduler and `planProductionDay` (`lines`) place; the closed-form headline is the one-stream ceiling, labelled as such — lockstep is retired (sowing-resource instruction, 2026-09-17, superseding ISSUE-13's remedy) | DONE 2026-09-17 |
 | **L4** | Timeline primitives for the shift bars (`_components/timeline/`, W2) | DONE |
-| **L5** | Cross-station routing per crop plan (`deriveRoute`, W0), edited on Process (W3) | DONE |
+| **L5** | Cross-station routing per grow plan (`deriveRoute`, W0), edited on Process (W3) | DONE |
 
 ---
 
@@ -439,5 +439,5 @@ binds. NOT STARTED.
   places both.
 - The distribution time itself, and its shape on the order (decision 13).
 - What two racks buy on a mixed day (L3): the sowing is one rack's load and the second rack
-  is a second slot, so the gain is concurrency — two crop plans blackout at once — and whole-sowing
+  is a second slot, so the gain is concurrency — two grow plans blackout at once — and whole-sowing
   rounding on each stream can eat part of it. The Gantt produces that result; it is not pre-judged.

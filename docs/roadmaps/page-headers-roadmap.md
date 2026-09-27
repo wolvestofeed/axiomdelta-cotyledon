@@ -24,7 +24,7 @@ passes: production and planning; finance and commercial; sustainability, people 
   line and the left edge, and a paragraph gives them nothing to catch on. On Capacity the real rules
   sit mid-paragraph, where nobody reads.
 - **Most ledes open by defining a noun, not by saying what the user does.** Examples: "Capacity is a
-  property of the plant.", "The crop plan library.", "Three levels."
+  property of the plant.", "The grow plan library.", "Three levels."
 - **Line length.** Since 2026-09-18 the lede runs full width (`max-width: none`). At 14px that is
   about 180–200 characters per line, about 2.5 times the comfortable reading measure. This is fine
   for one short line and hard work for a paragraph. See decision D2.
@@ -82,7 +82,7 @@ PageHeader({
 |---|---|---|---|
 | **Purpose** | What the user does or decides here. Starts with a verb. Never "This page…" | 1 sentence, ≤ 15 words (≤ 140 chars) | `--farm-fs-md`, `--farm-ink-soft` |
 | **On this page** | The names of the page's tabs and cards, word for word, so no new vocabulary is introduced | 2–5 items, 1–3 words each | Plain `.farm-chip` row. An item is an `#anchor` link only when it jumps to a section |
-| **Connects** | Workflow links: `From` Equipment · Crop plans, `To` Production Planning | ≤ 4 links | One `fs-xs` line. "From" and "To" are real words (no icons, per the house rule) |
+| **Connects** | Workflow links: `From` Equipment · Grow plans, `To` Production Planning | ≤ 4 links | One `fs-xs` line. "From" and "To" are real words (no icons, per the house rule) |
 | **How this page works** | The rules and method, one rule per bullet. This is the teaching content | 3–6 bullets, ≤ 25 words each, ≤ 120 words total | Native `<details>`, collapsed by default, text affordance "Show / Hide", copper left rule when open |
 
 **Always-visible text drops from 60–130 words per page to about 25–35 words.** Nothing is deleted.
@@ -212,7 +212,7 @@ Legend:
 
 **Capacity** (131 words)
 - **P:** See the most one blackout rack stream makes a day, and what limits it.
-- **On:** Constraint chain · Ceiling by crop plan · Plant inputs · Blackout check · Staffing check
+- **On:** Constraint chain · Ceiling by grow plan · Plant inputs · Blackout check · Staffing check
 - **↔:** ← Equipment · → Production Planning · → Day Schedule
 - **How:**
   - A sowing is one unit of each grow unit it passes through, and the tightest grow unit sets it.
@@ -234,9 +234,9 @@ Legend:
   - On Plan, stock comes from the forecast's timeline, so there is no trace.
 
 **Compare** (106 words)
-- **P:** Set one day under two forecasts, or two crop plans side by side.
-- **On:** Day comparison · Crop plan comparison · Variant proposal
-- **↔:** ← Day Schedule · ↔ Crop plans
+- **P:** Set one day under two forecasts, or two grow plans side by side.
+- **On:** Day comparison · Grow plan comparison · Variant proposal
+- **↔:** ← Day Schedule · ↔ Grow plans
 - **How:**
   - Each side of a day runs its own forecast through the same scheduler.
   - A variant is built from a typed or dictated instruction, reviewed on a proposal card, and saved only on click.
@@ -244,7 +244,7 @@ Legend:
 - **Relocate:** the metric list → Day table caption.
 
 **Process** (106 words)
-- **P:** Follow a crop plan's route step by step, and edit any step for this forecast.
+- **P:** Follow a grow plan's route step by step, and edit any step for this forecast.
 - **On:** Route map · Sowing stream · Harvest stream · Step editor *(v)*
 - **↔:** ← Time Studies · ← Equipment · → Day Schedule
 - **How:** (home of the two-streams rule)
@@ -259,7 +259,7 @@ Legend:
 - **On:** Flat plans · Order book · Confirmed counts · Distributions *(v)*
 - **↔:** ← Subscribers · → Production Planning · → Inventory
 - **How:**
-  - Forecast order = the flat plan's crop plan on a date × units per service.
+  - Forecast order = the flat plan's grow plan on a date × units per service.
   - Forecast orders are computed from Subscribers on every load, never stored.
   - A typed count, a confirmed count or a distribution replaces the forecast order it stands for.
   - A prospect's distribution day is every order on that date for that subscriber.
@@ -275,7 +275,7 @@ Legend:
   - No shift pattern or headcount is decided.
 
 **Time Studies** (89 words)
-- **P:** Time each crop plan's sowing tasks and adopt the one that sets its labor standard.
+- **P:** Time each grow plan's sowing tasks and adopt the one that sets its labor standard.
 - **On:** Study log · Trends · Labor standard · Labor hours and cost *(v)*
 - **↔:** → Process · → Schedule · → Day Schedule
 - **How:** (home of the labor-standard rule)
@@ -293,22 +293,22 @@ Legend:
   - Lanes are Phase 1 units. The strip is crew demand against the people proposed.
   - Breaks are reported, never repaired. Change orders, crews, routes or policy and the day re-places.
 
-**Crop plans** (86 words)
-- **P:** Pick a crop plan to see its cost per unit, sowing size and unit spec.
-- **On:** Library · Cost per unit · Sowing size · Unit spec · Edit crop plan
+**Grow plans** (86 words)
+- **P:** Pick a grow plan to see its cost per unit, sowing size and unit spec.
+- **On:** Library · Cost per unit · Sowing size · Unit spec · Edit grow plan
 - **↔:** ← Equipment · ← Packaging · → Production Planning
 - **How:**
-  - Every crop plan that can be costed or planned is a library row with a status.
-  - Editing SEED cost, quantity or yield here is a forecast edit. Edit crop plan changes the library.
+  - Every grow plan that can be costed or planned is a library row with a status.
+  - Editing SEED cost, quantity or yield here is a forecast edit. Edit grow plan changes the library.
   - The costing standard changes only when a super admin approves a version with an effective date.
 
 **Production Planning** (85 words)
-- **P:** Plan one crop plan run, one distribution day, or a whole period.
+- **P:** Plan one grow plan run, one distribution day, or a whole period.
 - **On:** Single run · Distribution day · Horizon · Close sowing record
 - **↔:** ← Orders · → Day Schedule · → Procurement · → Actuals
 - **How:**
   - A distribution day is every order on a date, netted against finished goods on hand.
-  - The shortfall is sized into whole sowings per crop plan and placed on the shared blackout rack.
+  - The shortfall is sized into whole sowings per grow plan and placed on the shared blackout rack.
   - Sowing records close on the distribution day.
   - The horizon rolls the order book through a period.
 
@@ -351,7 +351,7 @@ Legend:
 **Packaging** (56 words)
 - **P:** Keep the library of packages units leave the farm in, with costs.
 - **On:** Package library · Manual cost · Supplier-based cost
-- **↔:** → Crop plans · ↔ Equipment
+- **↔:** → Grow plans · ↔ Equipment
 - **How:**
   - Containers, lids, labels and liners are packaging.
   - Sealers, coders and vacuum packers are equipment.
@@ -444,7 +444,7 @@ Legend:
 
 **Plan v Actual** (53 words)
 - **P:** Compare each month's records with the plan of record in force at month end.
-- **On:** Months and quarters · Units and revenue · Food and labor cost · By crop plan, channel, subscriber
+- **On:** Months and quarters · Units and revenue · Food and labor cost · By grow plan, channel, subscriber
 - **↔:** ← Actuals · ← Profit & Loss
 - **How:** Both sides are computed the same way. A quarter is the sum of its months.
 
@@ -460,13 +460,13 @@ Legend:
 - **How:** Inventory is at standard cost by stage. Fixed assets are at cost less depreciation.
 
 **Unit Economics** (41 words)
-- **P:** Test price and unit per channel against a crop plan's cost per unit.
+- **P:** Test price and unit per channel against a grow plan's cost per unit.
 - **On:** Cost card · Price and unit · Contribution · Units per sowing
-- **↔:** ← Crop plans · → Profit & Loss
+- **↔:** ← Grow plans · → Profit & Loss
 
 **Suppliers** (37 words)
 - **P:** Find approved suppliers and record volume, price and lead time from conversations.
-- **On:** Directory · Certification · Prospect readiness · Crop plan match
+- **On:** Directory · Certification · Prospect readiness · Grow plan match
 - **↔:** → Procurement · → Logistics · → Supplier LCA Data
 
 **Sales / CRM** (33 words)
@@ -512,7 +512,7 @@ Legend:
 **Inputs** (59 words)
 - **P:** Compare each unit's food footprint on the reference and selected bases.
 - **On:** Per-unit footprint · Basis selector · Period total · Supplier credit
-- **↔:** ← Crop plans · ← Supplier LCA Data · → Inventory & Audit
+- **↔:** ← Grow plans · ← Supplier LCA Data · → Inventory & Audit
 
 **Inventory & Audit** (56 words) — hub for "How the inventory is built"
 - **P:** Assemble the year's greenhouse-gas inventory by scope, with the controls auditors check.
@@ -521,7 +521,7 @@ Legend:
 **Logistics** (56 words)
 - **P:** Measure freight ton-miles in from suppliers and out to distribution pickup points.
 - **On:** Inbound · Outbound
-- **↔:** ← Crop plans · ← Pickup Points & Routes · → Inventory & Audit
+- **↔:** ← Grow plans · ← Pickup Points & Routes · → Inventory & Audit
 
 **Equipment & Rebates** (55 words)
 - **P:** Set each equipment line's energy and refrigerant attributes, and review the utility's rebate list.

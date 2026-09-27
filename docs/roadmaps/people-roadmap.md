@@ -12,7 +12,7 @@ depends on is [`../staffing-contract.md`](../staffing-contract.md).
    hours the plan requires, the hours charged to each sowing, and the punches taken on its clocks.
 2. **Pay is confidential.** No pay or confidential employee information is held in Farm, and none
    reaches an operator.
-3. **Labor standards exist per crop plan.** Every crop plan in the library carries a log of time studies,
+3. **Labor standards exist per grow plan.** Every grow plan in the library carries a log of time studies,
    and its labor standard comes from that log.
 
 ## 2. Decisions
@@ -29,13 +29,13 @@ depends on is [`../staffing-contract.md`](../staffing-contract.md).
 5. **Production labor cost is visible to operators** — labor hours and labor cost per sowing and per
    day on Time Studies. HR totals (payroll by account, burden, benefits) and the financial statements
    are admin-only.
-6. **Labor is time studies per crop plan.** Each crop plan has a time study log on a cadence, trends
+6. **Labor is time studies per grow plan.** Each grow plan has a time study log on a cadence, trends
    graphed, quality assurance recorded; the log panel shows 10 rows and scrolls. A study entry holds
-   date, crop plan, sowing size, observer, task lines (task, stream, station, staff, elapsed minutes,
+   date, grow plan, sowing size, observer, task lines (task, stream, station, staff, elapsed minutes,
    labor minutes, fixed or variable) and a quality result (pass / hold / fail) with notes. Each
-   crop plan has a re-study interval and a next-due date. An admin adopts the study that is the
-   crop plan's labor standard.
-7. **Every crop plan has an estimated study.** A mock estimated time study is seeded for every crop plan
+   grow plan has a re-study interval and a next-due date. An admin adopts the study that is the
+   grow plan's labor standard.
+7. **Every grow plan has an estimated study.** A mock estimated time study is seeded for every grow plan
    and labelled Estimated; it stands in as the labor standard until an observed study is adopted.
    The Time Study Sheet is downloadable, and a timed sowing is entered in the OS as a dated log entry.
 8. **Schedule is production staff demand.** Farm generates a two-week staff demand schedule from the
@@ -88,17 +88,17 @@ operator's client.
 - [x] Tests: the staff document and the hours run carry no pay field; payroll posting from closed
       periods, the month split and the uncovered-hours note (`farm-payroll.test.ts`).
 
-**O2 — Time Studies: per crop plan** — built
-- [x] Migration 0061: `farm.time_studies` (crop plan, studied on, sowing size, observer, quality result,
+**O2 — Time Studies: per grow plan** — built
+- [x] Migration 0061: `farm.time_studies` (grow plan, studied on, sowing size, observer, quality result,
       quality notes, adopted at / by), `farm.time_study_lines` (task, station, staff, elapsed minutes,
-      labor minutes, fixed or variable), `farm.time_study_intervals` (re-study days per crop plan).
+      labor minutes, fixed or variable), `farm.time_study_intervals` (re-study days per grow plan).
       Migration 0064: `time_studies.basis`, `estimated` or `observed`. Migration 0066:
       `time_study_lines.stream`, sowing or harvest.
-- [x] Seeding: on read, every library crop plan with no study gets an estimated study at its derived
-      sowing at the plan's defaults (`source = 'seed'`), idempotent per crop plan under the advisory
+- [x] Seeding: on read, every library grow plan with no study gets an estimated study at its derived
+      sowing at the plan's defaults (`source = 'seed'`), idempotent per grow plan under the advisory
       lock. AMK-E-001's is the plan's 14-task time study at its stated sowing size, with no date,
-      observer or quality result. Every other crop plan's is built by `_engine/time-study-estimate.ts`
-      (pure): the task scaffold off the crop plan's own served components on the two streams — on the
+      observer or quality result. Every other grow plan's is built by `_engine/time-study-estimate.ts`
+      (pure): the task scaffold off the grow plan's own served components on the two streams — on the
       sowing stream receiving, scaling and mise en place, a prep and a sow per hot component,
       component blackout and stage, and the line turnaround (two people, 15 minutes); on the
       harvest stream a cold assembly per cold component, unit and assemble, seal and label, the
@@ -109,9 +109,9 @@ operator's client.
       sow time on file gets the allowance and says so. There is no second blackout, no cold-hold
       line and no end-of-day closedown line. Labelled ESTIMATED and PLACEHOLDER.
 - [x] The labor standard (`laborStandard`): the study adopted most recently; with none adopted, the
-      crop plan's estimated study stands in. An observed study that is not adopted does not stand in.
+      grow plan's estimated study stands in. An observed study that is not adopted does not stand in.
       Earlier adoptions stay on the record.
-- [x] The Time Studies page (`/farm/time-studies`, under Production): crop plan selector; KPIs (studies
+- [x] The Time Studies page (`/farm/time-studies`, under Production): grow plan selector; KPIs (studies
       and the standard's source, labor minutes per unit, labor hours and cost per sowing at the
       derived sowing size, labor cost per rated day, next study due); the log in a ten-row scrolling
       panel with a Basis column and the estimate marked "Stands in"; the selected study's task lines
@@ -122,24 +122,24 @@ operator's client.
       standard is the tray-weighted average of the approved studies. Fixed and variable minutes are derived from a study's lines, never typed.
 - [x] Labor cost per sowing and per day at the plan's placeholder loaded rate. No individual wage.
 - [x] Download the Time Study Sheet (`time-studies/time-study-sheet`, operator-gated, exceljs): Read
-      Me, one scaffold block per crop plan with the observer's cells shaded and the standard's minutes as
-      reference, the standards on file, the studies on file, the plan's task library; the crop plan open
+      Me, one scaffold block per grow plan with the observer's cells shaded and the standard's minutes as
+      reference, the standards on file, the studies on file, the plan's task library; the grow plan open
       on the page listed first. A timed sowing is entered on the page; the sheet is not imported.
-- [x] Crop plan costing reads each crop plan's own labor standard (Roadmap N3).
+- [x] Grow plan costing reads each grow plan's own labor standard (Roadmap N3).
 - [x] Tests: `farm-time-studies.test.ts`, `farm-time-study-estimate.test.ts`.
 - [ ] `pnpm farm:reseed` resetting the estimated studies. It does not reset them; deleting a
-      crop plan's estimated row re-seeds it.
+      grow plan's estimated row re-seeds it.
 - [ ] Importing a filled sheet back into the log, if timing on paper turns out to be the practice.
 
 **O3 — Schedule: production staff demand** — built; the published schedule waits on O4 transport
 - [x] Two weeks of staff demand from the production plans (`_engine/staff-demand.ts`): the order book
-      rolled through production with the same `planHorizon` as Production Planning; each crop plan
+      rolled through production with the same `planHorizon` as Production Planning; each grow plan
       staffed from its labor standard on two streams — sowing lines on the production day, a fixed
       line once per sowing and a variable line per unit produced; harvest lines on the distribution
       day, per unit shipped, a fixed line once that day — as people and staff-hours by task and
-      station per day. A crop plan with work and no study at all is listed and carries no demand. What
+      station per day. A grow plan with work and no study at all is listed and carries no demand. What
       distributed orders drew from stock is one shared function (`distributedConsumption`).
-- [x] The Schedule page shows the demand, a production day per collapsing group, the crop plans staffed
+- [x] The Schedule page shows the demand, a production day per collapsing group, the grow plans staffed
       from an estimate, and the Staffing status (demand prepared, not sent; no published schedule
       received). The operating day and the proposed crews are edited on Capacity; one day on the clock
       is the Day Schedule under Production. The demand document for Staffing is
@@ -176,7 +176,7 @@ operator's client.
 
 - Staffing owns positions, wages and burden; Phase N holds no roster positions and no payroll
   burden set.
-- N3's labor per crop plan comes from O2's labor standard × the loaded rate (the plan's placeholder
+- N3's labor per grow plan comes from O2's labor standard × the loaded rate (the plan's placeholder
   rate until Staffing prices it).
 - N4's labor cost for a forecast comes back from Staffing as line items (`staffing.labor_cost`,
   O4); until connected it uses the plan placeholder.
@@ -187,7 +187,7 @@ operator's client.
 |---|---|---|
 | Dashboard | The operator dashboard: production, cold chain, supply, sustainability, distribution, their own clock and hours; no company financials, no one else's staff data | The Admin Dashboard: all of it, financials and people included, supplier-bill alerts |
 | Sources | See | See, register and edit |
-| Crop plans, Equipment, Packaging | See (unit costs included) | See and edit |
+| Grow plans, Equipment, Packaging | See (unit costs included) | See and edit |
 | Production Planning, Day Schedule, Compare, Calendar, Process | See, close sowing records; no run economics or by-channel view | All |
 | Capacity | See | See |
 | Floor | Record: receive, close sowings, ship, punches | Record; link to Actuals |

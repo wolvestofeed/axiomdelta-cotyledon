@@ -20,7 +20,7 @@ When a decision, a plan, a rule or a figure changes, **delete the old version an
 | AxiomDelta Coaching Engine | The product other coaches license and subscribe to for their own businesses. Those coaches are Rob's clients. |
 | MicroFarm | This repo. The production OS for the microgreens and sprouts facility, and a product other farmers subscribe to. |
 
-MicroFarm's scope is the facility: crop plans, sowings, grow units, inventory, produce safety, suppliers, sustainability, staffing, subscribers and their flat plans and nutrition targets, orders, distribution, and the books of the facility. Bodywork bookings, coaching sessions, the library and sequencing live in the other products. Nothing about a client's sessions or health beyond their nutrition targets for their flats is held here.
+MicroFarm's scope is the facility: grow plans, sowings, grow units, inventory, produce safety, suppliers, sustainability, staffing, subscribers and their flat plans and nutrition targets, orders, distribution, and the books of the facility. Bodywork bookings, coaching sessions, the library and sequencing live in the other products. Nothing about a client's sessions or health beyond their nutrition targets for their flats is held here.
 
 - Multi-tenant: every farm is a workspace. The wellness center's facility is one workspace, never a special case in code.
 - No connection to CompTable. No webhooks, no contract, no shared database. Staffing, wages and pay periods are an internal module.

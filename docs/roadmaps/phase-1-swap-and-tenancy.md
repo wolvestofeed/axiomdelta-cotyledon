@@ -5,9 +5,9 @@ The kitchen vocabulary replaced in full (1a, commit `e5f34af`), then one Clerk o
 ## 1a — Vocabulary swap
 
 - [x] `outline.md` §3 applied to identifiers, schema, routes, cookies, env vars, CSS, tests, scripts and docs by a case-preserving rename engine; packages renamed `@mf/*`; route group `(farm)`; the OS at `/farm`
-- [x] Parent portal, ERRA copy, the CompTable pieces and the school-prospect dataset removed; HR is Staffing, Floor is Grow Room, Customers are Subscribers, Sites are Pickup Points, Recipes are Crop Plans, Equipment is Grow Units
+- [x] Parent portal, ERRA copy, the CompTable pieces and the school-prospect dataset removed; HR is Staffing, Floor is Grow Room, Customers are Subscribers, Sites are Pickup Points, Recipes are grow plans, Equipment is Grow Units
 - [x] The 37 migrations folded into `drizzle/0001_farm_init.sql`
-- [x] `test/farm-vocabulary.test.ts` fails on any surviving kitchen word outside the Phase 2 allowlist (the files that hold kitchen data until Phase 2 replaces them: `plan-data.ts`, `crop-plans-seed.ts`, `nutrient-profile.ts`, `grow-stages.ts`, `nutrition.ts`, `produce-safety.ts`, the agent fixtures; and the docs that cite the origin or studies as titled)
+- [x] `test/farm-vocabulary.test.ts` fails on any surviving kitchen word outside its allowlist (the files that name the origin or cite a source as it is titled, the compiled food factor table and `produce-safety.ts`), and on grow plan's former name in any form outside the migration that renames the tables
 - [x] Muse's research notes, training documents and todo list deleted as build history; the per-topic build plans kept in `roadmaps/`
 - [x] "Portions" and "meals" both became "units" and collided in the production ledger: a sowing's output count is `units`, the billable count is `servings` (one schema column, `servings_produced`). Phase 2 drops servings: a flat is a flat
 

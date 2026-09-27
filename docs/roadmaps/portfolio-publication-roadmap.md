@@ -162,7 +162,7 @@ below the rule that closes them.
 | Section | n | Modules |
 |---|---|---|
 | Overview | 3 | Dashboard · Reports · Sources |
-| Production | 11 | Crop plans · Time Studies · Production Planning · Day Schedule · Compare · Calendar · Process · Capacity · Equipment · Packaging · Floor |
+| Production | 11 | Grow plans · Time Studies · Production Planning · Day Schedule · Compare · Calendar · Process · Capacity · Equipment · Packaging · Floor |
 | Financials & Accounting | 10 | Unit Economics · Profit & Loss · Balance Sheet · Cash Flow · Ledger · Plan v Actual · Actuals · Receivables · Payables · Capital & Financing |
 | Cold Chain | 2 | Inventory · Produce Safety |
 | Supply Chain | 2 | Procurement · Suppliers |
@@ -303,13 +303,13 @@ The copy source for the page's section tiles. Every line verbatim from its `Page
 
 **Production** (11)
 
-- **Crop plans** — Pick a crop plan to see its cost per unit, sowing size and unit spec.
-- **Time Studies** — Time each crop plan's sowing tasks and adopt the one that sets its labor standard.
-- **Production Planning** — Plan one crop plan run, one distribution day, or a whole period.
+- **Grow plans** — Pick a grow plan to see its cost per unit, sowing size and unit spec.
+- **Time Studies** — Time each grow plan's sowing tasks and adopt the one that sets its labor standard.
+- **Production Planning** — Plan one grow plan run, one distribution day, or a whole period.
 - **Day Schedule** — Place one operating day on the clock and see what it breaks.
-- **Compare** — Set one day under two forecasts, or two crop plans side by side.
+- **Compare** — Set one day under two forecasts, or two grow plans side by side.
 - **Calendar** — Scan the month for days that don't fit, then open one.
-- **Process** — Follow a crop plan's route step by step, and edit any step for this forecast.
+- **Process** — Follow a grow plan's route step by step, and edit any step for this forecast.
 - **Capacity** — See the most one blackout rack stream makes a day, and what limits it.
 - **Equipment** — Keep the master list of every unit in service, planned or considered.
 - **Packaging** — Keep the library of packages units leave the farm in, with costs.
@@ -317,7 +317,7 @@ The copy source for the page's section tiles. Every line verbatim from its `Page
 
 **Financials & Accounting** (10)
 
-- **Unit Economics** — Test price and unit per channel against a crop plan’s cost per unit.
+- **Unit Economics** — Test price and unit per channel against a grow plan’s cost per unit.
 - **Profit & Loss** — Read revenue, cost of goods and margin by month, quarter or year.
 - **Balance Sheet** — Read the business’s position at each period end.
 - **Cash Flow** — See where cash moved, by the direct and indirect methods.
