@@ -168,6 +168,17 @@ export function cycleDays(days: StageDays): number {
   return days.sow + days.germination + days.blackout + days.light + days['harvest-window'];
 }
 
+/** The stage a tray is in on day `k` of its cycle (0 = the sow day), or off once the cycle is over. */
+export function stageOnCycleDay(days: StageDays, k: number): Exclude<StageKey, 'soak' | 'packed'> | 'off' {
+  if (k < 0) return 'off';
+  let edge = 0;
+  for (const key of ['sow', 'germination', 'blackout', 'light', 'harvest-window'] as const) {
+    edge += days[key];
+    if (k < edge) return key;
+  }
+  return 'off';
+}
+
 /** Days from sowing until the first day a unit can be distributed. */
 export function daysToHarvest(days: StageDays): number {
   return days.sow + days.germination + days.blackout + days.light;

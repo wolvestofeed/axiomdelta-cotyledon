@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TimeStudyDoc } from '@/data/time-studies';
-import { staffDemand, staffDemandDocument, traysOnShelf, cycleDaysByCode } from '@/engine/staff-demand';
+import { staffDemand, staffDemandDocument, traysOnShelf, cycleDaysByCode, stageDaysByCode } from '@/engine/staff-demand';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 /** A plan that is not a grow plan: the carrier without the grow plan it was projected from. */
 
@@ -219,5 +219,50 @@ describe('farm staff demand — the daily stream, from the trays on the shelves'
     expect(d.days[0]!.dailyStaffHours).toBeCloseTo((10 + 6) / 60, 9);
     expect(d.days[3]!.sowingStaffHours).toBe(0);
     expect(d.staffHours).toBeCloseTo(1 + 4 * (16 / 60), 9);
+  });
+});
+
+describe('farm staff demand — the daily stream placed on the stages its tasks cover', () => {
+  const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
+  const days = stageDaysByCode([broc]);
+  const cycle = cycleDaysByCode([broc])['BROC-01']!;
+  const trays = 20;
+  // One day's minutes for a 20-tray sowing, each task's total per tray spread over the cycle, as the estimate writes them.
+  const perDay = (totalPerTray: number) => (totalPerTray / cycle) * trays;
+  const shaped = study({
+    growPlanCode: 'BROC-01', sowingSize: trays, cycleDays: cycle,
+    lines: [
+      { task: 'Blackout watering', station: 'Grow rack', staff: 1, elapsedMinutes: perDay(1), laborMinutes: perDay(1), scalesWith: 'variable', stream: 'daily' },
+      { task: 'Watering under lights', station: 'Grow rack', staff: 1, elapsedMinutes: perDay(3), laborMinutes: perDay(3), scalesWith: 'variable', stream: 'daily' },
+      { task: 'Inspection and sanitization', station: 'Grow rack', staff: 1, elapsedMinutes: perDay(5), laborMinutes: perDay(5), scalesWith: 'variable', stream: 'daily' },
+    ],
+  });
+  const shelf = traysOnShelf([{ productionDate: '2027-02-01', runs: [run('BROC-01', 1, trays)] }], { 'BROC-01': cycle }, '2027-02-01', '2027-03-31');
+  const demand = staffDemand({ from: '2027-02-01', to: '2027-03-31', studies: [shaped], days: [], shelf, stageDays: days });
+  const hours = (task: string) => demand.days.map((d) => d.lines.find((l) => l.task === task)?.hours ?? 0);
+
+  it('the shelf carries each sowing by day of its cycle', () => {
+    expect(shelf.map((d) => d.trays[0]!.byDay)).toEqual(Array.from({ length: cycle }, (_, k) => [{ dayOfCycle: k, trays }]));
+  });
+
+  it('falls only on the days a tray is in the task\'s span', () => {
+    const d = days['BROC-01']!;
+    const stageOf = (k: number) => (k < d.sow ? 'sow' : k < d.sow + d.germination ? 'germination' : k < d.sow + d.germination + d.blackout ? 'blackout' : k < d.sow + d.germination + d.blackout + d.light ? 'light' : 'harvest-window');
+    hours('Blackout watering').forEach((h, k) => expect(h > 0, `blackout day ${k}`).toBe(stageOf(k) === 'blackout'));
+    hours('Watering under lights').forEach((h, k) => expect(h > 0, `light day ${k}`).toBe(stageOf(k) === 'light' || stageOf(k) === 'harvest-window'));
+    expect(hours('Inspection and sanitization').every((h) => h > 0)).toBe(true);
+  });
+
+  it('keeps each task\'s total over the cycle', () => {
+    const total = (task: string) => hours(task).reduce((t, h) => t + h, 0) * 60;
+    expect(total('Blackout watering')).toBeCloseTo(1 * trays, 9);
+    expect(total('Watering under lights')).toBeCloseTo(3 * trays, 9);
+    expect(total('Inspection and sanitization')).toBeCloseTo(5 * trays, 9);
+  });
+
+  it('without the stage days, a daily line is spread evenly as before', () => {
+    const even = staffDemand({ from: '2027-02-01', to: '2027-03-31', studies: [shaped], days: [], shelf });
+    const h = even.days.map((d) => d.lines.find((l) => l.task === 'Blackout watering')!.hours);
+    expect(new Set(h.map((x) => x.toFixed(9))).size).toBe(1);
   });
 });

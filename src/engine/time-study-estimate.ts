@@ -62,8 +62,8 @@ export function growPlanScaffold(plan: GrowPlanDef): ScaffoldTask[] {
  * A grow plan's estimated study at a sowing of `sowingTrays`: Vallecito's minutes per tray on the
  * sowing and harvest streams times the trays; each daily task's total over its span spread evenly
  * over the plan's cycle days as one day's minutes for the sowing. One person on every task, as
- * the sheet has it. The watering shape by stage is placed by the grow calendar (part 6); the
- * total over the cycle is the sheet's.
+ * the sheet has it. Staff demand places each daily task on the stages its span covers
+ * (`DAILY_SPAN_STAGES`), keeping the sheet's total over the cycle.
  */
 export function growPlanTimeStudy(plan: GrowPlanDef, sowingTrays: number): TimeStudySeed {
   const days = planStageDays(plan);

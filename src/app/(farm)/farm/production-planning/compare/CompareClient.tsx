@@ -23,7 +23,7 @@ import type { DateRange } from '@/engine/periods';
 import { finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
 import { resolveScenarioInputs, type FarmScenarioConfig } from '@/engine/scenario';
 import { schedule, scheduleInputsForDay, type ScheduleResult } from '@/engine/scheduler';
-import { cycleDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
+import { cycleDaysByCode, stageDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
 
 const HORIZON_DAYS = 21;
 const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
@@ -156,7 +156,7 @@ export function CompareClient({
     (s: ReturnType<typeof side>): DailyStreamOnDay => {
       const shelf = traysOnShelf(s.horizon.productionDays, cycleDaysByCode(s.resolved.growPlans), day, day)[0];
       if (!shelf) return { traysOnShelf: 0, minutes: 0 };
-      const d = staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0];
+      const d = staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies, stageDays: stageDaysByCode(s.resolved.growPlans) }).days[0];
       return { traysOnShelf: shelf.trays.reduce((t, x) => t + x.trays, 0), minutes: (d?.dailyStaffHours ?? 0) * 60 };
     },
     [day, studies],

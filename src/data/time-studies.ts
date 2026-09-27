@@ -136,6 +136,23 @@ export type TimeStudySeed = Pick<TimeStudyDoc, 'studiedOn' | 'sowingSize' | 'cyc
 /** The stage span a daily task covers on Vallecito's sheet; `cycle` is every day the tray is on the shelf. */
 export type DailySpan = 'germination' | 'blackout' | 'light' | 'cycle';
 
+/**
+ * The stages a daily task's span covers: germination and blackout watering mist the trays in those
+ * stages, watering under lights and nutrient preparation are bottom watering on the trays under
+ * light (the light stage and the harvest window), inspection runs the whole cycle.
+ */
+export const DAILY_SPAN_STAGES: Record<DailySpan, readonly StageKey[]> = {
+  germination: ['germination'],
+  blackout: ['blackout'],
+  light: ['light', 'harvest-window'],
+  cycle: ['sow', 'germination', 'blackout', 'light', 'harvest-window'],
+};
+
+/** The span of a daily task named on Vallecito's sheet; a task the sheet does not name runs the whole cycle. */
+export function dailySpanOf(task: string): DailySpan {
+  return VALLECITO_1020_STUDY.daily.find((d) => d.task === task)?.span ?? 'cycle';
+}
+
 export interface TrayStudyTask {
   task: string;
   station: string;

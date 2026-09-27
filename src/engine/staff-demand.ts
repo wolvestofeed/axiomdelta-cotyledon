@@ -8,10 +8,13 @@
  *   SOWING lines, on the production day, per sowing harvested: a fixed line takes its
  *   labor minutes once per sowing, a per-unit line its labor minutes per
  *   unit studied × the units produced.
- *   DAILY lines, on every day a tray is on its grow unit, per tray on the shelf: a
- *   per-unit line one day's minutes per tray studied × the trays on the shelf, a fixed
- *   line once a day per plan present (`traysOnShelf` derives the shelf from the sowings
- *   and each plan's cycle days).
+ *   DAILY lines, on the days a tray is in the task's span, per tray on the shelf: a
+ *   per-unit line's minutes over the cycle fall on the stages its span covers
+ *   (`DAILY_SPAN_STAGES`: germination and blackout watering mist those stages, watering
+ *   under lights the light stage and the harvest window, inspection the whole cycle), so
+ *   the total over the cycle is the study's; a fixed line once a day per plan present
+ *   (`traysOnShelf` derives the shelf, by day of each sowing's cycle, from the sowings and
+ *   each plan's cycle days). Without the plans' stage days a line is spread evenly.
  *   HARVEST lines, on the distribution day, per unit shipped that day: a
  *   per-unit line its labor minutes per unit studied × the units
  *   shipped; a fixed line (loading the vehicle) once per distribution day — the
@@ -23,9 +26,9 @@
  * listed and carries no demand; a grow plan running on its estimate is listed as such.
  */
 
-import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
+import { DAILY_SPAN_STAGES, dailySpanOf, type DailySpan, type TimeStudyDoc, type TimeStudyStream } from '@/data/time-studies';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { cycleDays } from '@/data/stage-schedule';
+import { cycleDays, stageOnCycleDay, type StageDays } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import type { GrowPlanRunPlan } from '@/engine/production-plan';
 import { isoAddDays } from '@/engine/orders';
@@ -100,7 +103,28 @@ export interface HarvestDayInput {
 /** A day's trays on the grow units, per plan. */
 export interface ShelfDayInput {
   date: string;
-  trays: readonly { growPlanCode: string; growPlanName: string; trays: number }[];
+  /** Per plan, the trays on the shelf that day, and how many sit on each day of their cycle (0 = the sow day). */
+  trays: readonly { growPlanCode: string; growPlanName: string; trays: number; byDay?: readonly { dayOfCycle: number; trays: number }[] }[];
+}
+
+/** Each plan's stage days, for placing the daily stream on the stages its tasks cover. */
+export function stageDaysByCode(growPlans: readonly GrowPlanDef[]): Record<string, StageDays> {
+  return Object.fromEntries(growPlans.map((r) => [r.code, planStageDays(r)]));
+}
+
+/**
+ * The trays a daily task's minutes fall on, weighted so the total over the cycle is kept: each
+ * tray in a stage the span covers counts cycle ÷ span days, a tray outside it none. Null when the
+ * plan has no day in the span, and the task is spread evenly.
+ */
+export function spanWeightedTrays(days: StageDays, span: DailySpan, cycle: number, byDay: readonly { dayOfCycle: number; trays: number }[]): number | null {
+  const stages = DAILY_SPAN_STAGES[span];
+  const spanDays = stages.reduce((t, k) => t + (k === 'soak' || k === 'packed' ? 0 : days[k]), 0);
+  if (spanDays <= 0 || cycle <= 0) return null;
+  return byDay.reduce((t, d) => {
+    const st = stageOnCycleDay(days, d.dayOfCycle);
+    return st !== 'off' && stages.includes(st) ? t + (d.trays * cycle) / spanDays : t;
+  }, 0);
 }
 
 /** Each plan's cycle days, for the shelf occupancy. */
@@ -114,7 +138,7 @@ export function cycleDaysByCode(growPlans: readonly GrowPlanDef[]): Record<strin
  * absent.
  */
 export function traysOnShelf(days: readonly DemandDayInput[], cycle: Readonly<Record<string, number>>, from: string, to: string): ShelfDayInput[] {
-  const byDate = new Map<string, Map<string, { growPlanCode: string; growPlanName: string; trays: number }>>();
+  const byDate = new Map<string, Map<string, { growPlanCode: string; growPlanName: string; trays: number; byDay: { dayOfCycle: number; trays: number }[] }>>();
   for (const d of days) {
     for (const run of d.runs) {
       const n = cycle[run.growPlanCode] ?? 0;
@@ -122,9 +146,13 @@ export function traysOnShelf(days: readonly DemandDayInput[], cycle: Readonly<Re
       for (let k = 0; k < n; k += 1) {
         const date = isoAddDays(d.productionDate, k);
         if (date < from || date > to) continue;
-        const m = byDate.get(date) ?? new Map();
-        const row = m.get(run.growPlanCode) ?? { growPlanCode: run.growPlanCode, growPlanName: run.growPlanName, trays: 0 };
+        type Row = { growPlanCode: string; growPlanName: string; trays: number; byDay: { dayOfCycle: number; trays: number }[] };
+        const m: Map<string, Row> = byDate.get(date) ?? new Map();
+        const row: Row = m.get(run.growPlanCode) ?? { growPlanCode: run.growPlanCode, growPlanName: run.growPlanName, trays: 0, byDay: [] };
         row.trays += run.produced;
+        const at = row.byDay.find((x) => x.dayOfCycle === k);
+        if (at) at.trays += run.produced;
+        else row.byDay.push({ dayOfCycle: k, trays: run.produced });
         m.set(run.growPlanCode, row);
         byDate.set(date, m);
       }
@@ -140,6 +168,8 @@ export function staffDemand(input: {
   harvest?: readonly HarvestDayInput[];
   shelf?: readonly ShelfDayInput[];
   studies: readonly TimeStudyDoc[];
+  /** Each plan's stage days (`stageDaysByCode`); absent, the daily stream is spread evenly over the cycle. */
+  stageDays?: Readonly<Record<string, StageDays>>;
 }): StaffDemand {
   const standards = new Map<string, TimeStudyDoc | null>();
   const standardFor = (code: string): TimeStudyDoc | null => {
@@ -217,7 +247,10 @@ export function staffDemand(input: {
       if (study.basis === 'estimated') a.estimated.add(t.growPlanCode);
       for (const l of study.lines) {
         if (l.stream !== 'daily') continue;
-        const minutes = l.scalesWith === 'fixed' ? l.laborMinutes : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * t.trays : 0;
+        const days = input.stageDays?.[t.growPlanCode];
+        const cycle = study.cycleDays > 0 ? study.cycleDays : days ? cycleDays(days) : 0;
+        const shaped = days && t.byDay ? spanWeightedTrays(days, dailySpanOf(l.task), cycle, t.byDay) : null;
+        const minutes = l.scalesWith === 'fixed' ? l.laborMinutes : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * (shaped ?? t.trays) : 0;
         lineFor(a, l, t.growPlanCode).hours += minutes / 60;
       }
     }

@@ -15,7 +15,7 @@ import { datesBetween, isoAddDays, orderBook, weekdayOf } from '@/engine/orders'
 import type { DateRange } from '@/engine/periods';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
 import { schedule, scheduleInputsForDay, type ScheduledBlock } from '@/engine/scheduler';
-import { cycleDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
+import { cycleDaysByCode, stageDaysByCode, staffDemand, traysOnShelf } from '@/engine/staff-demand';
 import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { useScenario } from '@/state/scenario-store';
@@ -121,7 +121,7 @@ export function DayScheduleClient({
 
   // The daily stream: the trays on the shelves that day on each plan's daily lines, beside the clock.
   const shelf = useMemo(() => traysOnShelf(horizon.productionDays, cycleDaysByCode(resolved.growPlans), day, day)[0] ?? null, [horizon.productionDays, resolved.growPlans, day]);
-  const daily = useMemo(() => (shelf ? staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0] ?? null : null), [shelf, studies, day]);
+  const daily = useMemo(() => (shelf ? staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies, stageDays: stageDaysByCode(resolved.growPlans) }).days[0] ?? null : null), [shelf, studies, day, resolved.growPlans]);
   const dailyLines = daily?.lines.filter((l) => l.stream === 'daily') ?? [];
   const dailyHours = daily?.dailyStaffHours ?? 0;
   const traysOnTheShelves = shelf?.trays.reduce((t, x) => t + x.trays, 0) ?? 0;
