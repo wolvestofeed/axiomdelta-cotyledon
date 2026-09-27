@@ -48,4 +48,4 @@ These came over with the code and describe the kitchen's builds of the scheduler
 
 ## How a session starts and ends
 
-Start: read `CLAUDE.md`, `outline.md`, this file, then the phase file for the phase in progress, then `todo.md`. End: run typecheck and tests, update the phase file's step status and this file's status column, move anything one-off to `todo.md`, commit with Rob's approval.
+Start: read `CLAUDE.md`, `outline.md`, this file, then the phase file for the phase in progress, then `todo.md`. The phase file opens with how to start, where the work stands and what is next, in order, with the files each step touches; follow it. End: run typecheck and tests, update the phase file's step status and this file's status column, move anything one-off to `todo.md`, commit with Rob's approval.

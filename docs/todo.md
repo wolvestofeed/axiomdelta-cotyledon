@@ -4,7 +4,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0014` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. Nothing is pushed to GitHub yet; push when you decide to.
+- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0014` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`. `main` is 50 commits ahead of `origin` on GitHub; push when you decide to.
 - Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.
@@ -16,6 +16,9 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - Quantities and prices for the home grow list on Equipment, Home: 25 rows sit at quantity 1 with no price.
 - Whether the 1010 tray and the 12 oz and 16 oz mason jars become tray formats for costing (seed grams, harvest grams, trays a shelf) or stay equipment only. The formats today are the 1020 flat, the 7x11, the 5x5 insert and the pint jar.
 - The incurred side of the tray wear and sanitizer a tray takes. The ledger applies them to work in process at their standard per tray (5195), but the forecast bills no trays and no sanitizer. Where each is billed (trays as equipment, sanitizer as a supply) is yours to state. The grow lights' electricity stays on the cost card and is no fixed cost.
+- The first real time study to approve: until one is, every plan runs on its estimated labor and the placeholder watering (mist 1 fl oz, bottom 14 fl oz per 1020).
+- Allergens present and allergen-free claims on each grow plan, typed in the grow plan editor: blank on all 12 until stated.
+- The first seed receipts: until one is recorded, each variety is priced at its record's opening price (True Leaf, January 2024), or a supplier's catalog price once one is linked on Procurement.
 - The energy rate the cost card prices light at is a code constant, $0.13/kWh (PLACEHOLDER, Austin Energy blended residential; Vallecito paid $0.1256). No page edits it; it can become a forecast input on the Home running costs panel when you want to state yours.
 
 ## Code
