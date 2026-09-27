@@ -73,6 +73,7 @@ import {
   ACC_OH_APPLIED,
   ACC_VAR_OH_APPLIED,
   ACC_ABNORMAL_SPOILAGE,
+  ACC_RESEARCH_DEVELOPMENT,
   ACC_ACCRUED_WAGES,
   ACC_ACCRUED_PAYROLL_TAXES,
   ACC_ACCRUED_WORKERS_COMP,
@@ -195,13 +196,17 @@ export interface ProductionSowingLedger {
     /** Tray wear and sanitizer applied to the Sow stage at their standard per tray. */
     consumablesApplied: number;
     packagingCost: number;
+    /** The packed trays' cost: finished goods for a production sowing, Research and Development for an experiment. */
     finishedGoodsCost: number;
-    /** What finished goods received, by element, cents: the three sum to the finished goods debit. */
+    /** What the packed trays carry, by element, cents: the three sum to the pack entry's debit. */
     finishedGoodsByElementCents: CostElements;
     /** Finished-goods cost ÷ units: the cost of one unit. */
     costPerUnit: number;
     unitsShipped: number;
+    /** Abnormal spoilage charged to 5910; zero on an experiment, whose loss is research. */
     abnormalSpoilage: number;
+    /** An experiment's charge to Research and Development (7920): the packed trays and any loss; zero on a production sowing. */
+    researchAndDevelopment: number;
     distributionExpensed: number;
     revenue: number;
     cogs: number;
@@ -269,6 +274,13 @@ export interface ProductionLedgerOptions {
   /** Light, tray wear and sanitizer per tray sown as an approved version froze them; absent, the cost card's. */
   variableOverheadPerTray?: { light: number; consumables: number };
   shrinkAllowance?: number;
+  /**
+   * True when the sowing is an experiment in R&D (`accounting-policy.md` §14): the chain posts as for
+   * any sowing, then the packed trays go from the pack stage to Research and Development (7920),
+   * never to finished goods, and a loss at any stage goes there too rather than to Abnormal Spoilage.
+   * Nothing is shipped.
+   */
+  experiment?: boolean;
 }
 
 /**
@@ -519,16 +531,23 @@ export function productionSowingLedger(
     lines: [line(ACC_WIP_PACK, growStageC, 'Harvested trays to packing'), line(ACC_WIP_GROW, -growStageC, 'Grow stage relieved')].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
 
-  if (abnormalSpoilage > 0) {
+  // An experiment's loss goes to Research and Development. Its packed trays go there whole, so a
+  // loss after packing is already in that charge and relieves nothing.
+  const experiment = opts.experiment === true;
+  const lossRelieved = [...abnormalByStage.entries()].filter(([acct]) => !(experiment && acct === ACC_FINISHED_GOODS));
+  const lossCharged = lossRelieved.reduce((t, [, v]) => t + v, 0);
+  if (lossCharged > 0) {
     entries.push(
-      entry(`${sowing.sowingId}-SPOIL`, date, 'Abnormal spoilage charged to the period', [
-        ...[...abnormalByStage.entries()].map(([acct, v]) => ({
+      entry(`${sowing.sowingId}-SPOIL`, date, experiment ? 'Experiment loss charged to research and development' : 'Abnormal spoilage charged to the period', [
+        ...lossRelieved.map(([acct, v]) => ({
           account: acct,
           dollars: -v,
-          memo: 'Stage relieved of abnormal loss',
+          memo: experiment ? 'Stage relieved of the loss' : 'Stage relieved of abnormal loss',
         })),
         // Last, so the rounding residual lands on the expense and every stage clears.
-        { account: ACC_ABNORMAL_SPOILAGE, dollars: abnormalSpoilage, memo: 'ASC 330-10-30-7 — abnormal waste is a current-period charge' },
+        experiment
+          ? { account: ACC_RESEARCH_DEVELOPMENT, dollars: lossCharged, memo: 'ASC 730-10-25-1 — research and development is expensed as incurred' }
+          : { account: ACC_ABNORMAL_SPOILAGE, dollars: lossCharged, memo: 'ASC 330-10-30-7 — abnormal waste is a current-period charge' },
       ]),
     );
   }
@@ -552,9 +571,9 @@ export function productionSowingLedger(
   entries.push({
     id: `${sowing.sowingId}-FG`,
     date,
-    description: 'Pack and receive finished trays into finished goods',
+    description: experiment ? "Charge the experiment's packed trays to research and development" : 'Pack and receive finished trays into finished goods',
     lines: [
-      line(ACC_FINISHED_GOODS, fgDebitCents, `${units.toLocaleString()} trays packed`),
+      line(experiment ? ACC_RESEARCH_DEVELOPMENT : ACC_FINISHED_GOODS, fgDebitCents, experiment ? `${units.toLocaleString()} trays packed; ASC 730-10-25-1, never inventory` : `${units.toLocaleString()} trays packed`),
       line(ACC_WIP_PACK, -packStageC, 'Pack stage relieved'),
       line(ACC_PACKAGING, -packagingC, "The plan's packaging"),
     ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
@@ -562,10 +581,10 @@ export function productionSowingLedger(
 
   const costPerUnit = units > 0 ? finishedGoodsCost / units : 0;
   // No price, no revenue (Roadmap N9): the shipment posts cost of goods sold and names the gap.
-  if (opts.shipments === undefined && opts.pricePerUnit === undefined && (opts.unitsShipped ?? units) > 0) {
+  if (!experiment && opts.shipments === undefined && opts.pricePerUnit === undefined && (opts.unitsShipped ?? units) > 0) {
     notes.push('No price per unit was given for the shipment: revenue is not posted for it.');
   }
-  const shipments: Shipment[] = opts.shipments !== undefined ? opts.shipments : [
+  const shipments: Shipment[] = experiment ? [] : opts.shipments !== undefined ? opts.shipments : [
     {
       id: 'SHIP',
       description: 'Distribute units to pickup points — revenue and cost of goods sold',
@@ -666,7 +685,8 @@ export function productionSowingLedger(
       finishedGoodsByElementCents: fgByElement,
       costPerUnit,
       unitsShipped: shipped,
-      abnormalSpoilage,
+      abnormalSpoilage: experiment ? 0 : abnormalSpoilage,
+      researchAndDevelopment: experiment ? fgDebitCents / 100 + lossCharged : 0,
       distributionExpensed,
       revenue,
       cogs,

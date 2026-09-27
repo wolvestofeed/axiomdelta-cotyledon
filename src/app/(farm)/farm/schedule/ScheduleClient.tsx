@@ -35,7 +35,8 @@ export function ScheduleClient({
   cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
-  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
+  /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
+  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; experimentId: string | null }[];
   distributions: { id: string; distributedOn: string; units: number }[];
   studies: TimeStudyDoc[];
 }) {

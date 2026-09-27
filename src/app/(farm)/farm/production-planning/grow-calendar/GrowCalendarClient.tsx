@@ -41,7 +41,8 @@ export function GrowCalendarClient({
   cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
-  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
+  /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
+  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; experimentId: string | null }[];
   distributions: { id: string; distributedOn: string; units: number }[];
   /** Open experiments in R&D, on the grow units from their sow dates. */
   experimentSowings: { growPlanCode: string; sowDate: string; trays: number; experiment: string }[];
@@ -94,9 +95,10 @@ export function GrowCalendarClient({
           const r = resolved.growPlans.find((x) => x.code === b.growPlanCode);
           return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off';
         }),
-      ...experimentSowings,
+      // Open experiments are the farm's own record, so they follow the recorded sowings: Actual only.
+      ...(world.isPlan ? [] : experimentSowings),
     ],
-    [sowings, resolved.growPlans, today, experimentSowings],
+    [sowings, resolved.growPlans, today, experimentSowings, world.isPlan],
   );
   const horizon = useMemo(
     () =>

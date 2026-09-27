@@ -82,6 +82,9 @@ export interface SowingRecordDoc {
   experimentId?: string | null;
 }
 
+/** True for the sowing record of an experiment in R&D: its trays are research, never finished goods (`accounting-policy.md` §14). */
+export const isExperimentSowing = (s: { experimentId?: string | null }): boolean => typeof s.experimentId === 'string' && s.experimentId.length > 0;
+
 /** What the receiver found at the dock. A rejected line is on the record and out of stock. */
 export type ReceiptCondition = 'accepted' | 'accepted_with_note' | 'rejected';
 
@@ -406,6 +409,7 @@ export interface FinishedLotRef {
 export function finishedLotsOf(sowings: readonly SowingRecordDoc[]): FinishedLotRef[] {
   const out: FinishedLotRef[] = [];
   for (const b of sowings) {
+    if (isExperimentSowing(b)) continue;
     for (const l of b.lots) {
       const lotCode = l.outputLotCode.trim();
       if (lotCode) out.push({ lotCode, growPlanCode: b.growPlanCode, variety: l.variety, productionDate: b.productionDate });

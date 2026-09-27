@@ -51,7 +51,8 @@ const nextServiceDay = (d: string) => {
 };
 const grams = (lb: number) => lb * GRAMS_PER_LB;
 
-interface SowingRow { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; closedBy: string | null }
+/** A closed sowing record; an experiment's (`experimentId`) is research, never stock. */
+interface SowingRow { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; closedBy: string | null; experimentId: string | null }
 
 export function ProductionPlanningClient({
   canEdit,
@@ -133,9 +134,10 @@ export function ProductionPlanningClient({
           const plan = planOf(b.growPlanCode);
           return plan !== null && stageOn(plan, b.sowDate, today).stage !== 'off';
         }),
-      ...experimentSowings,
+      // Open experiments are the farm's own record, so they follow the recorded sowings: Actual only.
+      ...(world.isPlan ? [] : experimentSowings),
     ],
-    [sowings, planOf, today, experimentSowings],
+    [sowings, planOf, today, experimentSowings, world.isPlan],
   );
   const stageToday = (s: CalendarSowing) => {
     const plan = planOf(s.growPlanCode);

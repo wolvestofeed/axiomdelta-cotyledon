@@ -35,6 +35,7 @@ import type { RequirementLine } from '@/engine/catalog';
 import { defaultGrowUnits } from '@/engine';
 import type { GrowUnit } from '@/engine/grow-capacity';
 import { ShelfLedger, calendarFromSowings, sowDateFor, stockDateFor, type GrowCalendar } from '@/engine/grow-calendar';
+import { isExperimentSowing } from '@/engine/actuals';
 
 type Assumptions = ResolvedInputs['assumptions'];
 type CapacityInputs = ResolvedInputs['capacityInputs'];
@@ -175,7 +176,8 @@ function drawFifo(lots: FinishedLot[], growPlanCode: string, date: string, qty: 
  * from then. Distributed orders draw from the oldest lot of their grow plan first.
  */
 export function finishedGoodsOnHand(input: {
-  sowings: readonly { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
+  /** The closed sowing records; an experiment's (`experimentId`) are research, never stock. */
+  sowings: readonly { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; experimentId?: string | null }[];
   consumed: readonly Consumption[];
   shelfLifeDays: number;
   asOf: string;
@@ -183,6 +185,7 @@ export function finishedGoodsOnHand(input: {
   growPlans: readonly GrowPlanDef[];
 }): OnHand {
   const lots: FinishedLot[] = input.sowings
+    .filter((b) => !isExperimentSowing(b))
     .map((b) => {
       const produced = stockDateFor(input.growPlans.find((r) => r.code === b.growPlanCode), b.productionDate);
       return {

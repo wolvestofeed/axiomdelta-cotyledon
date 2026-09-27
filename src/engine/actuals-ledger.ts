@@ -79,6 +79,7 @@ import {
   periodStart,
   periodsIn,
   toSowingExecution,
+  isExperimentSowing,
   OVERHEAD_BILL_CATEGORIES,
   type ActualsBundle,
 } from '@/engine/actuals';
@@ -427,11 +428,19 @@ export function postActuals(
           issueCosts: issueCosts.get(doc.id) ?? [],
           variableOverheadPerTray: std.variableOverheadPerTray,
           shipments: [],
+          experiment: isExperimentSowing(doc),
         },
         std.growPlan,
       );
       sowings.push(led);
       entries.push(...led.entries);
+      notes.push(...led.notes.map((n) => `${doc.sowingId}: ${n}`));
+      if (!led.massBalance.balanced) notes.push(...led.massBalance.failures.map((f) => `${doc.sowingId}: ${f}`));
+      // An experiment's trays are research, not finished goods: no layer, and no part of the cost per unit made.
+      if (isExperimentSowing(doc)) {
+        notes.push(`${doc.sowingId}: an experiment in R&D; its cost, ${usd(Math.round(led.amounts.researchAndDevelopment * 100))}, is charged to Research and Development (7920).`);
+        continue;
+      }
       fgCents += Math.round(led.amounts.finishedGoodsCost * 100);
       servingsProduced += led.amounts.servingsProduced;
       const units = led.amounts.servingsProduced;
@@ -442,8 +451,6 @@ export function postActuals(
         lastByGrowPlan.set(doc.growPlanCode, per);
         lastAny = per;
       }
-      notes.push(...led.notes.map((n) => `${doc.sowingId}: ${n}`));
-      if (!led.massBalance.balanced) notes.push(...led.massBalance.failures.map((f) => `${doc.sowingId}: ${f}`));
     }
     const costPerUnitCents = servingsProduced > 0 ? fgCents / servingsProduced : null;
 

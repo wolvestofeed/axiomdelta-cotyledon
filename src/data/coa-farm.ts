@@ -34,6 +34,8 @@ export const ACC_VAR_OH_APPLIED = '5195';
 export const ACC_ABNORMAL_SPOILAGE = '5910';
 /** Selling expense: the marketplace's cut on ghost-farm / retail orders. */
 export const ACC_MARKETPLACE_COMMISSION = '7910';
+/** Research and Development: an experiment's sowing at its full cost, packed or lost (ASC 730-10-25-1). */
+export const ACC_RESEARCH_DEVELOPMENT = '7920';
 
 export const ACC_ACCRUED_WAGES = '2110';
 /** Employer FICA, FUTA and SUTA accrued (shared chart). */
@@ -178,6 +180,13 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     type: 'expense',
     description:
       'Commission retained by a third-party marketplace on ghost-farm / retail orders, deducted from the remittance. A selling cost, never inventoriable (ASC 330-10-30-8).',
+  },
+  {
+    code: ACC_RESEARCH_DEVELOPMENT,
+    name: 'Research and Development',
+    type: 'expense',
+    description:
+      "An experiment's sowing at its full cost: materials, labor, overhead applied and absorbed, the packed trays and any loss at any stage. Expensed as incurred under ASC 730-10-25-1, never held in inventory or charged to cost of goods sold.",
   },
 ];
 
