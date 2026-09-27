@@ -87,12 +87,12 @@ Words that must not survive the swap anywhere but this table: recipe, portion, m
 
 ## 4. Domain model
 
-**Variety.** The master record and the costing basis. A short code (`BROC`, `RAD`, `SUN`, `PEA`, `FEN`, `BOR`, `AMA`, `CAB`, `CHIA`, `MUNG`, `LEN`, `WHT`), seed source and supplier with the supplier's short code (`TLM`) and item number, organic and heirloom status, origin, rolling cost per pound from receipts, observed yield per pound by tray format from closed sowings, soak and stage days, and the nutrient profile: compounds, nutrients and stated benefits, each citing a row of [`science-library.md`](science-library.md). Vallecito's twelve varieties seed the library.
+**Variety.** The master record and the costing basis. A short code (`BROC`, `RAD`, `SUN`, `PEA`, `FEN`, `BOR`, `AMA`, `CAB`, `CHIA`, `MUNG`, `LEN`, `WHT`), seed source and supplier with the supplier's short code (`TLM`) and item number, organic and heirloom status, origin, last price paid per pound from its most recent receipt (the supplier's catalog price until the first receipt; a price typed on a forecast stands over both), a rolling 12-month average price as a key figure, observed yield per pound by tray format from closed sowings, soak and stage days, and the nutrient profile: compounds, nutrients and stated benefits, each citing a row of [`science-library.md`](science-library.md). Vallecito's twelve varieties seed the library.
 
 **Tray format.** 1020 flat, 7x11 large tray, 5x5 insert, pint jar, cut ounce. A format names its dimensions, its grow-unit footprint (four 1020s per 48-inch shelf), and each variety's seeding density in grams.
 
 **Grow plan.** How a variety, or a mixed tray, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
-- **Seed line**: a variety, its grams per tray, and its share of a mixed tray. Costed at the variety's rolling cost per pound. The only line that carries provenance and nutrition.
+- **Seed line**: a variety, its grams per tray, and its share of a mixed tray. Costed at the variety's last price paid per pound. The only line that carries provenance and nutrition.
 - **Medium line**: coconut coir, jute fiber, hemp mat, vermiculite, or a hydroponic pad, with quantity per tray. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
 - **Nutrient line**: a nutrient solution or supplement from the workspace's Nutrients & Supplements library, its concentration in ml per gallon, and the stage it starts. Costed at concentration times water volume times price.
 - **Light line**: the light spec for the light stage: spectrum (fixture or wavelength mix), photoperiod in hours per day, intensity as PPFD at canopy or fixture height, and the stage it starts. Costed as fixture watts times hours times the energy rate, per tray per day, plus the fixture's amortized cost. Varieties are grown under different spectra and configurations, and light changes nutrient content (science library rows 2, 8), so light belongs to the plan.
@@ -120,12 +120,12 @@ A plan also carries the allergens present and the allergen-free claims, as state
 ## 5. Engine rules (ported, restated for growing)
 
 1. **A sowing is derived from grow-unit capacity, never typed.** One shelf or rack bounds the units of a format; a second grow unit is a parallel stream the production plan places as its own sowing.
-2. **The sowing is the costing basis, and the grow plan's lines are the cost.** Seed at rolling cost per pound times grams sown, medium at price per tray, nutrients at concentration times volume, light at watts times hours times the energy rate per tray per day, over observed yield per pound by format, plus consumables and labor at the derived sowing → unit cost. Cost to serve adds harvest labor, packaging and distribution, never storage.
+2. **The sowing is the costing basis, and the grow plan's lines are the cost.** On the plan, seed at the variety's last price paid per pound times grams sown, medium at price per tray, nutrients at concentration times volume, light at watts times hours times the energy rate per tray per day, over observed yield per pound by format, plus consumables and labor at the derived sowing → unit cost. Cost to serve adds harvest labor, packaging and distribution, never storage.
 3. **Labor is fixed per sowing, plus variable per tray per day, plus variable per unit, on three streams.** Soak, sow and weight count per sowing on the sowing stream; misting, bottom watering and inspection count per tray per day on the daily stream across the stage schedule; harvest, pack and hand-off count per unit on the harvest stream on the distribution day. The daily stream is what a two-week living crop adds to the kitchen's model. Time studies per grow plan, each recording the labor lines and the water and supplements the studied sowing took; every observed study is approved, and the plan's labor, water and supplements per tray are the average of its approved studies weighted by the trays each timed; estimated until the first approval. Vallecito's 27-minute 1020 study, with its one-to-three minutes of daily watering per flat, is the first seed.
 4. **Whole sowings only.** Overshoot is inventory inside the harvest window and waste after it; live flats not distributed become cut product, then waste.
 5. **Every dollar is computed from tagged reference data.** Provenance tags on every figure.
 6. **Only the harvest record posts journals.** Plan ledger and Actual ledger are separate worlds. A sowing that does not mass-balance does not close. One sow = one lot per variety.
-7. **US GAAP ASC 330 perpetual inventory at standard cost.** Fixed overhead absorbed on normal capacity; distribution is a period cost. `docs/accounting-policy.md` is the authority, ported with nouns swapped.
+7. **US GAAP ASC 330 perpetual inventory at actual cost.** Materials by lot at the price paid; labor at the recorded hours and rate, the approved standard where no crew is recorded; fixed overhead absorbed on normal capacity; variable overhead at its standard per tray; distribution is a period cost. Purchase orders price at the supplier's published price in force, the plan at the last price paid, the ledger at the lot's cost; the rolling 12-month average is a key figure, never a posting. Cost of goods sold shows materials, labor and overhead with its subtotal. `docs/accounting-policy.md` is the authority.
 8. **Capacity is a property of the grow room; labor is a requirement of the plan.** The plan emits staff-hours by interval; the internal roster is a proposed answer; a gap is a finding on the Staffing page.
 9. **Plan of record, forecasts, working copy, Plan v Actual** keep their meaning and the forecast bar.
 10. **No advice, no icons, headers by the rule, every source registered.**
@@ -138,7 +138,9 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 |---|---|---|
 | Overview | Dashboard, Reports, Sources | port |
 | Production | Grow plans | swap (from Recipes) |
-| | Nutrients & Supplements | new: the solutions and supplements a nutrient line names, with strength, price and what each is meant to elicit; seeded, editable |
+| | Varieties | new: the variety library, the master record; the rolling 12-month average seed price as a key figure |
+| | Nutrients & Supplements | new: the solutions and supplements a nutrient line names, with strength, price and what each is meant to elicit; seeded, editable; the rolling 12-month average price as a key figure |
+| | Media | new: the growing media a medium line names, with quantity per tray, price and traits; the rolling 12-month average price as a key figure |
 | | Time Studies | port |
 | | Production Planning, Sow Schedule, Compare, Calendar, Process | port (stages replace thermal in Process) |
 | | Grow Calendar | new: stages per sowing across days, back-planned from distribution days |

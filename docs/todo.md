@@ -27,7 +27,6 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - Nested async server components rendered as JSX elements lose the workspace scope; only the dashboard does it today, by calling them as functions. Add a structural check if the pattern spreads.
 - The Muse-era topic build plans in `roadmaps/` describe kitchen builds; re-base or delete each in the phase that touches its module.
 - The facility engine still carries the source client's kitchen rules, which no seed row now triggers: hood runs and canopy overhang, the dish machine within 5 ft of a floor drain, the two blackout-rack streams, drains placed by kettle and braising-pan names, the hot line and a la carte zones, the tumble chiller's clearances, the 34°F hold room and the 7- or 30-day shelf-life configurations (`facility.ts`, `facility-arrange.ts`, `facility-layout.ts`, `facility-design.ts`, `facility-conformance.ts`). Restate them for a grow facility when a commercial facility is designed.
-- `docs/accounting-policy.md` §10 (unit-pattern nutrition as a costing constraint) and parts of §12 (open items) still describe the source client's kitchen; rewrite them for the grow model.
 
 ## Across the products
 

@@ -4,23 +4,28 @@ The authority behind every number the platform posts. Co-versioned with
 `_engine/production-ledger.ts`, `_engine/index.ts` and `_data/coa-farm.ts`: if a rule
 here changes, the engine changes with it, and the reverse.
 
-Written for a reader who has to sign off on the books — a CPA, a lender, or a
-district's finance office. It states what the platform does and the authority for
+Written for a reader who has to sign off on the books — a CPA, a lender or an
+investor. It states what the platform does and the authority for
 doing it. It does not counsel; the operator decides.
 
 ---
 
 ## 1. Framework and posture
 
-- **US GAAP**, ASC 330 *Inventory*, on a **perpetual** inventory system at
-  **standard cost**, with variances isolated at the point they arise.
-- **IAS 2** is satisfied by the same engine. The two converged on the points that
-  matter here (normal-capacity absorption, abnormal waste, standard cost as an
-  approximation), so no second calculation exists. LIFO is not used, which keeps
-  the IFRS path open.
-- Cost flow assumption: **weighted average at standard**, with FIFO lot
-  consumption for physical and traceability purposes. Standard cost is the
-  carrying basis; the lot register is the physical record.
+- **US GAAP**, ASC 330 *Inventory*, on a **perpetual** inventory system at **actual cost**.
+  Every purchase order, receipt, supplier bill and payment carries the price actually quoted
+  and paid, and the ledger carries the same dollars.
+- **Materials** (seed, medium, nutrients, packaging) are carried by **lot at the price paid**:
+  specific identification where the sowing names the lot it drew, first in, first out where
+  it does not (ASC 330-10-30-9). The lot register is both the physical and the cost record.
+- **Direct labor** is the sowing record's recorded hours at the recorded rate. A sowing whose
+  crew is not recorded carries the approved labor standard (§5) and says so.
+- **Fixed manufacturing overhead** is absorbed at a predetermined rate on normal capacity
+  (§4), as ASC 330-10-30-3 requires under any cost method. **Variable manufacturing
+  overhead** that is not metered per sowing (the light a tray takes, its tray wear, the
+  sanitizer) is applied at its standard per tray (§2).
+- **IAS 2** is satisfied by the same engine: actual cost by specific identification and FIFO,
+  normal-capacity absorption and abnormal waste as a period charge. LIFO is not used.
 
 ## 2. What is a product cost and what is not
 
@@ -31,12 +36,12 @@ an article to its existing condition and location.
 
 | Element | Treatment |
 |---|---|
-| Purchased inputs | Seed, medium and nutrient at standard purchase price; freight-in and duties capitalise. Issued from raw materials to WIP-Sow on the trays sown |
-| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every grow plan; received into its own inventory at standard and charged at the pack stage |
-| Direct labor | Standard hours × standard loaded rate on the trays sown, absorbed by stream: the sowing stream to WIP-Sow, the daily stream to WIP-Grow, the harvest stream to WIP-Pack, split by the plan's study |
+| Purchased inputs | Seed, medium and nutrient at the price paid for the lot; freight-in and duties capitalise into the lot. Issued from raw materials to WIP-Sow at the cost of the lot drawn, on the quantity issued |
+| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every grow plan; received into its own inventory at the price paid and charged at the pack stage at the cost of the lot drawn |
+| Direct labor | The sowing record's recorded hours × recorded loaded rate; with no crew recorded, the approved standard hours × standard loaded rate on the trays sown. Absorbed by stream: the sowing stream to WIP-Sow, the daily stream to WIP-Grow, the harvest stream to WIP-Pack, split by the plan's study |
 | Variable manufacturing overhead | The light a tray takes (to WIP-Grow), its tray wear and the sanitizer (to WIP-Sow), applied at their standard per tray on the trays sown and credited to 5195. None of them is bought into raw materials |
 | Fixed manufacturing overhead | Absorbed at a predetermined rate set on **normal capacity** (§4) |
-| Normal spoilage | Inside the 3% shrink allowance; already in standard cost |
+| Normal spoilage | Inside the 3% shrink allowance; stays in the sowing's cost |
 
 **Not inventoriable**
 
@@ -74,10 +79,6 @@ Staffing surface keeps the accounts it has.
 | 1450 | Inventory — Finished Goods | Packed units awaiting distribution |
 | 2015 | Goods Received Not Invoiced | Clearing between receipt and vendor invoice |
 | 2160 | Accrued Manufacturing Overhead | Budgeted lease and utilities accrued at month end until the bill settles it (§4) |
-| 5110 | Purchase Price Variance | Invoice against standard, at receipt |
-| 5120 | Material Usage Variance | Actual issue against standard, at standard price |
-| 5130 | Direct Labor Rate Variance | Actual rate against standard, on actual hours |
-| 5140 | Direct Labor Efficiency Variance | Actual hours against standard, at standard rate |
 | 5150 | MOH Spending Variance | Actual fixed overhead against budget |
 | 5160 | MOH Volume Variance | Budget not absorbed because volume < normal capacity |
 | 5170 | Production Labor Not Charged to a Sowing | Loaded labor on the time clock beyond what sowing records charged; a period production cost (§16) |
@@ -155,50 +156,33 @@ On the Plan ledger the downtime allowance shows as a small favourable volume var
 cost per unit as a period metric is a different figure: it adds admin and interest to the
 period's overhead and divides by the period's own units.
 
-## 5. Standard cost and variance disposition
+## 5. Standards: labor and overhead only
 
-ASC 330-10-30-12/13 permits standard cost **only** where it approximates cost on a
-recognised basis and is **revised at reasonably regular intervals** to reflect
-current conditions.
+Materials are carried at actual cost and need no standard. What stands in for an actual cost
+until one is recorded is the **labor standard** and the **overhead rates**, and those are
+effective-dated and versioned (`farm.standard_versions`):
 
-- Standards are effective-dated and versioned (`farm.standard_versions`). A version is
-  the grow plan as resolved on the plan of record plus the cost assumptions, frozen when a
-  super admin approves it with an effective date. The ledger costs
-  a sowing at the version in force on its production date and the sowing record names it,
-  so a reviewer can reproduce the cost; a sowing dated before any approved version is
-  costed at the live library and the period says so. An effective date inside a locked
-  period is refused. Editing the library or the plan changes what the next approval
-  freezes; it never moves a standard already in force.
-- Approving a time study approves a version effective that day, so the plan's standard moves to
-  the new average of its approved studies (labor, and the water and supplements measured) for
-  sowings from that day; a sowing sown before it keeps the version it was sown at.
+- A version is the grow plan as resolved on the plan of record plus the cost assumptions and the
+  overhead absorption rate, frozen when a super admin approves it with an effective date. The
+  ledger reads from the version in force on a sowing's production date its labor standard (for
+  a sowing with no crew recorded), its variable overhead per tray and its fixed overhead rate,
+  and the sowing record names the version, so a reviewer can reproduce the cost. A sowing dated
+  before any approved version reads them from the live library and the period says so. An
+  effective date inside a locked period is refused. Editing the library or the plan changes
+  what the next approval freezes; it never moves a standard already in force.
+- Approving a time study approves a version effective that day, so the plan's labor standard
+  moves to the new average of its approved studies for sowings from that day; a sowing sown
+  before it keeps the version it was sown at.
 - Revision interval: `assumptions.standardCost.revisionIntervalMonths`.
-- **Disposition.** Net variance above
-  `assumptions.standardCost.varianceProrationThreshold` (5% of standard cost of
-  goods sold) **prorates** across ending raw materials, WIP, finished goods and
-  COGS. At or below it, the whole net variance goes to COGS. Writing every
-  variance to COGS regardless of size would carry inventory at a standard that no
-  longer approximates cost.
-- **Abnormal spoilage never prorates.** It is a period charge by rule and is
-  excluded from the proration base.
-
-**Sowing and period.** Purchase price, material usage and labor variances arise on
-a sowing and are dispositioned on the sowing's net. Overhead under- or
-over-absorption is a period figure — incurred against applied — and is reported
-beside the sowing net, not inside it.
 
 **The run buys for the allowance.** The purchase order for a run is built on
-`units × (1 + shrink allowance)`: the allowance is trim, over-packing and
-spoilage — pounds that are bought and never packed — so the quantity received
-carries it and raw materials are relieved by no more than they were received.
+`units × (1 + shrink allowance)`: the allowance is seed and medium bought and never packed,
+so the quantity received carries it and raw materials are relieved by no more than was
+received.
 
-**Case-rounding is not a variance.** A purchase order rounded up to whole cases
-costs more than the grow plan standard for the run. That difference is *quantity*, not
-price: it is inventory on hand and it nets against the next run's requirement.
-Treating it as a purchase price variance would book a phantom unfavourable variance
-every production day. Purchase price variance is measured at receipt, on the **price received**
-against standard; a supplier bill that differs from what was received adds its difference to the
-variance while it is flagged (§16).
+**Case-rounding is quantity, not cost.** A purchase order rounded up to whole cases buys more
+than the run needs. The extra is inventory on hand at the price paid, and it nets against the
+next run's requirement.
 
 ## 6. Spoilage — normal against abnormal
 
@@ -218,21 +202,20 @@ ISO 22400 draws the same line between planned and actual scrap.
 | | Recall or withdrawal |
 | | Shelf life exceeded |
 
-Normal spoilage is already inside the 3% shrink allowance and rides into WIP with
-the standard. Abnormal spoilage is relieved from the stage it occurred in and
-charged to 5910, **at the fully absorbed cost of the stages it passed**, per gram of
-the standard harvest: seed lost before or at sowing (stage `SOW`) is raw material at
-its purchase price; a gram lost on the shelves (`GROW`) carries the sow and grow
+Normal spoilage is inside the 3% shrink allowance and stays in the sowing's cost.
+Abnormal spoilage is relieved from the stage it occurred in and charged to 5910, **at
+the fully absorbed cost of the stages it passed**, per gram of the sowing's harvest:
+seed lost before or at sowing (stage `SOW`) is raw material at the lot's price paid; a gram lost on the shelves (`GROW`) carries the sow and grow
 stages, one lost at the harvest check or in packing (`PACK`) the pack stage as well,
 and one lost after packing (`FINISHED`) the packaging too. A tray removed at the
 check therefore leaves with the material, labor and overhead already spent on it,
-and a packed tray still costs the standard.
+and a packed tray carries the sowing's cost.
 
-**The allowance is on the record.** The standard issue for a sowing is the quantity
+**The allowance is on the record.** The planned issue for a sowing is the quantity
 the trays sown were bought for, `trays × (1 + shrink allowance)`, and each variety lot
-carries its allowance in grams. The standard record shows the allowance as normal
+carries its allowance in grams. The prefilled record shows the allowance as normal
 `TRIM` scrap at stage `SOW` — seed sorted out before sowing — so a record that ran
-exactly to standard balances and has no usage variance. A scrap event with a normal
+exactly to plan balances. A scrap event with a normal
 reason is normal only up to the lot's allowance, consumed in the order recorded; the
 grams beyond it are abnormal spoilage and leave inventory. An abnormal reason is
 abnormal in full.
@@ -277,30 +260,20 @@ Compliance date carried: **2028-07-20**, FDA's proposed 30-month extension (publ
 2025-08-07) of the 2026-01-20 date in the rule. Carried as a field, not as logic, so it can be
 corrected without a code change.
 
-## 10. unit-pattern nutrition as a costing constraint
+## 10. Prices: the plan's, the order's and the ledger's
 
-A prospect entree's packed weight is not a preference. It is the weight that distributes
-its nutrition contribution under 7 CFR 210.10(c) for its tray format. The chain
-therefore runs:
+Three prices are kept apart, and only one of them is on the ledger.
 
-```
-packed spec (nutrient profile) → SOWN required → ÷ growing yield → ÷ trim yield
-→ + planned waste → SEED requirement → ÷ pack size, round up to case → PO
-```
+| Price | Where it is used | What it is |
+|---|---|---|
+| **The plan's price** | The cost card, the forecast, the plan of record, Unit Economics | For a seed line, the variety's **last price paid** per pound, from its most recent accepted receipt; the supplier's catalog price until the first receipt; the variety record's opening price until then. For a medium or nutrient line, its library price. A price typed on a forecast stands over all of them |
+| **The order's price** | Purchase orders | The supplier's published price in force, from the approved catalog; the last price paid where no catalog price is on file; the record's price until then |
+| **The ledger's price** | Receipts, issues, work in process, finished goods, cost of goods sold | What was paid for the lot drawn (§1) |
 
-Costing runs the inverse over the same factors. Dollars are conserved through
-growing; mass is not, so there is a distinct cost per pound at each stage:
-
-```
-SOWN cost/lb     = SEED cost/lb ÷ trim yield
-harvested cost/lb = SEED cost/lb ÷ yield to harvest
-```
-
-Nutrition runs on the **as-served component**, not the input line: a salsa is
-served as a salsa, and scored input by input every line falls under the
-1/8-cup minimum and the salsa credits as nothing. Component totals are rounded once,
-**down**, per USDA — to the nearest 1/4 oz eq for meats/meat alternates and grains,
-and the nearest 1/8 cup for vegetables.
+The **rolling 12-month average** — the dollars over the quantity on the accepted receipt lines of
+the last twelve months, per variety, medium and nutrient — is a key performance figure on seed,
+media and nutrient costs. It is shown beside each item and reported on Reports. It is not a
+price any plan, order or posting uses, and nothing on the ledger reads it.
 
 ## 11. Internal controls the platform enforces
 
@@ -313,8 +286,9 @@ and cutoff testing goes at.
 - **Every posting carries a source document reference** — the sowing id.
 - **A sowing that does not mass-balance does not close.**
 - **Scrap cannot be recorded without a disposition reason code.**
-- **Standard cost changes are effective-dated**, so the standard in force on any
-  production date is reproducible.
+- **Labor and overhead standards are effective-dated**, so the standard in force on any
+  production date is reproducible; material cost is the lot's, so it is reproducible from
+  the lot register.
 - **Work in process clears to zero** when a sowing is packed. Asserted by test, in
   cents: rounding a combined figure once leaves a cent in a stage account that
   reads as inventory which does not exist and never clears.
@@ -323,27 +297,20 @@ and cutoff testing goes at.
 
 These are named rather than resolved. Nothing here is settled by the engine.
 
-- Ten of twelve input prices are placeholders.
-- The serving grow unit capacity is a placeholder. It is the cheapest physical check
-  on any unit change and is a packaging quote, not a model output.
-- The packing utensil is not specified. A standardized grow plan states it by size.
+- Most medium and nutrient prices are placeholders until their first receipt.
 - Budgeted fixed manufacturing overhead is the manufacturing-overhead fixed-cost
   lines (lease, utilities) plus straight-line depreciation, not a cost budget with
   maintenance and production supplies.
 - The plant capacity a forecast's production is bound by rides on a presumed
   operating day (07:00–19:00, PLACEHOLDER) that has not been decided.
 - Planned maintenance downtime is a 3% placeholder.
-- No trim yield is observed separately from growing yield. USDA Food Buying Guide
-  factors are SEED → harvested-and-drained and already include trim, so the composite is
-  used and the split is left undefined rather than invented.
 - The light a tray takes, its tray wear and the sanitizer are applied to work in process
   at their standard per tray (5195); the forecast bills no electricity by tray-day, no
   trays and no sanitizer against them, so on the Plan ledger their applied credit stands
   with nothing incurred beside it. The electricity sits in the utilities of the fixed
   overhead budget.
-- A sowing record with no actual labor hours posts labor at standard, so both labor
-  variances are zero on it. Plan ledger sowings carry none; a recorded sowing carries
-  them only when its crew hours or a total are entered.
+- A sowing record with no crew recorded posts labor at the approved standard; Plan ledger
+  sowings carry none.
 
 ## 14. Actuals
 
@@ -352,11 +319,11 @@ Plan ledger (§17); nothing is typed as a dollar total.
 
 | Record | Posts |
 |---|---|
-| Sowing record | Issue → apply → labor → overhead → sow → grow → pack → finished goods, at standard on the trays sown, with usage and labor variances from the actual grams, quantities and hours, and abnormal spoilage for trays removed at the check. No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
-| Receipt | Accepted lines: raw materials at standard — the input's standard from any grow plan in the library that uses it, at the version in force on the receipt date (Roadmap N5); the price received against standard to purchase price variance; goods received not invoiced (2015) at the price received. A rejected line posts nothing. An input on no grow plan is received at the price received with no variance and named in the notes. |
-| Supplier bill | Clears goods received not invoiced at what its receipts received; payable at the bill; any difference to purchase price variance while the bill is flagged (§16). |
-| Absorption | A sowing with no approved standard absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); an approved standard absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
-| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the standard per unit of the grow plan distributed when the distribution names it (that grow plan's sowings in the period, else the last period that made it), otherwise the period's standard per unit (the period's own sowings, else the last period that had any; zero before any sowing has posted); distribution expense; retail commission deducted from the remittance. |
+| Sowing record | Issue → apply → labor → overhead → sow → grow → pack → finished goods: the seed, medium and nutrient issued at the cost of the lots drawn, labor at the recorded hours and rate (the approved standard where no crew is recorded), variable overhead at its standard per tray and fixed overhead at the rate in force, on the trays sown; abnormal spoilage for trays removed at the check. The sowing's cost per packed unit is kept by element (materials, labor, overhead). No receipt or shipment of its own. Refused at close unless the mass balance reconciles. |
+| Receipt | Accepted lines: raw materials by lot at the price received, against goods received not invoiced (2015) at the same amount. A rejected line posts nothing. |
+| Supplier bill | Recorded only when it equals its receipts, line for line in quantity and value; it clears goods received not invoiced and credits the payable at the same amount (§16). |
+| Absorption | A sowing with no approved version in force absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); a version absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
+| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the cost per unit of the finished goods relieved, first in, first out by sowing within the grow plan the distribution names (else across the period's finished goods), by element; distribution expense; retail commission deducted from the remittance. |
 | Subscriber / supplier payment | Cash against receivables / payables, applied to invoices / bills. |
 | Opening balance | Cash, the fit-out at cost, long-term debt and owners' equity as of its date. |
 | Payroll | At month end, loaded labor earned on the time clock less what the month's sowing records charged, to 5170 against the four payroll liabilities; on each pay date through today, the pay period's loaded labor paid in cash (§16). |
@@ -367,7 +334,7 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash (Roadmap N5). |
 | Marketplace deposit | Cash against processor clearing (1200) (Roadmap N5). |
 
-The standard per unit is carried unrounded and only a distribution's extended cost
+A sowing's cost per unit is carried unrounded and only a distribution's extended cost
 rounds, so a period whose distributions equal its production relieves finished goods
 to within a cent. Receivables and payables are not settled unless a payment record
 applies to them: the actuals position carries real working capital, and it opens
@@ -427,15 +394,16 @@ Retail and wholesale orders are paid at the time of ordering: the distribution d
 
 ### Payables and the three-way match
 
-A receipt posts raw materials at standard and credits goods received not invoiced (2015) at the
-price received; the price received against standard is the purchase price variance (§5). Receiving
+A receipt posts raw materials by lot at the price received and credits goods received not invoiced
+(2015) at the same amount. Receiving
 has no tolerance: each line keeps its purchase-order quantity and price, and a line received short,
 over or at a changed price states the override reason. The supplier's bill is recorded against the
 receipts it covers and clears 2015 at what they received; the bill is credited to accounts payable.
 The match is exact: order against receipt needs the override reason for any difference, and the bill
 must equal what was received, input by input, in quantity and value. A bill that does not
-match is posted — the liability exists — with the difference in the purchase price variance, is
-flagged on Payables and the Dashboard, and is not paid until rectified.
+match is refused at recording with its differences listed: a bill that differs from the purchase
+order is a misunderstanding to rectify with the supplier before any money moves. Until the
+corrected bill is recorded, goods received not invoiced carries the liability at what was received.
 
 ### Aging and days outstanding
 
@@ -474,7 +442,8 @@ calendar days — is accrued against what the month's sowing records charged to 
 the difference is production labor not charged to a sowing (5170), a period production cost. Hours on
 the clock on dates no closed pay period covers accrue nothing and are noted. Each closed pay period
 is paid in cash on its pay date; no payroll run is recorded yet, so the pay date is taken as the
-payment through today. Sowing records charge standard labor at the plan's placeholder rate until
+payment through today. A sowing record charges its recorded crew hours at the recorded rate, and
+the approved labor standard at the plan's placeholder rate where no crew is recorded, until
 Staffing's loaded rates arrive. Pay periods paid after the forecast window ends stay accrued.
 
 ### Opening balance
@@ -489,13 +458,13 @@ actuals (§14) — so actual against plan is the same report run twice. Nothing 
 
 | Element | Plan treatment |
 |---|---|
-| Documents | Sowing records at standard, receipts, supplier bills and payments, distributions, monthly invoices and collections, closed pay periods, fixed-cost bills, capital purchases, loan draws and payments, equity at the start, marketplace deposits — all generated by the timeline |
-| Standard | Every sowing at the live library: the plan is where standards come from, so no per-sowing approval note is written |
+| Documents | Sowing records at the plan's labor standard, receipts at the order's price, supplier bills and payments, distributions, monthly invoices and collections, closed pay periods, fixed-cost bills, capital purchases, loan draws and payments, equity at the start, marketplace deposits — all generated by the timeline |
+| Standard | Every sowing at the live library: the plan's price for its lines, its labor standard and overhead; the plan is where standards come from, so no per-sowing approval note is written |
 | Absorption | The forecast's own production as normal capacity (§4) |
 | Overhead budget | Each month, the manufacturing-overhead fixed-cost lines in force that month, lease or utilities by the category their bill settles |
 | Depreciation | Straight-line on each capital purchase from the month it is bought over its class life (equipment and leasehold years) |
 | No terms on file | Invoices collected on the issue date; supplier bills — including inputs with no supplier linked — paid on the bill date; own-fleet distribution cost paid on the distribution date; fixed-cost bills paid on the first of the month; marketplace remittances, net of commission, deposited on the distribution date. Each is named in the timeline's gaps |
-| Statements | By month, calendar quarter and fiscal year (§15), clipped to the forecast window: classified income statement (revenue by channel, cost of goods sold at standard, manufacturing variances, gross margin, selling and distribution, general and administrative, operating income, interest, net income), classified balance sheet with inventory by stage, cash flow by the direct and the indirect method asserted equal, every period balanced. Each grow plan is costed on its own standard |
+| Statements | By month, calendar quarter and fiscal year (§15), clipped to the forecast window: classified income statement (revenue by channel; cost of goods sold by element — materials, labor, overhead — with its subtotal, and the overhead spending and volume variances; gross margin; selling and distribution, general and administrative, operating income, interest, net income), classified balance sheet with inventory by stage, cash flow by the direct and the indirect method asserted equal, every period balanced. Each grow plan is costed on its own lines |
 
 The indirect cash flow classifies capital and debt by whether cash moved in the entry: capital bought
 for cash is investing, a loan drawn or repaid in cash is financing, and a fit-out capitalised and
