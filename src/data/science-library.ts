@@ -168,6 +168,7 @@ export interface ScienceClaim {
 }
 
 const B = (n: number) => rowFor('B', n);
+const C = (n: number) => rowFor('C', n);
 const D = (n: number) => rowFor('D', n);
 
 export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
@@ -215,6 +216,25 @@ export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
   { id: 'h-pylori', topic: 'other-clinical', text: 'Sulforaphane is bactericidal against H. pylori including antibiotic-resistant strains; two months of daily sprouts reduces colonization but does not eradicate it.', varieties: ['broccoli'], evidence: 'human', rows: [46, 48] },
   { id: 'fenugreek-iron', topic: 'nutrition', text: 'Fenugreek microgreens are rich in iron.', varieties: ['fenugreek'], evidence: 'human', rows: [57] },
   { id: 'lentil-protein-folate', topic: 'nutrition', text: 'Sprouted lentils are a good source of protein and folate.', varieties: ['red-lentil'], evidence: 'human', rows: [58] },
+  // ── Document C: the clinical profiles of fenugreek, borage, amaranth and wheat ──
+  { id: 'fenugreek-bioactives', topic: 'nutrition', text: 'Fenugreek microgreens carry steroidal saponins (diosgenin), the alkaloid trigonelline and galactomannan fiber; GC-MS profiling finds 1-nonadecene, tetracosane and eicosane, which track their antioxidant capacity.', varieties: ['fenugreek'], evidence: 'human', rows: [C(13)] },
+  { id: 'fenugreek-antioxidant', topic: 'nutrition', text: 'Methanolic fenugreek microgreen extracts are high in flavonoids and tannins and scavenge ABTS, DPPH and hydrogen peroxide radicals, reaching 90.6% total antioxidant capacity in vitro.', varieties: ['fenugreek'], evidence: 'cell', rows: [C(13)] },
+  { id: 'fenugreek-germination-vitamins', topic: 'nutrition', text: 'Sprouting fenugreek raises alpha-tocopherol (vitamin E) nearly three-fold and beta-carotene by 55%, and raises the ratio of polyunsaturated to saturated fatty acids.', varieties: ['fenugreek'], evidence: 'human', rows: [C(23)] },
+  { id: 'fenugreek-enzyme-inhibition', topic: 'metabolic', text: 'Fenugreek extracts inhibit alpha-glucosidase by up to 99% and alpha-amylase by 95% in vitro, the enzymes that break carbohydrates into glucose.', varieties: ['fenugreek'], evidence: 'cell', rows: [C(23)] },
+  { id: 'fenugreek-galactomannan-glucose', topic: 'metabolic', text: 'Galactomannan fiber thickens gut contents, delaying carbohydrate digestion and blunting the rise in blood glucose after eating.', varieties: ['fenugreek'], evidence: 'review', rows: [C(14)] },
+  { id: 'fenugreek-antibacterial', topic: 'other-clinical', text: 'Fenugreek microgreen extracts inhibit Staphylococcus aureus, Pseudomonas aeruginosa and Aeromonas hydrophila, and their biofilms by more than 70%, in vitro.', varieties: ['fenugreek'], evidence: 'cell', rows: [C(13)] },
+  { id: 'fenugreek-bile-acids', topic: 'cardiovascular', text: 'The mucilaginous fiber in fenugreek binds bile acids in the gut and raises their excretion, so the liver draws on circulating cholesterol to make new ones.', varieties: ['fenugreek'], evidence: 'review', rows: [C(14)] },
+  { id: 'borage-gla-rosmarinic', topic: 'nutrition', text: 'Borage is one of the rare plant sources of gamma-linolenic acid (GLA); its leaves carry rosmarinic acid and other phenolic acids.', varieties: ['borage'], evidence: 'human', rows: [C(18), C(19)] },
+  { id: 'borage-pyrrolizidine', topic: 'safety', text: 'Mature borage makes pyrrolizidine alkaloids, which are toxic to the liver; early-harvested microgreens accumulate little, and seed lines are monitored and bred for alkaloid-free profiles.', varieties: ['borage'], evidence: 'review', rows: [C(27)] },
+  { id: 'borage-fat-oxidation', topic: 'metabolic', text: 'In C. elegans and in diet-induced obese rats, borage seed oil reduced fat accumulation by raising peroxisomal beta-oxidation; the rats gained less weight and white fat, with Cebpa lowered and no change in what they ate.', varieties: ['borage'], evidence: 'animal', rows: [C(28)] },
+  { id: 'borage-dna-protection', topic: 'other-clinical', text: 'In Drosophila, borage seed oil and GLA protected DNA against hydrogen peroxide damage.', varieties: ['borage'], evidence: 'animal', rows: [C(29), C(30)] },
+  { id: 'borage-health-span', topic: 'other-clinical', text: 'In Drosophila, whole borage extended health span where isolated GLA slightly shortened lifespan; the whole-plant extract was cytotoxic to HL60 leukemia cells.', varieties: ['borage'], evidence: 'animal', rows: [C(30)] },
+  { id: 'gla-eicosanoids', topic: 'mechanism', text: 'GLA is lengthened to DGLA, which competes with arachidonic acid for the COX and LOX enzymes and shifts production toward the anti-inflammatory series-1 prostaglandins (PGE1).', varieties: ['borage'], evidence: 'review', rows: [C(27)] },
+  { id: 'amaranth-betalains', topic: 'nutrition', text: 'The red of red garnet amaranth is betalains, chiefly the betacyanin amaranthin, free-radical scavengers whose synthesis rises under light, drought and temperature stress.', varieties: ['amaranth'], evidence: 'human', rows: [C(16), C(17)] },
+  { id: 'amaranth-squalene', topic: 'nutrition', text: 'Amaranth carries squalene, the precursor of plant and animal sterols.', varieties: ['amaranth'], evidence: 'review', rows: [C(35)] },
+  { id: 'amaranth-protein', topic: 'nutrition', text: 'Amaranth protein is high in lysine and methionine, the amino acids cereals and legumes lack.', varieties: ['amaranth'], evidence: 'review', rows: [C(33)] },
+  { id: 'amaranth-ldl-oxidation', topic: 'cardiovascular', text: 'Squalene and amaranthin protect lipids from peroxidation, including the oxidative modification of LDL.', varieties: ['amaranth'], evidence: 'review', rows: [C(33)] },
+  { id: 'wheat-vitamin-e', topic: 'nutrition', text: 'Germinating wheat raises its vitamin E, the tocopherols and tocotrienols, 5.3-fold over the dormant seed.', varieties: ['wheat'], evidence: 'human', rows: [C(23)] },
   // ── Safety ──
   { id: 'sprout-pathogens', topic: 'safety', text: 'Sprouts grown warm, humid and dark are the highest-risk format for Salmonella and STEC; contamination is often inside the seed coat where surface sanitizers miss it.', varieties: ['mung-bean', 'red-lentil', 'wheat'], evidence: 'review', rows: [17, 50, 51, 53] },
   { id: 'microgreen-risk', topic: 'safety', text: 'Microgreens under light with airflow and lower humidity carry lower risk, but root uptake and foliar contamination still require Good Agricultural Practices.', varieties: ['all'], evidence: 'review', rows: [54] },

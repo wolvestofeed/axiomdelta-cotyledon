@@ -222,6 +222,29 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 | Microgreens under light with airflow and lower humidity carry lower risk, but root uptake and foliar contamination still require Good Agricultural Practices. | all micros | review | 54 |
 | Seed or substrate inoculation with PGPR and protective endophytes (Bacillus, Pseudomonas and others) excludes pathogens and raises yield. | all | review | 55 |
 
+### Clinical profiles (document C)
+
+| Claim | Varieties | Evidence | Rows |
+|---|---|---|---|
+| Fenugreek microgreens carry steroidal saponins (diosgenin), the alkaloid trigonelline and galactomannan fiber; GC-MS profiling finds 1-nonadecene, tetracosane and eicosane, which track their antioxidant capacity. | fenugreek | primary | 76 |
+| Methanolic fenugreek microgreen extracts are high in flavonoids and tannins and scavenge ABTS, DPPH and hydrogen peroxide radicals, reaching 90.6% total antioxidant capacity in vitro. | fenugreek | cell | 76 |
+| Sprouting fenugreek raises alpha-tocopherol (vitamin E) nearly three-fold and beta-carotene by 55%, and raises the ratio of polyunsaturated to saturated fatty acids. | fenugreek | primary | 82 |
+| Fenugreek extracts inhibit alpha-glucosidase by up to 99% and alpha-amylase by 95% in vitro, the enzymes that break carbohydrates into glucose. | fenugreek | cell | 82 |
+| Galactomannan fiber thickens gut contents, delaying carbohydrate digestion and blunting the rise in blood glucose after eating. | fenugreek | review | 77 |
+| Fenugreek microgreen extracts inhibit Staphylococcus aureus, Pseudomonas aeruginosa and Aeromonas hydrophila, and their biofilms by more than 70%, in vitro. | fenugreek | cell | 76 |
+| The mucilaginous fiber in fenugreek binds bile acids in the gut and raises their excretion, so the liver draws on circulating cholesterol to make new ones. | fenugreek | review | 77 |
+| Borage is one of the rare plant sources of gamma-linolenic acid (GLA); its leaves carry rosmarinic acid and other phenolic acids. | borage | primary | 80, 81 |
+| Mature borage makes pyrrolizidine alkaloids, which are toxic to the liver; early-harvested microgreens accumulate little, and seed lines are monitored and bred for alkaloid-free profiles. | borage | review | 84 |
+| In C. elegans and in diet-induced obese rats, borage seed oil reduced fat accumulation by raising peroxisomal beta-oxidation; the rats gained less weight and white fat, with Cebpa lowered and no change in what they ate. | borage | animal | 85 |
+| In Drosophila, borage seed oil and GLA protected DNA against hydrogen peroxide damage. | borage | animal | 86, 87 |
+| In Drosophila, whole borage extended health span where isolated GLA slightly shortened lifespan; the whole-plant extract was cytotoxic to HL60 leukemia cells. | borage | animal | 87 |
+| GLA is lengthened to DGLA, which competes with arachidonic acid for the COX and LOX enzymes and shifts production toward the anti-inflammatory series-1 prostaglandins (PGE1). | borage | review | 84 |
+| The red of red garnet amaranth is betalains, chiefly the betacyanin amaranthin, free-radical scavengers whose synthesis rises under light, drought and temperature stress. | amaranth | primary | 78, 79 |
+| Amaranth carries squalene, the precursor of plant and animal sterols. | amaranth | review | 92 |
+| Amaranth protein is high in lysine and methionine, the amino acids cereals and legumes lack. | amaranth | review | 90 |
+| Squalene and amaranthin protect lipids from peroxidation, including the oxidative modification of LDL. | amaranth | review | 90 |
+| Germinating wheat raises its vitamin E, the tocopherols and tocotrienols, 5.3-fold over the dormant seed. | wheat | primary | 82 |
+
 ### Media (document B)
 
 | Claim | Varieties | Evidence | Rows |
@@ -261,7 +284,7 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 
 ## 4. Variety benefit profiles
 
-From the report's Table 2, each row citing the claims above. This is the seed for each variety's nutrient profile in Phase 2.
+From document A's Table 2 and document C's profiles, each row citing the claims above: the seed for each variety's nutrient profile.
 
 | Variety | Bioactives | Nutrients | Stated benefits | Rows |
 |---|---|---|---|---|
@@ -273,8 +296,12 @@ From the report's Table 2, each row citing the claims above. This is the seed fo
 | Sunflower (*Helianthus annuus*) | fumaric acid, phenolic acids | calcium, potassium | skeletal minerals, cellular energy, antioxidant capacity | 14 |
 | Radish, Sango (*Raphanus sativus*) | lutein, beta-carotene, anthocyanins | calcium, potassium, 16 amino acids | oxidative stress, ocular health, antibacterial | 9, 15 |
 | Pea (*Pisum sativum*) | flavonoids, organic acids | phosphorus, copper, vitamin C | phosphorus and copper accumulation, vitamin C, gentle flavor | 14 |
+| Fenugreek (*Trigonella foenum-graecum*) | diosgenin, trigonelline, galactomannans, saponins | iron, protein, fiber, magnesium | slower carbohydrate digestion and glucose rise (review); bile-acid binding (review); enzyme inhibition, antioxidant and antibacterial activity (in vitro) | 57, 76, 77, 82 |
+| Borage (*Borago officinalis*) | gamma-linolenic acid, rosmarinic acid | vitamins B, C, K, folate, fiber | GLA to anti-inflammatory PGE1 (review); less fat accumulation (animal); DNA protection (animal); pyrrolizidine alkaloids in the mature plant (review, safety) | 80, 81, 84, 85, 86, 87 |
+| Red garnet amaranth (*Amaranthus tricolor*) | betalains (amaranthin), carotenoids, squalene | lysine, methionine, vitamins K, E, C, calcium, iron | free-radical scavenging; complete amino acids (review); lipids and LDL protected from oxidation (review) | 78, 79, 90, 92 |
+| Hard red winter wheat (*Triticum aestivum*) | superoxide dismutase, chlorophyll | vitamin E, B vitamins, vitamins C and K | vitamin E up 5.3-fold on germination | 82 |
 
-Varieties Rob grows that the report does not profile and that need their own rows before a benefit is stated: fenugreek, borage, red garnet amaranth, purple Rambo radish, chia, hard red winter wheat. The Vallecito research database (`_inventory/raw-extracts/Microgreens_Research_Database__*.txt`) has starting citations for fenugreek iron (Journal of Food Science & Nutrition, doi:10.1002/fsn3.1209) and lentil protein (Food Chemistry, doi:10.1016/j.foodchem.2018.06.123).
+Document C profiles chia's compounds (alpha-linolenic acid, chlorogenic acid, mucilage) with no inline citation, so chia's benefits stay the supplier's until a chia source is registered. Purple Rambo radish carries the supplier's statements and the radish rows above.
 
 ### 4b. Light and media responses by variety
 
