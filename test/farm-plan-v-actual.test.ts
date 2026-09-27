@@ -13,7 +13,7 @@ const channel = growPlan.channels[0];
 function side(): PvaSideInput {
   const doc = { ...standardSowingRecordPrefill('2026-10-05', 1, 400, growPlan as never), id: 'B1', closedAt: '2026-10-05', actualLaborHours: 10, actualLaborRate: 20 };
   // The measures read the posting's amounts only.
-  const led = { amounts: { materialIssuedToWip: 812.5, directLaborActual: 200, packagingCost: 180, servingsProduced: 400 } } as unknown as ProductionSowingLedger;
+  const led = { amounts: { materialIssuedToWip: 812.5, directLaborActual: 200, packagingCost: 180, unitsProduced: 400 } } as unknown as ProductionSowingLedger;
   const d = (id: string, date: string, units: number, subscriberId: string): DistributionDoc => ({ id, distributedOn: date, phase: channel, pickupPointId: null, pickupPointName: null, units, pricePerUnitCents: 1000, lotCodes: [], distributedBy: null, subscriberId, growPlanCode: growPlan.code, notes: null });
   const basis = { ...emptySustainabilityBasis('actual', '2026-10-01', '2026-10-31'), units: [{ growPlanCode: growPlan.code, channel, units: 300 }], totalUnits: 300, producedByGrowPlan: { [growPlan.code]: 400 } };
   const food = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: {} });

@@ -123,7 +123,7 @@ async function ActualsPageInner({
       </div>
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={num(Math.round(p?.servingsProduced ?? 0))} label="Servings produced" sub={`${p?.sowings.length ?? 0} sowing record${(p?.sowings.length ?? 0) === 1 ? '' : 's'} closed`} />
+        <Kpi value={num(Math.round(p?.unitsProduced ?? 0))} label="Units produced" sub={`${p?.sowings.length ?? 0} sowing record${(p?.sowings.length ?? 0) === 1 ? '' : 's'} closed`} />
         <Kpi value={num(Math.round(p?.unitsDistributed ?? 0))} label="Units distributed" sub={planMonth ? `${num(Math.round(planMonth.unitsDistributed))} on the Plan ledger` : 'Outside the plan’s window'} />
         <Kpi value={fixed.perUnitCents === null ? '—' : money(fixed.perUnitCents / 100)} label="Fixed cost per unit" sub={`${money(fromCents(fixed.totalCents), 0)} fixed expense over ${num(Math.round(month.unitsDistributed))} units distributed — a period metric`} />
         <Kpi value={money(fromCents(is.revenueCents), 0)} label="Revenue, actual" sub={pis ? `${money(fromCents(pis.revenueCents), 0)} on the Plan ledger` : 'Outside the plan’s window'} />

@@ -40,7 +40,7 @@ export interface StatementPeriod {
   /** Every entry in the period balances, and assets equal liabilities plus equity at its end. */
   balanced: boolean;
   /** Units made and distributed in the period, from the posted months it covers. */
-  servingsProduced: number;
+  unitsProduced: number;
   unitsDistributed: number;
   /**
    * Fixed cost per unit — a period metric on the expense basis, never in the cost of a
@@ -119,7 +119,7 @@ export function statementPeriods(input: {
       cashFlowIndirect: indirect,
       cashFlowTies: direct.netChangeCents === indirect.netChangeCents,
       balanced: entriesBalance && bs.totalAssetsCents === bs.totalLiabilitiesCents + bs.totalEquityCents,
-      servingsProduced: covered.reduce((s, p) => s + p.servingsProduced, 0),
+      unitsProduced: covered.reduce((s, p) => s + p.unitsProduced, 0),
       unitsDistributed,
       fixedExpense: {
         manufacturingOverheadCents,

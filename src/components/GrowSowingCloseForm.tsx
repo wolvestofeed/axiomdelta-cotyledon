@@ -125,7 +125,6 @@ export function GrowSowingCloseForm({
         plannedUnits: prefill.traysSown,
         goodUnits: traysPacked,
         sowingsRun: 1,
-        servingsProduced: null,
         lots,
         issues,
         crew,

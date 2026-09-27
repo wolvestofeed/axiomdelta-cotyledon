@@ -53,7 +53,7 @@ export default function PnlPage() {
             <Kpi value={dollars(is.grossMarginCents)} label="Gross margin" sub={is.revenueCents ? `${pct(is.grossMarginCents / is.revenueCents)} of revenue` : 'No revenue in the period'} />
             <Kpi value={signed(is.operatingIncomeCents)} label="Operating income" sub={is.revenueCents ? `${pct(is.operatingIncomeCents / is.revenueCents)} of revenue` : '—'} />
             <Kpi value={signed(is.netIncomeCents)} label="Net income, pre-tax" sub="After interest" />
-            <Kpi value={num(Math.round(period.servingsProduced))} label="Servings produced" sub="Sowing records in the period" />
+            <Kpi value={num(Math.round(period.unitsProduced))} label="Units produced" sub="Sowing records in the period" />
           </div>
 
           <div className="grid gap-4 mt-4 farm-autofit-22">

@@ -125,7 +125,6 @@ export function growSowingPrefill(
     plannedUnits: trays,
     goodUnits: trays,
     sowingsRun: 1,
-    servingsProduced: null,
     lots,
     issues,
     crew: [],

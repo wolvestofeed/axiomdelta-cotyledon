@@ -845,9 +845,6 @@ export const farmSowingRecords = farmSchema.table(
     /** Sowings the record covers: fixed labor is per sowing. */
     // @classification: Internal
     sowingsRun: integer('sowings_run').notNull().default(1),
-    /** Units the trays became; null = one unit per tray. */
-    // @classification: Internal
-    servingsProduced: doublePrecision('servings_produced'),
     /** VarietyLot[] — one lot per variety: seed issued, harvest, packed, in grams, and scrap (0009). */
     // @classification: Internal
     lots: jsonb('lots').notNull().default([]),

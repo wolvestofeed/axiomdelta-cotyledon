@@ -64,7 +64,7 @@ export interface PvaMeasures {
   cogsLaborCents: number;
   cogsOverheadCents: number;
   distributionCostCents: number;
-  servingsProduced: number;
+  unitsProduced: number;
   sowings: number;
   newSubscribers: number;
   wasteKg: number;
@@ -106,7 +106,7 @@ export function pvaMeasures(side: PvaSideInput): PvaMeasures {
     cogsLaborCents: cogsOf(side, ACC_COGS_LABOR),
     cogsOverheadCents: cogsOf(side, ACC_COGS_OVERHEAD),
     distributionCostCents: (side.statement?.sellingAndDistribution ?? []).reduce((t, r) => t + r.cents, 0),
-    servingsProduced: side.sowingLedgers.reduce((t, b) => t + b.amounts.servingsProduced, 0),
+    unitsProduced: side.sowingLedgers.reduce((t, b) => t + b.amounts.unitsProduced, 0),
     sowings: side.sowings.reduce((t, b) => t + b.sowingsRun, 0),
     newSubscribers: [...side.firstOrderOn.values()].filter((d) => inMonth(d, side.period)).length,
     wasteKg: shrink + expired,
@@ -131,7 +131,7 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
   if (months.length === 0) return z;
   const add = (a: number, b: number) => a + b;
   for (const m of months) {
-    for (const k of ['units', 'revenueCents', 'orders', 'inputCostCents', 'laborHours', 'laborCostCents', 'packagingCostCents', 'cogsMaterialsCents', 'cogsLaborCents', 'cogsOverheadCents', 'distributionCostCents', 'servingsProduced', 'sowings', 'newSubscribers', 'wasteKg', 'waterGal', 'electricityKwh', 'naturalGasTherms', 'fuelGal'] as const) z[k] = add(z[k], m[k]);
+    for (const k of ['units', 'revenueCents', 'orders', 'inputCostCents', 'laborHours', 'laborCostCents', 'packagingCostCents', 'cogsMaterialsCents', 'cogsLaborCents', 'cogsOverheadCents', 'distributionCostCents', 'unitsProduced', 'sowings', 'newSubscribers', 'wasteKg', 'waterGal', 'electricityKwh', 'naturalGasTherms', 'fuelGal'] as const) z[k] = add(z[k], m[k]);
     for (const k of ['total', 'scope1', 'scope2', 'scope3'] as const) z.emissionsKg[k] += m.emissionsKg[k];
     for (const k of ['referenceKg', 'onNamedSupplierKg', 'onSupplierDataKg'] as const) z.food[k] += m.food[k];
   }
@@ -143,7 +143,7 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
 
 export function emptyMeasures(): PvaMeasures {
   return {
-    units: 0, revenueCents: 0, orders: 0, inputCostCents: 0, laborHours: 0, laborCostCents: 0, packagingCostCents: 0, cogsMaterialsCents: 0, cogsLaborCents: 0, cogsOverheadCents: 0, distributionCostCents: 0, servingsProduced: 0, sowings: 0, newSubscribers: 0,
+    units: 0, revenueCents: 0, orders: 0, inputCostCents: 0, laborHours: 0, laborCostCents: 0, packagingCostCents: 0, cogsMaterialsCents: 0, cogsLaborCents: 0, cogsOverheadCents: 0, distributionCostCents: 0, unitsProduced: 0, sowings: 0, newSubscribers: 0,
     wasteKg: 0, waterGal: 0, electricityKwh: 0, naturalGasTherms: 0, fuelGal: 0,
     emissionsKg: { total: 0, scope1: 0, scope2: 0, scope3: 0 },
     food: { referenceKg: 0, onNamedSupplierKg: 0, onSupplierDataKg: 0 },
@@ -157,8 +157,8 @@ export function emptyMeasures(): PvaMeasures {
  * plus selling and distribution over the units distributed. Null with nothing made.
  */
 export function servedCostPerUnitCents(m: PvaMeasures): number | null {
-  if (m.servingsProduced <= 0) return null;
-  const made = (m.inputCostCents + m.laborCostCents + m.packagingCostCents) / m.servingsProduced;
+  if (m.unitsProduced <= 0) return null;
+  const made = (m.inputCostCents + m.laborCostCents + m.packagingCostCents) / m.unitsProduced;
   return made + (m.units > 0 ? m.distributionCostCents / m.units : 0);
 }
 
@@ -184,7 +184,7 @@ export function pvaBreakdown(side: PvaSideInput, by: 'growPlan' | 'channel' | 's
     if (!led) return;
     const cur = perUnit.get(b.growPlanCode) ?? { cents: 0, units: 0 };
     cur.cents += led.amounts.materialIssuedToWip * 100;
-    cur.units += led.amounts.servingsProduced;
+    cur.units += led.amounts.unitsProduced;
     perUnit.set(b.growPlanCode, cur);
   });
   const keyOf = (x: { growPlanCode?: string | null; phase?: number; channel?: number; subscriberId?: string | null }) =>

@@ -42,7 +42,6 @@ const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   plannedUnits: r.plannedUnits,
   goodUnits: r.goodUnits,
   sowingsRun: r.sowingsRun,
-  servingsProduced: r.servingsProduced,
   lots: (r.lots ?? []) as VarietyLot[],
   issues: (r.issues ?? []) as SowingIssue[],
   crew: (r.crew ?? []) as CrewHoursLine[],

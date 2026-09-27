@@ -156,7 +156,7 @@ export interface PostedPeriod {
   sowings: ProductionSowingLedger[];
   /** Finished-goods cost ÷ units for the sowings made in this period, cents, unrounded; null when none was. */
   costPerUnitCents: number | null;
-  servingsProduced: number;
+  unitsProduced: number;
   unitsDistributed: number;
   overhead: {
     appliedCents: number;
@@ -238,7 +238,7 @@ export interface PostActualsOptions {
  * their own absorption; the channel units-a-day × days basis is retired.
  */
 export function bundleAbsorption(bundle: Pick<ActualsBundle, 'sowings'>, inputs: ResolvedInputs, annualFixedOverhead: number): OverheadAbsorption {
-  const units = bundle.sowings.reduce((t, b) => t + (b.servingsProduced ?? b.goodUnits), 0);
+  const units = bundle.sowings.reduce((t, b) => t + b.goodUnits, 0);
   const months = new Set(bundle.sowings.map((b) => b.productionDate.slice(0, 7))).size;
   const perYear = months > 0 ? (units * 12) / months : 0;
   const downtime = inputs.assumptions.overhead.plannedMaintenanceDownRate.value;
@@ -407,7 +407,7 @@ export function postActuals(
     // ── Sowings: the chain without its own receipt or shipment.
     const sowings: ProductionSowingLedger[] = [];
     let fgCents = 0;
-    let servingsProduced = 0;
+    let unitsProduced = 0;
     for (const doc of p.sowings) {
       const std = standardFor(doc.growPlanCode, doc.productionDate);
       if (!std.approved && !options.liveLibraryIsStandard) notes.push(`${doc.sowingId}: no approved standard in force for ${doc.growPlanCode} on ${doc.productionDate}; costed at the live library (${std.label}).`);
@@ -419,7 +419,6 @@ export function postActuals(
         toSowingExecution(doc),
         {
           sowings: doc.sowingsRun,
-          servingsProduced: doc.servingsProduced ?? doc.goodUnits,
           assumptions: std.assumptions,
           // A version approved since N3 absorbs at the rate it froze (audit A15).
           overhead: std.overheadRatePerUnit === null ? absorption : { ...absorption, ratePerUnit: std.overheadRatePerUnit },
@@ -442,8 +441,8 @@ export function postActuals(
         continue;
       }
       fgCents += Math.round(led.amounts.finishedGoodsCost * 100);
-      servingsProduced += led.amounts.servingsProduced;
-      const units = led.amounts.servingsProduced;
+      unitsProduced += led.amounts.unitsProduced;
+      const units = led.amounts.unitsProduced;
       if (units > 0) {
         const el = led.amounts.finishedGoodsByElementCents;
         layers.push({ sowingId: doc.sowingId, growPlanCode: doc.growPlanCode, date: doc.productionDate, units, cents: { ...el } });
@@ -452,7 +451,7 @@ export function postActuals(
         lastAny = per;
       }
     }
-    const costPerUnitCents = servingsProduced > 0 ? fgCents / servingsProduced : null;
+    const costPerUnitCents = unitsProduced > 0 ? fgCents / unitsProduced : null;
 
     // ── What a grow plan's unit costs on its cost card, by element, cents: the plan's price for its
     //    lines, its labor standard and the overhead rate in force. Used only for units distributed
@@ -721,7 +720,7 @@ export function postActuals(
       entries: posted,
       sowings,
       costPerUnitCents,
-      servingsProduced,
+      unitsProduced,
       unitsDistributed,
       overhead: { appliedCents, incurredCents, volumeVarianceCents, ratePerUnit: absorption.ratePerUnit, budgetCents, billedCents: overheadBilledCents, spendingVarianceCents, accruedUnbilledCents },
       receivables: { billedCents, paidAtOrderCents, collectedCents },

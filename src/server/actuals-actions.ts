@@ -82,7 +82,6 @@ const SowingInput = z.object({
   plannedUnits: z.number().min(0),
   goodUnits: z.number().min(0),
   sowingsRun: z.number().int().min(1).default(1),
-  servingsProduced: z.number().min(0).nullable().default(null),
   lots: z.array(LotSchema).min(1, 'A sowing record carries at least one variety lot'),
   issues: z.array(IssueSchema).default([]),
   crew: z
@@ -151,7 +150,6 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
       plannedUnits: d.plannedUnits,
       goodUnits: d.goodUnits,
       sowingsRun: d.sowingsRun,
-      servingsProduced: d.servingsProduced,
       lots: d.lots,
       issues: d.issues,
       crew: d.crew,

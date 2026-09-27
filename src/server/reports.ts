@@ -453,7 +453,7 @@ const costTrend: Builder = (ctx) => {
     const f = m.fixedExpense;
     return row([
       m.label,
-      num(Math.round(m.servingsProduced)),
+      num(Math.round(m.unitsProduced)),
       num(Math.round(m.unitsDistributed)),
       p && p.costPerUnitCents !== null ? money(p.costPerUnitCents / 100) : '—',
       cents(f.manufacturingOverheadCents),
@@ -462,9 +462,9 @@ const costTrend: Builder = (ctx) => {
       cents(f.totalCents),
       f.perUnitCents === null ? '—' : money(f.perUnitCents / 100),
       cents(f.principalRepaidCents),
-    ], m.unitsDistributed === 0 && m.servingsProduced === 0 ? 'faint' : undefined);
+    ], m.unitsDistributed === 0 && m.unitsProduced === 0 ? 'faint' : undefined);
   });
-  for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, num(Math.round(y.servingsProduced)), num(Math.round(y.unitsDistributed)), '—', cents(y.fixedExpense.manufacturingOverheadCents), cents(y.fixedExpense.generalAndAdministrativeCents), cents(y.fixedExpense.interestCents), cents(y.fixedExpense.totalCents), y.fixedExpense.perUnitCents === null ? '—' : money(y.fixedExpense.perUnitCents / 100), cents(y.fixedExpense.principalRepaidCents)], 'total'));
+  for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, num(Math.round(y.unitsProduced)), num(Math.round(y.unitsDistributed)), '—', cents(y.fixedExpense.manufacturingOverheadCents), cents(y.fixedExpense.generalAndAdministrativeCents), cents(y.fixedExpense.interestCents), cents(y.fixedExpense.totalCents), y.fixedExpense.perUnitCents === null ? '—' : money(y.fixedExpense.perUnitCents / 100), cents(y.fixedExpense.principalRepaidCents)], 'total'));
   return {
     summary: table([{ label: 'Period' }, { label: 'Units made', num: true }, { label: 'Units distributed', num: true }, { label: 'Cost / unit made', num: true }, { label: 'Manufacturing overhead', num: true }, { label: 'G&A', num: true }, { label: 'Interest', num: true }, { label: 'Fixed expense', num: true }, { label: 'Fixed / unit distributed', num: true }, { label: 'Principal repaid', num: true }], rows),
     detail: table([{ label: 'Period' }, { label: 'Overhead applied', num: true }, { label: 'Overhead incurred', num: true }, { label: 'Volume variance', num: true }, { label: 'Spending variance', num: true }],

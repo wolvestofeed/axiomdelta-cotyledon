@@ -58,8 +58,6 @@ export interface SowingRecordDoc {
   goodUnits: number;
   /** Sowings the record covers: fixed labor is per sowing. A record is one sow, and the sow is the lot. */
   sowingsRun: number;
-  /** Units the trays became; null = one unit per tray. */
-  servingsProduced: number | null;
   /** One lot per variety, in grams. */
   lots: VarietyLot[];
   /** The medium and nutrient issued to the trays. */

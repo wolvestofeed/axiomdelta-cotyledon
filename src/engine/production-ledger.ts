@@ -178,10 +178,8 @@ export interface ProductionSowingLedger {
   amounts: {
     /** Trays sown: the basis of the standard. */
     traysSown: number;
-    /** Trays packed: what finished goods receives. */
+    /** Trays packed: the sowing's output, one count in its format. */
     unitsProduced: number;
-    /** Units those units became (conversion-cost basis). */
-    servingsProduced: number;
     purchaseOrderCost: number;
     /** Seed, medium and nutrient issued, at the cost of the lots drawn. */
     materialIssuedToWip: number;
@@ -240,10 +238,6 @@ export interface ProductionLedgerOptions {
    * `pricePerUnit` distribution; each ships at the standard cost per UNIT.
    */
   shipments?: Shipment[];
-  /**
-   * Units the packed trays became; defaults to the trays packed.
-   */
-  servingsProduced?: number;
   /** The assumptions in force (a resolved scenario's, or the plan-data defaults). */
   assumptions?: typeof defaultAssumptions;
   /** Sowings the record covers: fixed labor is per sowing. */
@@ -301,7 +295,6 @@ export function productionSowingLedger(
 
   const trays = sowing.traysSown;
   const units = sowing.goodUnits;
-  const servings = opts.servingsProduced ?? units;
   const date = sowing.productionDate;
   const std = (perTrayCost: number) => perTrayCost * trays * (1 + shrink);
 
@@ -588,7 +581,7 @@ export function productionSowingLedger(
     {
       id: 'SHIP',
       description: 'Distribute units to pickup points — revenue and cost of goods sold',
-      units: opts.unitsShipped ?? servings,
+      units: opts.unitsShipped ?? units,
       pricePerUnit: opts.pricePerUnit ?? 0,
       revenueAccount: ACC_FOOD_SALES,
     },
@@ -672,7 +665,6 @@ export function productionSowingLedger(
     amounts: {
       traysSown: trays,
       unitsProduced: units,
-      servingsProduced: servings,
       purchaseOrderCost: opts.purchaseOrderCost,
       materialIssuedToWip: materialIssued,
       directLaborStandard,

@@ -119,7 +119,7 @@ describe('approved standard versions (Roadmap J5)', () => {
     const frozen = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std]));
     const live = postActuals(bundle([sowing('2026-09-14', standardLabel(version(1, '2026-09-01')))], [version(1, '2026-09-01')]));
     const absorbed = (r: ReturnType<typeof postActuals>) => r.periods[0]!.sowings[0]!.amounts.overheadAbsorbed;
-    const units = frozen.periods[0]!.sowings[0]!.amounts.servingsProduced;
+    const units = frozen.periods[0]!.sowings[0]!.amounts.unitsProduced;
     expect(absorbed(frozen)).toBeCloseTo(9.99 * units, 6);
     expect(absorbed(live)).not.toBeCloseTo(absorbed(frozen), 2);
   });

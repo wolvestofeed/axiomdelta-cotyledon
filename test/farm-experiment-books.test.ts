@@ -142,7 +142,7 @@ describe('an experiment in the Actual ledger', () => {
     expect(net(posted.entries, ACC_RESEARCH_DEVELOPMENT)).toBe(Math.round(expLed.amounts.researchAndDevelopment * 100));
     // The cost per unit made is the production sowing's alone.
     const prodLed = posted.periods[0]!.sowings.find((l) => l.entries[0]!.id.startsWith('B-260914-01'))!;
-    expect(posted.periods[0]!.costPerUnitCents).toBeCloseTo((prodLed.amounts.finishedGoodsCost * 100) / prodLed.amounts.servingsProduced, 6);
+    expect(posted.periods[0]!.costPerUnitCents).toBeCloseTo((prodLed.amounts.finishedGoodsCost * 100) / prodLed.amounts.unitsProduced, 6);
     expect(posted.periods[0]!.notes.join(' ')).toMatch(/B-260914-02: an experiment in R&D/);
   });
 

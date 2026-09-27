@@ -11,7 +11,7 @@ const receipt = (id: string, on: string, lines: { input: string; qty: number; lo
   receivedBy: null, notes: null,
 });
 const sowing = (id: string, on: string, consumed: { input: string; qty: number; lot?: string }[]): SowingRecordDoc => ({
-  id, sowingId: id, growPlanCode: 'BROC-01', productionDate: on, standardVersion: 'v', plannedUnits: 0, goodUnits: 0, sowingsRun: 1, servingsProduced: null,
+  id, sowingId: id, growPlanCode: 'BROC-01', productionDate: on, standardVersion: 'v', plannedUnits: 0, goodUnits: 0, sowingsRun: 1,
   // Each consumed line as an issue in its own unit; the raw stock reads a seed lot the same way.
   lots: [],
   issues: consumed.map((c) => ({ kind: 'medium' as const, input: c.input, lotCode: c.lot ?? 'not recorded', qty: c.qty, unit: 'lb' })),
