@@ -144,7 +144,7 @@ export function ProcurementClient({
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={money(stockValue)} label="Raw stock on hand, at invoice" sub={`${Object.keys(stock.byInput).length} input${Object.keys(stock.byInput).length === 1 ? '' : 's'} with a lot on hand as of ${productionDate}`} />
         <Kpi value={num(openPos)} label="Open purchase orders" sub={`${onOrderLines} line${onOrderLines === 1 ? '' : 's'} still to receive`} />
-        <Kpi value={money(day.purchase.total)} label="Next run, gross at standard" sub={`${num(Math.round(day.totalProduced))} base units on ${dateLabel(productionDate)}`} />
+        <Kpi value={money(day.purchase.total)} label="Next run, gross at the order's price" sub={`${num(Math.round(day.totalProduced))} base units on ${dateLabel(productionDate)}`} />
         <Kpi value={money(net.netTotal)} label="Next run, net to buy" sub={`${net.toBuy.length} line${net.toBuy.length === 1 ? '' : 's'} after stock and open orders`} />
       </div>
       <div className="grid gap-3 mt-3 farm-autofit-11">

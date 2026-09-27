@@ -105,8 +105,12 @@ export interface StatementRow {
 export interface IncomeStatement {
   revenue: StatementRow[];
   revenueCents: number;
+  /** Cost of goods sold by element — materials, labor, overhead — always the three rows. */
+  costOfGoodsSold: StatementRow[];
+  /** Their subtotal. */
   costOfGoodsSoldCents: number;
-  grossMarginAtStandardCents: number;
+  /** Revenue less cost of goods sold, before the variances and period production costs. */
+  grossMarginBeforeVariancesCents: number;
   /** Overhead spending and volume, and abnormal spoilage. */
   manufacturingVariances: StatementRow[];
   manufacturingVariancesCents: number;
@@ -158,6 +162,7 @@ export interface ClassifiedBalanceSheet {
 
 /** Cost of goods sold by element: materials, labor, overhead. */
 const COGS_CODES: readonly string[] = [ACC_COGS_MATERIALS, ACC_COGS_LABOR, ACC_COGS_OVERHEAD];
+const COGS_LABELS: Record<string, string> = { [ACC_COGS_MATERIALS]: 'Materials', [ACC_COGS_LABOR]: 'Labor', [ACC_COGS_OVERHEAD]: 'Overhead' };
 const VARIANCE_CODES = [
   ACC_OH_SPENDING_VAR,
   ACC_OH_VOLUME_VAR,
@@ -188,7 +193,11 @@ export function classifyIncomeStatement(pnl: ProfitAndLoss): IncomeStatement {
   const revenue = pnl.income
     .filter((r) => r.balanceCents !== 0)
     .map((r) => ({ code: r.account.code, label: r.account.name, cents: r.balanceCents }));
-  const cogs = pnl.expense.filter((r) => COGS_CODES.includes(r.account.code)).reduce((t, r) => t + r.balanceCents, 0);
+  const costOfGoodsSold = COGS_CODES.map((code) => {
+    const r = pnl.expense.find((x) => x.account.code === code);
+    return { code, label: COGS_LABELS[code]!, cents: r?.balanceCents ?? 0 };
+  });
+  const cogs = costOfGoodsSold.reduce((t, r) => t + r.cents, 0);
   const variances = rowsFor(pnl.expense, VARIANCE_CODES);
   const periodProduction = rowsFor(pnl.expense, [ACC_UNASSIGNED_PRODUCTION_LABOR]);
   const selling = rowsFor(pnl.expense, [ACC_DISTRIBUTION, ACC_MARKETPLACE_COMMISSION]);
@@ -202,14 +211,15 @@ export function classifyIncomeStatement(pnl: ProfitAndLoss): IncomeStatement {
   const sum = (rows: StatementRow[]) => rows.reduce((s, r) => s + r.cents, 0);
   const revenueCents = sum(revenue);
   const variancesCents = sum(variances);
-  const grossAtStd = revenueCents - cogs;
-  const gross = grossAtStd - variancesCents - sum(periodProduction);
+  const grossBeforeVariances = revenueCents - cogs;
+  const gross = grossBeforeVariances - variancesCents - sum(periodProduction);
   const operating = gross - sum(selling) - sum(admin) - sum(otherOperating);
   return {
     revenue,
     revenueCents,
+    costOfGoodsSold,
     costOfGoodsSoldCents: cogs,
-    grossMarginAtStandardCents: grossAtStd,
+    grossMarginBeforeVariancesCents: grossBeforeVariances,
     manufacturingVariances: variances,
     manufacturingVariancesCents: variancesCents,
     periodProductionCosts: periodProduction,

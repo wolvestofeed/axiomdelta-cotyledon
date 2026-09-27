@@ -23,7 +23,7 @@ export function BalanceSheetView() {
           <ul>
             <li>The statement is classified, at the end of the period picked, on the ledger selected in the forecast bar.</li>
             <li>It is built from the same journal as the statement of income and the cash flow.</li>
-            <li>Inventory is carried at standard cost by stage.</li>
+            <li>Inventory is carried at cost by stage: materials by lot at the price paid, labor as recorded, overhead at its rates.</li>
             <li>Fixed assets are at cost less accumulated depreciation.</li>
           </ul>
         }
@@ -34,7 +34,7 @@ export function BalanceSheetView() {
         <>
           <PageControls><PeriodPicker book={book} granularity={granularity} period={period} onGranularity={setGranularity} onLabel={setLabel} /></PageControls>
           <div className="grid gap-3 mb-4 farm-autofit-11">
-            <Kpi value={dollars(c.totalAssetsCents)} label="Total assets" sub={`${dollars(c.inventoryCents)} inventory at standard`} />
+            <Kpi value={dollars(c.totalAssetsCents)} label="Total assets" sub={`${dollars(c.inventoryCents)} inventory at cost`} />
             <Kpi value={dollars(c.totalLiabilitiesCents)} label="Total liabilities" sub={`${dollars(c.longTermDebtCents + c.currentUnitOfLongTermDebtCents)} long-term debt`} />
             <Kpi value={signed(c.totalEquityCents)} label="Total equity" sub={`${signed(c.retainedEarningsCents)} retained earnings`} />
             <Kpi value={<span>A = L + E <CheckPill ok={balanced} okLabel="✓" overLabel="✗" /></span>} label="Balance check" sub={`At ${period.to}`} />

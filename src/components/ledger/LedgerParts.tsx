@@ -95,8 +95,11 @@ export function IncomeStatementCard({ period, title = 'Statement of income — a
             <tr key={r.code}><td>{r.label}</td><td className="num">{dollars(r.cents)}</td></tr>
           ))}
           <tr className="total"><td>Revenue</td><td className="num">{dollars(is.revenueCents)}</td></tr>
-          <tr><td>Cost of goods sold at standard</td><td className="num">({dollars(is.costOfGoodsSoldCents)})</td></tr>
-          <tr className="total"><td>Gross margin at standard</td><td className="num">{dollars(is.grossMarginAtStandardCents)}</td></tr>
+          {is.costOfGoodsSold.map((r) => (
+            <tr key={r.code}><td className="pl-5!">Cost of goods sold — {r.label.toLowerCase()}</td><td className="num">({dollars(r.cents)})</td></tr>
+          ))}
+          <tr><td>Cost of goods sold</td><td className="num">({dollars(is.costOfGoodsSoldCents)})</td></tr>
+          <tr className="total"><td>Gross margin before variances</td><td className="num">{dollars(is.grossMarginBeforeVariancesCents)}</td></tr>
           {is.manufacturingVariances.map((r) => (
             <tr key={r.code}><td className="pl-5!">{r.label}</td><td className="num">{r.cents < 0 ? dollars(-r.cents) : `(${dollars(r.cents)})`}</td></tr>
           ))}
@@ -142,7 +145,7 @@ export function BalanceSheetCards({ period }: { period: StatementPeriod }) {
               <tr key={r.code}><td className="pl-5!">{r.label}</td><td className="num">{signed(r.cents)}</td></tr>
             ))}
             {inventoryRows.length > 0 && (
-              <tr><td className="farm-c-soft">Inventory at standard cost, total</td><td className="num farm-c-soft">{signed(c.inventoryCents)}</td></tr>
+              <tr><td className="farm-c-soft">Inventory at cost, total</td><td className="num farm-c-soft">{signed(c.inventoryCents)}</td></tr>
             )}
             <tr className="total"><td>Total current assets</td><td className="num">{signed(c.currentAssetsCents)}</td></tr>
             <tr><td colSpan={2} className="font-semibold! pt-3!">Non-current assets</td></tr>

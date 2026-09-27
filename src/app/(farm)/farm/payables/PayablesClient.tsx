@@ -124,10 +124,7 @@ export function PayablesClient({
     const payload = { supplierId: formSupplier.supplierId, supplierName: formSupplier.supplierName ?? 'Supplier', billNumber: form.billNumber, billDate: form.billDate, receiptIds: form.receiptIds, lines: form.lines, notes: null };
     run(
       () => (form.id ? updateSupplierBill({ ...payload, id: form.id }) : recordSupplierBill(payload)),
-      (res) => {
-        const r = res as { status?: string; issues?: string[] };
-        return r.status === 'mismatched' ? `Recorded bill ${form.billNumber} — flagged: ${r.issues?.length ?? 0} issue${r.issues?.length === 1 ? '' : 's'}; it is not paid until rectified.` : `Recorded bill ${form.billNumber} — matched.`;
-      },
+      () => `Recorded bill ${form.billNumber} — matched.`,
       () => setForm(null),
     );
   }
@@ -229,10 +226,10 @@ export function PayablesClient({
             </div>
           )}
           <div className="flex gap-2 mt-3!">
-            <button type="button" className="farm-btn primary" disabled={pending || !form.billNumber.trim() || form.receiptIds.length === 0 || form.lines.length === 0 || !formTerms} onClick={submitBill}>{form.id ? 'Save rectified bill' : 'Record bill'}</button>
+            <button type="button" className="farm-btn primary" disabled={pending || !form.billNumber.trim() || form.receiptIds.length === 0 || form.lines.length === 0 || !formTerms || preview?.status !== 'matched'} onClick={submitBill}>{form.id ? 'Save rectified bill' : 'Record bill'}</button>
             <button type="button" className="farm-btn" onClick={() => setForm(null)} disabled={pending}>Cancel</button>
           </div>
-          <p className="farm-kpi-sub mt-2">Lines start as the receipts&apos; accepted lines; type what the supplier&apos;s bill says. A bill that does not match is recorded and flagged. A quantity or price received differently from the order is corrected on the receipt with its override reason, not here.</p>
+          <p className="farm-kpi-sub mt-2">Lines start as the receipts&apos; accepted lines; type what the supplier&apos;s bill says. A bill that does not match its receipts is not recorded; its differences are listed above. A quantity or price received differently from the order is corrected on the receipt with its override reason, not here.</p>
         </Card>
       )}
 

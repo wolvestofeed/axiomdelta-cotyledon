@@ -33,7 +33,7 @@ export default function PnlPage() {
           <ul>
             <li>Plan or Actual follows the ledger selected in the forecast bar. Actual posts what was recorded.</li>
             <li>Plan runs the open forecast day by day, its subscribers, services, flat plans and the lines in service, and posts what the business would record.</li>
-            <li>Cost of goods sold is at standard, with the manufacturing variances beneath it.</li>
+            <li>Cost of goods sold is the cost of the sowings relieved, as materials, labor and overhead, with the overhead variances and abnormal spoilage beneath it.</li>
             <li>Fixed cost never enters the cost of a unit.</li>
             <li>Manufacturing overhead is absorbed at normal capacity, and the unabsorbed remainder is a period charge.</li>
             <li>General and administrative cost is a period expense.</li>
@@ -59,8 +59,9 @@ export default function PnlPage() {
           <div className="grid gap-4 mt-4 farm-autofit-22">
             <IncomeStatementCard period={period}>
               <p className="farm-kpi-sub mt-2">
-                Cost of goods sold carries material at standard including the normal-spoilage allowance, direct labor at the grow plan&rsquo;s
-                standard, packaging, and fixed manufacturing overhead at the normal-capacity rate. A variance in brackets is unfavourable.
+                Cost of goods sold is what the units distributed cost, oldest sowing first: materials by lot at the price paid with
+                packaging, direct labor as recorded (the approved standard where no crew is recorded), and overhead, variable at its standard
+                per tray and fixed at the normal-capacity rate. A variance in brackets is unfavourable.
                 Principal repaid on the loans is financing, not expense: see <Link className="farm-link" href="/farm/financials/cash-flow">Cash Flow</Link>.
               </p>
             </IncomeStatementCard>

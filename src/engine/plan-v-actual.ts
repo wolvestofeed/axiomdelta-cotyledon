@@ -6,6 +6,7 @@
  * from the sums. Nothing is stored.
  */
 
+import { ACC_COGS_MATERIALS, ACC_COGS_LABOR, ACC_COGS_OVERHEAD } from '@/data/coa-farm';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import type { SowingRecordDoc, DistributionDoc, ReceiptDoc } from '@/engine/actuals';
 import type { ProductionSowingLedger } from '@/engine/production-ledger';
@@ -58,6 +59,10 @@ export interface PvaMeasures {
   laborHours: number;
   laborCostCents: number;
   packagingCostCents: number;
+  /** Cost of goods sold on the income statement, by element. */
+  cogsMaterialsCents: number;
+  cogsLaborCents: number;
+  cogsOverheadCents: number;
   distributionCostCents: number;
   servingsProduced: number;
   sowings: number;
@@ -75,6 +80,7 @@ export interface PvaMeasures {
 }
 
 const cents = (dollars: number) => Math.round(dollars * 100);
+const cogsOf = (side: PvaSideInput, code: string) => side.statement?.costOfGoodsSold.find((r) => r.code === code)?.cents ?? 0;
 const inMonth = (d: string, period: string) => d.slice(0, 7) === period;
 
 function byStars(list: readonly { rating: MarkRating }[]): Record<1 | 2 | 3, number> {
@@ -96,6 +102,9 @@ export function pvaMeasures(side: PvaSideInput): PvaMeasures {
     laborHours: side.sowings.reduce((t, b) => t + (b.actualLaborHours ?? 0), 0),
     laborCostCents: cents(side.sowingLedgers.reduce((t, b) => t + b.amounts.directLaborActual, 0)),
     packagingCostCents: cents(side.sowingLedgers.reduce((t, b) => t + b.amounts.packagingCost, 0)),
+    cogsMaterialsCents: cogsOf(side, ACC_COGS_MATERIALS),
+    cogsLaborCents: cogsOf(side, ACC_COGS_LABOR),
+    cogsOverheadCents: cogsOf(side, ACC_COGS_OVERHEAD),
     distributionCostCents: (side.statement?.sellingAndDistribution ?? []).reduce((t, r) => t + r.cents, 0),
     servingsProduced: side.sowingLedgers.reduce((t, b) => t + b.amounts.servingsProduced, 0),
     sowings: side.sowings.reduce((t, b) => t + b.sowingsRun, 0),
@@ -122,7 +131,7 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
   if (months.length === 0) return z;
   const add = (a: number, b: number) => a + b;
   for (const m of months) {
-    for (const k of ['units', 'revenueCents', 'orders', 'inputCostCents', 'laborHours', 'laborCostCents', 'packagingCostCents', 'distributionCostCents', 'servingsProduced', 'sowings', 'newSubscribers', 'wasteKg', 'waterGal', 'electricityKwh', 'naturalGasTherms', 'fuelGal'] as const) z[k] = add(z[k], m[k]);
+    for (const k of ['units', 'revenueCents', 'orders', 'inputCostCents', 'laborHours', 'laborCostCents', 'packagingCostCents', 'cogsMaterialsCents', 'cogsLaborCents', 'cogsOverheadCents', 'distributionCostCents', 'servingsProduced', 'sowings', 'newSubscribers', 'wasteKg', 'waterGal', 'electricityKwh', 'naturalGasTherms', 'fuelGal'] as const) z[k] = add(z[k], m[k]);
     for (const k of ['total', 'scope1', 'scope2', 'scope3'] as const) z.emissionsKg[k] += m.emissionsKg[k];
     for (const k of ['referenceKg', 'onNamedSupplierKg', 'onSupplierDataKg'] as const) z.food[k] += m.food[k];
   }
@@ -134,7 +143,7 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
 
 export function emptyMeasures(): PvaMeasures {
   return {
-    units: 0, revenueCents: 0, orders: 0, inputCostCents: 0, laborHours: 0, laborCostCents: 0, packagingCostCents: 0, distributionCostCents: 0, servingsProduced: 0, sowings: 0, newSubscribers: 0,
+    units: 0, revenueCents: 0, orders: 0, inputCostCents: 0, laborHours: 0, laborCostCents: 0, packagingCostCents: 0, cogsMaterialsCents: 0, cogsLaborCents: 0, cogsOverheadCents: 0, distributionCostCents: 0, servingsProduced: 0, sowings: 0, newSubscribers: 0,
     wasteKg: 0, waterGal: 0, electricityKwh: 0, naturalGasTherms: 0, fuelGal: 0,
     emissionsKg: { total: 0, scope1: 0, scope2: 0, scope3: 0 },
     food: { referenceKg: 0, onNamedSupplierKg: 0, onSupplierDataKg: 0 },

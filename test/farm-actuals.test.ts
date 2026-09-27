@@ -302,6 +302,17 @@ describe('actuals — the Actual ledger by period (Roadmap N6)', () => {
     expect(s.incomeStatement.manufacturingVariances.some((r) => r.code === '5110' || r.code === '5120')).toBe(false);
   });
 
+  it('shows cost of goods sold by element, materials, labor and overhead, with its subtotal', () => {
+    const is = s.incomeStatement;
+    expect(is.costOfGoodsSold.map((r) => [r.code, r.label])).toEqual([['5011', 'Materials'], ['5012', 'Labor'], ['5013', 'Overhead']]);
+    expect(is.costOfGoodsSold.every((r) => r.cents > 0)).toBe(true);
+    expect(is.costOfGoodsSoldCents).toBe(is.costOfGoodsSold.reduce((t, r) => t + r.cents, 0));
+    expect(is.grossMarginBeforeVariancesCents).toBe(is.revenueCents - is.costOfGoodsSoldCents);
+    // Everything made was distributed: the subtotal is what finished goods received.
+    const el = ledger.periods[0]!.sowings[0]!.amounts.finishedGoodsByElementCents;
+    expect(is.costOfGoodsSold.map((r) => r.cents)).toEqual([el.materials, el.labor, el.overhead]);
+  });
+
   it('the position is cumulative and balances', () => {
     const bs = s.balanceSheet;
     expect(bs.currentAssetsCents + bs.netFixedAssetsCents).toBe(bs.totalAssetsCents);

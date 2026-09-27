@@ -277,7 +277,11 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     const rpAfterUnits = rp.bundle.distributions.filter((d) => d.distributedOn > asOf && d.distributedOn >= from && d.distributedOn <= to).reduce((t, d) => t + d.units, 0);
     const planPart = rpMonthUnits > 0 ? rpAfterUnits / rpMonthUnits : 0;
     const rowsOf = (st: IncomeStatement | null, k = 1) => (st?.sellingAndDistribution ?? []).map((r) => ({ ...r, cents: Math.round(r.cents * k) }));
-    const rollingStatement = { sellingAndDistribution: [...(cut ? rowsOf(statementOf(actualLedger, period)) : []), ...rowsOf(statementOf(rp.ledger, period), planPart)] } as IncomeStatement;
+    // Cost of goods sold the same way, element by element: the records' rows plus the plan's share.
+    const cogsOf = (st: IncomeStatement | null, k = 1) => (st?.costOfGoodsSold ?? []).map((r) => ({ ...r, cents: Math.round(r.cents * k) }));
+    const cogsRows = [...(cut ? cogsOf(statementOf(actualLedger, period)) : []), ...cogsOf(statementOf(rp.ledger, period), planPart)];
+    const costOfGoodsSold = [...new Set(cogsRows.map((r) => r.code))].map((code) => ({ ...cogsRows.find((r) => r.code === code)!, cents: cogsRows.filter((r) => r.code === code).reduce((t, r) => t + r.cents, 0) }));
+    const rollingStatement = { sellingAndDistribution: [...(cut ? rowsOf(statementOf(actualLedger, period)) : []), ...rowsOf(statementOf(rp.ledger, period), planPart)], costOfGoodsSold } as unknown as IncomeStatement;
     const rpShare = rp.firstYearUnits > 0 ? rpAfterUnits / rp.firstYearUnits : 0;
     const re = energyInWindow(readings, from, cut ?? '0000-00-00');
     const pe = rp.inputs.sustainability.energy;

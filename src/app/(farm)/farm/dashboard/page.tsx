@@ -443,7 +443,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
         <HeroStat value={num(plant.sowingSize)} label="Sowing — active-grow-plan average" sub={`Trays one grow unit takes; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
         <HeroStat value={coverText(day)} label="Days of cover" sub={`Finished stock over a distribution day's orders; ${picture.R.assumptions.inventory.blackoutShelfLife.value}-day shelf life`} />
-        <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-grow-plan average, at standard" />
+        <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-grow-plan average, at the plan's price" />
       </div>
 
       <SectionGrid sections={sections} isAdmin={false} />

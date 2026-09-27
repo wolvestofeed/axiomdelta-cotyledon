@@ -64,6 +64,14 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
     expect(servedCostPerUnitCents(m)).toBeCloseTo((m.inputCostCents + m.laborCostCents + m.packagingCostCents) / 400, 9);
   });
 
+  it('carries cost of goods sold by element from the income statement, zero with none', () => {
+    expect([m.cogsMaterialsCents, m.cogsLaborCents, m.cogsOverheadCents]).toEqual([0, 0, 0]);
+    const rows = [{ code: '5011', label: 'Materials', cents: 700 }, { code: '5012', label: 'Labor', cents: 300 }, { code: '5013', label: 'Overhead', cents: 90 }];
+    const withStatement = pvaMeasures({ ...s, statement: { costOfGoodsSold: rows, sellingAndDistribution: [] } as never });
+    expect([withStatement.cogsMaterialsCents, withStatement.cogsLaborCents, withStatement.cogsOverheadCents]).toEqual([700, 300, 90]);
+    expect(sumMeasures([withStatement, withStatement]).cogsLaborCents).toBe(600);
+  });
+
   it('tallies ratings by stars and carries the sustainability quantities', () => {
     expect(m.subscribersByStars).toEqual({ 1: 0, 2: 0, 3: 1 });
     expect(m.suppliersByStars).toEqual({ 1: 1, 2: 0, 3: 0 });

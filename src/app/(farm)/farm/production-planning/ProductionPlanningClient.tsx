@@ -408,7 +408,7 @@ export function ProductionPlanningClient({
               <div className="farm-scroll-x">
                 <table className="farm-table">
                   <thead>
-                    <tr><th>Plan</th><th>Sow date</th><th className="num">Units</th><th className="num">Required (trays)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing (trays)</th><th className="num">Sowings</th><th className="num">Sown</th><th className="num">Closing</th><th className="num">Inputs at standard</th></tr>
+                    <tr><th>Plan</th><th>Sow date</th><th className="num">Units</th><th className="num">Required (trays)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing (trays)</th><th className="num">Sowings</th><th className="num">Sown</th><th className="num">Closing</th><th className="num">Inputs at the plan&rsquo;s price</th></tr>
                   </thead>
                   <tbody>
                     {dayRuns.map((r) => {
@@ -665,7 +665,7 @@ export function ProductionPlanningClient({
   );
 }
 
-/** The net requirement table: gross at standard, stock applied, on order applied, net, packs. */
+/** The net requirement table: gross, stock applied, on order applied, net, packs. */
 function NetCard({ title, net, stock, gross, shrink, runs, onOrderDrafts }: { title: string; net: NetRequirements; stock: ReturnType<typeof rawStockOnHand>; gross: number; shrink: number; runs: number; onOrderDrafts: Record<string, number> }) {
   const stockValue = Object.values(stock.byInput).reduce((s, l) => s + l.valueCents, 0) / 100;
   const drafts = net.lines.filter((l) => (onOrderDrafts[l.input] ?? 0) > 0).length;

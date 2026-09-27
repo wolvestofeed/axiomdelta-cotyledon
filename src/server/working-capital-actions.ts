@@ -313,7 +313,12 @@ const SupplierBillInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
 });
 
-async function checkBill(d: z.infer<typeof SupplierBillInput>, billId: string | null): Promise<{ error: string } | { terms: string; status: 'matched' | 'mismatched'; issues: string[] }> {
+/**
+ * The checks a bill passes before it is recorded: its receipts on file and not on another bill,
+ * the supplier's terms, and the three-way match. A bill that does not equal its receipts, line for
+ * line in quantity and value, is refused with its differences listed (`accounting-policy.md` §16).
+ */
+async function checkBill(d: z.infer<typeof SupplierBillInput>, billId: string | null): Promise<{ error: string } | { terms: string }> {
   const receipts = await db.select({ id: farmReceipts.id, supplierId: farmReceipts.supplierId }).from(farmReceipts).where(inArray(farmReceipts.id, d.receiptIds));
   if (receipts.length !== d.receiptIds.length) return { error: 'A receipt named on the bill is not on file.' };
   if (d.supplierId && receipts.some((r) => r.supplierId && r.supplierId !== d.supplierId)) return { error: 'A receipt named on the bill is from a different supplier.' };
@@ -336,15 +341,16 @@ async function checkBill(d: z.infer<typeof SupplierBillInput>, billId: string | 
     bundle.receipts.filter((r) => d.receiptIds.includes(r.id)),
     pos.map((p) => ({ id: p.id, poNumber: p.poNumber, lines: p.lines })),
   );
-  return { terms, status: match.status, issues: match.issues };
+  if (match.status === 'mismatched') return { error: `The bill does not match its receipts and is not recorded. ${match.issues.join(' ')}` };
+  return { terms };
 }
 
-/** Record a supplier's bill against its receipts. A mismatched bill is recorded, flagged, and not paid until rectified. */
+/** Record a supplier's bill against its receipts. A bill that does not match them is refused. */
 export async function recordSupplierBill(...args: Parameters<typeof recordSupplierBillInner>): ReturnType<typeof recordSupplierBillInner> {
   return withWorkspace(() => recordSupplierBillInner(...args));
 }
 
-async function recordSupplierBillInner(input: unknown): Promise<Result<{ id: string; status: 'matched' | 'mismatched'; issues: string[] }>> {
+async function recordSupplierBillInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = SupplierBillInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -361,20 +367,20 @@ async function recordSupplierBillInner(input: unknown): Promise<Result<{ id: str
   const id = await db.transaction(async (tx) => {
     const rows = await tx.insert(farmSupplierBills).values({ ...d, paymentTerms: checked.terms, createdBy: access.userId }).returning({ id: farmSupplierBills.id });
     const row = rows[0];
-    if (row) await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_supplier_bill', recordKind: 'supplier_bill', recordId: row.id, period: periodOf(d.billDate), detail: { supplierName: d.supplierName, billNumber: d.billNumber, billDate: d.billDate, receiptIds: d.receiptIds, match: checked.status, issues: checked.issues } });
+    if (row) await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_supplier_bill', recordKind: 'supplier_bill', recordId: row.id, period: periodOf(d.billDate), detail: { supplierName: d.supplierName, billNumber: d.billNumber, billDate: d.billDate, receiptIds: d.receiptIds, match: 'matched' } });
     return row?.id ?? null;
   });
   if (!id) return { ok: false, error: 'Failed to record the bill.' };
   revalidatePath('/farm', 'layout');
-  return { ok: true, id, status: checked.status, issues: checked.issues };
+  return { ok: true, id };
 }
 
-/** Rectify a bill: replace its number, date, receipts and lines. Refused once a payment is applied to it. */
+/** Rectify a bill: replace its number, date, receipts and lines. Refused once a payment is applied to it, or when it does not match its receipts. */
 export async function updateSupplierBill(...args: Parameters<typeof updateSupplierBillInner>): ReturnType<typeof updateSupplierBillInner> {
   return withWorkspace(() => updateSupplierBillInner(...args));
 }
 
-async function updateSupplierBillInner(input: unknown): Promise<Result<{ status: 'matched' | 'mismatched'; issues: string[] }>> {
+async function updateSupplierBillInner(input: unknown): Promise<Result> {
   const parsed = SupplierBillInput.extend({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -398,10 +404,10 @@ async function updateSupplierBillInner(input: unknown): Promise<Result<{ status:
   }
   await db.transaction(async (tx) => {
     await tx.update(farmSupplierBills).set({ ...d, paymentTerms: checked.terms, updatedAt: new Date() }).where(eq(farmSupplierBills.id, id));
-    await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_supplier_bill', recordKind: 'supplier_bill', recordId: id, period: periodOf(d.billDate), detail: { rectified: true, previousBillDate: String(current.billDate), billNumber: d.billNumber, billDate: d.billDate, receiptIds: d.receiptIds, match: checked.status, issues: checked.issues } });
+    await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_supplier_bill', recordKind: 'supplier_bill', recordId: id, period: periodOf(d.billDate), detail: { rectified: true, previousBillDate: String(current.billDate), billNumber: d.billNumber, billDate: d.billDate, receiptIds: d.receiptIds, match: 'matched' } });
   });
   revalidatePath('/farm', 'layout');
-  return { ok: true, status: checked.status, issues: checked.issues };
+  return { ok: true };
 }
 
 // ── Supplier payments (K3) ──────────────────────────────────────────────────

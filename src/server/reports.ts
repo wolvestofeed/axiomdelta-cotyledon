@@ -402,13 +402,13 @@ const incomeByPeriod: Builder = (ctx) => {
   for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, num(Math.round(y.unitsDistributed)), cents(y.incomeStatement.revenueCents), cents(y.incomeStatement.grossMarginCents), cents(y.incomeStatement.operatingIncomeCents), signedCents(y.incomeStatement.netIncomeCents)], 'total'));
   return {
     summary: table([{ label: 'Period' }, { label: 'Units distributed', num: true }, { label: 'Revenue', num: true }, { label: 'Gross margin', num: true }, { label: 'Operating income', num: true }, { label: 'Net income, pre-tax', num: true }], rows),
-    detail: table([{ label: 'Period' }, { label: 'Cost of goods sold at standard', num: true }, { label: 'Manufacturing variances', num: true }, { label: 'Gross margin at standard', num: true }, { label: 'Selling & distribution', num: true }, { label: 'General & administrative', num: true }, { label: 'Financing', num: true }],
+    detail: table([{ label: 'Period' }, { label: 'COGS — materials', num: true }, { label: 'COGS — labor', num: true }, { label: 'COGS — overhead', num: true }, { label: 'Cost of goods sold', num: true }, { label: 'Manufacturing variances', num: true }, { label: 'Gross margin before variances', num: true }, { label: 'Selling & distribution', num: true }, { label: 'General & administrative', num: true }, { label: 'Financing', num: true }],
       months.map((m) => {
         const s = m.incomeStatement;
         const sum = (xs: { cents: number }[]) => xs.reduce((t, x) => t + x.cents, 0);
-        return row([m.label, cents(s.costOfGoodsSoldCents), signedCents(s.manufacturingVariancesCents), cents(s.grossMarginAtStandardCents), cents(sum(s.sellingAndDistribution)), cents(sum(s.generalAndAdministrative)), cents(sum(s.financing))], s.revenueCents === 0 ? 'faint' : undefined);
+        return row([m.label, ...s.costOfGoodsSold.map((c) => cents(c.cents)), cents(s.costOfGoodsSoldCents), signedCents(s.manufacturingVariancesCents), cents(s.grossMarginBeforeVariancesCents), cents(sum(s.sellingAndDistribution)), cents(sum(s.generalAndAdministrative)), cents(sum(s.financing))], s.revenueCents === 0 ? 'faint' : undefined);
       })),
-    basis: `${ctx.worldLabel}, ${selected.ledger.from} to ${selected.ledger.to}. The classified income statement by month; the year rows total the calendar year.`,
+    basis: `${ctx.worldLabel}, ${selected.ledger.from} to ${selected.ledger.to}. The classified income statement by month, cost of goods sold by element at the cost of the sowings relieved; the year rows total the calendar year.`,
     empty: selected.empty ? 'Nothing is on record yet; every figure is zero.' : undefined,
   };
 };
@@ -448,12 +448,12 @@ const variances: Builder = (ctx) => {
   const lineLabels = [...new Set(months.flatMap((m) => m.incomeStatement.manufacturingVariances.map((v) => v.label)))];
   const rows = months.map((m) => {
     const s = m.incomeStatement;
-    return row([m.label, cents(s.grossMarginAtStandardCents), signedCents(s.manufacturingVariancesCents), s.grossMarginAtStandardCents !== 0 ? pct(s.manufacturingVariancesCents / Math.abs(s.grossMarginAtStandardCents), 1) : '—', cents(s.grossMarginCents)], s.revenueCents === 0 && s.manufacturingVariancesCents === 0 ? 'faint' : undefined);
+    return row([m.label, cents(s.grossMarginBeforeVariancesCents), signedCents(s.manufacturingVariancesCents), s.grossMarginBeforeVariancesCents !== 0 ? pct(s.manufacturingVariancesCents / Math.abs(s.grossMarginBeforeVariancesCents), 1) : '—', cents(s.grossMarginCents)], s.revenueCents === 0 && s.manufacturingVariancesCents === 0 ? 'faint' : undefined);
   });
-  for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, cents(y.incomeStatement.grossMarginAtStandardCents), signedCents(y.incomeStatement.manufacturingVariancesCents), y.incomeStatement.grossMarginAtStandardCents !== 0 ? pct(y.incomeStatement.manufacturingVariancesCents / Math.abs(y.incomeStatement.grossMarginAtStandardCents), 1) : '—', cents(y.incomeStatement.grossMarginCents)], 'total'));
+  for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, cents(y.incomeStatement.grossMarginBeforeVariancesCents), signedCents(y.incomeStatement.manufacturingVariancesCents), y.incomeStatement.grossMarginBeforeVariancesCents !== 0 ? pct(y.incomeStatement.manufacturingVariancesCents / Math.abs(y.incomeStatement.grossMarginBeforeVariancesCents), 1) : '—', cents(y.incomeStatement.grossMarginCents)], 'total'));
   const detail = months.flatMap((m) => m.incomeStatement.manufacturingVariances.filter((v) => v.cents !== 0).map((v) => row([m.label, v.code, v.label, signedCents(v.cents)])));
   return {
-    summary: table([{ label: 'Period' }, { label: 'Gross margin at standard', num: true }, { label: 'Manufacturing variances', num: true }, { label: 'Share of margin at standard', num: true }, { label: 'Gross margin', num: true }], rows),
+    summary: table([{ label: 'Period' }, { label: 'Gross margin before variances', num: true }, { label: 'Manufacturing variances', num: true }, { label: 'Share of margin before variances', num: true }, { label: 'Gross margin', num: true }], rows),
     detail: table([{ label: 'Period' }, { label: 'Account' }, { label: 'Variance' }, { label: 'Amount', num: true }], detail),
     basis: `${ctx.worldLabel}. Variance lines on the income statement: ${lineLabels.length ? lineLabels.join(', ') : 'none posted'}. A negative amount is unfavourable to margin as the statement signs it.`,
     empty: detail.length === 0 ? 'No variance has posted.' : undefined,

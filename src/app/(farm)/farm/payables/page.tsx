@@ -19,7 +19,7 @@ const fromCents = (c: number) => c / 100;
 /**
  * Payables (Roadmap K2, K3): supplier bills recorded against the receipts
  * they cover, with the three-way match of purchase order, receipt and bill; a
- * mismatched bill is flagged and not paid until rectified. Aging by days past
+ * bill that does not match is refused, and one on file that does not is not paid. Aging by days past
  * due, days to pay for the month. Every figure is computed from the records.
  */
 export default async function PayablesPage(props: Parameters<typeof PayablesPageInner>[0]) {
@@ -82,7 +82,7 @@ async function PayablesPageInner({ searchParams }: { searchParams: Promise<{ per
             <li>A receipt waits as goods received, not invoiced, until the supplier&rsquo;s bill is recorded against it.</li>
             <li>A bill must equal its receipts, input by input, in quantity and value.</li>
             <li>Anything received short, over or at a changed price carries its override reason on the receipt.</li>
-            <li>A bill that does not match is flagged and is not paid until it is rectified.</li>
+            <li>A bill that does not match is refused, with its differences listed. A bill on file that does not match is not paid until it is rectified.</li>
             <li>Each bill takes its supplier&rsquo;s payment terms, which set its due date.</li>
           </ul>
         }

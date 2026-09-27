@@ -140,7 +140,8 @@ async function ActualsPageInner({
               </thead>
               <tbody>
                 {row('Revenue', is.revenueCents, pis?.revenueCents ?? null)}
-                {row('Cost of goods sold at standard', -is.costOfGoodsSoldCents, pis ? -pis.costOfGoodsSoldCents : null)}
+                {is.costOfGoodsSold.map((c) => row(`Cost of goods sold — ${c.label.toLowerCase()}`, -c.cents, pis ? -(pis.costOfGoodsSold.find((x) => x.code === c.code)?.cents ?? 0) : null))}
+                {row('Cost of goods sold', -is.costOfGoodsSoldCents, pis ? -pis.costOfGoodsSoldCents : null)}
                 {is.manufacturingVariances.map((v) => (
                   <tr key={v.code}><td className="pl-5!">{v.label}</td><td className="num">{signed(-v.cents)}</td><td className="num">—</td><td className="num">{signed(-v.cents)}</td></tr>
                 ))}
@@ -165,7 +166,7 @@ async function ActualsPageInner({
             <tbody>
               <tr><td>Cash</td><td className="num">{signed(s.cashCents)}</td></tr>
               {wc.processorClearingCents !== 0 && <tr><td>Retail and wholesale orders captured, not yet deposited</td><td className="num">{signed(wc.processorClearingCents)}</td></tr>}
-              <tr><td>Inventory at standard, by stage</td><td className="num">{signed(s.balanceSheet.inventoryCents)}</td></tr>
+              <tr><td>Inventory at cost, by stage</td><td className="num">{signed(s.balanceSheet.inventoryCents)}</td></tr>
               {s.balanceSheet.currentAssets.filter((r) => r.code >= '1400' && r.code < '1500').map((r) => (
                 <tr key={r.code}><td className="pl-5!">{r.label}</td><td className="num">{signed(r.cents)}</td></tr>
               ))}

@@ -241,6 +241,14 @@ describe('K2 — the three-way match', () => {
     expect(m.issues.some((i) => i.startsWith('Pinto beans: billed $80.00 against $75.00'))).toBe(true);
   });
 
+  it('a bill equal to its receipts in total but not line for line is mismatched: recording it is refused', () => {
+    // 50 lb at $1.58 and 40 lb at $1.10 bill $123.00, what was received, on different lines.
+    const m = threeWayMatch(bill([{ input: 'Pinto beans', qty: 50, unit: 'lb', unitPriceCents: 158 }, { input: 'Brown rice', qty: 40, unit: 'lb', unitPriceCents: 110 }]), [exact], [PO]);
+    expect(m.differenceCents).toBe(0);
+    expect(m.status).toBe('mismatched');
+    expect(m.issues).toHaveLength(2);
+  });
+
   it('a received line not billed, a billed line not received, and a rejected line all count', () => {
     const withRejected = receipt('r1', [
       ...exact.lines,
