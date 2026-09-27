@@ -34,7 +34,8 @@ import {
   KG_PER_LB,
   KG_PER_OZ,
 } from '@/data/emission-factors';
-import type { GrowPlanCarrier } from '@/engine/grow-plan-bridge';
+import type { GrowPlanDef } from '@/data/grow-plan';
+import { purchaseLines } from '@/engine/grow-purchase';
 import { lcaOptions as defaultLcaOptions, type LcaOption, type LcaBoundary } from '@/data/lca-options';
 import type { EnergyActivity, WaterActivity, EquipmentAttrs, ServiceAdd } from '@/engine/scenario';
 import { canopyMassPerUnit } from '@/engine';
@@ -278,7 +279,7 @@ const STATUS_RANK: Record<FactorProvenance['status'], number> = {
 
 // ── Scope 3: the crop plan's food footprint per unit ────────────────────────
 
-type CropPlan = GrowPlanCarrier;
+type CropPlan = GrowPlanDef;
 
 export interface CropPlanFoodLine {
   name: string;
@@ -300,9 +301,8 @@ export interface CropPlanFoodFootprint {
 }
 
 /**
- * Per-unit Scope 3 food emissions from the crop plan's as-purchased quantities.
- * Mass per unit = seedQtyPerSowing (lb → kg, or each × mass per piece) ÷ the authored sowing,
- * scaled by the phase unit factor. Inputs without a study product are
+ * Per-unit Scope 3 food emissions from the plan's purchase lines: the quantity one tray takes (lb → kg,
+ * or each × mass per piece), scaled by the channel's unit factor. Lines without a study product are
  * listed as excluded, not silently dropped.
  */
 export function cropPlanFoodFootprint(
@@ -311,7 +311,7 @@ export function cropPlanFoodFootprint(
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
   unitFactor = 1,
 ): CropPlanFoodFootprint {
-  const lines: CropPlanFoodLine[] = cropPlan.inputs.map((ing) => {
+  const lines: CropPlanFoodLine[] = purchaseLines(cropPlan).map((ing) => {
     const m = map[ing.name];
     if (!m) {
       return { name: ing.name, category: null, massKgPerUnit: 0, kgCo2ePerUnit: 0, factorKgCo2ePerKg: null, status: null, excludedReason: 'No mapping to a study product.' };
@@ -321,13 +321,13 @@ export function cropPlanFoodFootprint(
     }
     const f = factors.find((x) => x.category === m.category);
     if (!f) throw new Error(`No food factor on file for ${m.category}`);
-    let massPerSowing: number;
-    if (ing.unit === 'lb') massPerSowing = ing.seedQtyPerSowing * KG_PER_LB;
+    let massPerTray: number;
+    if (ing.unit === 'lb') massPerTray = ing.qtyPerTray * KG_PER_LB;
     else {
       if (m.massKgPerEach === undefined) throw new Error(`${ing.name} is bought by the piece; mass per piece missing`);
-      massPerSowing = ing.seedQtyPerSowing * m.massKgPerEach;
+      massPerTray = ing.qtyPerTray * m.massKgPerEach;
     }
-    const massKgPerUnit = (massPerSowing / cropPlan.sowingUnits) * unitFactor;
+    const massKgPerUnit = massPerTray * unitFactor;
     const statuses = [f.provenance.status, ...(m.massStatus ? [m.massStatus] : [])];
     const status = statuses.reduce((w, s) => (STATUS_RANK[s] > STATUS_RANK[w] ? s : w));
     return {
@@ -361,31 +361,19 @@ export function seedMassPerUnitKg(
   map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
   unitFactor = 1,
 ): number {
-  let perSowing = 0;
-  for (const ing of cropPlan.inputs) {
+  let perTray = 0;
+  for (const ing of purchaseLines(cropPlan)) {
     const m = map[ing.name];
     if (!m || m.category === null) continue;
-    if (ing.unit === 'lb') perSowing += ing.seedQtyPerSowing * KG_PER_LB;
-    else if (m.massKgPerEach !== undefined) perSowing += ing.seedQtyPerSowing * m.massKgPerEach;
+    if (ing.unit === 'lb') perTray += ing.qtyPerTray * KG_PER_LB;
+    else if (m.massKgPerEach !== undefined) perTray += ing.qtyPerTray * m.massKgPerEach;
   }
-  return (perSowing / cropPlan.sowingUnits) * unitFactor;
+  return perTray * unitFactor;
 }
 
-/** Shipped mass per unit, kg: blackout hot mass plus the cold-packed components. */
-export function shippedMassPerUnitKg(
-  cropPlan: CropPlan,
-  map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
-  unitFactor = 1,
-): number {
-  const hotKg = canopyMassPerUnit(cropPlan, unitFactor) * KG_PER_LB;
-  let coldPerSowing = 0;
-  for (const ing of cropPlan.inputs) {
-    if (ing.isHotComponent) continue;
-    const m = map[ing.name];
-    if (ing.unit === 'lb') coldPerSowing += ing.seedQtyPerSowing * KG_PER_LB;
-    else if (m?.massKgPerEach !== undefined) coldPerSowing += ing.seedQtyPerSowing * m.massKgPerEach;
-  }
-  return hotKg + (coldPerSowing / cropPlan.sowingUnits) * unitFactor;
+/** Shipped mass per unit, kg: the harvest weight a live tray packs. */
+export function shippedMassPerUnitKg(cropPlan: CropPlan, unitFactor = 1): number {
+  return canopyMassPerUnit(cropPlan, unitFactor) * KG_PER_LB;
 }
 
 // ── Scope 3: waste flows from the operating model ───────────────────────────

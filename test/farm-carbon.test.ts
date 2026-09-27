@@ -29,13 +29,13 @@ import {
   type FoodFactor,
 } from '@/data/emission-factors';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { purchaseLines } from '@/engine/grow-purchase';
 import type { LcaOption } from '@/data/lca-options';
 
 // A grow plan and a map written for these tests only: the mechanics of the food footprint, not a
 // mapping of record (the grow plan lines are mapped in Phase 5).
-const broc = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
-const seedLine = broc.inputs.find((i) => i.unit === 'lb')!;
+const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
+const seedLine = purchaseLines(broc).find((l) => l.unit === 'lb')!;
 const testMap = { [seedLine.name]: { category: 'other-vegetables' } };
 const vegFactor = () => inputFactors.find((f) => f.category === 'other-vegetables')!;
 
@@ -101,21 +101,22 @@ describe('farm carbon — food footprint mechanics on a grow plan', () => {
   it('a mapped pound line is its mass per unit times the study factor; the rest stay excluded', () => {
     const r = cropPlanFoodFootprint(broc, inputFactors, testMap);
     const line = r.lines.find((l) => l.name === seedLine.name)!;
-    const mass = (seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits;
+    const mass = seedLine.qtyPerTray * KG_PER_LB;
     expect(line.massKgPerUnit).toBeCloseTo(mass, 12);
     expect(line.kgCo2ePerUnit).toBeCloseTo(mass * vegFactor().kgCo2ePerKg, 12);
     expect(line.status).toBe('SOURCED');
     expect(r.totalKgCo2ePerUnit).toBeCloseTo(line.kgCo2ePerUnit, 12);
     expect(r.largestLine).toEqual({ name: seedLine.name, share: 1 });
-    expect(r.lines.filter((l) => l.excludedReason)).toHaveLength(broc.inputs.length - 1);
+    expect(r.lines.filter((l) => l.excludedReason)).toHaveLength(purchaseLines(broc).length - 1);
   });
   it('scales with the phase unit factor', () => {
     const base = cropPlanFoodFootprint(broc, inputFactors, testMap).totalKgCo2ePerUnit;
     expect(cropPlanFoodFootprint(broc, inputFactors, testMap, 1.5).totalKgCo2ePerUnit).toBeCloseTo(base * 1.5, 12);
   });
   it('a piece line with no mass per piece is refused, not guessed', () => {
-    const each = { ...broc, inputs: [{ ...seedLine, unit: 'each' as const }] };
-    expect(() => cropPlanFoodFootprint(each, inputFactors, testMap)).toThrow(/mass per piece missing/);
+    const medium = purchaseLines(broc).find((l) => l.kind === 'medium')!;
+    expect(medium.unit).toBe('each');
+    expect(() => cropPlanFoodFootprint(broc, inputFactors, { ...testMap, [medium.name]: { category: 'other-vegetables' } })).toThrow(/mass per piece missing/);
   });
 });
 
@@ -345,8 +346,8 @@ import { haversineMiles } from '@/engine/geo';
 describe('farm carbon — mass per unit', () => {
   it('as-purchased mass sums the mapped lines only', () => {
     expect(seedMassPerUnitKg(broc, {})).toBe(0);
-    expect(seedMassPerUnitKg(broc, testMap)).toBeCloseTo((seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits, 12);
-    expect(seedMassPerUnitKg(broc, testMap, 1.5)).toBeCloseTo((1.5 * seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits, 12);
+    expect(seedMassPerUnitKg(broc, testMap)).toBeCloseTo(seedLine.qtyPerTray * KG_PER_LB, 12);
+    expect(seedMassPerUnitKg(broc, testMap, 1.5)).toBeCloseTo(1.5 * seedLine.qtyPerTray * KG_PER_LB, 12);
   });
 });
 
@@ -441,7 +442,7 @@ describe('farm carbon — dual basis on a grow plan', () => {
     const aligned = alignToRetail(0.2, 'farm_gate', vegFactor());
     expect(line.selected!.rawKgPerKg).toBe(0.2);
     expect(line.selected!.alignedKgPerKg).toBeCloseTo(aligned, 12);
-    expect(line.selected!.kgCo2ePerUnit).toBeCloseTo(((seedLine.seedQtyPerSowing * KG_PER_LB) / broc.sowingUnits) * aligned, 12);
+    expect(line.selected!.kgCo2ePerUnit).toBeCloseTo((seedLine.qtyPerTray * KG_PER_LB) * aligned, 12);
     expect(line.selected!.provenance.status).toBe('SOURCED');
     expect(line.selected!.status).toBe('DERIVED');
     expect(d.linesOnSelectedBasis).toBe(1);

@@ -13,6 +13,7 @@
  * and the typed planning day (audit A11). Nothing here is stored.
  */
 
+import { lineLabel } from '@/data/grow-plan';
 import type { ActualsBundle } from '@/engine/actuals';
 import type { LedgerKind } from '@/engine/ledger-view';
 import { finishedGoodsOnHand, unitFactorFor } from '@/engine/production-plan';
@@ -207,8 +208,8 @@ export function mixFoodFootprint(input: {
       continue;
     }
     const pf = unitFactorFor(cropPlan, m.channel, input.unitFactorByChannel);
-    const dual = cropPlanFoodFootprintDual(cropPlan as never, input.selection ?? {}, inputFactors, cropPlanFoodCategoryMap, input.options, pf);
-    const missing = cropPlan.inputs.filter((i) => !cropPlanFoodCategoryMap[i.name]).map((i) => i.name);
+    const dual = cropPlanFoodFootprintDual(cropPlan, input.selection ?? {}, inputFactors, cropPlanFoodCategoryMap, input.options, pf);
+    const missing = cropPlan.lines.map((l) => lineLabel(l)).filter((name) => !cropPlanFoodCategoryMap[name]);
     if (missing.length > 0) {
       const u = unmapped.get(cropPlan.code) ?? { code: cropPlan.code, name: cropPlan.name, unmapped: missing, units: 0 };
       u.units += m.units;
@@ -248,7 +249,7 @@ export function mixShrinkKg(basis: SustainabilityBasis, cropPlans: readonly Grow
   for (const [code, qty] of Object.entries(basis.producedByCropPlan)) {
     const r = cropPlans.find((x) => x.code === code);
     if (!r) continue;
-    seedKg += qty * seedMassPerUnitKg(r as never);
+    seedKg += qty * seedMassPerUnitKg(r);
     units += qty;
   }
   return { kg: seedKg * shrinkAllowance, seedKg, units };
@@ -261,7 +262,7 @@ export function expiredMassKg(basis: SustainabilityBasis, cropPlans: readonly Gr
   for (const [code, qty] of Object.entries(basis.expiredByCropPlan)) {
     const r = cropPlans.find((x) => x.code === code);
     units += qty;
-    if (r) kg += qty * shippedMassPerUnitKg(r as never);
+    if (r) kg += qty * shippedMassPerUnitKg(r);
   }
   return { units, kg };
 }
@@ -283,7 +284,7 @@ export function mixShippedMassPerUnitKg(basis: SustainabilityBasis, cropPlans: r
   for (const m of basis.units) {
     const r = m.cropPlanCode ? cropPlans.find((x) => x.code === m.cropPlanCode) : undefined;
     if (!r) continue;
-    kg += m.units * shippedMassPerUnitKg(r as never, cropPlanFoodCategoryMap, unitFactorFor(r, m.channel, unitFactorByChannel));
+    kg += m.units * shippedMassPerUnitKg(r, unitFactorFor(r, m.channel, unitFactorByChannel));
     units += m.units;
   }
   return units > 0 ? kg / units : 0;

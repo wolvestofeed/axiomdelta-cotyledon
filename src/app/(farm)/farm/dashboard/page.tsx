@@ -105,7 +105,7 @@ async function loadOperatingPicture() {
   const day = dashboardToday({ today, book, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: pf, openingLots, closures, channels: R.phases.map((p) => p.phase) });
 
   // Food: active-crop-plan averages per unit, and the period's footprint on the selected ledger.
-  const foots = active.map((r) => cropPlanFoodFootprint(r as never));
+  const foots = active.map((r) => cropPlanFoodFootprint(r));
   const basis = await postSustainabilityBasis(kind, view.config);
   const mix = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: pf, selection: R.sustainability.inputBasis, options: [...curatedOptions, ...supplierOptions] });
   const foodCo2 = { perUnit: mean(foots.map((f) => f.totalKgCo2ePerUnit)), periodKg: mix.referenceKg, periodLabel: isPlan ? `forecast year from ${basis.from}` : `reporting year ${basis.from.slice(0, 4)}`, unmappedCropPlans: mix.cropPlansWithUnmappedLines.length, activeCount: active.length };
