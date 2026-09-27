@@ -1,6 +1,6 @@
 /**
  * What a variety's seed was paid: the last price paid, which prices the seed line on the plan,
- * and the rolling 12-month average, a key figure. A purchase order prices at the supplier's
+ * and the rolling 12-month average of seed, media and nutrients, a key figure. A purchase order prices at the supplier's
  * catalog first; a price typed on the forecast stands over both.
  */
 import { describe, expect, it } from 'vitest';
@@ -8,7 +8,7 @@ import { VARIETIES, VARIETY_BY_KEY } from '@/data/varieties';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { ReceiptDoc } from '@/engine/actuals';
 import type { CatalogLine } from '@/engine/catalog';
-import { lastPricesPaid, rollingSeedCosts, rollingWindowFrom } from '@/engine/seed-cost';
+import { lastPricesPaid, receivedUnitWord, rollingCostTagged, rollingCosts, rollingWindowFrom } from '@/engine/seed-cost';
 import { growPlanToRows, rowsToGrowPlan } from '@/engine/grow-plan-library';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { buildPurchaseOrder, purchaseLines } from '@/engine/grow-purchase';
@@ -48,12 +48,25 @@ describe('the last price paid', () => {
 
 describe('the rolling 12-month average (a key figure)', () => {
   it('is the dollars over the pounds of the accepted lines in the twelve months to the date', () => {
-    const costs = rollingSeedCosts(
-      [receipt('2026-10-01', [line(BROC.name, 5, 2000)]), receipt('2027-01-15', [line(BROC.name, 1, 2600)]), receipt('2025-12-31', [line(BROC.name, 10, 100)])],
+    const costs = rollingCosts(
+      [receipt('2026-10-01', [line(BROC.name, 5, 2000)]), receipt('2027-01-15', [line(BROC.name, 1, 2600), line(BROC.name, 4, 1, { condition: 'rejected' })]), receipt('2025-12-31', [line(BROC.name, 10, 100)])],
       '2027-01-31',
-      VARIETIES,
     );
-    expect(costs['broccoli']!.pricePerLb).toBeCloseTo((5 * 20 + 26) / 6, 12);
+    expect(costs[BROC.name]!.perUnit).toBeCloseTo((5 * 20 + 26) / 6, 12);
+    expect(costs[BROC.name]).toMatchObject({ unit: 'lb', receipts: 2, qty: 6, from: '2026-10-01', to: '2027-01-15' });
+    expect(rollingCostTagged(costs[BROC.name]!, 'lb')).toMatchObject({ status: 'DERIVED', unit: '$/lb' });
+  });
+
+  it('averages a medium and a nutrient under the name they are received under, never across units', () => {
+    const costs = rollingCosts(
+      [receipt('2027-01-02', [line('Medium: coco-coir', 18.5, 125, { unit: 'each' }), line('Nutrient: floragrow-npk', 946, 2, { unit: 'each' }), line('Nutrient: floragrow-npk', 946, 4, { unit: 'each' }), line('Medium: coco-coir', 1, 99999)])],
+      '2027-01-31',
+    );
+    expect(costs['Medium: coco-coir']).toMatchObject({ unit: 'each', receipts: 1, qty: 18.5 });
+    expect(costs['Medium: coco-coir']!.perUnit).toBeCloseTo(1.25, 12);
+    expect(costs['Nutrient: floragrow-npk']!.perUnit).toBeCloseTo(0.03, 12);
+    const unitOf = (key: string) => (key === 'coco-coir' ? 'gal' : key === 'jute-mat' ? 'each' : undefined);
+    expect([receivedUnitWord(BROC.name, 'lb', unitOf), receivedUnitWord('Medium: coco-coir', 'each', unitOf), receivedUnitWord('Medium: jute-mat', 'each', unitOf), receivedUnitWord('Nutrient: floragrow-npk', 'each', unitOf)]).toEqual(['lb', 'gal', 'mat', 'ml']);
   });
 
   it('the window opens the day after the same date a year earlier', () => {

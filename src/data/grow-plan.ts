@@ -242,7 +242,7 @@ export function lineLabel(line: GrowPlanLine, byKey: Readonly<Record<string, Var
     case 'seed':
       return byKey[line.varietyKey]?.name ?? line.varietyKey;
     case 'medium':
-      return `Medium: ${line.mediumKey}`;
+      return mediumPurchaseName(line.mediumKey);
     case 'nutrient':
       return `Nutrient: ${line.nutrientKey} from ${line.startsAt}`;
     case 'light':
@@ -256,8 +256,14 @@ export function lineLabel(line: GrowPlanLine, byKey: Readonly<Record<string, Var
  * starts at, so one bottle is one stock. A light line buys nothing; it keeps its label.
  */
 export function purchaseName(line: GrowPlanLine, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): string {
-  return line.kind === 'nutrient' ? `Nutrient: ${line.nutrientKey}` : lineLabel(line, byKey);
+  return line.kind === 'nutrient' ? nutrientPurchaseName(line.nutrientKey) : lineLabel(line, byKey);
 }
+
+/** What a medium from the Media library is received under. */
+export const mediumPurchaseName = (key: string): string => `Medium: ${key}`;
+
+/** What a solution from the Nutrients & Supplements library is received under. */
+export const nutrientPurchaseName = (key: string): string => `Nutrient: ${key}`;
 
 /** What a plan must satisfy before it is stored or costed. Empty when it is whole. */
 export function growPlanProblems(plan: Pick<GrowPlanDef, 'code' | 'format' | 'lines'>, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): string[] {

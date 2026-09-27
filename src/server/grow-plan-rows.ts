@@ -2,7 +2,7 @@ import { asc, inArray } from 'drizzle-orm';
 import { farmGrowPlans, farmGrowPlanLines, farmReceipts } from '@/db';
 import { VARIETIES } from '@/data/varieties';
 import type { ReceiptDoc } from '@/engine/actuals';
-import { lastPricesPaid } from '@/engine/seed-cost';
+import { lastPricesPaid, rollingCosts } from '@/engine/seed-cost';
 import { rowsToLibraryPlan, type LibraryGrowPlan } from '@/engine/grow-plan-library';
 import type { SeedDb } from '@/server/seed-writes';
 import { listNutrientsWith } from '@/server/nutrient-rows';
@@ -33,6 +33,12 @@ export async function listGrowPlansWith(db: SeedDb): Promise<LibraryGrowPlan[]> 
     byGrowPlan.set(l.growPlanId, arr);
   }
   return headers.map((h) => rowsToLibraryPlan(h, byGrowPlan.get(h.id) ?? [], nutrients, lastPaid, media));
+}
+
+/** Each input's rolling 12-month average by the name it is received under, from the receipts on file. */
+export async function rollingCostsWith(db: SeedDb, asOf: string) {
+  const rows = await db.select({ receivedOn: farmReceipts.receivedOn, lines: farmReceipts.lines }).from(farmReceipts);
+  return rollingCosts(rows.map((r) => ({ receivedOn: String(r.receivedOn), lines: (r.lines ?? []) as ReceiptDoc['lines'] })), asOf);
 }
 
 /** Each variety's last price paid, from every receipt on file. */

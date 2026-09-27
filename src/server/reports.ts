@@ -17,6 +17,9 @@ import { REPORT_CATALOG, reportsFor, type ReportCell, type ReportData, type Repo
 import type { ActualsBundle, DistributionDoc } from '@/engine/actuals';
 import { toSowingExecution } from '@/engine/actuals';
 import { massBalance } from '@/engine/sowing';
+import { receivedUnitWord, rollingCosts, rollingWindowFrom } from '@/engine/seed-cost';
+import { purchaseLines } from '@/engine/grow-purchase';
+import { MEDIUM_BY_KEY } from '@/data/inputs-catalog';
 import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
 import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
@@ -657,6 +660,36 @@ const supplierActivity: Builder = (ctx) => {
   };
 };
 
+const inputCosts: Builder = (ctx) => {
+  const { records, selected, today } = ctx;
+  const from = rollingWindowFrom(today);
+  const costs = rollingCosts(records.receipts, today);
+  const plans = selected.inputs.growPlans;
+  const mediumUnit = (key: string) => plans.find((p) => p.media?.[key])?.media?.[key]?.unit ?? MEDIUM_BY_KEY[key]?.unit;
+  const planPrice = new Map<string, number>();
+  for (const p of plans) for (const l of purchaseLines(p)) if (!planPrice.has(l.name)) planPrice.set(l.name, l.unitCost);
+  const rows = Object.entries(costs)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([input, c]) => {
+      const word = receivedUnitWord(input, c.unit, mediumUnit);
+      const plan = planPrice.get(input);
+      return row([input, word, money(c.perUnit, word === 'ml' ? 4 : 2), c.receipts, `${num(c.qty, 2)} ${word}`, c.from === c.to ? c.from : `${c.from} to ${c.to}`, plan === undefined ? '—' : money(plan, word === 'ml' ? 4 : 2)]);
+    });
+  const lines = records.receipts
+    .filter((r) => r.receivedOn >= from && r.receivedOn <= today)
+    .sort((a, b) => b.receivedOn.localeCompare(a.receivedOn))
+    .flatMap((r) => r.lines.filter((l) => l.condition !== 'rejected' && l.qty > 0).map((l) => {
+      const word = receivedUnitWord(l.input, l.unit, mediumUnit);
+      return row([r.receivedOn, r.supplierName ?? '—', l.input, `${num(l.qty, 2)} ${word}`, money(l.unitPriceCents / 100, word === 'ml' ? 4 : 2), money((l.qty * l.unitPriceCents) / 100)]);
+    }));
+  return {
+    summary: table([{ label: 'Input' }, { label: 'Unit' }, { label: '12-month average', num: true }, { label: 'Receipt lines', num: true }, { label: 'Received', num: true }, { label: 'First and last receipt' }, { label: 'Plan\'s price', num: true }], rows),
+    detail: table([{ label: 'Received' }, { label: 'Supplier' }, { label: 'Input' }, { label: 'Qty', num: true }, { label: '$/unit', num: true }, { label: 'Value', num: true }], lines),
+    basis: `The receipts on the records dated ${from} to ${today}: the dollars over the quantity on the accepted lines, per input in the unit it is received in, rejected lines left out. A key figure; no plan, purchase order or posting uses it. The plan's price is the one the cost card reads (the last price paid, else the catalog, else the library).`,
+    empty: rows.length === 0 ? `No receipt from ${from} to ${today}.` : undefined,
+  };
+};
+
 // ── Sustainability ──────────────────────────────────────────────────────────
 
 async function sustainabilityWorld(ctx: Ctx) {
@@ -1025,6 +1058,7 @@ const BUILDERS: Record<string, Builder> = {
   'stage-records': stageRecordsByMonth,
   'supply-position': supplyPosition,
   'supplier-activity': supplierActivity,
+  'input-costs': inputCosts,
   'emissions-statement': emissionsStatement,
   'waste-end-of-life': wasteEndOfLife,
   'refrigerant-leakage': refrigerantLeakage,

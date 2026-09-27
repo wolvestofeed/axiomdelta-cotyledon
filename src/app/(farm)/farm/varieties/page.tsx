@@ -9,7 +9,8 @@ import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { singleVarietyPlan } from '@/data/grow-plan';
 import { withWorkspace } from '@/server/workspace';
 import { db } from '@/lib/db';
-import { lastPaidWith } from '@/server/grow-plan-rows';
+import { lastPaidWith, rollingCostsWith } from '@/server/grow-plan-rows';
+import { RollingAverageCard } from '@/components/RollingAverageCard';
 import { lastPricePaidTagged } from '@/engine/seed-cost';
 import type { Tagged } from '@/data/tagged';
 
@@ -22,7 +23,8 @@ export default async function VarietiesPage() {
 
 async function VarietiesPageInner() {
   // A variety is priced at its last price paid once received; the record's opening price stands until then.
-  const lastPaid = await lastPaidWith(db);
+  const today = new Date().toISOString().slice(0, 10);
+  const [lastPaid, rolling] = await Promise.all([lastPaidWith(db), rollingCostsWith(db, today)]);
   const priceOf = (key: string, record: Tagged) => (lastPaid[key] ? lastPricePaidTagged(lastPaid[key]!) : record);
   const rowTitle = (r: number) => SCIENCE_SOURCE_BY_ROW[r]?.title ?? `row ${r}`;
   return (
@@ -30,7 +32,7 @@ async function VarietiesPageInner() {
       <PageHeader
         title="Varieties"
         purpose="Read each variety's record: seed, density, stages, light and media, and what the science states."
-        functions={['Seed and supplier', 'Density and stages', 'Light and media', 'Nutrient profile', 'Targets']}
+        functions={['The library', 'Rolling 12-month average', 'Seed and stages', 'Light and media', 'Nutrient profile and targets']}
         connects={[
           { href: '/farm/grow-plans', dir: 'to' },
           { href: '/farm/sources', dir: 'to' },
@@ -38,6 +40,7 @@ async function VarietiesPageInner() {
         howItWorks={
           <ul>
             <li>A variety is the master record: its seed source and supplier code, its price per pound (its last price paid once received, the record&rsquo;s opening price until then; a supplier&rsquo;s catalog price stands between them on the plan once a supplier is linked), its grams per 1020 and per jar, its soak and stage days, and its harvest weight until a closed sowing observes one.</li>
+            <li>The rolling 12-month average is the dollars over the pounds on the accepted seed receipts of the last twelve months, per variety: a key figure beside the price, which no plan, order or posting uses.</li>
             <li>Every stated benefit and every light or media note cites rows of the science library, registered on Sources.</li>
             <li>The targets a variety carries are what the Flat Builder reads a subscriber&rsquo;s nutrition targets against.</li>
           </ul>
@@ -73,6 +76,8 @@ async function VarietiesPageInner() {
         </div>
         <p className="farm-kpi-sub mt-2">Prices are True Leaf Market&rsquo;s 5-pound tier as Vallecito bought it in January 2024 (DATED); densities are what Vallecito sowed (STATED); harvest weights are PLACEHOLDER until closed sowings observe them. Each variety&rsquo;s plan is on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>.</p>
       </Card>
+
+      <RollingAverageCard what="seed" asOf={today} items={VARIETIES.map((v) => ({ name: v.name, unitWord: 'lb', cost: rolling[v.name] }))} />
 
       {VARIETIES.map((v) => {
         const d = v.stageDays.value;
