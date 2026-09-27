@@ -161,8 +161,8 @@ export function GrowRoomClient({
       today,
       (sowingCountByDate[today] ?? 0) + 1,
       closing.units,
-      std?.snapshot.growPlan ?? closingGrowPlan,
-      std ? std.snapshot.assumptions.yield.shrinkAllowance.value : shrink,
+      closingGrowPlan,
+      shrink,
       std ? standardLabel(std) : undefined,
     );
     return closing.growUnitKey !== undefined ? { ...prefill, growUnitKey: closing.growUnitKey } : prefill;

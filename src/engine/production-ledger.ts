@@ -266,6 +266,8 @@ export interface ProductionLedgerOptions {
    * no lot is on hand and every issue is costed at the plan's price.
    */
   issueCosts?: readonly IssueCost[];
+  /** Light, tray wear and sanitizer per tray sown as an approved version froze them; absent, the cost card's. */
+  variableOverheadPerTray?: { light: number; consumables: number };
   shrinkAllowance?: number;
 }
 
@@ -322,8 +324,8 @@ export function productionSowingLedger(
   const materialIssued = [...materialByInput.values()].reduce((t, v) => t + v, 0);
   if (atPlanPrice.length > 0) notes.push(`No lot on hand for ${atPlanPrice.join(', ')}: costed at the plan's price.`);
   if (unpriced.length > 0) notes.push(`No lot on hand for ${unpriced.join(', ')}, and no line on ${growPlan.code} prices it: issued at zero.`);
-  const lightApplied = std(perTray.light);
-  const consumablesApplied = std(perTray.consumables);
+  const lightApplied = std(opts.variableOverheadPerTray?.light ?? perTray.light);
+  const consumablesApplied = std(opts.variableOverheadPerTray?.consumables ?? perTray.consumables);
 
   // ── Labor: the record's crew hours at the recorded rate, else the approved standard on the
   //    trays sown, split over the stages by the plan's study.

@@ -82,7 +82,7 @@ import {
   OVERHEAD_BILL_CATEGORIES,
   type ActualsBundle,
 } from '@/engine/actuals';
-import { standardInForce, standardLabel, libraryLabel } from '@/engine/standards';
+import { standardInForce, standardLabel, libraryLabel, assumptionsAtStandard } from '@/engine/standards';
 import { lotRegister } from '@/engine/net-requirements';
 import {
   amortizationSchedule,
@@ -307,29 +307,25 @@ export function postActuals(
       );
     }
 
-    // ── The standard in force on a date (Roadmap J5): the approved snapshot,
-    //    else the live library grow plan and the plan's assumptions, with a note.
+    // ── The standard in force on a date (Roadmap J5): the live library grow plan and its own
+    //    assumptions (Roadmap N3), with the labor standard, the variable overhead per tray and the
+    //    fixed overhead rate an approved version froze, where one is in force.
     const standards = bundle.standards ?? [];
     const standardFor = (growPlanCode: string, date: string) => {
+      const growPlan = inputs.growPlans.find((r) => r.code === growPlanCode) ?? inputs.growPlan;
+      const live = assumptionsFor(inputs, growPlanCode);
       const v = standardInForce(standards, growPlanCode, date);
       if (v) {
         return {
-          growPlan: v.snapshot.growPlan,
-          assumptions: v.snapshot.assumptions,
+          growPlan,
+          assumptions: assumptionsAtStandard(live, v.snapshot),
+          variableOverheadPerTray: v.snapshot.variableOverheadPerTray,
           overheadRatePerUnit: v.snapshot.overheadRatePerUnit ?? null,
           label: standardLabel(v),
           approved: true,
         };
       }
-      // No version in force: the live library grow plan at its OWN assumptions — its
-      // labor standard and packaging (Roadmap N3) — and the live overhead rate.
-      return {
-        growPlan: inputs.growPlans.find((r) => r.code === growPlanCode) ?? inputs.growPlan,
-        assumptions: assumptionsFor(inputs, growPlanCode),
-        overheadRatePerUnit: null,
-        label: libraryLabel(growPlanCode),
-        approved: false,
-      };
+      return { growPlan, assumptions: live, variableOverheadPerTray: undefined, overheadRatePerUnit: null, label: libraryLabel(growPlanCode), approved: false };
     };
 
     // ── Equity, capital and loans (Roadmap N5): dated documents in cash.
@@ -429,6 +425,7 @@ export function postActuals(
           purchaseOrderCost: 0,
           receiptRecorded: true,
           issueCosts: issueCosts.get(doc.id) ?? [],
+          variableOverheadPerTray: std.variableOverheadPerTray,
           shipments: [],
         },
         std.growPlan,

@@ -5,17 +5,17 @@ import { deriveCapacity } from '@/engine';
 import { resolveScenarioInputs, inputKey, assumptionsFor } from '@/engine/scenario';
 import { standardSowingRecordPrefill, type ActualsBundle, type SowingRecordDoc } from '@/engine/actuals';
 import { postActuals } from '@/engine/actuals-ledger';
-import { standardInForce, standardHistory, nextStandardVersion, standardDiffers, standardLabel, libraryLabel, type StandardVersionDoc } from '@/engine/standards';
+import { standardInForce, standardHistory, nextStandardVersion, standardDiffers, standardLabel, libraryLabel, standardSnapshot, readSnapshot, type StandardVersionDoc } from '@/engine/standards';
 
-// What an approval freezes since Roadmap N3: the plan at its OWN assumptions — its labor
-// standard and packaging — from the resolved plan, on the seed grow plans' reference plan.
+// What an approval freezes: the plan's OWN labor standard (Roadmap N3), its variable overhead per
+// tray and, when given, the fixed overhead rate, on the seed grow plans' reference plan.
 const R0 = resolveScenarioInputs();
 const growPlan = R0.growPlan;
 const sowingSize = deriveCapacity(growPlan, R0.capacityInputs).sowingSize;
 const ownAssumptions = assumptionsFor(R0, growPlan.code);
 const version = (n: number, effectiveFrom: string, over: Partial<StandardVersionDoc> = {}): StandardVersionDoc => ({
   id: `s${n}`, growPlanCode: growPlan.code, version: n, effectiveFrom, approvedBy: 'cpa@example.com', approvedAt: `${effectiveFrom}T09:00:00.000Z`, notes: null,
-  snapshot: { growPlan: structuredClone(growPlan), assumptions: structuredClone(ownAssumptions) }, ...over,
+  snapshot: standardSnapshot(growPlan, ownAssumptions), ...over,
 });
 const sowing = (productionDate: string, standardVersion = libraryLabel(growPlan.code)): SowingRecordDoc => ({
   ...standardSowingRecordPrefill(productionDate, 1, sowingSize, growPlan, assumptions.yield.shrinkAllowance.value, standardVersion),
@@ -44,28 +44,55 @@ describe('approved standard versions (Roadmap J5)', () => {
     expect(libraryLabel(growPlan.code)).toBe(`${growPlan.code}@library`);
   });
 
-  it('a snapshot differs from the live standard when a price or an assumption moved', () => {
-    const live = { growPlan: structuredClone(growPlan), assumptions: structuredClone(ownAssumptions) };
+  it('a snapshot differs from the live standard when labor or overhead per tray moved, never when a price did', () => {
+    const live = standardSnapshot(growPlan, ownAssumptions);
     expect(standardDiffers(versions[0]!.snapshot, live)).toBe(false);
-    const dearer = structuredClone(live);
     const first = purchaseLines(growPlan)[0]!;
-    dearer.growPlan.prices = { [first.name]: { unitCost: first.unitCost * 1.1, status: 'STATED', source: 'test' } };
-    expect(standardDiffers(versions[0]!.snapshot, dearer)).toBe(true);
+    const dearer = { ...structuredClone(growPlan), prices: { [first.name]: { unitCost: first.unitCost * 1.1, status: 'STATED' as const, source: 'test' } } };
+    expect(standardDiffers(versions[0]!.snapshot, standardSnapshot(dearer, ownAssumptions))).toBe(false);
+    expect(standardDiffers(versions[0]!.snapshot, { ...live, labor: { ...live.labor, variableMinutesPerUnit: live.labor.variableMinutesPerUnit + 1 } })).toBe(true);
+    expect(standardDiffers(versions[0]!.snapshot, { ...live, variableOverheadPerTray: { ...live.variableOverheadPerTray, consumables: live.variableOverheadPerTray.consumables + 0.01 } })).toBe(true);
   });
 
-  it('the ledger costs a sowing at the version in force, not at the live library', () => {
+  it('a version freezes no material price: a price rise on the library reaches a sowing under a version', () => {
     const first = purchaseLines(growPlan)[0]!;
     const dearer = resolveScenarioInputs({ inputs: { [inputKey(growPlan.code, first.name)]: { unitCost: first.unitCost * 2 } } });
     const std = version(1, '2026-09-01');
     const atStandard = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std]), dearer);
     const atLibrary = postActuals(bundle([sowing('2026-09-14')]), dearer);
     const base = postActuals(bundle([sowing('2026-09-14')]));
-    const fg = (r: ReturnType<typeof postActuals>) => r.periods[0]!.sowings[0]!.amounts.finishedGoodsCost;
-    expect(fg(atStandard)).toBeCloseTo(fg(base), 6); // frozen snapshot: the library price rise does not reach it
-    expect(fg(atLibrary)).toBeGreaterThan(fg(base)); // no version in force: costed at the live library
+    const material = (r: ReturnType<typeof postActuals>) => r.periods[0]!.sowings[0]!.amounts.materialIssuedToWip;
+    expect(material(atStandard)).toBeGreaterThan(material(base));
+    expect(material(atStandard)).toBeCloseTo(material(atLibrary), 6);
     expect(atLibrary.periods[0]!.notes.some((n) => n.includes('no approved standard in force'))).toBe(true);
     expect(atStandard.periods[0]!.notes.some((n) => n.includes('no approved standard'))).toBe(false);
     expect(atStandard.balanced && atLibrary.balanced).toBe(true);
+  });
+
+  it('a sowing with no crew recorded takes the labor standard the version froze; one with crew recorded does not', () => {
+    const live = standardSnapshot(growPlan, ownAssumptions);
+    const std = version(1, '2026-09-01', { snapshot: { ...live, labor: { ...live.labor, loadedRatePerHour: live.labor.loadedRatePerHour * 2 } } });
+    const labor = (r: ReturnType<typeof postActuals>) => r.periods[0]!.sowings[0]!.amounts.directLaborActual;
+    const base = postActuals(bundle([sowing('2026-09-14')]));
+    expect(labor(postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std])))).toBeCloseTo(labor(base) * 2, 6);
+    const crewed = { ...sowing('2026-09-14', standardLabel(std)), actualLaborHours: 5, actualLaborRate: 30 };
+    expect(labor(postActuals(bundle([crewed], [std])))).toBeCloseTo(150, 6);
+  });
+
+  it('light, tray wear and sanitizer apply at the version\'s rates per tray', () => {
+    const live = standardSnapshot(growPlan, ownAssumptions);
+    const std = version(1, '2026-09-01', { snapshot: { ...live, variableOverheadPerTray: { light: 1, consumables: 0.5 } } });
+    const led = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std])).periods[0]!.sowings[0]!;
+    const trays = led.amounts.traysSown * (1 + assumptions.yield.shrinkAllowance.value);
+    expect(led.amounts.lightApplied).toBeCloseTo(trays, 6);
+    expect(led.amounts.consumablesApplied).toBeCloseTo(trays * 0.5, 6);
+  });
+
+  it('a version stored with the whole grow plan and assumptions reads as the labor and overhead it froze', () => {
+    const expected = standardSnapshot(growPlan, ownAssumptions, 1.2);
+    expect(readSnapshot({ growPlan, assumptions: ownAssumptions, overheadRatePerUnit: 1.2 })).toEqual(expected);
+    expect(readSnapshot({ growPlan: { plan: growPlan }, assumptions: ownAssumptions })).toEqual(standardSnapshot(growPlan, ownAssumptions));
+    expect(readSnapshot(expected)).toBe(expected);
   });
 
   it('a record naming a different version than the one in force is costed at the one in force, with a note', () => {
@@ -84,11 +111,11 @@ describe('approved standard versions (Roadmap J5)', () => {
     const own = ownAssumptions.laborSplit.variableMinutesPerUnit.value;
     // AMK-E-001's own estimated study is not the plan's linear 1.5 min a unit.
     expect(own).not.toBeCloseTo(typed, 3);
-    expect(version(1, '2026-09-01').snapshot.assumptions.laborSplit.variableMinutesPerUnit.value).toBeCloseTo(own, 10);
+    expect(version(1, '2026-09-01').snapshot.labor.variableMinutesPerUnit).toBeCloseTo(own, 10);
   });
 
   it('a standard carrying an overhead rate absorbs at it, not at the live rate (audit A15)', () => {
-    const std = version(1, '2026-09-01', { snapshot: { growPlan: structuredClone(growPlan), assumptions: structuredClone(ownAssumptions), overheadRatePerUnit: 9.99 } });
+    const std = version(1, '2026-09-01', { snapshot: standardSnapshot(growPlan, ownAssumptions, 9.99) });
     const frozen = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std]));
     const live = postActuals(bundle([sowing('2026-09-14', standardLabel(version(1, '2026-09-01')))], [version(1, '2026-09-01')]));
     const absorbed = (r: ReturnType<typeof postActuals>) => r.periods[0]!.sowings[0]!.amounts.overheadAbsorbed;
@@ -104,10 +131,10 @@ describe('approved standard versions (Roadmap J5)', () => {
   });
 
   it('a changed overhead rate counts as a difference only when both sides carry one', () => {
-    const withRate = { growPlan: structuredClone(growPlan), assumptions: structuredClone(ownAssumptions), overheadRatePerUnit: 1.35 };
+    const withRate = standardSnapshot(growPlan, ownAssumptions, 1.35);
     expect(standardDiffers(withRate, { ...withRate, overheadRatePerUnit: 1.35 })).toBe(false);
     expect(standardDiffers(withRate, { ...withRate, overheadRatePerUnit: 1.4 })).toBe(true);
-    const legacy = { growPlan: structuredClone(growPlan), assumptions: structuredClone(ownAssumptions) };
+    const legacy = standardSnapshot(growPlan, ownAssumptions);
     expect(standardDiffers(legacy, withRate)).toBe(false);
   });
 });

@@ -1131,7 +1131,7 @@ export const farmStandardVersions = farmSchema.table(
     approvedAt: timestamp('approved_at', { withTimezone: true }).notNull().defaultNow(),
     // @classification: Internal
     notes: text('notes'),
-    /** StandardSnapshot — { growPlan: the grow plan as resolved, assumptions, overhead rate }. */
+    /** StandardSnapshot — { labor standard, variable overhead per tray, overhead rate }; older rows carry the grow plan and assumptions (`readSnapshot`). */
     // @classification: Confidential
     snapshot: jsonb('snapshot').notNull(),
   },

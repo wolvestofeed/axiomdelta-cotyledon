@@ -2,7 +2,7 @@ import 'server-only';
 import { farmStandardVersions } from '@/db';
 import { db } from '@/lib/db';
 import { assumptionsFor } from '@/engine/scenario';
-import { nextStandardVersion, standardLabel, type StandardSnapshot } from '@/engine/standards';
+import { nextStandardVersion, standardLabel, standardSnapshot } from '@/engine/standards';
 import type { requireFarmSuperAdmin } from '@/server/access';
 import { postLedger } from '@/server/ledgers';
 import { refuseIfLocked } from '@/server/periods';
@@ -11,10 +11,10 @@ import { getScenarioView } from '@/server/scenarios';
 import { loadStandards } from '@/server/standards';
 
 /**
- * MicroFarm — approving a standard-cost version (Roadmap J5), shared by the Grow plans page and
- * the approval of a time study. The snapshot is the grow plan as resolved on the PLAN OF RECORD —
- * not an open forecast — with the plan's own cost assumptions (its labor standard and packaging)
- * and the overhead absorption rate in force, frozen with an effective date. An effective date
+ * MicroFarm — approving a standard version (Roadmap J5), shared by the Grow plans page and the
+ * approval of a time study. The snapshot is the grow plan's labor standard, its variable overhead
+ * per tray and the fixed overhead absorption rate, as resolved on the PLAN OF RECORD — not an open
+ * forecast — frozen with an effective date. An effective date
  * inside a locked period is refused: it would re-cost sowings the lock protects. The approval is
  * an entry on the posting trail. The caller has checked the admin's access.
  */
@@ -39,11 +39,7 @@ export async function approveStandardVersion(access: Pick<AdminAccess, 'userId' 
   const { inputs } = planOfRecord;
   const growPlan = inputs.growPlans.find((r) => r.code === d.growPlanCode);
   if (!growPlan) return { ok: false, error: `Grow plan ${d.growPlanCode} is not in the library.` };
-  const snapshot: StandardSnapshot = {
-    growPlan,
-    assumptions: assumptionsFor(inputs, d.growPlanCode),
-    overheadRatePerUnit: planOfRecord.ledger.absorption.ratePerUnit,
-  };
+  const snapshot = standardSnapshot(growPlan, assumptionsFor(inputs, d.growPlanCode), planOfRecord.ledger.absorption.ratePerUnit);
   const version = nextStandardVersion(standards, d.growPlanCode);
   const who = access.email ?? access.userId;
   return db.transaction(async (tx): Promise<StandardApproval> => {

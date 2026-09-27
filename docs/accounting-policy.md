@@ -165,11 +165,15 @@ Materials are carried at actual cost and need no standard. What stands in for an
 until one is recorded is the **labor standard** and the **overhead rates**, and those are
 effective-dated and versioned (`farm.standard_versions`):
 
-- A version is the grow plan as resolved on the plan of record plus the cost assumptions and the
-  overhead absorption rate, frozen when a super admin approves it with an effective date. The
-  ledger reads from the version in force on a sowing's production date its labor standard (for
-  a sowing with no crew recorded), its variable overhead per tray and its fixed overhead rate,
-  and the sowing record names the version, so a reviewer can reproduce the cost. A sowing dated
+- A version is the grow plan's labor standard (minutes per sowing, per unit and on the daily
+  stream per unit, at the loaded rate), its variable overhead per tray (the light it takes, its tray
+  wear and the sanitizer) and the fixed overhead absorption rate, as resolved on the plan of record,
+  frozen when a super admin approves it with an effective date. It freezes no material price and no
+  line of the plan. The ledger reads from the version in force on a sowing's production date its
+  labor standard (for a sowing with no crew recorded), its variable overhead per tray and its fixed
+  overhead rate, and the sowing record names the version, so a reviewer can reproduce the cost. A
+  version approved before only labor and overhead were frozen is read for the labor standard and
+  overhead per tray it froze; its grow plan and prices are not used. A sowing dated
   before any approved version reads them from the live library and the period says so. An
   effective date inside a locked period is refused. Editing the library or the plan changes
   what the next approval freezes; it never moves a standard already in force.

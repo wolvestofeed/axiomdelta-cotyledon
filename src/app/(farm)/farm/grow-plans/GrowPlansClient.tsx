@@ -12,7 +12,7 @@ import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSele
 import { GrowPlanEditor } from '@/components/GrowPlanEditor';
 import { setGrowPlanStatus } from '@/server/grow-plan-actions';
 import { approveStandard } from '@/server/standard-actions';
-import { standardInForce, standardHistory, standardDiffers, standardLabel, type StandardVersionDoc } from '@/engine/standards';
+import { standardInForce, standardHistory, standardDiffers, standardLabel, standardSnapshot, type StandardSnapshot, type StandardVersionDoc } from '@/engine/standards';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
@@ -58,15 +58,13 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
   const selectedAssumptions = useMemo(() => assumptionsFor(resolved, selected.code), [resolved, selected.code]);
   const serve = useMemo(() => costToServe(selected, selectedAssumptions, resolved.capacityInputs), [selected, selectedAssumptions, resolved.capacityInputs]);
   // ── The standard in force (Roadmap J5) ───────────────────────────────────
-  const shrink = resolved.assumptions.yield.shrinkAllowance.value;
   const inForce = useMemo(() => standardInForce(standards, selected.code, today), [standards, selected.code, today]);
   const history = useMemo(() => standardHistory(standards, selected.code), [standards, selected.code]);
-  const differs = useMemo(
-    () => (inForce ? standardDiffers(inForce.snapshot, { growPlan: selected, assumptions: selectedAssumptions }) : null),
-    [inForce, selected, selectedAssumptions],
-  );
-  const foodAtStandard = inForce ? costPlanPerUnit(inForce.snapshot.growPlan, inForce.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null;
-  const foodLive = costPlanPerUnit(selected, shrink).totalInputCostPerUnit;
+  // What an approval would freeze now: the live labor standard and variable overhead per tray.
+  const liveStandard = useMemo(() => standardSnapshot(selected, selectedAssumptions), [selected, selectedAssumptions]);
+  const differs = useMemo(() => (inForce ? standardDiffers(inForce.snapshot, liveStandard) : null), [inForce, liveStandard]);
+  const standardWords = (x: StandardSnapshot) =>
+    `labor ${num(x.labor.fixedMinutesPerSowing, 1)} min a sowing and ${num(x.labor.variableMinutesPerUnit + x.labor.dailyMinutesPerUnit, 2)} min a unit at ${money(x.labor.loadedRatePerHour, 2)}/h; light, tray wear and sanitizer ${money(x.variableOverheadPerTray.light + x.variableOverheadPerTray.consumables, 4)} a tray`;
   const [stdDate, setStdDate] = useState(today);
   const [stdNotes, setStdNotes] = useState('');
   const [stdMsg, setStdMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -334,8 +332,8 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
         {inForce ? (
           <p className="farm-kpi-sub">
             <strong className="farm-c-ink">{standardLabel(inForce)}</strong>, effective {inForce.effectiveFrom}, approved by {inForce.approvedBy} on {inForce.approvedAt.slice(0, 10)}{inForce.notes ? ` — ${inForce.notes}` : ''}.
-            Input cost per unit at the standard {money(foodAtStandard ?? 0, 4)}; at the live library and plan {money(foodLive, 4)}.
-            {differs ? ' The live grow plan or assumptions differ from the standard in force; sowings are costed at the standard until a new version is approved.' : ' The live grow plan and assumptions match the standard in force.'}
+            At the standard: {standardWords(inForce.snapshot)}{inForce.snapshot.overheadRatePerUnit !== undefined ? `; fixed overhead ${money(inForce.snapshot.overheadRatePerUnit, 4)} a unit` : ''}. Live: {standardWords(liveStandard)}.
+            {differs ? ' The live labor standard or overhead per tray differs from the standard in force; sowings with no crew recorded take the standard until a new version is approved.' : ' The live labor standard and overhead per tray match the standard in force.'}
           </p>
         ) : (
           <p className="farm-kpi-sub">No approved standard is in force for {selected.code} as of {today}. Sowings are costed at the live library ({selected.code}@library) and the record says so.</p>
@@ -344,12 +342,12 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
           <div className="flex flex-wrap gap-3 items-end mt-3!">
             <label className="farm-kpi-sub">Effective from<br /><input className="farm-input" type="date" value={stdDate} onChange={(e) => setStdDate(e.target.value)} /></label>
             <label className="farm-kpi-sub">Notes<br /><input className="farm-input w-80!" value={stdNotes} onChange={(e) => setStdNotes(e.target.value)} placeholder="what changed and why" /></label>
-            <button type="button" className="farm-btn primary" onClick={approve} disabled={stdPending || !stdDate}>Approve the plan of record as the standard</button>
+            <button type="button" className="farm-btn primary" onClick={approve} disabled={stdPending || !stdDate}>Approve the plan of record&rsquo;s labor and overhead as the standard</button>
           </div>
         )}
         {history.length > 0 && (
           <table className="farm-table mt-3">
-            <thead><tr><th>Version</th><th>Effective from</th><th>Approved by</th><th>Approved on</th><th className="num">Food $/unit</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Version</th><th>Effective from</th><th>Approved by</th><th>Approved on</th><th className="num">Labor min / sowing</th><th className="num">Labor min / unit</th><th className="num">Loaded $/h</th><th className="num">Light, trays, sanitizer $/tray</th><th className="num">Fixed overhead $/unit</th><th>Notes</th></tr></thead>
             <tbody>
               {history.map((v) => (
                 <tr key={v.id}>
@@ -357,7 +355,11 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
                   <td>{v.effectiveFrom}</td>
                   <td>{v.approvedBy}</td>
                   <td>{v.approvedAt.slice(0, 10)}</td>
-                  <td className="num">{money(costPlanPerUnit(v.snapshot.growPlan, v.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 4)}</td>
+                  <td className="num">{num(v.snapshot.labor.fixedMinutesPerSowing, 1)}</td>
+                  <td className="num">{num(v.snapshot.labor.variableMinutesPerUnit + v.snapshot.labor.dailyMinutesPerUnit, 2)}</td>
+                  <td className="num">{money(v.snapshot.labor.loadedRatePerHour, 2)}</td>
+                  <td className="num">{money(v.snapshot.variableOverheadPerTray.light + v.snapshot.variableOverheadPerTray.consumables, 4)}</td>
+                  <td className="num">{v.snapshot.overheadRatePerUnit === undefined ? '—' : money(v.snapshot.overheadRatePerUnit, 4)}</td>
                   <td className="farm-c-soft">{v.notes ?? ''}</td>
                 </tr>
               ))}
@@ -365,7 +367,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
           </table>
         )}
         <p className="farm-kpi-sub mt-2">
-          A standard is the grow plan as resolved on the plan of record plus the cost assumptions, frozen with an effective date. The ledger costs each sowing at the version in force on its production date and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
+          A standard is the grow plan&rsquo;s labor standard, its light, tray wear and sanitizer per tray and the fixed overhead rate, as resolved on the plan of record, frozen with an effective date. Materials are at the cost of the lots drawn and take no standard. The ledger reads the version in force on a sowing&rsquo;s production date for its labor when no crew is recorded and for its overhead, and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
         </p>
       </Card>
 
