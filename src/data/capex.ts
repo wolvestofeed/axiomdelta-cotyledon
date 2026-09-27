@@ -74,6 +74,8 @@ export interface EquipmentLine extends ScheduleLine {
    * no tray sits on. Capacity in trays is derived from these (`_engine/grow-capacity.ts`).
    */
   shelves?: number | null;
+  /** A dark rack: it holds tray sowings only through germination and blackout (0020). */
+  darkStagesOnly?: boolean;
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
   /**
@@ -146,13 +148,16 @@ export const RESOURCE_SEED: Record<string, ResourceSeed> = {
 /**
  * The grow room's Phase 1 list: Vallecito's starter rack as bought (DATED, Break-even sheet
  * 2023): a 6-tier 24x48 shelving unit with five lit growing tiers, five Mars Hydro VG80
- * fixtures, four clip fans and sixteen 1020 three-piece flat sets, $1,058 the rack. The sixth
- * tier is the top of the unit and holds no tray. A jar stand for sprouts is not on the list;
- * jars sit on a rack shelf at the format's placeholder count.
+ * fixtures, four clip fans and sixteen 1020 three-piece flat sets, $1,058 the rack. Rob's grow room
+ * for 20 trays a week is two such lit racks and two dark racks of the same shelving: a week's trays
+ * germinate stacked on a dark rack, spread over it in blackout, then fill a lit rack, so all four
+ * hold trays at once. The sixth tier is the top of the unit and holds no tray. A jar stand for
+ * sprouts is not on the list; jars sit on a rack shelf at the format's placeholder count.
  */
-const GROW_ROOM_SEED: readonly (ScheduleLine & { shelves?: number; shelfWidthIn?: number; fixtureKey?: string })[] = [
-  { item: 'Grow rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 1, unitCostNew: 200, critical: true, note: 'Vallecito 2023, $200. Five lit growing tiers; four 1020 flats a shelf.', shelves: 5, shelfWidthIn: 48, fixtureKey: 'mars-hydro-vg80' },
-  { item: 'LED grow light, Mars Hydro VG80', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 5, unitCostNew: 90, critical: true, note: 'Vallecito 2023, $450 for five; one a tier.' },
+const GROW_ROOM_SEED: readonly (ScheduleLine & { shelves?: number; shelfWidthIn?: number; fixtureKey?: string; darkStagesOnly?: boolean })[] = [
+  { item: 'Grow rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 2, unitCostNew: 200, critical: true, note: 'Vallecito 2023, $200 each; the second is to buy. Five lit growing tiers; four 1020 flats a shelf. Two lit racks hold a week of 20 trays under light and the overlap into the next.', shelves: 5, shelfWidthIn: 48, fixtureKey: 'mars-hydro-vg80' },
+  { item: 'Dark rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 2, unitCostNew: 200, critical: true, note: 'The germination and blackout racks, curtained: five tiers of four 1020 flats each. A week of 20 trays germinates stacked five high on about one shelf, then spreads over a whole rack in blackout. Priced at the lit rack\'s Vallecito $200 until a receipt.', shelves: 5, shelfWidthIn: 48, darkStagesOnly: true },
+  { item: 'LED grow light, Mars Hydro VG80', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 10, unitCostNew: 90, critical: true, note: 'Vallecito 2023, $450 for five; one a tier; five more for the second lit rack.' },
   { item: 'Clip fan, 6 in', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 4, unitCostNew: 50, critical: false, note: 'Vallecito 2023, $200 for four.' },
   { item: '1020 three-piece flat set', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 16, unitCostNew: 13, critical: false, note: 'Vallecito 2023, $208 for sixteen: base, mesh and blackout top.' },
 ];
@@ -282,7 +287,7 @@ const planned = (l: ScheduleLine, over: Partial<EquipmentLine> = {}): EquipmentL
 
 /** The equipment library's seed: the home grow room and list, then the commercial list split into build-out phases. */
 export const equipmentSeed: EquipmentLine[] = [
-  ...GROW_ROOM_SEED.map(({ shelves, shelfWidthIn, fixtureKey, ...l }): EquipmentLine => planned(l, { shelves: shelves ?? null, shelfWidthIn: shelfWidthIn ?? null, fixtureKey: fixtureKey ?? null })),
+  ...GROW_ROOM_SEED.map(({ shelves, shelfWidthIn, fixtureKey, darkStagesOnly, ...l }): EquipmentLine => planned(l, { shelves: shelves ?? null, shelfWidthIn: shelfWidthIn ?? null, fixtureKey: fixtureKey ?? null, darkStagesOnly: darkStagesOnly === true })),
   ...HOME_SEED.map((l) => planned(l)),
   ...schedule.flatMap((l): EquipmentLine[] => {
   if (l.phase !== 1) return [planned(l)];

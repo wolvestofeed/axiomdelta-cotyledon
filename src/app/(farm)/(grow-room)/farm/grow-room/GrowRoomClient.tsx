@@ -233,7 +233,7 @@ export function GrowRoomClient({
                 <div key={x.id} className={`farm-floor-row${closed ? ' done' : ''}`}>
                   <div>
                     <div className="farm-floor-row-title">{i + 1} · {x.growPlanCode} {x.growPlanName} · {num(x.trays)} trays</div>
-                    <div className="farm-floor-row-sub">for {dateLabel(x.distributionDate!)} · harvest window {x.harvestFrom} to {x.harvestTo} · {x.placed ? `on the ${x.unitItem?.toLowerCase() ?? 'grow unit'}` : 'no room on any grow unit'} · <CheckPill ok={x.placed} okLabel="placed" overLabel="no room" /></div>
+                    <div className="farm-floor-row-sub">for {dateLabel(x.distributionDate!)} · harvest window {x.harvestFrom} to {x.harvestTo} · {x.placed ? (x.darkUnitItem ? `stacked on the ${x.darkUnitItem.toLowerCase()}, then the ${x.unitItem?.toLowerCase() ?? 'grow unit'}` : `on the ${x.unitItem?.toLowerCase() ?? 'grow unit'}`) : 'no room on any grow unit'} · <CheckPill ok={x.placed} okLabel="placed" overLabel="no room" /></div>
                   </div>
                   {!closed && <button type="button" className={`farm-btn${closing?.seq === i + 1 ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === i + 1 ? null : { seq: i + 1, growPlanCode: x.growPlanCode, units: x.trays, growUnitKey: x.unitKey }))}>Close sowing record</button>}
                   {closed && <span className="farm-kpi-sub">closed</span>}

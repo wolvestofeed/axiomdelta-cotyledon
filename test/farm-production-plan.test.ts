@@ -35,6 +35,8 @@ const order = (date: string, code: string, unitsOrdered: number, channel = 1): B
 // 2027-03-22 is a Monday.
 const DIST = '2027-03-22';
 const shrink = G.assumptions.yield.shrinkAllowance.value;
+/** One of the seed's lit racks, no dark rack: one sowing of 20 trays for a cycle. */
+const ONE_RACK: GrowUnit[] = (G.capacityInputs.growUnits ?? []).filter((u) => !u.darkOnly).map((u) => ({ ...u, units: 1 }));
 const plan30 = (book: BookOrder[], openingLots: Parameters<typeof planHorizon>[0]['openingLots'] = [], shelfLifeDays = 30) =>
   planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots, shelfLifeDays });
 
@@ -156,7 +158,7 @@ describe('the horizon', () => {
   });
 
   it('opening stock is drawn first, and what the grow units cannot make is unfilled and shared across channels', () => {
-    const h = plan30([order(DIST, 'BROC-01', 50)], [{ sowingId: 'x', growPlanCode: 'BROC-01', produced: '2027-03-01', expires: '2027-03-30', qtyProduced: 10, remaining: 10 }]);
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 50)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, growUnits: ONE_RACK, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots: [{ sowingId: 'x', growPlanCode: 'BROC-01', produced: '2027-03-01', expires: '2027-03-30', qtyProduced: 10, remaining: 10 }], shelfLifeDays: 30 });
     const run = h.productionDays[0]!.runs[0]!;
     expect(run.onHand).toBe(10);
     expect(run.sowingsNeeded).toBe(2);
@@ -236,7 +238,7 @@ describe('the grow model', () => {
   });
 
   it('a requirement past the grow units\' room is a shortfall with an unplaced sowing', () => {
-    const h = horizon([order(DIST, 'BROC-01', 30)]);
+    const h = horizon([order(DIST, 'BROC-01', 30)], G, ONE_RACK);
     const day = h.productionDays[0]!;
     const run = day.runs[0]!;
     expect(run.sowingsNeeded).toBe(2);

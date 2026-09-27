@@ -24,6 +24,7 @@ interface EquipmentPatch {
   shelves?: number | null;
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
+  darkStagesOnly?: boolean;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: SowingCapacityBasis;
   concurrentSowings?: number | null;
@@ -41,6 +42,9 @@ const fromYesNo = (v: string): boolean | null => (v === 'yes' ? true : v === 'no
 const basisTag = (b: SowingCapacityBasis | undefined) => (b === 'stated' || b === 'observed' ? 'STATED' : 'PLACEHOLDER');
 
 /** The equipment library for one setting: the home grow room's list, or a commercial facility's. */
+/** The fixture select's value for a dark rack: unlit, holding trays through germination and blackout only. */
+const DARK = '__dark';
+
 export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; setting: EquipmentSetting }) {
   const { resolved, setForecast } = useScenario();
   // The master list edits in both worlds; the open forecast's column is on Plan only (Roadmap N6 slice 3).
@@ -275,8 +279,9 @@ export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; settin
                       <InlineNumber value={e.shelfWidthIn ?? null} step={12} nullable disabled={!rowEditable || !e.shelves} label={`${e.item} shelf width in inches`} onCommit={(n) => save(e.id, { shelfWidthIn: n === null || n <= 0 ? null : n })} />
                     </td>
                     <td>
-                      <select className="farm-input farm-cell-control w-40!" value={e.fixtureKey ?? ''} disabled={!rowEditable || !e.shelves} aria-label={`${e.item} fixture`} onChange={(ev) => save(e.id, { fixtureKey: ev.target.value || null })}>
-                        <option value="">Unlit</option>
+                      <select className="farm-input farm-cell-control w-40!" value={e.darkStagesOnly ? DARK : e.fixtureKey ?? ''} disabled={!rowEditable || !e.shelves} aria-label={`${e.item} fixture`} onChange={(ev) => save(e.id, ev.target.value === DARK ? { fixtureKey: null, darkStagesOnly: true } : { fixtureKey: ev.target.value || null, darkStagesOnly: false })}>
+                        <option value="">Unlit, whole cycle</option>
+                        <option value={DARK}>Dark rack: germination and blackout</option>
                         {LIGHT_FIXTURES.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
                       </select>
                     </td>

@@ -57,15 +57,16 @@ describe('farm financials — amortising payments (PMT)', () => {
 });
 
 describe('farm financials — capex rollup', () => {
-  it('the seed is the home grow room: Vallecito\'s rack as bought, no build-out', () => {
+  it('the seed is the home grow room: Vallecito\'s rack as bought, a second lit rack and two dark racks, no build-out', () => {
     const r = capexRollup();
-    expect(r.equipmentAll).toBe(1_058);
-    expect(r.equipmentPhase1).toBe(1_058);
+    const home = 1_058 + 650 + 2 * 200;
+    expect(r.equipmentAll).toBe(home);
+    expect(r.equipmentPhase1).toBe(home);
     expect(r.equipmentPhase2Add).toBe(0);
     expect(r.equipmentPhase3Add).toBe(0);
     expect(r.leaseholdSubtotal).toBe(0);
-    expect(r.totalCapex).toBe(1_058);
-    expect(r.phase1Capex).toBe(1_058);
+    expect(r.totalCapex).toBe(home);
+    expect(r.phase1Capex).toBe(home);
   });
   it('no loan and no fixed cost is carried until one is stated', () => {
     expect(capexRollup().totalMonthlyFinancing).toBe(0);

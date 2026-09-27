@@ -18,17 +18,20 @@ import { resolveScenarioInputs } from '@/engine/scenario';
 
 const withEquipment = (lines: EquipmentLine[]) => capexRollup(resolveScenarioInputs({}, undefined, undefined, undefined, undefined, lines));
 const home = equipmentSeed.filter((e) => e.setting === 'home');
+/** The home grow room's capital: Vallecito's rack as bought, a second lit rack with its lights, and the dark rack. */
+const HOME = 1_058 + 650 + 2 * 200;
 const commercial = equipmentSeed.filter((e) => e.setting === 'commercial');
 
 describe('farm equipment — the seed', () => {
   it('carries the home grow room in capital and no commercial row until a forecast selects it', () => {
     const r = capexRollup();
-    // Vallecito's starter rack as bought: rack $200, five lights $450, four fans $200, sixteen flat sets $208.
-    expect(r.equipmentAll).toBe(1_058);
-    expect(r.equipmentPhase1).toBe(1_058);
+    // Vallecito's starter rack as bought ($1,058: rack $200, five lights $450, four fans $200, sixteen flat sets $208),
+    // a second lit rack with its five lights ($650) and two dark racks ($400).
+    expect(r.equipmentAll).toBe(HOME);
+    expect(r.equipmentPhase1).toBe(HOME);
     expect(r.equipmentPhase2Add).toBe(0);
     const all = withEquipment(equipmentSeed.map((e) => ({ ...e, status: 'planned' as const })));
-    expect(all.equipmentAll).toBe(419_833);
+    expect(all.equipmentAll).toBe(419_833 + HOME - 1_058);
     expect(all.equipmentPhase2Add).toBe(145_775);
     expect(all.equipmentPhase3Add).toBe(0);
   });
@@ -38,8 +41,12 @@ describe('farm equipment — the seed', () => {
     expect(commercial.every((e) => e.status === 'unset' && e.inServiceDate === null)).toBe(true);
   });
 
-  it('the home list is Vallecito\'s rack as bought and Rob\'s list at quantity 1 with no price', () => {
-    expect(home.filter((e) => e.category === 'Grow room').map((e) => e.item)).toEqual(['Grow rack, 6-tier 24x48 wire shelving', 'LED grow light, Mars Hydro VG80', 'Clip fan, 6 in', '1020 three-piece flat set']);
+  it('the home list is Vallecito\'s rack as bought, a second lit rack and two dark racks, and Rob\'s list at quantity 1 with no price', () => {
+    expect(home.filter((e) => e.category === 'Grow room').map((e) => e.item)).toEqual(['Grow rack, 6-tier 24x48 wire shelving', 'Dark rack, 6-tier 24x48 wire shelving', 'LED grow light, Mars Hydro VG80', 'Clip fan, 6 in', '1020 three-piece flat set']);
+    const rack = home.find((e) => e.item === 'Grow rack, 6-tier 24x48 wire shelving')!;
+    const dark = home.find((e) => e.item === 'Dark rack, 6-tier 24x48 wire shelving')!;
+    expect([rack.qty, rack.shelves, rack.fixtureKey, rack.darkStagesOnly]).toEqual([2, 5, 'mars-hydro-vg80', false]);
+    expect([dark.qty, dark.shelves, dark.fixtureKey, dark.darkStagesOnly]).toEqual([2, 5, null, true]);
     const list = home.filter((e) => e.category !== 'Grow room');
     expect(list).toHaveLength(25);
     expect(list.every((e) => e.qty === 1 && e.unitCostNew === 0 && /not stated/.test(e.note ?? ''))).toBe(true);
@@ -66,15 +73,15 @@ describe('farm equipment — status', () => {
 
   it('drops a row from capital when it is marked No', () => {
     const lines = equipmentSeed.map((e) => (e.key === 'Grow rack, 6-tier 24x48 wire shelving' ? { ...e, status: 'no' as const } : e));
-    expect(withEquipment(lines).equipmentAll).toBe(1_058 - 200);
+    expect(withEquipment(lines).equipmentAll).toBe(HOME - 2 * 200);
   });
 
   it('a forecast selects a commercial row by its own status, and the capital, the grow units and the dates follow', () => {
     const key = 'Walk-in cooler, 12x20, with refrigeration';
     const R = resolveScenarioInputs({ forecast: { equipment: { [key]: { status: 'planned' } } } });
-    expect(capexRollup(R).equipmentAll).toBe(1_058 + 52_000);
+    expect(capexRollup(R).equipmentAll).toBe(HOME + 52_000);
     expect(R.datedEquipment.find((e) => e.key === key)!.inServiceBasis).toBe('phase_one_at_start');
-    expect(capexRollup().equipmentAll).toBe(1_058);
+    expect(capexRollup().equipmentAll).toBe(HOME);
   });
 });
 

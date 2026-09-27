@@ -463,7 +463,7 @@ export function ProductionPlanningClient({
                         <td className="whitespace-nowrap!">{dateLabel(s.sowDate)}</td>
                         <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
                         <td className="num">{num(s.trays)}</td>
-                        <td>{s.placed ? s.unitItem : <span className="farm-c-over">no room on any unit for the {num(s.cycleDays)}-day cycle</span>}</td>
+                        <td>{s.placed ? (s.darkUnitItem ? `${s.darkUnitItem}, then ${s.unitItem}` : s.unitItem) : <span className="farm-c-over">no room on any unit for the {num(s.cycleDays)}-day cycle</span>}</td>
                         <td>{stageToday(s)}</td>
                       </tr>
                     ))}

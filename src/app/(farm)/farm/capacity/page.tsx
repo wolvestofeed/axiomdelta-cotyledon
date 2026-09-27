@@ -11,7 +11,7 @@ import { defaultGrowUnits } from '@/engine';
 import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
 import { lightLine, planStageDays, type GrowPlanDef } from '@/data/grow-plan';
-import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
+import { GERMINATION_STACK, cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { clock } from '@/data/crews';
@@ -71,7 +71,12 @@ export default function CapacityPage() {
           { step: `Light line${light ? `: ${regime?.name ?? light.regimeKey}` : ': none'} against each unit's fixture`, value: `${num(cap.unitCount)} of ${num(units.reduce((t, u) => t + u.units, 0))} units take the plan`, status: 'DERIVED', note: light ? 'A unit takes the plan only when its fixture delivers the regime at the intensity asked (`fixtureDelivers`)' : 'A plan with no light line goes on any unit' },
           { step: 'Trays across the units that take the plan', value: `${num(cap.totalTrays)} trays`, status: 'DERIVED', note: 'Units counted; the shelves in use at once' },
           { step: `Cycle days on the shelf: sow ${days.sow}, germination ${days.germination}, blackout ${days.blackout}, light ${days.light}, harvest window ${days['harvest-window']}`, value: `${num(cap.cycleDays)} days`, status: 'DERIVED', note: `${num(cap.daysToHarvest)} days to the first harvest day; a live tray waits in its window` },
-          { step: 'Trays across the units ÷ cycle days = SUSTAINED CEILING', value: `${num(cap.traysPerDay, 2)} trays a day`, status: 'DERIVED', note: 'What the shelves make on average with every shelf full; the calendar places the actual sowings', total: true },
+          ...(cap.darkTrays > 0 && cap.lightDays > 0
+            ? [
+                { step: `Dark racks: ${days.sow + days.germination} days stacked ${num(GERMINATION_STACK.value)} to a place, ${days.blackout} days spread in blackout`, value: `${num(cap.darkTrays)} places`, status: 'DERIVED' as StatusTag, note: GERMINATION_STACK.note },
+                { step: `Lit trays ÷ ${cap.lightDays} light days, and dark places ÷ ${num((days.sow + days.germination) / GERMINATION_STACK.value + days.blackout, 1)} place-days a tray: the lesser = SUSTAINED CEILING`, value: `${num(cap.traysPerDay, 2)} trays a day`, status: 'DERIVED' as StatusTag, note: 'Every dark day on the dark racks, every light day on the lit units; the calendar places the actual sowings', total: true },
+              ]
+            : [{ step: 'Trays across the units ÷ cycle days = SUSTAINED CEILING', value: `${num(cap.traysPerDay, 2)} trays a day`, status: 'DERIVED' as StatusTag, note: 'What the shelves make on average with every shelf full; the calendar places the actual sowings', total: true }]),
           { step: '× 365 = trays a year with every shelf full', value: `${num(cap.traysPerDay * 365, 0)} trays`, status: 'DERIVED', note: 'A shelf is occupied seven days a week; production days gate the sow and harvest labor, not the shelf' },
         ]
       : [];

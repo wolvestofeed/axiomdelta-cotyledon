@@ -58,6 +58,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
         shelves: l.shelves ?? null,
         shelfWidthIn: l.shelfWidthIn ?? null,
         fixtureKey: l.fixtureKey ?? null,
+        darkStagesOnly: l.darkStagesOnly === true,
         sowingCapacityLb: l.sowingCapacityLb ?? null,
         sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated',
         concurrentSowings: l.concurrentSowings ?? null,
@@ -400,7 +401,7 @@ export async function syncSetupSeed(db: SeedDb, equipment: readonly EquipmentLin
       .update(farmEquipment)
       .set({
         position, item: l.item, category: l.category, setting: l.setting, buildPhase: l.phase, status: l.status, inServiceDate: l.inServiceDate, newUsed: l.newUsed, qty: l.qty,
-        unitCostCents: Math.round(l.unitCostNew * 100), critical: l.critical, notes: l.note ?? null, shelves: l.shelves ?? null, shelfWidthIn: l.shelfWidthIn ?? null, fixtureKey: l.fixtureKey ?? null,
+        unitCostCents: Math.round(l.unitCostNew * 100), critical: l.critical, notes: l.note ?? null, shelves: l.shelves ?? null, shelfWidthIn: l.shelfWidthIn ?? null, fixtureKey: l.fixtureKey ?? null, darkStagesOnly: l.darkStagesOnly === true,
         sowingCapacityLb: l.sowingCapacityLb ?? null, sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated', concurrentSowings: l.concurrentSowings ?? null, changeoverMinutes: l.changeoverMinutes ?? null,
         attendedRun: l.attendedRun ?? null, mayRunUnattended: l.mayRunUnattended ?? null, resourceBasis: l.resourceBasis ?? 'estimated',
       })

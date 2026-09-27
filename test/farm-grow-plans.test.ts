@@ -207,10 +207,12 @@ describe('costing on the four line kinds', () => {
 });
 
 describe('capacity in trays and cycle days', () => {
-  const units = growUnitsFrom(equipmentSeed);
+  const seed = growUnitsFrom(equipmentSeed);
+  /** One of the seed's lit racks, no dark rack. */
+  const units = seed.filter((u) => !u.darkOnly).map((u) => ({ ...u, units: 1 }));
 
-  it('the seed grow unit is Vallecito\'s rack: five lit shelves of four 1020s under the Mars Hydro', () => {
-    expect(units).toHaveLength(1);
+  it('the seed grow units are two of Vallecito\'s lit racks, five shelves of four 1020s under the Mars Hydro, and two dark racks of the same shelving', () => {
+    expect(seed.map((u) => [u.units, u.shelves, u.fixtureKey, u.darkOnly])).toEqual([[2, 5, 'mars-hydro-vg80', false], [2, 5, null, true]]);
     const rack = units[0]!;
     expect(rack.shelves).toBe(5);
     expect(rack.fixtureKey).toBe('mars-hydro-vg80');
@@ -304,7 +306,8 @@ describe('the library: rows round-trip the plan', () => {
     expect(cap.grow?.sowingTrays).toBe(20);
     expect(cap.grow?.cycleDays).toBe(cycleDays(VARIETY_BY_KEY['broccoli']!.stageDays.value));
     expect(cap.maxUnitsPerDay).toBe(cap.sowingSize * cap.cyclesPerDay);
-    expect(cap.cyclesPerDay).toBeLessThanOrEqual(1);
+    // Sowings a day are the lit racks that take the plan: two on the seed.
+    expect(cap.cyclesPerDay).toBe(cap.grow!.unitCount);
     const s = sowingCosting(lib, R.capacityInputs, 0);
     expect(s.sowingUnits).toBe(20);
     expect(s.sowingInputCost).toBeCloseTo(20 * costPlan(lib).perTray.total, 6);

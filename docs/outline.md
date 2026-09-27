@@ -103,7 +103,7 @@ A plan also carries the allergens present and the allergen-free claims, as state
 
 **Control point.** A check recorded on a stage: seed sanitation before soak, spent-water test for sprouts, temperature and humidity through germination and light. Replaces the kitchen's thermal critical control points.
 
-**Grow unit.** Shelf, rack, sprouting rack, jar stand, with capacity in trays per format, its fixture (spectrum, watts, PPFD map at tray height), and a build phase. A sowing is what one grow unit takes; a second unit is a parallel stream. Vallecito's Mars Hydro PPFD map is the first fixture record.
+**Grow unit.** Shelf, rack, sprouting rack, jar stand, with capacity in trays per format, its fixture (spectrum, watts, PPFD map at tray height), and a build phase. A sowing is what one lit grow unit takes; a second unit is a parallel stream. A dark rack holds a tray sowing only through its dark stages: stacked five high under a weight from the sow day through germination, one shelf place a stack, then spread four to a shelf in blackout; the trays then fill a lit rack for the light stage and the harvest window. The home grow room for 20 trays a week is two lit racks and two dark racks, all holding trays at once. Vallecito's Mars Hydro PPFD map is the first fixture record.
 
 **Sowing.** The batch. One grow plan, one sow day, one lot per variety, grow-unit loads, stage records, mass balance (seed issued + water gain − stage loss − scrap = packed), crew hours. Only a closed sowing posts journals. A sowing's output is a count of units in its format; there is no second billable count.
 

@@ -148,6 +148,14 @@ export const STAGE_BY_KEY: Readonly<Record<StageKey, StageDef>> = Object.fromEnt
 export const FL_OZ_PER_GAL = 128;
 
 /**
+ * Seeded trays stacked through germination on a dark rack: misted, stacked five or six high with
+ * each tray's bottom on the seeds below and 10 to 15 lb centered on top, until the sprouts lift the
+ * stack. A stack takes one tray's place on the shelf, so from the sow day through germination a
+ * sowing takes one place per this many trays; in blackout the trays are spread four to a shelf.
+ */
+export const GERMINATION_STACK: Tagged = tagged(5, 'STATED', 'trays a stack', 'Rob: stacks of five or six seeded trays under 10 to 15 lb through germination, about 20% of their spread footprint; five taken');
+
+/**
  * Fluid ounces of water one 1020 tray takes per watering, by method. Water per tray per day is
  * this times the waterings that day; the nutrient line's volume over the cycle is the sum of
  * waterings from the stage it starts. The rinse is the pint jar's, on a sprout plan only; a

@@ -1885,6 +1885,9 @@ export const farmEquipment = farmSchema.table(
     shelfWidthIn: doublePrecision('shelf_width_in'),
     // @classification: Internal
     fixtureKey: text('fixture_key'),
+    /** A dark rack (0020): it holds tray sowings only through germination and blackout. */
+    // @classification: Internal
+    darkStagesOnly: boolean('dark_stages_only').notNull().default(false),
     /** Pounds one unit takes in one run (0065); null on equipment a sowing does not pass through. */
     // @classification: Internal
     sowingCapacityLb: doublePrecision('sowing_capacity_lb'),

@@ -13,7 +13,7 @@
 
 import { planStageDays, planStages, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays as cycleDaysOf, daysToHarvest as daysToHarvestOf, type StageKey, type WateringMethod } from '@/data/stage-schedule';
-import { deriveGrowCapacity, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
+import { darkDaysOf, darkPlacesPerTray, deriveGrowCapacity, traysPerUnit, unitHoldsDarkStages, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
 import { isClosed, type DateRange } from '@/engine/periods';
 
@@ -103,16 +103,21 @@ export interface CalendarSowing {
   experiment?: string;
   trays: number;
   cycleDays: number;
-  /** The grow unit the sowing sits on; null when none could hold it. */
+  /** The grow unit the sowing sits on, under light when it began on a dark rack; null when none could hold it. */
   unitKey: string | null;
   unitItem: string | null;
+  /** The dark rack it sits on through the sow day, germination and blackout; null when it spends its whole cycle on `unitKey`. */
+  darkUnitKey?: string | null;
+  darkUnitItem?: string | null;
   placed: boolean;
 }
 
 /**
- * The shelves over time: trays on each grow unit by date. A sowing is placed on the unit that
- * takes the plan with room on every day of the cycle, the largest unit first; nothing is placed
- * over capacity.
+ * The shelves over time: trays on each grow unit by date. A tray sowing with a light line goes on a
+ * dark rack with room through its dark days (sow, germination, blackout) and a lit unit that takes
+ * the plan with room through its light days, the largest of each first; with no dark rack that has
+ * room, on one unit that takes the plan with room on every day of the cycle. Nothing is placed over
+ * capacity.
  */
 export class ShelfLedger {
   private readonly used = new Map<string, Map<string, number>>();
@@ -158,6 +163,25 @@ export class ShelfLedger {
       placed: false,
     };
     const able = this.units.filter((u) => unitTakesPlan(u, plan) && traysPerUnit(u, plan.format) > 0).sort((a, b) => this.capacityOf(b, plan) - this.capacityOf(a, plan));
+    // Shelf places the sowing takes on day k: on a dark rack, one per stack through the sow day and germination.
+    const placesOn = (u: GrowUnit, k: number) => (u.darkOnly ? trays * darkPlacesPerTray(days, k) : trays);
+    const roomOn = (u: GrowUnit, fromDay: number, toDay: number) => {
+      for (let k = fromDay; k < toDay; k += 1) if (this.traysOn(u.key, isoAddDays(sowDate, k)) + placesOn(u, k) > this.capacityOf(u, plan) + 1e-9) return false;
+      return true;
+    };
+    const dark = darkDaysOf(days);
+    const darkRacks = this.units.filter((u) => unitHoldsDarkStages(u, plan)).sort((a, b) => this.capacityOf(b, plan) - this.capacityOf(a, plan));
+    if (dark > 0 && dark < cycle) {
+      const d = darkRacks.find((u) => roomOn(u, 0, dark));
+      const l = d ? able.find((u) => roomOn(u, dark, cycle)) : undefined;
+      if (d && l) {
+        for (let k = 0; k < dark; k += 1) this.reserve(d.key, isoAddDays(sowDate, k), placesOn(d, k));
+        for (let k = dark; k < cycle; k += 1) this.reserve(l.key, isoAddDays(sowDate, k), trays);
+        Object.assign(sowing, { darkUnitKey: d.key, darkUnitItem: d.item, unitKey: l.key, unitItem: l.item, placed: true });
+        this.sowings.push(sowing);
+        return sowing;
+      }
+    }
     for (const u of able) {
       const cap = this.capacityOf(u, plan);
       let fits = true;
@@ -182,6 +206,7 @@ export class ShelfLedger {
 export interface CalendarUnitDay {
   unitKey: string;
   item: string;
+  /** Shelf places taken: a tray each, but one per stack on a dark rack through the sow day and germination. */
   trays: number;
   /** Trays the unit holds in the format of what sits on it that day; in 1020 flats when empty. */
   capacity: number;
@@ -230,10 +255,16 @@ export function calendarFromSowings(input: { from: string; to: string; sowings: 
     const byUnit = new Map<string, CalendarUnitDay>();
     // A unit's capacity that day is in the format of what sits on it; empty, it is counted in 1020 flats.
     const formatsOn = new Map<string, Set<string>>();
+    // The unit a placed sowing sits on that day: its dark rack through the dark stages, else its unit.
+    const unitOnDay = (s: CalendarSowing, stage: StageKey | 'off'): string | null =>
+      s.darkUnitKey && (stage === 'sow' || stage === 'germination' || stage === 'blackout') ? s.darkUnitKey : s.unitKey;
     for (const s of input.sowings) {
       const plan = plans.get(s.growPlanCode);
-      if (!plan || !s.placed || !s.unitKey || !stageOn(plan, s.sowDate, d).onShelf) continue;
-      formatsOn.set(s.unitKey, new Set([...(formatsOn.get(s.unitKey) ?? []), plan.format]));
+      if (!plan || !s.placed || !s.unitKey) continue;
+      const st = stageOn(plan, s.sowDate, d);
+      const key = unitOnDay(s, st.stage);
+      if (!st.onShelf || !key) continue;
+      formatsOn.set(key, new Set([...(formatsOn.get(key) ?? []), plan.format]));
     }
     for (const u of input.units) {
       const formats = [...(formatsOn.get(u.key) ?? [])];
@@ -260,10 +291,13 @@ export function calendarFromSowings(input: { from: string; to: string; sowings: 
       if (st.stage === 'harvest-window') day.traysHarvestable += s.trays;
       if (!st.onShelf) continue;
       day.traysOnShelf += s.trays;
-      const row = byUnit.get(s.unitKey);
+      const on = unitOnDay(s, st.stage) ?? s.unitKey;
+      const row = byUnit.get(on);
+      // A dark rack's row counts shelf places: one per stack through the sow day and germination.
+      const places = on === s.darkUnitKey ? s.trays * darkPlacesPerTray(planStageDays(plan), st.dayOfCycle) : s.trays;
       if (row) {
-        row.trays += s.trays;
-        used.set(s.unitKey, (used.get(s.unitKey) ?? 0) + s.trays);
+        row.trays += places;
+        used.set(on, (used.get(on) ?? 0) + places);
       }
     }
     day.byUnit = [...byUnit.values()];

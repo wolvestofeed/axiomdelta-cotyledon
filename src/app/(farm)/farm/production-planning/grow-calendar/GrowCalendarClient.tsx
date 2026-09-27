@@ -236,7 +236,7 @@ export function GrowCalendarClient({
                         <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
                         <td className="whitespace-nowrap!">{s.experiment ? `experiment: ${s.experiment}` : s.distributionDate ?? 'recorded'}</td>
                         <td className="num">{num(s.trays)}</td>
-                        <td>{s.placed ? s.unitItem : 'no room on any unit'}</td>
+                        <td>{s.placed ? (s.darkUnitItem ? `${s.darkUnitItem}, then ${s.unitItem}` : s.unitItem) : 'no room on any unit'}</td>
                         <td>{st && st.stage !== 'off' ? `${STAGE_BY_KEY[st.stage].name}, day ${st.dayOfCycle}` : '—'}</td>
                       </tr>
                     );

@@ -9,7 +9,7 @@ import { VARIETY_BY_KEY } from '@/data/varieties';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import { equipmentSeed } from '@/data/capex';
-import { growUnitsFrom } from '@/engine/grow-capacity';
+import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
 import { ShelfLedger, calendarFromSowings, daysFrom, leadDaysFor, planGrowCalendar, sowDateFor, stageOn } from '@/engine/grow-calendar';
 import { planHorizon } from '@/engine/production-plan';
 import { resolveScenarioInputs } from '@/engine/scenario';
@@ -23,7 +23,8 @@ const mung = growPlanSeed.find((p) => p.code === 'MUNG-01')!;
 const lib = [...growPlanSeed];
 /** A plan that is not a grow plan: the carrier without the grow plan it was projected from. */
 
-const units = growUnitsFrom(equipmentSeed);
+/** One of the seed's lit racks: five shelves of four 1020s under the Mars Hydro, no dark rack. */
+const units = growUnitsFrom(equipmentSeed).filter((u) => !u.darkOnly).map((u) => ({ ...u, units: 1 }));
 const brocDays = VARIETY_BY_KEY['broccoli']!.stageDays.value;
 
 describe('the stage on a day', () => {
@@ -145,7 +146,7 @@ describe('the horizon on grow plans', () => {
 
   it('a second sowing inside the first\'s cycle has no room on one rack: the day does not fit and the calendar says so', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
     expect(h.productionDays).toHaveLength(2);
     expect(h.productionDays[0]!.fits).toBe(true);
     expect(h.productionDays[1]!.fits).toBe(false);
@@ -156,7 +157,7 @@ describe('the horizon on grow plans', () => {
 
   it('an opening sowing on the shelves blocks the rack until its cycle ends', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, openingSowings: [{ growPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, openingSowings: [{ growPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
     expect(h.productionDays[0]!.fits).toBe(false);
     expect(h.growCalendar!.sowings.filter((s) => s.distributionDate === null && s.placed)).toHaveLength(1);
   });
@@ -182,5 +183,86 @@ describe('the route and the day for a grow plan', () => {
     expect(day.violations.filter((v) => v.kind === 'route' || v.kind === 'unplaced')).toEqual([]);
     expect(day.metrics.sowingLaborHours).toBeCloseTo((7 * 20) / 60, 6);
     expect(day.metrics.harvestLaborHours).toBeCloseTo((3 * 20) / 60, 6);
+  });
+});
+
+describe('dark racks', () => {
+  const seedUnits = growUnitsFrom(equipmentSeed);
+  const lit = { ...units[0]! };
+  const dark = { key: 'dark', item: 'Dark rack', shelves: 5, shelfWidthIn: 48, fixtureKey: null, units: 1, darkOnly: true };
+  const days = planStageDays(broc);
+  const darkDays = days.sow + days.germination + days.blackout;
+  const stacked = days.sow + days.germination;
+  const cycle = cycleDays(days);
+  const at = (k: number) => new Date(Date.UTC(2027, 2, 1 + k)).toISOString().slice(0, 10);
+
+  it('hold a tray sowing through its dark days, stacked five to a place through germination; it moves to a lit rack for its light days', () => {
+    const ledger = new ShelfLedger([lit, dark]);
+    const s = ledger.place(broc, '2027-03-01', 20);
+    expect(s).toMatchObject({ placed: true, darkUnitKey: 'dark', unitKey: lit.key });
+    for (let k = 0; k < cycle; k += 1) {
+      expect(ledger.traysOn('dark', at(k)), `day ${k}`).toBe(k < stacked ? 4 : k < darkDays ? 20 : 0);
+      expect(ledger.traysOn(lit.key, at(k)), `day ${k}`).toBe(k < darkDays ? 0 : 20);
+    }
+  });
+
+  it('never take a plan under light whole; a sprout plan with no light line sits on one whole', () => {
+    expect(new ShelfLedger([dark]).place(broc, '2027-03-01', 4).placed).toBe(false);
+    const jars = new ShelfLedger([dark]).place(mung, '2027-03-01', 4);
+    expect(jars).toMatchObject({ placed: true, unitKey: 'dark' });
+    expect(jars.darkUnitKey ?? null).toBeNull();
+  });
+
+  it('with no dark rack that has room, a sowing spends its whole cycle on a lit rack', () => {
+    // One shelf holds the stacks but not the 20 spread in blackout.
+    const ledger = new ShelfLedger([lit, { ...dark, shelves: 1 }]);
+    const s = ledger.place(broc, '2027-03-01', 20);
+    expect(s).toMatchObject({ placed: true, unitKey: lit.key });
+    expect(s.darkUnitKey ?? null).toBeNull();
+    expect(ledger.traysOn(lit.key, at(0))).toBe(20);
+  });
+
+  it('let one lit rack take a second week sown as the first moves under light', () => {
+    const one = new ShelfLedger([lit]);
+    expect(one.place(broc, '2027-03-01', 20).placed).toBe(true);
+    expect(one.place(broc, '2027-03-08', 20).placed).toBe(false);
+    const withDark = new ShelfLedger([lit, dark]);
+    expect(withDark.place(broc, '2027-03-01', 20).placed).toBe(true);
+    // The second week's dark days overlap the first's light days, not its dark ones.
+    expect(withDark.place(broc, `2027-03-${String(1 + darkDays).padStart(2, '0')}`, 20).placed).toBe(true);
+  });
+
+  it('are read by the calendar on the days the trays sit there', () => {
+    const ledger = new ShelfLedger([lit, dark]);
+    ledger.place(broc, '2027-03-01', 20);
+    const cal = calendarFromSowings({ from: '2027-03-01', to: '2027-03-31', sowings: ledger.sowings, growPlans: lib, units: [lit, dark] });
+    const onUnit = (date: string, key: string) => cal.days.find((d) => d.date === date)!.byUnit.find((u) => u.unitKey === key)!.trays;
+    expect(onUnit(at(1), 'dark')).toBe(4);
+    expect(onUnit(at(stacked), 'dark')).toBe(20);
+    expect(onUnit(at(1), lit.key)).toBe(0);
+    expect(onUnit(at(darkDays), 'dark')).toBe(0);
+    expect(onUnit(at(darkDays), lit.key)).toBe(20);
+  });
+
+  it('set the ceiling as the lesser of the lit trays over the light days and the dark places over the place-days a tray takes there', () => {
+    const cap = deriveGrowCapacity(broc, [lit, dark]);
+    expect(cap.darkTrays).toBe(20);
+    expect([cap.darkDays, cap.lightDays]).toEqual([darkDays, cycle - darkDays]);
+    expect(cap.traysPerDay).toBeCloseTo(Math.min(20 / (cycle - darkDays), 20 / (stacked / 5 + days.blackout)), 9);
+    expect(deriveGrowCapacity(broc, [lit]).traysPerDay).toBeCloseTo(20 / cycle, 9);
+  });
+
+  it('the seed racks carry 20 trays a week: a weekly sowing of 20 is placed every week, and all four racks hold trays at once', () => {
+    const ledger = new ShelfLedger(seedUnits);
+    const weeks = [0, 7, 14, 21, 28, 35].map((k) => ledger.place(broc, at(k), 20));
+    expect(weeks.every((s) => s.placed)).toBe(true);
+    expect(weeks.every((s) => s.darkUnitKey)).toBe(true);
+    // Two lit racks and two dark racks: after the first fortnight every day has trays on both kinds.
+    const litKey = seedUnits.find((u) => !u.darkOnly)!.key;
+    const darkKey = seedUnits.find((u) => u.darkOnly)!.key;
+    for (let k = 14; k < 35; k += 1) {
+      expect(ledger.traysOn(litKey, at(k)), `lit day ${k}`).toBeGreaterThan(0);
+      expect(ledger.traysOn(darkKey, at(k)), `dark day ${k}`).toBeGreaterThan(0);
+    }
   });
 });

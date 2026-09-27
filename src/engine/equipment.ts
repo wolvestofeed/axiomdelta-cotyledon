@@ -116,6 +116,7 @@ export interface EquipmentRowShape {
   shelves?: number | null;
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
+  darkStagesOnly?: boolean | null;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: string | null;
   concurrentSowings?: number | null;
@@ -160,6 +161,7 @@ export function equipmentFromRow(r: EquipmentRowShape): EquipmentLine {
     shelves: r.shelves ?? null,
     shelfWidthIn: r.shelfWidthIn ?? null,
     fixtureKey: r.fixtureKey ?? null,
+    darkStagesOnly: r.darkStagesOnly === true,
     sowingCapacityLb: r.sowingCapacityLb ?? null,
     sowingCapacityBasis: isCapacityBasis(r.sowingCapacityBasis) ? r.sowingCapacityBasis : 'estimated',
     concurrentSowings: r.concurrentSowings ?? null,
