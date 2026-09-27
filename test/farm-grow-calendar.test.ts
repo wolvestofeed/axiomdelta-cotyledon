@@ -10,7 +10,6 @@ import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import { equipmentSeed } from '@/data/capex';
 import { growUnitsFrom } from '@/engine/grow-capacity';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { ShelfLedger, calendarFromSowings, daysFrom, leadDaysFor, planGrowCalendar, sowDateFor, stageOn } from '@/engine/grow-calendar';
 import { planHorizon } from '@/engine/production-plan';
 import { resolveScenarioInputs } from '@/engine/scenario';
@@ -21,7 +20,7 @@ import type { BookOrder } from '@/engine/orders';
 
 const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
 const mung = growPlanSeed.find((p) => p.code === 'MUNG-01')!;
-const lib = growPlanSeed.map((p) => projectCropPlan(p));
+const lib = [...growPlanSeed];
 /** A plan that is not a grow plan: the carrier without the grow plan it was projected from. */
 
 const units = growUnitsFrom(equipmentSeed);

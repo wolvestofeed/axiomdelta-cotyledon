@@ -60,7 +60,7 @@ export function lineFromStored(raw: unknown): GrowPlanLine | null {
   return typeof kind === 'string' && LINE_KINDS.has(kind) ? (raw as GrowPlanLine) : null;
 }
 
-/** The stored grow plan, before projection. */
+/** The stored grow plan. */
 export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): GrowPlanDef {
   const status = CROP_PLAN_STATUSES.includes(header.status as CropPlanStatus) ? (header.status as CropPlanStatus) : 'developing';
   const format = (header.format in TRAY_FORMAT_BY_KEY ? header.format : 'flat-1020') as TrayFormatKey;

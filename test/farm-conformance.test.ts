@@ -24,7 +24,6 @@ import { standardSowingRecordPrefill, type ActualsBundle } from '@/engine/actual
 import { EMPTY_BUNDLE } from '@/engine/actuals';
 import { libraryLabel } from '@/engine/standards';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { laborMinutesPerUnit } from '@/engine/unit-cost';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeCropPlanAverages } from '@/engine/active-averages';
@@ -138,7 +137,7 @@ describe('C5 — the audit findings of §5 are gone', () => {
   const LIFTED = new Set(['engine', 'server', 'data', 'components', 'state']);
   const at = (...p: string[]) => (LIFTED.has(p[0]!) ? join(__dirname, '..', 'src', ...p) : join(__dirname, '..', 'src', 'app', '(farm)', 'farm', ...p));
   const src = (...p: string[]) => readFileSync(at(...p), 'utf8');
-  const LIB = growPlanSeed.map((p) => ({ ...projectCropPlan(p), status: 'in_service' as const }));
+  const LIB = growPlanSeed.map((p) => ({ ...p, status: 'in_service' as const }));
   const studies = LIB.map((r, i) => ({ ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, R.capacityInputs).sowingSize)), id: `S${i}`, cropPlanCode: r.code, basis: 'estimated' as const })) as never;
   const L = resolveScenarioInputs({}, LIB, undefined, [], {}, undefined, undefined, {}, undefined, undefined, undefined, undefined, studies);
 

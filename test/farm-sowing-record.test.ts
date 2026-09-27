@@ -6,14 +6,13 @@
 import { describe, expect, it } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import { VARIETY_BY_KEY } from '@/data/varieties';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { massBalance } from '@/engine/sowing';
 import { standardSowingRecordPrefill, toSowingExecution } from '@/engine/actuals';
 import { EMPTY_STAGE_RECORDS, growLotCode, growSowingPrefill, isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
 import { productionSowingLedger } from '@/engine/production-ledger';
 
-const broc = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
-const mung = projectCropPlan(growPlanSeed.find((p) => p.code === 'MUNG-01')!);
+const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
+const mung = growPlanSeed.find((p) => p.code === 'MUNG-01')!;
 
 describe('the prefill at standard', () => {
   it('one lot per variety in grams: the seed issued, the harvest from the record, packed as harvested; the lot is the variety on the day', () => {
@@ -70,17 +69,17 @@ describe('the prefill at standard', () => {
 
 describe('the control points on a record', () => {
   it('an empty record is all gaps; a filled one is recorded; a positive spent-water result fails', () => {
-    const empty = sowingRecordChecks(EMPTY_STAGE_RECORDS, broc.plan);
+    const empty = sowingRecordChecks(EMPTY_STAGE_RECORDS, broc);
     expect(empty.points.map((c) => [c.point.id, c.status])).toEqual([['seed-sanitation', 'gap'], ['temperature-humidity', 'gap'], ['harvest-check', 'gap']]);
     expect(empty.complete).toBe(false);
     expect(empty.spentWater).toBeNull();
-    const filled = sowingRecordChecks({ seedTreatment: { method: 'calcium hypochlorite', concentration: '20,000 ppm', contactMinutes: 15, seedLot: 'TLM-45262-A', by: 'Rob' }, spentWaterTest: null, readings: [{ at: '2027-03-03', tempF: 70, rhPct: 55, by: 'Rob' }], harvestCheck: { traysPassed: 20, traysRemoved: 0, note: '' } }, broc.plan);
+    const filled = sowingRecordChecks({ seedTreatment: { method: 'calcium hypochlorite', concentration: '20,000 ppm', contactMinutes: 15, seedLot: 'TLM-45262-A', by: 'Rob' }, spentWaterTest: null, readings: [{ at: '2027-03-03', tempF: 70, rhPct: 55, by: 'Rob' }], harvestCheck: { traysPassed: 20, traysRemoved: 0, note: '' } }, broc);
     expect(filled.complete).toBe(true);
     expect(filled.gaps).toEqual([]);
-    const jar = sowingRecordChecks({ ...EMPTY_STAGE_RECORDS, spentWaterTest: { sampledAtHours: 48, listeria: false, salmonella: true, ecoliO157: false, sampledOn: null, resultOn: '2027-03-05', lab: 'x' } }, mung.plan);
+    const jar = sowingRecordChecks({ ...EMPTY_STAGE_RECORDS, spentWaterTest: { sampledAtHours: 48, listeria: false, salmonella: true, ecoliO157: false, sampledOn: null, resultOn: '2027-03-05', lab: 'x' } }, mung);
     expect(jar.points.find((c) => c.point.id === 'spent-water-test')!.status).toBe('failed');
     expect(jar.spentWater?.pass).toBe(false);
-    const early = sowingRecordChecks({ ...EMPTY_STAGE_RECORDS, spentWaterTest: { sampledAtHours: 24, listeria: false, salmonella: false, ecoliO157: false, sampledOn: null, resultOn: null, lab: '' } }, mung.plan);
+    const early = sowingRecordChecks({ ...EMPTY_STAGE_RECORDS, spentWaterTest: { sampledAtHours: 24, listeria: false, salmonella: false, ecoliO157: false, sampledOn: null, resultOn: null, lab: '' } }, mung);
     expect(early.points.find((c) => c.point.id === 'spent-water-test')!.status).toBe('gap');
   });
 });

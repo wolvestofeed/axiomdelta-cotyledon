@@ -7,9 +7,8 @@ import {
   matchCropPlanToSuppliers,
 } from '@/engine/suppliers';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 
-const cropPlan = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
+const cropPlan = growPlanSeed.find((p) => p.code === 'BROC-01')!;
 
 describe('farm suppliers — compiled dataset', () => {
   it('loads and is internally consistent', () => {

@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 
-const seedCropPlans = growPlanSeed.map((p) => projectCropPlan(p));
+const seedCropPlans = [...growPlanSeed];
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, mondayOf, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import { flatPlanInForce, applyCycleToPlans, copyCycleToPlan, plansFromCycle } from '@/engine/flat-plans';

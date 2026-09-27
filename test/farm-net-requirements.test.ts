@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { purchaseLines } from '@/engine/grow-purchase';
 import { purchaseOrderForRun } from '@/engine';
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
 import { rawStockOnHand, rawLotsByUseBy, openOrders, receiptCoverage, netRequirements, netToRequirementLines, orderByDate, type PoLike } from '@/engine/net-requirements';
@@ -17,10 +17,10 @@ const sowing = (id: string, on: string, consumed: { input: string; qty: number; 
   issues: consumed.map((c) => ({ kind: 'medium' as const, input: c.input, lotCode: c.lot ?? 'not recorded', qty: c.qty, unit: 'lb' })),
   actualLaborHours: null, actualLaborRate: null, closedBy: null, closedAt: null, notes: null,
 });
-const seed = projectCropPlan(growPlanSeed.find((p) => p.code === 'BROC-01')!);
+const seed = growPlanSeed.find((p) => p.code === 'BROC-01')!;
 // Two of the plan's own lines: its seed and its medium.
-const SEED = seed.inputs.find((i) => i.unit === 'lb')!.name;
-const MEDIUM = seed.inputs.find((i) => i.name.startsWith('Medium'))!.name;
+const SEED = purchaseLines(seed).find((i) => i.unit === 'lb')!.name;
+const MEDIUM = purchaseLines(seed).find((i) => i.kind === 'medium')!.name;
 
 describe('raw stock on hand', () => {
   it('receipts are lots; issues draw the named lot first, else the oldest; unmatched issues are reported', () => {

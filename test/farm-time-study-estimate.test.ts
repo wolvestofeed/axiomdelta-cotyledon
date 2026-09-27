@@ -7,7 +7,6 @@ import { estimatedTimeStudy, timeStudyScaffold } from '@/engine/time-study-estim
 import { laborStandard, standardIsEstimated, summarizeStudy } from '@/engine/time-studies';
 import { VALLECITO_1020_STUDY, type TimeStudyDoc } from '@/data/time-studies';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { growPlanScaffold, growPlanTimeStudy } from '@/engine/time-study-estimate';
 import { cycleDays } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
@@ -41,7 +40,7 @@ describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray s
     expect(tasks.filter((t) => t[0] === 'sowing').map((t) => t[1])).toEqual(VALLECITO_1020_STUDY.sowing.map((t) => t.task));
     expect(tasks.filter((t) => t[0] === 'daily').map((t) => t[1])).toEqual(VALLECITO_1020_STUDY.daily.map((t) => t.task));
     expect(tasks.filter((t) => t[0] === 'harvest').map((t) => t[1])).toEqual(['Prep harvest station', 'Packaging and labels', 'Clean station']);
-    expect(timeStudyScaffold(projectCropPlan(broc)).map((t) => t.task)).toEqual(tasks.map((t) => t[1]));
+    expect(timeStudyScaffold(broc).map((t) => t.task)).toEqual(tasks.map((t) => t[1]));
   });
 
   it('a jar plan skips the light and blackout waterings', () => {
@@ -67,7 +66,7 @@ describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray s
   });
 
   it('the estimate of a library plan is this study, and it is the plan\'s labor standard until one is adopted', () => {
-    const lib = projectCropPlan(broc);
+    const lib = broc;
     const e = estimatedTimeStudy(lib, 20);
     expect(e.lines.map((l) => l.task)).toEqual(growPlanTimeStudy(broc, 20).lines.map((l) => l.task));
     const std = laborStandard([{ id: 'e', cropPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed', ...e }]);

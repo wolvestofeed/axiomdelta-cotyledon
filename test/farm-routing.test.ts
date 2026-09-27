@@ -11,12 +11,11 @@ const equipmentSeed = seed.map((e) => (e.setting === 'commercial' ? { ...e, stat
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { deriveRoute, routeDepths, routeOrder, routeOverlayFor, routeKey, routeResources } from '@/engine/routing';
 import { isEmptyConfig, resolveScenarioInputs, SCENARIO_SECTIONS } from '@/engine/scenario';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 
-const lib = growPlanSeed.map((p) => projectCropPlan(p));
+const lib = [...growPlanSeed];
 const cap = resolveScenarioInputs({}, lib).capacityInputs;
 const byCode = (code: string) => lib.find((r) => r.code === code)!;
 const standardFor = (code: string): TimeStudyDoc => {

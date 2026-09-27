@@ -11,7 +11,6 @@
 import { describe, it, expect } from 'vitest';
 import { assumptions as typed } from '@/data/plan-data';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PackagingLibrary } from '@/data/packaging';
 import { seedPackagingLibrary } from '@/data/packaging';
@@ -22,7 +21,7 @@ import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { laborMinutesForSowing, summarizeStudy } from '@/engine/time-studies';
 import { planProductionDay } from '@/engine/production-plan';
 
-const seedLibrary = growPlanSeed.map((p) => projectCropPlan(p));
+const seedLibrary = [...growPlanSeed];
 const R = resolveScenarioInputs({}, seedLibrary);
 const rate = R.assumptions.labor.blendedLoadedWage.value;
 // A tray plan and a jar plan: the jar plan skips the blackout and light waterings, so its minutes differ.

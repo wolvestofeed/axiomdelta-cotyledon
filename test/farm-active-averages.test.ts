@@ -5,14 +5,13 @@
 import { describe, it, expect } from 'vitest';
 import { assumptions } from '@/data/plan-data';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { resolveScenarioInputs as resolveLibrary } from '@/engine/scenario';
 import { costToServe, deriveCapacity } from '@/engine';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeCropPlanAverages, sowingElapsedMinutes } from '@/engine/active-averages';
 import type { TimeStudyDoc } from '@/data/time-studies';
 
-const seedLibrary = growPlanSeed.map((p) => projectCropPlan(p));
+const seedLibrary = [...growPlanSeed];
 const capacityInputs = resolveLibrary({}, seedLibrary).capacityInputs;
 const seeded: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
   id: `s${i}`, cropPlanCode: r.code, approvedAt: null, approvedBy: null, source: 'seed',

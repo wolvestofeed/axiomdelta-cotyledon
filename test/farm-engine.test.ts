@@ -5,22 +5,19 @@ import { assumptions } from '@/data/plan-data';
 import { crews as seedCrews, newCrew } from '@/data/crews';
 import { resolveScenarioInputs, type CrewOverlay } from '@/engine/scenario';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
+import { planVarieties } from '@/data/grow-plan';
 
 /** Proposed crews through the overlay, resolved the way every page resolves them. */
 const crewsWith = (overlay: Record<string, CrewOverlay>) => resolveScenarioInputs({ crews: overlay }).crews;
 
 describe('farm — plan yields carry their own provenance', () => {
-  const growLines = growPlanSeed.flatMap((p) => projectCropPlan(p).inputs.map((i) => ({ plan: p.code, i })));
-  it('every stored harvested yield equals SEED quantity × yield factor (no drift), on every seed grow plan', () => {
-    for (const { plan, i } of growLines) {
-      expect(i.seedQtyPerSowing * i.yieldToHarvest, `${plan} ${i.name}`).toBeCloseTo(i.harvestedYieldPerSowing, 9);
-    }
-  });
-  it('every line names the source of its yield, separately from its price', () => {
-    for (const { plan, i } of growLines) {
-      expect(i.yieldSource.length, `${plan} ${i.name}`).toBeGreaterThan(0);
-      expect(i.yieldStatus, `${plan} ${i.name}`).toBeTruthy();
+  it('every seed line carries a harvest weight with its own tag, separate from its price', () => {
+    for (const plan of growPlanSeed) {
+      for (const v of planVarieties(plan)) {
+        expect(v.harvestGramsPer1020.status, `${plan.code} ${v.name}`).toBeTruthy();
+        expect(v.seedPricePerLb.status, `${plan.code} ${v.name}`).toBeTruthy();
+        expect(v.harvestGramsPer1020, `${plan.code} ${v.name}`).not.toBe(v.seedPricePerLb);
+      }
     }
   });
 });

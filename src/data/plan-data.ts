@@ -162,66 +162,8 @@ export const capacityInputs = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
-// The crop plan shape a grow plan is projected into (`grow-plan-bridge.ts`)
+// Library status
 // ─────────────────────────────────────────────────────────────────────────
-
-export interface InputLine {
-  name: string;
-  spec: string;
-  seedQtyPerSowing: number; // as-purchased quantity for the crop plan's authored sowing (`CropPlanDef.sowingUnits`)
-  unit: 'lb' | 'each';
-  yieldToHarvest: number; // multiplier
-  harvestedYieldPerSowing: number; // seedQtyPerSowing × yieldToHarvest, for the same authored sowing — asserted by test, never typed loose
-  seedUnitCost: number;
-  packSize: number; // case/pack size for the purchase-order calculator
-  /** The grow line the input projects. A light line is overhead, never bought into raw stock, so no purchase order carries it. */
-  lineKind?: 'seed' | 'medium' | 'nutrient' | 'light';
-  isHotComponent: boolean; // hot components are blackouted → drive canopy mass/unit
-  /** Each-unit items (tortilla) carry no lb weight; this is their mass for the packed-weight math. */
-  unitMassOz?: number;
-  /** Provenance of the PRICE (`seedUnitCost`). */
-  status: StatusTag;
-  source: string;
-  /**
-   * FDA Food Traceability List category this line falls under (21 CFR 1.1990),
-   * when it does. Set explicitly per line — never inferred from the name. A
-   * line in scope puts every receipt, sowing and shipment that touches it under
-   * FSMA 204 record-keeping; an absent field means the line is out of scope
-   * (cheddar is a hard cheese; crushed tomato is canned).
-   */
-  foodTraceabilityList?: string;
-  /**
-   * Provenance of the YIELD (`yieldToHarvest`) — separate from the price. A line can
-   * have a quoted price and a guessed yield, or the reverse; one tag cannot carry both.
-   */
-  yieldStatus: StatusTag;
-  yieldSource: string;
-  /**
-   * SEED -> SOWN trim yield, when the trim step has been observed SEPARATELY from
-   * growing. USDA Food Buying Guide factors are already SEED -> harvested-and-drained
-   * and therefore include trim, so `yieldToHarvest` is the composite. Setting this
-   * splits the composite: sowYield = yieldToHarvest / trimYield. Left undefined
-   * where no separate trim observation exists — the engine does not invent one.
-   */
-  trimYield?: number;
-  /**
-   * Harvested -> blackout yield. Blackouting drives off some moisture, but no
-   * blackout-stage weight loss has been observed for this crop plan, so this is left
-   * undefined (treated as 1.0) rather than guessed. The stage exists in the cost
-   * chain so an observation can be recorded against it.
-   */
-  blackoutYield?: number;
-  /**
-   * The SERVED COMPONENT this line rolls up into. The component — not the
-   * input line — is the unit of growing, blackouting, lot coding and
-   * nutrition. USDA credits what is served, and a salsa is served as a salsa,
-   * not as separate tomato and onion lines; nutrition each line alone drops
-   * every line under the 1/8-cup minimum and understates the unit.
-   */
-  component: string;
-  /** Set on a line projected from a grow plan's seed line (`_engine/grow-plan-bridge.ts`): the variety it stands for. */
-  varietyKey?: string;
-}
 
 /** Library status. Production Planning plans `in_service`; the others run singly. */
 export type CropPlanStatus = 'in_service' | 'planned' | 'developing';
@@ -231,53 +173,6 @@ export const CROP_PLAN_STATUS_LABELS: Record<CropPlanStatus, string> = {
   planned: 'Planned',
   developing: 'Developing',
 };
-
-/** The unit spec block a crop plan carries. */
-export interface CropPlanSpec {
-  trayFormat: Tagged<string>;
-  nutritionTarget: { mmaOzEq: Tagged; grainsOzEq: Tagged };
-  carriesVegetableRequirement: Tagged<boolean>;
-  servingGrowUnitCapacityOz: Tagged;
-  packingUtensil: Tagged<string>;
-  /**
-   * For an adult (corporate / retail) variant derived from a student crop plan.
-   * The protein serving leads: `proteinTargetOz` is the packed protein the
-   * adult unit serves (crop plan development per unit; a default by unit type
-   * when not known), `upgradeMultiplier` is the DERIVED factor on the protein
-   * lines that reaches it, `vegetableMultiplier` scales the vegetable lines.
-   * Grains and sides are the student crop plan's. Absent on a crop plan authored at
-   * its own unit.
-   */
-  proteinTargetOz?: Tagged;
-  upgradeMultiplier?: Tagged;
-  vegetableMultiplier?: Tagged;
-}
-
-/**
- * A crop plan as the engine reads it — a library row, or the seed below. Every
- * crop plan that can be costed, credited, sowing-sized or planned has this shape.
- */
-export interface CropPlanDef {
-  code: string;
-  name: string;
-  category: string;
-  status: CropPlanStatus;
-  /** Expansion phases served; each channel carries its own menu. */
-  channels: number[];
-  components: string;
-  productionMethod: string;
-  allergensPresent: string;
-  allergenFreeClaims: string;
-  /**
-   * The units the input quantities are written for — the crop plan as
-   * authored. The production SOWING is not this: it is what one unit of each
-   * Phase 1 grow unit takes (`deriveCapacity`), and every quantity scales to it.
-   * Sowing costing runs at the derived sowing; the unit cost comes down from it.
-   */
-  sowingUnits: number;
-  spec: CropPlanSpec;
-  inputs: InputLine[];
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Staffing

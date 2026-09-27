@@ -19,13 +19,13 @@ import {
   nextGrowPlanCode,
   planStageDays,
   seedLineFor,
-  singleVarietyPlan,
+  formatNameOf,
+  varietyNamesOf,
   type GrowPlanDef,
 } from '@/data/grow-plan';
 import { growPlanSeed, GROW_PLAN_SEED_CODES } from '@/data/grow-plans-seed';
 import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor, costPlan, costContextFor } from '@/engine/grow-costing';
 import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { cropPlanToRows, rowsToCropPlan, rowsToGrowPlan, nextCropPlanCode, SEED_GROW_PLANS } from '@/engine/crop-plan-library';
 import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
@@ -246,13 +246,7 @@ describe('capacity in trays and cycle days', () => {
   });
 });
 
-describe('the library: rows round-trip the plan and project it for the engine', () => {
-  it('a projected plan is the grow plan: its fields at the top level equal the plan it carries', () => {
-    const c = projectCropPlan(broccoli());
-    const { plan, ...top } = c;
-    for (const k of Object.keys(plan) as (keyof GrowPlanDef)[]) expect(top[k as keyof typeof top]).toEqual(plan[k]);
-  });
-
+describe('the library: rows round-trip the plan', () => {
   const rows = (p: GrowPlanDef) => {
     const { header, lines } = cropPlanToRows(p);
     return rowsToCropPlan({ ...header, id: 'x', version: 1, effectiveFrom: '2026-09-25', updatedAt: '2026-09-25T00:00:00.000Z' }, lines);
@@ -347,11 +341,11 @@ describe('the library: rows round-trip the plan and project it for the engine', 
     expect(cycles.every((c) => c.days.every((d) => d.cropPlanCode === 'BROC-01'))).toBe(true);
   });
 
-  it('the projection is the same plan the seed was built from', () => {
-    const lib = projectCropPlan(broccoli());
+  it('a plan is labelled by its format and its varieties', () => {
+    const lib = broccoli();
     expect(lib.code).toBe('BROC-01');
-    expect(lib.category).toBe('1020 flat');
-    expect(lib.components).toBe(VARIETY_BY_KEY['broccoli']!.name);
+    expect(formatNameOf(lib)).toBe('1020 flat');
+    expect(varietyNamesOf(lib)).toBe(VARIETY_BY_KEY['broccoli']!.name);
     expect(SPROUT_STAGES.length).toBeLessThan(STAGES.length);
   });
 });

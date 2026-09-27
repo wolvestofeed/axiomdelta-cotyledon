@@ -18,13 +18,12 @@ import {
 } from '@/engine/production-plan';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import { VARIETY_BY_KEY } from '@/data/varieties';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { sowDateFor } from '@/engine/grow-calendar';
 import type { GrowUnit } from '@/engine/grow-capacity';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import type { BookOrder } from '@/engine/orders';
 
-const lib = growPlanSeed.map((p) => projectCropPlan(p));
+const lib = [...growPlanSeed];
 const G = resolveScenarioInputs({}, lib);
 const plan = (code: string) => G.cropPlans.find((p) => p.code === code)!;
 const growPlan = (code: string) => growPlanSeed.find((p) => p.code === code)!;

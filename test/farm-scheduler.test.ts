@@ -8,7 +8,6 @@ import { equipmentSeed } from '@/data/capex';
 import { newCrew } from '@/data/crews';
 import { capacityInputs } from '@/data/plan-data';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 import { tagged } from '@/data/tagged';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
@@ -184,7 +183,7 @@ describe('farm scheduler — priority rules are a policy input', () => {
 });
 
 describe('farm scheduler — the plan library', () => {
-  const lib = growPlanSeed.map((p) => projectCropPlan(p));
+  const lib = [...growPlanSeed];
   const R = resolveScenarioInputs({}, lib);
   const studyFor = (code: string): TimeStudyDoc => {
     const r = lib.find((x) => x.code === code)!;

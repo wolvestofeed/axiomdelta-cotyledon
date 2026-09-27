@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { assumptions } from '@/data/plan-data';
 import { growPlanSeed } from '@/data/grow-plans-seed';
-import { projectCropPlan } from '@/engine/grow-plan-bridge';
 
 import { costCropPlan, deriveCapacity } from '@/engine';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
@@ -15,7 +14,7 @@ import { dailyMinutesPerUnit } from '@/engine/unit-cost';
 import type { BookOrder } from '@/engine/orders';
 import type { TimeStudyDoc } from '@/data/time-studies';
 
-const grow = growPlanSeed.map((p) => projectCropPlan(p));
+const grow = [...growPlanSeed];
 const onChannel = (code: string, channel: number) => ({ ...grow.find((r) => r.code === code)!, channels: [channel] });
 // Two plans authored for channels 2 and 3, each carrying its own unit there.
 const seedLibrary = [...grow.filter((r) => r.code !== 'PEA-01' && r.code !== 'SUN-01'), onChannel('PEA-01', 2), onChannel('SUN-01', 3)];

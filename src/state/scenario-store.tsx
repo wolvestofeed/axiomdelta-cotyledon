@@ -34,7 +34,6 @@ import {
   type ResolvedInputs,
   type ScenarioSection,
   type AssumptionsOverlay,
-  type InputOverlay,
   type PhaseOverlay,
   type PhaseProfileOverlay,
   type CapacityOverlay,
@@ -42,7 +41,6 @@ import {
   type SustainabilityOverlay,
   type PickupPointOverlay,
   type SalesOverlay,
-  inputKey,
   type ForecastOverlay,
   type ResourceOverlay,
   type RouteStepOverlay,
@@ -93,12 +91,6 @@ export interface ScenarioStore {
   addCrew: (defaults: NewCrewDefaults) => string;
   /** Take a crew out of this scenario (a seeded crew is marked removed; an added one is dropped). */
   removeCrew: (id: string) => void;
-  setInput: (
-    cropPlanCode: string,
-    name: string,
-    key: keyof InputOverlay,
-    value: number | undefined,
-  ) => void;
   /** The crop plan library as loaded (no scenario edits) — the standard the edits are measured against. */
   library: GrowPlanDef[];
   /** The Nutrients & Supplements library as loaded; the seed list when the server passed none. */
@@ -293,21 +285,6 @@ export function ScenarioProvider({
         if (seedCrews.some((c) => c.id === id) || id in LEGACY_SEED_CREWS) all[id] = { removed: true };
         else delete all[id];
         if (Object.keys(all).length === 0) delete d.crews;
-      });
-    },
-    [mutate],
-  );
-
-  const setInput = useCallback<ScenarioStore['setInput']>(
-    (cropPlanCode, name, key, value) => {
-      mutate((d) => {
-        const ings = (d.inputs ??= {});
-        const k = inputKey(cropPlanCode, name);
-        const row = ((ings[k] ??= {}) as Record<string, number>);
-        if (value === undefined) delete row[key];
-        else row[key] = value;
-        if (Object.keys(row).length === 0) delete ings[k];
-        if (Object.keys(ings).length === 0) delete d.inputs;
       });
     },
     [mutate],
@@ -554,7 +531,6 @@ export function ScenarioProvider({
       setCrew,
       addCrew,
       removeCrew,
-      setInput,
       setPhase,
       setPhaseProfile,
       setCapexFinance,
@@ -593,7 +569,6 @@ export function ScenarioProvider({
       setCrew,
       addCrew,
       removeCrew,
-      setInput,
       setPhase,
       setPhaseProfile,
       setCapexFinance,
