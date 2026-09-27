@@ -18,7 +18,15 @@ import { tagged, type Tagged } from '@/data/tagged';
 
 // ── Growing media ─────────────────────────────────────────────────────────
 
-export type MediumKey = 'coco-coir' | 'jute-mat' | 'hemp-mat' | 'vermiculite' | 'peat-vermiculite' | 'hydro-pad' | 'none';
+/**
+ * A medium line names a row of the workspace's Media library by its key. The list below is the
+ * library's seed; from the first read the workspace's rows are the source (`src/server/media.ts`),
+ * and a row can be added or edited on the Media page.
+ */
+export type MediumKey = string;
+
+/** The row a plan with no medium names (jar sprouts); it stays in the library. */
+export const NO_MEDIUM_KEY = 'none';
 
 export interface GrowingMediumDef {
   key: MediumKey;
@@ -347,7 +355,7 @@ export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegim
   return energy + amortized;
 }
 
-export const MEDIUM_BY_KEY = Object.fromEntries(GROWING_MEDIA.map((m) => [m.key, m])) as Readonly<Record<MediumKey, GrowingMediumDef>>;
+export const MEDIUM_BY_KEY = Object.fromEntries(GROWING_MEDIA.map((m) => [m.key, m])) as Readonly<Record<string, GrowingMediumDef>>;
 export const NUTRIENT_BY_KEY = Object.fromEntries(NUTRIENT_SOLUTIONS.map((n) => [n.key, n])) as Readonly<Record<string, NutrientSolutionDef>>;
 export const FIXTURE_BY_KEY = Object.fromEntries(LIGHT_FIXTURES.map((l) => [l.key, l])) as Readonly<Record<string, LightFixtureDef>>;
 export const REGIME_BY_KEY = Object.fromEntries(LIGHT_REGIMES.map((r) => [r.key, r])) as Readonly<Record<LightRegimeKey, LightRegimeDef>>;

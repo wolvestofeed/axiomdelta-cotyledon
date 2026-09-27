@@ -8,7 +8,7 @@ import { costGrowPlan, defaultGrowCostContext, fixtureFor } from '@/engine/grow-
 import { GROW_PLAN_STATUS_LABELS, type GrowPlanStatus } from '@/data/plan-data';
 import { codePrefixFor, growPlanProblems, seedLineFor, type GrowPlanDef, type GrowPlanLine, type SeedLine } from '@/data/grow-plan';
 import { VARIETIES, VARIETY_BY_KEY } from '@/data/varieties';
-import { GROWING_MEDIA, LIGHT_REGIMES, type LightRegimeKey, type MediumKey, type NutrientKey } from '@/data/inputs-catalog';
+import { LIGHT_REGIMES, type LightRegimeKey, type MediumKey, type NutrientKey } from '@/data/inputs-catalog';
 import { useScenario } from '@/state/scenario-store';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { STAGES, SPROUT_STAGES, type StageKey } from '@/data/stage-schedule';
@@ -106,8 +106,9 @@ export function GrowPlanEditor({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const { nutrients } = useScenario();
+  const { nutrients, media } = useScenario();
   const nutrientByKey = useMemo(() => Object.fromEntries(nutrients.map((n) => [n.key, n])), [nutrients]);
+  const mediumByKey = useMemo(() => Object.fromEntries(media.map((m) => [m.key, m])), [media]);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const codes = useMemo(() => library.map((r) => r.code), [library]);
@@ -129,7 +130,7 @@ export function GrowPlanEditor({
 
   const livePlan = useMemo(() => toPlan(d), [d]);
   const problems = useMemo(() => growPlanProblems(livePlan), [livePlan]);
-  const costing = useMemo(() => (problems.length === 0 ? costGrowPlan(livePlan, defaultGrowCostContext({ fixture: fixtureFor(livePlan), nutrients: nutrientByKey })) : null), [livePlan, problems, nutrientByKey]);
+  const costing = useMemo(() => (problems.length === 0 ? costGrowPlan(livePlan, defaultGrowCostContext({ fixture: fixtureFor(livePlan), nutrients: nutrientByKey, media: mediumByKey })) : null), [livePlan, problems, nutrientByKey, mediumByKey]);
   const stages = TRAY_FORMAT_BY_KEY[d.format].kind === 'sprout' ? SPROUT_STAGES : STAGES;
   const lead = d.lines.find((l): l is DraftSeed => l.kind === 'seed');
   const leadVariety = lead ? VARIETY_BY_KEY[lead.varietyKey] : undefined;
@@ -238,7 +239,7 @@ export function GrowPlanEditor({
                     )}
                     {l.kind === 'medium' && (
                       <select className="farm-select" value={l.mediumKey} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftMedium), mediumKey: e.target.value as MediumKey }))}>
-                        {GROWING_MEDIA.map((m) => <option key={m.key} value={m.key}>{m.name}</option>)}
+                        {media.map((m) => <option key={m.key} value={m.key}>{m.name}</option>)}
                       </select>
                     )}
                     {l.kind === 'nutrient' && (
@@ -259,7 +260,7 @@ export function GrowPlanEditor({
                         {d.lines.filter((x) => x.kind === 'seed').length > 1 && <><input className="farm-num-input" type="number" min={0} max={1} step={0.05} title="Share of the tray" value={l.share} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftSeed), share: Number(e.target.value) }))} /> share</>}
                       </span>
                     )}
-                    {l.kind === 'medium' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="catalog" value={l.qtyPerTray ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftMedium), qtyPerTray: numOrNull(e.target.value) }))} /> {GROWING_MEDIA.find((m) => m.key === l.mediumKey)?.unit ?? ''}</span>}
+                    {l.kind === 'medium' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="library" value={l.qtyPerTray ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftMedium), qtyPerTray: numOrNull(e.target.value) }))} /> {mediumByKey[l.mediumKey]?.unit ?? ''}</span>}
                     {l.kind === 'nutrient' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="catalog" value={l.mlPerGal ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftNutrient), mlPerGal: numOrNull(e.target.value) }))} /> ml/gal</span>}
                     {l.kind === 'light' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={5} placeholder="regime" value={l.ppfd ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftLight), ppfd: numOrNull(e.target.value) }))} /> µmol</span>}
                   </td>

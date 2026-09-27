@@ -150,7 +150,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
         break;
       }
       case 'medium': {
-        const m = ctx.media[line.mediumKey];
+        const m = plan.media?.[line.mediumKey] ?? ctx.media[line.mediumKey];
         if (!m || m.unit === 'none') {
           lines.push({ line, label: m?.name ?? line.mediumKey, quantity: 0, quantityUnit: 'none', unitCost: 0, costPerTray: 0, status: 'STATED', source: 'No medium', basis: 'None' });
           break;
@@ -166,7 +166,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           costPerTray: qty * m.costPerUnit.value,
           status: m.costPerUnit.status,
           source: m.costPerUnit.note ?? '',
-          basis: line.qtyPerTray ? `Typed quantity (${tag.status})` : `Catalog ${m.qtyPer1020.value} ${m.unit} per 1020 × ${density.toFixed(3)} area factor`,
+          basis: line.qtyPerTray ? `Typed quantity (${tag.status})` : `Library ${m.qtyPer1020.value} ${m.unit} per 1020 × ${density.toFixed(3)} area factor`,
         });
         break;
       }

@@ -6,18 +6,20 @@ import { lastPricesPaid } from '@/engine/seed-cost';
 import { rowsToLibraryPlan, type LibraryGrowPlan } from '@/engine/grow-plan-library';
 import type { SeedDb } from '@/server/seed-writes';
 import { listNutrientsWith } from '@/server/nutrient-rows';
+import { listMediaWith } from '@/server/media-rows';
 
 /**
  * Rows → library plans, for any Drizzle handle. `_lib/grow-plans.ts` (server-only) and the
  * reseed script both read through this so the shape is built once. Oldest first: the seed
  * plans in variety order, then whatever was added. Each plan carries the workspace's Nutrients &
- * Supplements records its nutrient lines name, and the last price paid for each variety it sows
+ * Supplements and Media records its nutrient and medium lines name, and the last price paid for each variety it sows
  * from the workspace's receipts.
  */
 export async function listGrowPlansWith(db: SeedDb): Promise<LibraryGrowPlan[]> {
   const headers = await db.select().from(farmGrowPlans).orderBy(asc(farmGrowPlans.createdAt));
   if (headers.length === 0) return [];
   const nutrients = Object.fromEntries((await listNutrientsWith(db)).map((n) => [n.key, n]));
+  const media = Object.fromEntries((await listMediaWith(db)).map((m) => [m.key, m]));
   const lastPaid = await lastPaidWith(db);
   const lines = await db
     .select()
@@ -30,7 +32,7 @@ export async function listGrowPlansWith(db: SeedDb): Promise<LibraryGrowPlan[]> 
     arr.push(l);
     byGrowPlan.set(l.growPlanId, arr);
   }
-  return headers.map((h) => rowsToLibraryPlan(h, byGrowPlan.get(h.id) ?? [], nutrients, lastPaid));
+  return headers.map((h) => rowsToLibraryPlan(h, byGrowPlan.get(h.id) ?? [], nutrients, lastPaid, media));
 }
 
 /** Each variety's last price paid, from every receipt on file. */

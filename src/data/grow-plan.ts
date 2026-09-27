@@ -23,7 +23,7 @@
 import type { Tagged } from '@/data/tagged';
 import { tagged } from '@/data/tagged';
 import type { GrowPlanStatus } from '@/data/plan-data';
-import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
+import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef, GrowingMediumDef } from '@/data/inputs-catalog';
 import type { MeasuredConsumption } from '@/data/time-studies';
 import type { StatusTag } from '@/data/tagged';
 import type { LastPricePaid } from '@/engine/seed-cost';
@@ -47,7 +47,7 @@ export interface SeedLine {
 export interface MediumLine {
   kind: 'medium';
   mediumKey: MediumKey;
-  /** Quantity per tray in the medium's unit; null = the catalog's quantity per 1020 scaled to the format. */
+  /** Quantity per tray in the medium's unit; null = the library's quantity per 1020 scaled to the format. */
   qtyPerTray: Tagged | null;
 }
 
@@ -92,6 +92,11 @@ export interface GrowPlanDef {
    * Never stored with the plan.
    */
   nutrients?: Readonly<Record<string, NutrientSolutionDef>>;
+  /**
+   * The workspace's Media records its medium lines name, attached when the library is read so the
+   * plan is costed against them; absent, the costing reads the seed list. Never stored with the plan.
+   */
+  media?: Readonly<Record<string, GrowingMediumDef>>;
   /**
    * What the plan's approved time studies measured, attached where the scenario is resolved: the
    * costing reads its ounces per watering over the placeholder volumes and its ml per tray over the

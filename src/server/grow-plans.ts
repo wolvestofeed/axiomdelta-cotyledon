@@ -6,6 +6,7 @@ import { rowsToLibraryPlan, type LibraryGrowPlan } from '@/engine/grow-plan-libr
 import { withSeedLock, seedMissingGrowPlans } from '@/server/seed-writes';
 import { listGrowPlansWith, lastPaidWith } from '@/server/grow-plan-rows';
 import { listNutrientsWith } from '@/server/nutrient-rows';
+import { listMediaWith } from '@/server/media-rows';
 
 /**
  * MicroFarm — grow plan library read layer (server-only).
@@ -38,6 +39,7 @@ export async function getGrowPlanByCode(code: string): Promise<LibraryGrowPlan |
     .where(eq(farmGrowPlanLines.growPlanId, h[0].id))
     .orderBy(asc(farmGrowPlanLines.position));
   const nutrients = Object.fromEntries((await listNutrientsWith(db)).map((n) => [n.key, n]));
+  const media = Object.fromEntries((await listMediaWith(db)).map((m) => [m.key, m]));
   const lastPaid = await lastPaidWith(db);
-  return rowsToLibraryPlan(h[0], lines, nutrients, lastPaid);
+  return rowsToLibraryPlan(h[0], lines, nutrients, lastPaid, media);
 }

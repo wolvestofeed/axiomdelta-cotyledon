@@ -11,6 +11,7 @@ import { growPlanProblems, type GrowPlanDef, type GrowPlanLine } from '@/data/gr
 import { tagged } from '@/data/tagged';
 import { withWorkspace } from '@/server/workspace';
 import { listNutrients } from '@/server/nutrients';
+import { listMedia } from '@/server/media';
 
 /**
  * MicroFarm — grow plan library writes. SUPER ADMIN ONLY.
@@ -33,7 +34,7 @@ const STAGE_KEYS = ['soak', 'sow', 'germination', 'blackout', 'light', 'harvest-
 const TYPED = 'Typed in the grow plan editor';
 
 const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1) });
-const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.enum(['coco-coir', 'jute-mat', 'hemp-mat', 'vermiculite', 'peat-vermiculite', 'hydro-pad', 'none']), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
+const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.string().trim().min(1).max(60), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
 const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.string().trim().min(1).max(60), mlPerGal: z.number().min(0).max(4_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LightLineIn = z.object({ kind: z.literal('light'), regimeKey: z.enum(['yield', 'balanced', 'nutrition-forward', 'biofortify-far-red', 'continuous']), ppfd: z.number().min(0).max(2_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LineIn = z.discriminatedUnion('kind', [SeedLineIn, MediumLineIn, NutrientLineIn, LightLineIn]);
@@ -87,6 +88,12 @@ async function nutrientProblems(plan: GrowPlanDef): Promise<string[]> {
   return plan.lines.filter((l) => l.kind === 'nutrient' && !known.has(l.nutrientKey)).map((l) => `Nutrient line: "${l.kind === 'nutrient' ? l.nutrientKey : ''}" is not in the Nutrients & Supplements library.`);
 }
 
+/** A medium line must name a row of the workspace's Media library. */
+async function mediumProblems(plan: GrowPlanDef): Promise<string[]> {
+  const known = new Set((await listMedia()).map((m) => m.key));
+  return plan.lines.filter((l) => l.kind === 'medium' && !known.has(l.mediumKey)).map((l) => `Medium line: "${l.kind === 'medium' ? l.mediumKey : ''}" is not in the Media library.`);
+}
+
 const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join('.') || 'plan'}: ${i.message}`).join('; ');
 
 /** Add a grow plan to the library. */
@@ -104,7 +111,7 @@ async function createGrowPlanInner(input: unknown): Promise<Result<{ id: string;
     return refuse(e);
   }
   const plan = toGrowPlan(parsed.data);
-  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
+  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan)), ...(await mediumProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
   const existing = await db.select({ id: farmGrowPlans.id }).from(farmGrowPlans).where(eq(farmGrowPlans.code, plan.code)).limit(1);
   if (existing[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
@@ -137,7 +144,7 @@ async function updateGrowPlanInner(input: unknown): Promise<Result<{ id: string 
     return refuse(e);
   }
   const plan = toGrowPlan(parsed.data);
-  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
+  const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan)), ...(await mediumProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
   const current = await db.select({ id: farmGrowPlans.id, version: farmGrowPlans.version, code: farmGrowPlans.code }).from(farmGrowPlans).where(eq(farmGrowPlans.id, parsed.data.id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Grow plan not found.' };

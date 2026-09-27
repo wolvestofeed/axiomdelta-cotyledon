@@ -7,8 +7,9 @@
  * (`_lib/grow-plans.ts`) and the actions call these so the shape is defined once.
  */
 
-import type { NutrientSolutionDef } from '@/data/inputs-catalog';
+import type { NutrientSolutionDef, GrowingMediumDef } from '@/data/inputs-catalog';
 import { nutrientsForPlan } from '@/engine/nutrients';
+import { mediaForPlan } from '@/engine/media';
 import type { LastPricePaid } from '@/engine/seed-cost';
 import type { GrowPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
@@ -72,7 +73,7 @@ function lastPaidFor(lines: readonly GrowPlanLine[], lastPaid?: Readonly<Record<
 }
 
 /** The stored grow plan. */
-export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>): GrowPlanDef {
+export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>, media?: Readonly<Record<string, GrowingMediumDef>>): GrowPlanDef {
   const status = GROW_PLAN_STATUSES.includes(header.status as GrowPlanStatus) ? (header.status as GrowPlanStatus) : 'developing';
   const format = (header.format in TRAY_FORMAT_BY_KEY ? header.format : 'flat-1020') as TrayFormatKey;
   const sd = header.stageDays;
@@ -93,12 +94,13 @@ export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPl
     allergensPresent: header.allergensPresent ?? '',
     allergenFreeClaims: header.allergenFreeClaims ?? '',
     ...(nutrients ? { nutrients: nutrientsForPlan({ lines: planLines }, nutrients) } : {}),
+    ...(media ? { media: mediaForPlan({ lines: planLines }, media) } : {}),
     ...lastPaidFor(planLines, lastPaid),
   };
 }
 
-export function rowsToLibraryPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>): LibraryGrowPlan {
-  const plan = rowsToGrowPlan(header, lines, nutrients, lastPaid);
+export function rowsToLibraryPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>, lastPaid?: Readonly<Record<string, LastPricePaid>>, media?: Readonly<Record<string, GrowingMediumDef>>): LibraryGrowPlan {
+  const plan = rowsToGrowPlan(header, lines, nutrients, lastPaid, media);
   return {
     ...plan,
     id: header.id,

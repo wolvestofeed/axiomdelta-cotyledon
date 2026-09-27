@@ -2318,3 +2318,48 @@ export const farmNutrients = farmSchema.table(
 );
 
 export type FarmNutrientRow = typeof farmNutrients.$inferSelect;
+
+/** The Media library (migration 0015): one row per growing medium a grow plan's medium line names. */
+export const farmMedia = farmSchema.table(
+  'media',
+  {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
+    // @classification: Internal
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The key a medium line names; unique in the workspace. */
+    // @classification: Internal
+    key: text('key').notNull(),
+    // @classification: Internal
+    position: integer('position').notNull().default(0),
+    // @classification: Internal
+    name: text('name').notNull(),
+    /** 'loose' | 'mat' | 'none' */
+    // @classification: Internal
+    form: text('form').notNull(),
+    /** 'gal' | 'each' | 'none' */
+    // @classification: Internal
+    unit: text('unit').notNull(),
+    /** Tagged: how much one 1020 tray takes, in the unit. */
+    // @classification: Internal
+    qtyPer1020: jsonb('qty_per_1020').notNull(),
+    /** Tagged: dollars per unit. */
+    // @classification: Confidential
+    costPerUnit: jsonb('cost_per_unit').notNull(),
+    /** { ph?, porosity?, note } */
+    // @classification: Internal
+    traits: jsonb('traits').notNull().default({}),
+    /** Science library rows behind the traits. */
+    // @classification: Internal
+    rows: jsonb('rows').notNull().default([]),
+    /** 'seed' | 'user_built' */
+    // @classification: Internal
+    source: text('source').notNull().default('user_built'),
+    // @classification: Internal
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // @classification: Internal
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('farm_media_unique_key').on(t.workspaceId, t.key)],
+);
+
+export type FarmMediumRow = typeof farmMedia.$inferSelect;

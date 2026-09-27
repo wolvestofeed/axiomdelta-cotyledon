@@ -55,7 +55,7 @@ import { seedPackagingLibrary, type PackagingLibrary } from '@/data/packaging';
 import type { CatalogLine } from '@/engine/catalog';
 import { codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { TimeStudyDoc } from '@/data/time-studies';
-import { NUTRIENT_SOLUTIONS, type NutrientSolutionDef } from '@/data/inputs-catalog';
+import { GROWING_MEDIA, NUTRIENT_SOLUTIONS, type GrowingMediumDef, type NutrientSolutionDef } from '@/data/inputs-catalog';
 
 const clone = <T,>(v: T): T => structuredClone(v);
 
@@ -95,6 +95,8 @@ export interface ScenarioStore {
   library: GrowPlanDef[];
   /** The Nutrients & Supplements library as loaded; the seed list when the server passed none. */
   nutrients: NutrientSolutionDef[];
+  /** The Media library as loaded; the seed list when the server passed none. */
+  media: GrowingMediumDef[];
   setPhase: (phase: number, key: keyof PhaseOverlay, value: number | undefined) => void;
   setPhaseProfile: (
     phase: number,
@@ -156,6 +158,7 @@ export function ScenarioProvider({
   leasehold,
   timeStudies,
   nutrients,
+  media,
   isSuperAdmin = false,
   children,
 }: {
@@ -183,6 +186,7 @@ export function ScenarioProvider({
   timeStudies?: TimeStudyDoc[];
   /** The Nutrients & Supplements library the server loaded; omit for the seed list. */
   nutrients?: NutrientSolutionDef[];
+  media?: GrowingMediumDef[];
   isSuperAdmin?: boolean;
   children: ReactNode;
 }) {
@@ -198,6 +202,7 @@ export function ScenarioProvider({
   const leaseLib = useMemo(() => leasehold ?? leaseholdSeed, [leasehold]);
   const studyLib = useMemo(() => timeStudies ?? null, [timeStudies]);
   const nutrientLib = useMemo(() => nutrients ?? [...NUTRIENT_SOLUTIONS], [nutrients]);
+  const mediaLib = useMemo(() => media ?? [...GROWING_MEDIA], [media]);
   const [baseline, setBaseline] = useState<FarmScenarioConfig>(() => clone(seed));
   const [config, setConfig] = useState<FarmScenarioConfig>(() => clone(seed));
 
@@ -548,6 +553,7 @@ export function ScenarioProvider({
       setSchedulePolicy,
       library: lib,
       nutrients: nutrientLib,
+      media: mediaLib,
       isSuperAdmin,
       resetSection,
       resetAll,
@@ -562,6 +568,7 @@ export function ScenarioProvider({
       dirtySections,
       lib,
       nutrientLib,
+      mediaLib,
       custs,
       setForecast,
       setAssumption,

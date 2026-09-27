@@ -17,6 +17,7 @@ import { getFarmAccess } from '@/server/access';
 import { getScenarioView, listScenarios } from '@/server/scenarios';
 import { listGrowPlans } from '@/server/grow-plans';
 import { listNutrients } from '@/server/nutrients';
+import { listMedia } from '@/server/media';
 import { listSubscribers } from '@/server/subscribers';
 import { listEquipment } from '@/server/equipment';
 import { listPackagingLibrary } from '@/server/packaging';
@@ -64,7 +65,7 @@ async function FarmLayoutInner({ children }: { children: React.ReactNode }) {
   // What this person is looking at: an open forecast, or the plan of record.
   const ledgerCookie = (await cookies()).get(LEDGER_COOKIE)?.value;
   const ledgerKind = isLedgerKind(ledgerCookie) ? ledgerCookie : 'plan';
-  const [view, saved, library, subscribers, calendar, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, nutrients] = await Promise.all([
+  const [view, saved, library, subscribers, calendar, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, nutrients, media] = await Promise.all([
     getScenarioView(),
     listScenarios({ userId: access.userId, isSuperAdmin: access.isSuperAdmin }),
     listGrowPlans(),
@@ -78,11 +79,12 @@ async function FarmLayoutInner({ children }: { children: React.ReactNode }) {
     listLeasehold(),
     listTimeStudies(),
     listNutrients(),
+    listMedia(),
   ]);
 
   return (
     <div className={`farm-root ${farmFontVars}`}>
-      <ScenarioProvider initialConfig={view.config} library={library} subscribers={subscribers} closures={calendar.closures} equipment={equipment} packaging={packaging} catalog={catalog} loans={loans} fixedCostLines={fixedCostLines} leasehold={leasehold} timeStudies={timeStudies.studies} nutrients={nutrients} isSuperAdmin={access.isSuperAdmin}>
+      <ScenarioProvider initialConfig={view.config} library={library} subscribers={subscribers} closures={calendar.closures} equipment={equipment} packaging={packaging} catalog={catalog} loans={loans} fixedCostLines={fixedCostLines} leasehold={leasehold} timeStudies={timeStudies.studies} nutrients={nutrients} media={media} isSuperAdmin={access.isSuperAdmin}>
         <LedgerProvider initialKind={ledgerKind}>
         <div className="farm-shell">
           <FarmSidebar isAdmin={access.isSuperAdmin} userName={access.name ?? access.email ?? 'Signed in'} userEmail={access.email} />
