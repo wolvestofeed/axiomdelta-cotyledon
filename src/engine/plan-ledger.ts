@@ -138,7 +138,6 @@ export function postPlanLedger(input: { timeline: ForecastTimeline; inputs: Reso
     overheadBudgetFor,
     depreciationFor,
     periods: months,
-    openingStandardCostPerUnitCents: 0,
     liveLibraryIsStandard: true,
   });
 

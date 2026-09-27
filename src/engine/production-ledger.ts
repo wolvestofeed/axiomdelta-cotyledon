@@ -10,8 +10,9 @@
  * lots they drew (`lotRegister`), else the plan's price; the light a tray takes
  * and the wear on its tray and the sanitizer are overhead, applied at their standard per tray on
  * the trays SOWN (the grow plan's cost card, `grow-costing.ts`);
- * labor splits over the three stages by the plan's study, the sowing stream to Sow, the daily
- * stream to Grow, the harvest stream to Pack. Trays removed at the harvest check leave as
+ * labor is the record's crew hours at the recorded rate, else the approved standard, split over the
+ * three stages by the plan's study, the sowing stream to Sow, the daily stream to Grow, the
+ * harvest stream to Pack. Trays removed at the harvest check leave as
  * abnormal spoilage at the cost of the stages they passed.
  *
  * The chain, and the authority for each step:
@@ -27,8 +28,9 @@
  *                  first out).
  *   apply          Dr WIP-Sow (tray wear, sanitizer) and WIP-Grow (light), Cr Variable
  *                  Overhead Applied, at the standard per tray.
- *   labor          Dr WIP-Sow / WIP-Grow / WIP-Pack @ standard by stream, Cr Accrued
- *                  Wages @ actual, difference split into rate and efficiency variances.
+ *   labor          Dr WIP-Sow / WIP-Grow / WIP-Pack by stream, Cr Accrued Wages and the
+ *                  payroll liabilities: the recorded hours at the recorded rate, the
+ *                  approved standard where no crew is recorded.
  *   overhead       Dr WIP-Sow @ normal-capacity rate, Cr Overhead Applied
  *                  ASC 330-10-30-3 — allocation on normal capacity.
  *                  Dr Overhead Control, Cr AP for the fixed overhead actually incurred
@@ -40,7 +42,8 @@
  *   pack -> FG     Dr Finished Goods, Cr WIP-Pack + Packaging Inventory
  *   abnormal scrap Dr Abnormal Spoilage, Cr the stage it occurred in
  *                  ASC 330-10-30-7 — a current-period charge, never inventory.
- *   shipment       Dr AR, Cr Revenue; Dr COGS, Cr Finished Goods
+ *   shipment       Dr AR, Cr Revenue; Dr COGS by element (materials, labor,
+ *                  overhead), Cr Finished Goods
  *                  Distribution is expensed here, not capitalised: ASC 330-10-30-8
  *                  makes selling and distribution costs period costs.
  */
@@ -63,9 +66,9 @@ import {
   ACC_WIP_PACK,
   ACC_FINISHED_GOODS,
   ACC_GRIR,
-  ACC_COGS,
-  ACC_LABOR_RATE_VAR,
-  ACC_LABOR_EFFICIENCY_VAR,
+  ACC_COGS_MATERIALS,
+  ACC_COGS_LABOR,
+  ACC_COGS_OVERHEAD,
   ACC_OH_CONTROL,
   ACC_OH_APPLIED,
   ACC_VAR_OH_APPLIED,
@@ -126,29 +129,35 @@ function entry(
   return { id, date, description, lines };
 }
 
-export interface VarianceSummary {
-  laborRate: number;
-  laborEfficiency: number;
-  /**
-   * Fixed overhead incurred in the sowing's period less overhead applied to the
-   * sowing. Positive = under-absorbed. A PERIOD figure, so it is zero unless the
-   * caller supplied the period's incurred overhead; the annual volume variance
-   * is a period-end computation (`absorbOverhead`) and is never posted here.
-   */
-  overheadVolume: number;
-  /**
-   * Sum of the SOWING variances — labor rate and efficiency. Positive is unfavourable. The overhead figure above is a period
-   * figure and is dispositioned at period end, so it is reported beside this
-   * total, not inside it.
-   */
-  net: number;
-  /** Net sowing variance as a share of standard COGS for the sowing. */
-  shareOfStandardCogs: number;
-  /**
-   * ASC 330-10-30-12/13: a material net variance prorates across ending raw
-   * materials, WIP, finished goods and COGS; an immaterial one goes wholly to COGS.
-   */
-  disposition: 'PRORATE' | 'TO_COGS';
+/** Cost by element: materials (seed, medium, nutrient and packaging), labor, overhead (variable and fixed). */
+export interface CostElements {
+  materials: number;
+  labor: number;
+  overhead: number;
+}
+
+export const COST_ELEMENTS = ['materials', 'labor', 'overhead'] as const;
+
+/** The cost of goods sold account each element posts to. */
+export const COGS_ACCOUNT: Record<keyof CostElements, string> = {
+  materials: ACC_COGS_MATERIALS,
+  labor: ACC_COGS_LABOR,
+  overhead: ACC_COGS_OVERHEAD,
+};
+
+const COGS_MEMO: Record<keyof CostElements, string> = {
+  materials: 'Cost of goods sold — materials',
+  labor: 'Cost of goods sold — labor',
+  overhead: 'Cost of goods sold — overhead',
+};
+
+/** The cost of goods sold legs, one per element, and the finished goods credit for their total. */
+export function cogsLegs(c: CostElements, memo: string): Array<{ account: string; cents: number; memo: string }> {
+  const total = c.materials + c.labor + c.overhead;
+  return [
+    ...COST_ELEMENTS.map((e) => ({ account: COGS_ACCOUNT[e], cents: c[e], memo: `${COGS_MEMO[e]}, ${memo}` })),
+    { account: ACC_FINISHED_GOODS, cents: -total, memo: 'Finished goods relieved' },
+  ];
 }
 
 export interface ProductionSowingLedger {
@@ -175,7 +184,9 @@ export interface ProductionSowingLedger {
     purchaseOrderCost: number;
     /** Seed, medium and nutrient issued, at the cost of the lots drawn. */
     materialIssuedToWip: number;
+    /** Standard hours at the standard rate on the trays sown. */
     directLaborStandard: number;
+    /** What the labor entry charged: the recorded hours at the recorded rate, else the standard. */
     directLaborActual: number;
     /** Fixed overhead absorbed at the normal-capacity rate. */
     overheadAbsorbed: number;
@@ -185,15 +196,22 @@ export interface ProductionSowingLedger {
     consumablesApplied: number;
     packagingCost: number;
     finishedGoodsCost: number;
-    /** Finished-goods cost ÷ units: the standard cost of one UNIT. */
-    standardCostPerUnit: number;
+    /** What finished goods received, by element, cents: the three sum to the finished goods debit. */
+    finishedGoodsByElementCents: CostElements;
+    /** Finished-goods cost ÷ units: the cost of one unit. */
+    costPerUnit: number;
     unitsShipped: number;
     abnormalSpoilage: number;
     distributionExpensed: number;
     revenue: number;
     cogs: number;
+    /**
+     * Fixed overhead incurred in the sowing's period less overhead applied to the sowing.
+     * Positive = under-absorbed. Zero unless the caller supplied the period's incurred
+     * overhead; the annual volume variance is a period-end computation and never posted here.
+     */
+    overheadVolume: number;
   };
-  variances: VarianceSummary;
   /** Statements of fact about how this sowing was costed, for the audit trail. */
   notes: string[];
 }
@@ -307,7 +325,8 @@ export function productionSowingLedger(
   const lightApplied = std(perTray.light);
   const consumablesApplied = std(perTray.consumables);
 
-  // ── Labor at standard on the trays sown, split over the stages by the plan's study.
+  // ── Labor: the record's crew hours at the recorded rate, else the approved standard on the
+  //    trays sown, split over the stages by the plan's study.
   const sowings = opts.sowings ?? 1;
   const labor = laborForDay(sowings, trays, assumptions);
   const directLaborStandard = labor.directLaborCost;
@@ -317,19 +336,21 @@ export function productionSowingLedger(
     ? { sow: study.sowingLaborMinutes / streamMinutes, grow: study.dailyLaborMinutes / streamMinutes }
     : { sow: 1, grow: 0 };
   const stdRate = assumptions.labor.blendedLoadedWage.value;
-  const actualHours = sowing.actualLaborHours ?? labor.totalLaborHours;
-  const actualRate = sowing.actualLaborRate ?? stdRate;
-  const directLaborActual = actualHours * actualRate;
-  const laborRateVariance = (actualRate - stdRate) * actualHours;
-  const laborStdC = cents(directLaborStandard);
-  const laborSowC = Math.round(laborStdC * streamShare.sow);
-  const laborGrowC = Math.round(laborStdC * streamShare.grow);
-  const laborPackC = laborStdC - laborSowC - laborGrowC;
+  const laborHours = sowing.actualLaborHours ?? labor.totalLaborHours;
+  const laborRate = sowing.actualLaborRate ?? stdRate;
+  const directLaborActual = sowing.actualLaborHours === null ? directLaborStandard : laborHours * laborRate;
   if (sowing.actualLaborHours === null) {
-    notes.push(
-      'No actual labor hours on the sowing record, so labor posts at standard and both labor variances are zero. The time study is an estimate, not an observation.',
-    );
+    notes.push(`No crew hours on the sowing record: labor posts at the approved standard, ${labor.totalLaborHours.toFixed(2)} hours at $${stdRate.toFixed(2)}.`);
+  } else if (sowing.actualLaborRate === null) {
+    notes.push(`The crew's hours are recorded without a rate for every person: ${laborHours.toFixed(2)} hours post at the standard rate, $${stdRate.toFixed(2)}.`);
   }
+  // Loaded labor is owed as wages, payroll taxes, workers' comp and benefits (Roadmap K5); the
+  // stages take exactly what is owed, split by stream.
+  const owed = splitLoadedLaborCents(cents(directLaborActual), assumptions.labor.payrollBurden.value);
+  const laborC = owed.wagesCents + owed.payrollTaxesCents + owed.workersCompCents + owed.benefitsCents;
+  const laborSowC = Math.round(laborC * streamShare.sow);
+  const laborGrowC = Math.round(laborC * streamShare.grow);
+  const laborPackC = laborC - laborSowC - laborGrowC;
 
   // ── Overhead applied at the normal-capacity rate, and what the period incurred.
   const overheadAbsorbed = opts.overhead.ratePerUnit * trays;
@@ -362,6 +383,14 @@ export function productionSowingLedger(
     FINISHED: perG(sowStage + growStage + packStage, stdHarvestG) + perG(packagingCost, (costing?.harvestGramsPerTray ?? 0) * units),
   };
   const stageAccount: Record<ScrapStage, string> = { SOW: ACC_WIP_SOW, GROW: ACC_WIP_GROW, PACK: ACC_WIP_PACK, FINISHED: ACC_FINISHED_GOODS };
+  // Each stage's cost by element, for the element split of what spoilage takes out.
+  const sowV: CostElements = { materials: materialIssued, labor: laborSowC / 100, overhead: consumablesApplied + overheadAbsorbed };
+  const growV: CostElements = { ...sowV, labor: sowV.labor + laborGrowC / 100, overhead: sowV.overhead + lightApplied };
+  const packV: CostElements = { ...growV, labor: growV.labor + laborPackC / 100 };
+  const abnormalByElement: CostElements = { materials: 0, labor: 0, overhead: 0 };
+  const takeOut = (v: CostElements, g: number) => {
+    for (const e of COST_ELEMENTS) abnormalByElement[e] += g * perG(v[e], stdHarvestG);
+  };
   let abnormalSpoilage = 0;
   const abnormalByStage = new Map<string, number>();
   const stagesHit = new Set<ScrapStage>();
@@ -372,6 +401,11 @@ export function productionSowingLedger(
       stagesHit.add(st);
       const value = k.abnormalG * (st === 'SOW' ? seedCostPerG(lot) : costPerG[st]);
       abnormalSpoilage += value;
+      if (st === 'SOW') abnormalByElement.materials += value;
+      else {
+        takeOut(st === 'GROW' ? growV : packV, k.abnormalG);
+        if (st === 'FINISHED') abnormalByElement.materials += k.abnormalG * perG(packagingCost, (costing?.harvestGramsPerTray ?? 0) * units);
+      }
       abnormalByStage.set(stageAccount[st], (abnormalByStage.get(stageAccount[st]) ?? 0) + value);
     }
   }
@@ -424,36 +458,26 @@ export function productionSowingLedger(
     ]),
   );
 
-  // Loaded labor at actual is owed as wages, payroll taxes, workers' comp and
-  // benefits (Roadmap K5). Built in cents: the standard legs sum to the standard,
-  // the owed legs to the actual, and the efficiency variance closes the entry.
   const line = (account: string, c: number, memo: string): JournalLine => ({
     accountCode: account,
     debitCents: c > 0 ? c : 0,
     creditCents: c < 0 ? -c : 0,
     memo,
   });
-  const owed = splitLoadedLaborCents(cents(directLaborActual), assumptions.labor.payrollBurden.value);
-  const owedC = owed.wagesCents + owed.payrollTaxesCents + owed.workersCompCents + owed.benefitsCents;
-  const rateVarC = cents(laborRateVariance);
-  const effVarC = owedC - laborStdC - rateVarC;
   entries.push({
     id: `${sowing.sowingId}-LABOR`,
     date,
-    description: 'Direct labor — standard into work in process by stream, actual accrued',
+    description: 'Direct labor into work in process by stream',
     lines: [
-      line(ACC_WIP_SOW, laborSowC, `Sowing stream: ${labor.totalLaborHours.toFixed(2)} standard hours in all at $${stdRate.toFixed(2)}`),
+      line(ACC_WIP_SOW, laborSowC, `Sowing stream: ${laborHours.toFixed(2)} hours in all at $${laborRate.toFixed(2)}${sowing.actualLaborHours === null ? ', the approved standard' : ' as recorded'}`),
       line(ACC_WIP_GROW, laborGrowC, 'Daily stream over the cycle'),
       line(ACC_WIP_PACK, laborPackC, 'Harvest stream'),
-      line(ACC_LABOR_RATE_VAR, rateVarC, 'Labor rate variance'),
-      line(ACC_LABOR_EFFICIENCY_VAR, effVarC, 'Labor efficiency variance'),
-      line(ACC_ACCRUED_WAGES, -owed.wagesCents, 'Accrued wages at actual'),
+      line(ACC_ACCRUED_WAGES, -owed.wagesCents, 'Accrued wages'),
       line(ACC_ACCRUED_PAYROLL_TAXES, -owed.payrollTaxesCents, 'Employer FICA, FUTA and SUTA on the wages'),
       line(ACC_ACCRUED_WORKERS_COMP, -owed.workersCompCents, "Workers' comp premium on the wages"),
       line(ACC_ACCRUED_BENEFITS, -owed.benefitsCents, 'Burden over the statutory rates, as benefits'),
     ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
-  const laborEfficiencyVariance = effVarC / 100;
 
   entries.push(
     entry(`${sowing.sowingId}-OH`, date, 'Absorb fixed manufacturing overhead at the normal-capacity rate', [
@@ -513,18 +537,28 @@ export function productionSowingLedger(
   const packagingC = cents(packagingCost);
   const fgDebitCents = packStageC + packagingC;
   const finishedGoodsCost = fgDebitCents / 100;
+  // Finished goods by element: each element's cents charged, less its share of the spoilage; the
+  // rounding residual lands on the largest element so the three sum to the finished goods debit.
+  const fgByElement: CostElements = {
+    materials: cents(materialIssued) + packagingC - cents(abnormalByElement.materials),
+    labor: laborC - cents(abnormalByElement.labor),
+    overhead: cents(consumablesApplied) + cents(overheadAbsorbed) + cents(lightApplied) - cents(abnormalByElement.overhead),
+  };
+  const residualC = fgDebitCents - (fgByElement.materials + fgByElement.labor + fgByElement.overhead);
+  const largest = COST_ELEMENTS.reduce((a, b) => (fgByElement[b] > fgByElement[a] ? b : a));
+  fgByElement[largest] += residualC;
   entries.push({
     id: `${sowing.sowingId}-FG`,
     date,
     description: 'Pack and receive finished trays into finished goods',
     lines: [
-      line(ACC_FINISHED_GOODS, fgDebitCents, `${units.toLocaleString()} trays at standard`),
+      line(ACC_FINISHED_GOODS, fgDebitCents, `${units.toLocaleString()} trays packed`),
       line(ACC_WIP_PACK, -packStageC, 'Pack stage relieved'),
       line(ACC_PACKAGING, -packagingC, "The plan's packaging"),
     ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
   });
 
-  const standardCostPerUnit = units > 0 ? finishedGoodsCost / units : 0;
+  const costPerUnit = units > 0 ? finishedGoodsCost / units : 0;
   // No price, no revenue (Roadmap N9): the shipment posts cost of goods sold and names the gap.
   if (opts.shipments === undefined && opts.pricePerUnit === undefined && (opts.unitsShipped ?? units) > 0) {
     notes.push('No price per unit was given for the shipment: revenue is not posted for it.');
@@ -542,31 +576,31 @@ export function productionSowingLedger(
   const revenue = shipments.reduce((s, x) => s + x.units * x.pricePerUnit, 0);
   const distributionExpensed = shipped * distributionPerUnit;
 
-  // Finished goods are relieved at standard per unit, in cents, with the last
-  // shipment of a fully shipped run taking the rounding residual so the account
-  // clears to exactly zero rather than to a stray cent.
+  // Finished goods are relieved by element at the sowing's cost per unit, in cents, with the
+  // last shipment of a fully shipped run taking what is left so the account clears to exactly
+  // zero rather than to a stray cent.
   const fullyShipped = shipped === units;
   let cogsCents = 0;
-  let relievedCents = 0;
+  const relieved: CostElements = { materials: 0, labor: 0, overhead: 0 };
   shipments.forEach((x, idx) => {
     const isLast = idx === shipments.length - 1;
-    const lineCogsCents =
-      fullyShipped && isLast
-        ? fgDebitCents - relievedCents
-        : cents(x.units * standardCostPerUnit);
-    relievedCents += lineCogsCents;
-    cogsCents += lineCogsCents;
+    const take = {} as CostElements;
+    for (const e of COST_ELEMENTS) {
+      take[e] = fullyShipped && isLast ? fgByElement[e] - relieved[e] : units > 0 ? Math.round((x.units * fgByElement[e]) / units) : 0;
+      relieved[e] += take[e];
+    }
+    cogsCents += take.materials + take.labor + take.overhead;
     const revenueCents = cents(x.units * x.pricePerUnit);
+    const legs = [
+      { account: ACC_AR, cents: revenueCents, memo: 'Accounts receivable' },
+      { account: x.revenueAccount, cents: -revenueCents, memo: `${x.units.toLocaleString()} units at $${x.pricePerUnit.toFixed(2)}` },
+      ...cogsLegs(take, `${x.units.toLocaleString()} units at $${costPerUnit.toFixed(4)}`),
+    ];
     entries.push({
       id: `${sowing.sowingId}-${x.id}`,
       date,
       description: x.description,
-      lines: [
-        { accountCode: ACC_AR, debitCents: revenueCents, creditCents: 0, memo: 'Accounts receivable' },
-        { accountCode: x.revenueAccount, debitCents: 0, creditCents: revenueCents, memo: `${x.units.toLocaleString()} units at $${x.pricePerUnit.toFixed(2)}` },
-        { accountCode: ACC_COGS, debitCents: lineCogsCents, creditCents: 0, memo: `${x.units.toLocaleString()} units at $${standardCostPerUnit.toFixed(4)} standard` },
-        { accountCode: ACC_FINISHED_GOODS, debitCents: 0, creditCents: lineCogsCents, memo: 'Finished goods relieved' },
-      ].filter((l) => l.debitCents > 0 || l.creditCents > 0),
+      lines: legs.filter((l) => l.cents !== 0).map((l) => line(l.account, l.cents, l.memo)),
     });
   });
   const cogs = cogsCents / 100;
@@ -599,10 +633,6 @@ export function productionSowingLedger(
     });
   });
 
-  const netVariance = laborRateVariance + laborEfficiencyVariance;
-  const standardCogs = cogs || finishedGoodsCost;
-  const share = standardCogs > 0 ? Math.abs(netVariance) / standardCogs : 0;
-
   const coa = FARM_COA;
   const posted = entries.filter((e) => e.lines.length > 0);
   return {
@@ -631,21 +661,14 @@ export function productionSowingLedger(
       consumablesApplied,
       packagingCost,
       finishedGoodsCost,
-      standardCostPerUnit,
+      finishedGoodsByElementCents: fgByElement,
+      costPerUnit,
       unitsShipped: shipped,
       abnormalSpoilage,
       distributionExpensed,
       revenue,
       cogs,
-    },
-    variances: {
-      laborRate: laborRateVariance,
-      laborEfficiency: laborEfficiencyVariance,
       overheadVolume,
-      net: netVariance,
-      shareOfStandardCogs: share,
-      disposition:
-        share > assumptions.standardCost.varianceProrationThreshold.value ? 'PRORATE' : 'TO_COGS',
     },
     notes,
   };

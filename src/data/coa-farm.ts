@@ -22,9 +22,10 @@ export const ACC_WIP_PACK = '1440';
 export const ACC_FINISHED_GOODS = '1450';
 export const ACC_GRIR = '2015';
 
-export const ACC_COGS = '5010';
-export const ACC_LABOR_RATE_VAR = '5130';
-export const ACC_LABOR_EFFICIENCY_VAR = '5140';
+/** Cost of goods sold by element (`accounting-policy.md` §14): the shared chart's 5010 is not posted. */
+export const ACC_COGS_MATERIALS = '5011';
+export const ACC_COGS_LABOR = '5012';
+export const ACC_COGS_OVERHEAD = '5013';
 export const ACC_OH_SPENDING_VAR = '5150';
 export const ACC_OH_VOLUME_VAR = '5160';
 export const ACC_OH_CONTROL = '5180';
@@ -62,7 +63,7 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     code: ACC_PACKAGING,
     name: 'Inventory — Packaging & Disposables',
     type: 'asset',
-    description: "The plans' packaging held at standard cost.",
+    description: "The plans' packaging held at cost.",
   },
   {
     code: ACC_WIP_SOW,
@@ -89,7 +90,25 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     code: ACC_FINISHED_GOODS,
     name: 'Inventory — Finished Goods',
     type: 'asset',
-    description: 'Packed units at standard cost, awaiting distribution.',
+    description: 'Packed units at the cost of their sowing, awaiting distribution.',
+  },
+  {
+    code: ACC_COGS_MATERIALS,
+    name: 'Cost of Goods Sold — Materials',
+    type: 'expense',
+    description: 'Seed, medium, nutrient and packaging in the units distributed, at the cost of the sowings relieved.',
+  },
+  {
+    code: ACC_COGS_LABOR,
+    name: 'Cost of Goods Sold — Labor',
+    type: 'expense',
+    description: 'Direct labor in the units distributed, at the cost of the sowings relieved.',
+  },
+  {
+    code: ACC_COGS_OVERHEAD,
+    name: 'Cost of Goods Sold — Overhead',
+    type: 'expense',
+    description: 'Light, tray wear and sanitizer applied and fixed overhead absorbed in the units distributed, at the cost of the sowings relieved.',
   },
   {
     code: ACC_GRIR,
@@ -104,19 +123,6 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     type: 'liability',
     description:
       'Budgeted occupancy and utilities accrued into Overhead Control at month end; a bill recorded for the period settles it, and the difference between bill and budget is the spending variance. A balance is overhead accrued but not yet billed.',
-  },
-  {
-    code: ACC_LABOR_RATE_VAR,
-    name: 'Direct Labor Rate Variance',
-    type: 'expense',
-    description: 'Actual wage rate against standard rate, on actual hours.',
-  },
-  {
-    code: ACC_LABOR_EFFICIENCY_VAR,
-    name: 'Direct Labor Efficiency Variance',
-    type: 'expense',
-    description:
-      'Actual hours against standard hours for the units produced, at standard rate. The gap between the time-study labor basis and the design-target basis resolves here.',
   },
   {
     code: ACC_OH_SPENDING_VAR,
@@ -189,8 +195,6 @@ export const FARM_INVENTORY_FLOW = [
 
 /** Variance accounts, for period-end disposition. */
 export const FARM_VARIANCE_ACCOUNTS = [
-  ACC_LABOR_RATE_VAR,
-  ACC_LABOR_EFFICIENCY_VAR,
   ACC_OH_SPENDING_VAR,
   ACC_OH_VOLUME_VAR,
 ] as const;

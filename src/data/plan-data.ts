@@ -81,10 +81,8 @@ export const assumptions = {
     ),
   },
   /**
-   * Standard-cost policy. ASC 330-10-30-12/13 permits standard costs only where
-   * they approximate cost on a recognised basis and are revised at reasonably
-   * regular intervals; material variances prorate across inventory and COGS
-   * rather than being written wholly to COGS.
+   * The labor and overhead standards (`accounting-policy.md` §5): they stand in for an
+   * actual cost until one is recorded, and are revised at reasonably regular intervals.
    */
   standardCost: {
     revisionIntervalMonths: t(
@@ -92,12 +90,6 @@ export const assumptions = {
       'STATED',
       'months',
       'Interval at which standards are re-set. ASC 330-10-30-13 requires revision at reasonably regular intervals to reflect current conditions.',
-    ),
-    varianceProrationThreshold: t(
-      0.05,
-      'STATED',
-      '% of standard COGS',
-      'Net variance above this share prorates across ending raw materials, WIP, finished goods and COGS; at or below it the whole net variance goes to COGS.',
     ),
     normalSpoilageBasis: t(
       'shrinkAllowance',

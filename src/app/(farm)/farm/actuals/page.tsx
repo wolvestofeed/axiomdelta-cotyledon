@@ -181,7 +181,7 @@ async function ActualsPageInner({
           {p && (
             <table className="farm-table mt-3">
               <tbody>
-                <tr><td>Standard cost per unit relieved</td><td className="num">{money(fromCents(p.standardCostPerUnitCents), 4)}</td></tr>
+                <tr><td>Cost per unit made</td><td className="num">{p.costPerUnitCents === null ? '—' : money(fromCents(p.costPerUnitCents), 4)}</td></tr>
                 <tr><td>Overhead applied / incurred</td><td className="num">{money(fromCents(p.overhead.appliedCents), 0)} / {money(fromCents(p.overhead.incurredCents), 0)}</td></tr>
                 <tr><td>{p.overhead.volumeVarianceCents >= 0 ? 'Under-absorbed — period charge' : 'Over-absorbed — period credit'}</td><td className="num">{money(fromCents(Math.abs(p.overhead.volumeVarianceCents)), 0)}</td></tr>
                 <tr><td>Lease + utilities: budget accrued / billed</td><td className="num">{money(fromCents(p.overhead.budgetCents), 0)} / {money(fromCents(p.overhead.billedCents), 0)}</td></tr>

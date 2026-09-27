@@ -79,6 +79,9 @@ Staffing surface keeps the accounts it has.
 | 1450 | Inventory — Finished Goods | Packed units awaiting distribution |
 | 2015 | Goods Received Not Invoiced | Clearing between receipt and vendor invoice |
 | 2160 | Accrued Manufacturing Overhead | Budgeted lease and utilities accrued at month end until the bill settles it (§4) |
+| 5011 | Cost of Goods Sold — Materials | Seed, medium, nutrient and packaging in the units distributed |
+| 5012 | Cost of Goods Sold — Labor | Direct labor in the units distributed |
+| 5013 | Cost of Goods Sold — Overhead | Variable overhead applied and fixed overhead absorbed in the units distributed. The shared chart's 5010 is not posted |
 | 5150 | MOH Spending Variance | Actual fixed overhead against budget |
 | 5160 | MOH Volume Variance | Budget not absorbed because volume < normal capacity |
 | 5170 | Production Labor Not Charged to a Sowing | Loaded labor on the time clock beyond what sowing records charged; a period production cost (§16) |
@@ -323,7 +326,7 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Receipt | Accepted lines: raw materials by lot at the price received, against goods received not invoiced (2015) at the same amount. A rejected line posts nothing. |
 | Supplier bill | Recorded only when it equals its receipts, line for line in quantity and value; it clears goods received not invoiced and credits the payable at the same amount (§16). |
 | Absorption | A sowing with no approved version in force absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); a version absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
-| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the cost per unit of the finished goods relieved, first in, first out by sowing within the grow plan the distribution names (else across the period's finished goods), by element; distribution expense; retail commission deducted from the remittance. |
+| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the cost per unit of the finished goods relieved, first in, first out by sowing within the grow plan the distribution names (else across every grow plan's finished goods), by element to 5011, 5012 and 5013; distribution expense; retail commission deducted from the remittance. Units beyond the finished goods on hand are costed at the grow plan's most recent sowing cost per unit, else its cost card, else zero; finished goods goes negative by that amount and the period's notes name the units. |
 | Subscriber / supplier payment | Cash against receivables / payables, applied to invoices / bills. |
 | Opening balance | Cash, the fit-out at cost, long-term debt and owners' equity as of its date. |
 | Payroll | At month end, loaded labor earned on the time clock less what the month's sowing records charged, to 5170 against the four payroll liabilities; on each pay date through today, the pay period's loaded labor paid in cash (§16). |
@@ -334,9 +337,9 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash (Roadmap N5). |
 | Marketplace deposit | Cash against processor clearing (1200) (Roadmap N5). |
 
-A sowing's cost per unit is carried unrounded and only a distribution's extended cost
-rounds, so a period whose distributions equal its production relieves finished goods
-to within a cent. Receivables and payables are not settled unless a payment record
+Each sowing is a layer of finished goods from its sow date, holding its units and its cost
+by element in cents; a distribution that takes a layer's last unit takes what the layer has
+left, so finished goods clears to the cent once everything made is distributed. Receivables and payables are not settled unless a payment record
 applies to them: the actuals position carries real working capital, and it opens
 from the opening balance record once one is recorded (§16). The forecast-month column
 on Actuals is the Plan ledger's own month for the same period (Roadmap N6). A shipment given no

@@ -170,11 +170,14 @@ describe('actuals — posting a period', () => {
     expect(ids.some((id) => id.endsWith('-FG'))).toBe(true);
   });
 
-  it('a distribution relieves finished goods at the period standard per unit and books revenue', () => {
-    expect(p.standardCostPerUnitCents).toBeGreaterThan(0);
+  it('a distribution relieves the sowing’s finished goods by element and books revenue', () => {
+    expect(p.costPerUnitCents).toBeGreaterThan(0);
     const dlv = posted.entries.find((e) => e.id.startsWith('DLV-'))!;
-    const cogs = dlv.lines.find((l) => l.accountCode === '5010')!.debitCents;
-    expect(cogs).toBe(Math.round(sowingSize * p.standardCostPerUnitCents));
+    const debit = (code: string) => dlv.lines.find((l) => l.accountCode === code)?.debitCents ?? 0;
+    const el = p.sowings[0]!.amounts.finishedGoodsByElementCents;
+    expect([debit('5011'), debit('5012'), debit('5013')]).toEqual([el.materials, el.labor, el.overhead]);
+    expect(el.materials + el.labor + el.overhead).toBe(Math.round(p.sowings[0]!.amounts.finishedGoodsCost * 100));
+    expect(dlv.lines.some((l) => l.accountCode === '5010')).toBe(false);
     expect(dlv.lines.find((l) => l.accountCode === '4010')!.creditCents).toBe(sowingSize * 2000);
     // Everything produced was distributed, so finished goods is flat.
     expect(net(posted.entries, '1450')).toBe(0);
@@ -257,11 +260,33 @@ describe('actuals — posting a period', () => {
     expect(empty.periods).toEqual([]);
   });
 
-  it('a distribution with no sowing before it relieves the opening standard it is given, zero by default (Roadmap N6)', () => {
+  it('a distribution with no finished goods on hand: at zero when it names no grow plan, else at the plan’s cost card, and says so', () => {
+    const cogsOf = (x: ReturnType<typeof postActuals>) => ['5011', '5012', '5013'].reduce((t, c) => t + net(x.entries, c), 0);
     const only = postActuals({ sowings: [], receipts: [], distributions: [distributionDoc(50)], bills: [] });
-    expect(only.periods[0].standardCostPerUnitCents).toBe(0);
-    const given = postActuals({ sowings: [], receipts: [], distributions: [distributionDoc(50)], bills: [] }, undefined, undefined, { openingStandardCostPerUnitCents: 312 });
-    expect(given.periods[0].standardCostPerUnitCents).toBe(312);
+    expect(only.periods[0].costPerUnitCents).toBeNull();
+    expect(cogsOf(only)).toBe(0);
+    expect(only.periods[0].notes.join(' ')).toMatch(/beyond the finished goods on hand, costed at zero/);
+    const named = postActuals({ sowings: [], receipts: [], distributions: [{ ...distributionDoc(50), growPlanCode: growPlan.code }], bills: [] });
+    expect(cogsOf(named)).toBeGreaterThan(0);
+    expect(net(named.entries, '1450')).toBe(-cogsOf(named));
+    expect(named.periods[0].notes.join(' ')).toContain(`costed at ${growPlan.code}'s cost card`);
+  });
+
+  it('finished goods are relieved first in, first out by sowing within the grow plan', () => {
+    const early = sowingDoc({ id: 'b-early', sowingId: 'B-260910-01', productionDate: '2026-09-10', actualLaborHours: 10, actualLaborRate: 30 });
+    const late = sowingDoc({ id: 'b-late', sowingId: 'B-260914-01' });
+    const first = { ...distributionDoc(sowingSize, 1, 'd-first'), growPlanCode: growPlan.code };
+    const second = { ...distributionDoc(sowingSize, 1, 'd-second'), growPlanCode: growPlan.code, distributedOn: '2026-09-16' };
+    const x = postActuals({ sowings: [late, early], receipts: [], distributions: [second, first], bills: [] });
+    const [a, b] = ['B-260910-01', 'B-260914-01'].map((id) => x.periods[0].sowings.find((l) => l.entries[0]!.id.startsWith(id))!.amounts.finishedGoodsByElementCents);
+    const cogsOn = (date: string) => {
+      const e = x.entries.find((en) => en.id.startsWith('DLV-') && en.date === date)!;
+      return ['5011', '5012', '5013'].map((c) => e.lines.find((l) => l.accountCode === c)?.debitCents ?? 0);
+    };
+    expect(cogsOn('2026-09-15')).toEqual([a!.materials, a!.labor, a!.overhead]);
+    expect(cogsOn('2026-09-16')).toEqual([b!.materials, b!.labor, b!.overhead]);
+    expect(a!.labor).not.toBe(b!.labor);
+    expect(net(x.entries, '1450')).toBe(0);
   });
 });
 
@@ -331,10 +356,13 @@ describe('actuals — the mass balance gate', () => {
     expect(mb.balanced).toBe(false);
   });
 
-  it('actual labor on the record produces labor variances in the period', () => {
-    const doc = sowingDoc({ actualLaborHours: 40, actualLaborRate: assumptions.labor.blendedLoadedWage.value + 2 });
+  it('actual labor on the record is charged to work in process as recorded, with no variance', () => {
+    const rate = assumptions.labor.blendedLoadedWage.value + 2;
+    const doc = sowingDoc({ actualLaborHours: 40, actualLaborRate: rate });
     const posted = postActuals({ ...bundle, sowings: [doc] });
-    expect(Math.abs(net(posted.entries, '5130'))).toBeGreaterThan(0);
+    const labor = posted.entries.find((e) => e.id.endsWith('-LABOR'))!;
+    expect(labor.lines.filter((l) => ['1430', '1435', '1440'].includes(l.accountCode)).reduce((t, l) => t + l.debitCents, 0)).toBe(Math.round(40 * rate * 100));
+    expect(posted.entries.flatMap((e) => e.lines).some((l) => l.accountCode === '5130' || l.accountCode === '5140')).toBe(false);
     expect(posted.balanced).toBe(true);
   });
 });

@@ -25,9 +25,9 @@ import {
   ACC_WIP_PACK,
   ACC_FINISHED_GOODS,
   ACC_GRIR,
-  ACC_COGS,
-  ACC_LABOR_RATE_VAR,
-  ACC_LABOR_EFFICIENCY_VAR,
+  ACC_COGS_MATERIALS,
+  ACC_COGS_LABOR,
+  ACC_COGS_OVERHEAD,
   ACC_OH_SPENDING_VAR,
   ACC_OH_VOLUME_VAR,
   ACC_ABNORMAL_SPOILAGE,
@@ -107,7 +107,7 @@ export interface IncomeStatement {
   revenueCents: number;
   costOfGoodsSoldCents: number;
   grossMarginAtStandardCents: number;
-  /** Purchase price, usage, labor, overhead volume and abnormal spoilage. */
+  /** Overhead spending and volume, and abnormal spoilage. */
   manufacturingVariances: StatementRow[];
   manufacturingVariancesCents: number;
   /** Production costs of the period that no sowing carried: clocked labor not charged to a sowing. */
@@ -156,9 +156,9 @@ export interface ClassifiedBalanceSheet {
   totalEquityCents: number;
 }
 
+/** Cost of goods sold by element: materials, labor, overhead. */
+const COGS_CODES: readonly string[] = [ACC_COGS_MATERIALS, ACC_COGS_LABOR, ACC_COGS_OVERHEAD];
 const VARIANCE_CODES = [
-  ACC_LABOR_RATE_VAR,
-  ACC_LABOR_EFFICIENCY_VAR,
   ACC_OH_SPENDING_VAR,
   ACC_OH_VOLUME_VAR,
   ACC_ABNORMAL_SPOILAGE,
@@ -188,13 +188,13 @@ export function classifyIncomeStatement(pnl: ProfitAndLoss): IncomeStatement {
   const revenue = pnl.income
     .filter((r) => r.balanceCents !== 0)
     .map((r) => ({ code: r.account.code, label: r.account.name, cents: r.balanceCents }));
-  const cogs = pnl.expense.find((r) => r.account.code === ACC_COGS)?.balanceCents ?? 0;
+  const cogs = pnl.expense.filter((r) => COGS_CODES.includes(r.account.code)).reduce((t, r) => t + r.balanceCents, 0);
   const variances = rowsFor(pnl.expense, VARIANCE_CODES);
   const periodProduction = rowsFor(pnl.expense, [ACC_UNASSIGNED_PRODUCTION_LABOR]);
   const selling = rowsFor(pnl.expense, [ACC_DISTRIBUTION, ACC_MARKETPLACE_COMMISSION]);
   const admin = rowsFor(pnl.expense, [ACC_ADMIN]);
   const financing = rowsFor(pnl.expense, [ACC_INTEREST]);
-  const placed = new Set([ACC_COGS, ...VARIANCE_CODES, ACC_UNASSIGNED_PRODUCTION_LABOR, ACC_DISTRIBUTION, ACC_MARKETPLACE_COMMISSION, ACC_ADMIN, ACC_INTEREST]);
+  const placed = new Set([...COGS_CODES, ...VARIANCE_CODES, ACC_UNASSIGNED_PRODUCTION_LABOR, ACC_DISTRIBUTION, ACC_MARKETPLACE_COMMISSION, ACC_ADMIN, ACC_INTEREST]);
   const otherOperating = pnl.expense
     .filter((r) => r.balanceCents !== 0 && !placed.has(r.account.code))
     .map((r) => ({ code: r.account.code, label: r.account.name, cents: r.balanceCents }));

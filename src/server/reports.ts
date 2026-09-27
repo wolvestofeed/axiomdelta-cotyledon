@@ -423,7 +423,7 @@ const costTrend: Builder = (ctx) => {
       m.label,
       num(Math.round(m.servingsProduced)),
       num(Math.round(m.unitsDistributed)),
-      p && p.servingsProduced > 0 ? money(p.standardCostPerUnitCents / 100) : '—',
+      p && p.costPerUnitCents !== null ? money(p.costPerUnitCents / 100) : '—',
       cents(f.manufacturingOverheadCents),
       cents(f.generalAndAdministrativeCents),
       cents(f.interestCents),
@@ -434,10 +434,10 @@ const costTrend: Builder = (ctx) => {
   });
   for (const y of selected.ledger.years) rows.push(row([`Year ${y.label}`, num(Math.round(y.servingsProduced)), num(Math.round(y.unitsDistributed)), '—', cents(y.fixedExpense.manufacturingOverheadCents), cents(y.fixedExpense.generalAndAdministrativeCents), cents(y.fixedExpense.interestCents), cents(y.fixedExpense.totalCents), y.fixedExpense.perUnitCents === null ? '—' : money(y.fixedExpense.perUnitCents / 100), cents(y.fixedExpense.principalRepaidCents)], 'total'));
   return {
-    summary: table([{ label: 'Period' }, { label: 'Units made', num: true }, { label: 'Units distributed', num: true }, { label: 'Standard cost / unit', num: true }, { label: 'Manufacturing overhead', num: true }, { label: 'G&A', num: true }, { label: 'Interest', num: true }, { label: 'Fixed expense', num: true }, { label: 'Fixed / unit distributed', num: true }, { label: 'Principal repaid', num: true }], rows),
+    summary: table([{ label: 'Period' }, { label: 'Units made', num: true }, { label: 'Units distributed', num: true }, { label: 'Cost / unit made', num: true }, { label: 'Manufacturing overhead', num: true }, { label: 'G&A', num: true }, { label: 'Interest', num: true }, { label: 'Fixed expense', num: true }, { label: 'Fixed / unit distributed', num: true }, { label: 'Principal repaid', num: true }], rows),
     detail: table([{ label: 'Period' }, { label: 'Overhead applied', num: true }, { label: 'Overhead incurred', num: true }, { label: 'Volume variance', num: true }, { label: 'Spending variance', num: true }],
       selected.ledger.months.map((m) => row([m.label, cents(m.overhead.appliedCents), cents(m.overhead.incurredCents), signedCents(m.overhead.volumeVarianceCents), signedCents(m.overhead.spendingVarianceCents)]))),
-    basis: `${ctx.worldLabel}. Standard cost per unit is finished-goods cost over the units made in the period. Fixed cost per unit is a period metric on the expense basis and is never in the cost of a unit.`,
+    basis: `${ctx.worldLabel}. Cost per unit made is finished-goods cost over the units made in the period. Fixed cost per unit is a period metric on the expense basis and is never in the cost of a unit.`,
     empty: selected.empty ? 'Nothing is on record yet.' : undefined,
   };
 };

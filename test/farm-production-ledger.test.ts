@@ -139,16 +139,29 @@ describe('the production sowing journal', () => {
     expect(led.amounts.finishedGoodsCost).toBeGreaterThan(led.amounts.materialIssuedToWip);
   });
 
+  it('keeps finished goods by element and relieves them to cost of goods sold by element', () => {
+    const el = led.amounts.finishedGoodsByElementCents;
+    expect(el.materials + el.labor + el.overhead).toBe(Math.round(led.amounts.finishedGoodsCost * 100));
+    expect(el.materials).toBe(Math.round(led.amounts.materialIssuedToWip * 100) + Math.round(led.amounts.packagingCost * 100));
+    const ship = led.entries.find((e) => e.id.endsWith('-SHIP'))!;
+    const debit = (code: string) => ship.lines.find((l) => l.accountCode === code)?.debitCents ?? 0;
+    expect([debit('5011'), debit('5012'), debit('5013')]).toEqual([el.materials, el.labor, el.overhead]);
+    expect(net(led.entries, ACC_FINISHED_GOODS)).toBe(0);
+  });
+
   it('expenses distribution instead of capitalising it', () => {
     const deliv = led.entries.find((e) => e.id.endsWith('DELIV'))!;
     expect(deliv.lines.some((l) => l.accountCode === '7900' && l.debitCents > 0)).toBe(true);
     expect(deliv.lines.some((l) => l.accountCode === ACC_FINISHED_GOODS)).toBe(false);
   });
 
-  it('runs both labor variances at zero when the sowing runs to standard', () => {
-    const v = led.variances;
-    expect(v.laborRate).toBeCloseTo(0, 6);
-    expect(v.laborEfficiency).toBeCloseTo(0, 6);
+  it('with no crew recorded, labor posts at the approved standard and says so, with no variance account', () => {
+    const labor = led.entries.find((e) => e.id.endsWith('-LABOR'))!;
+    const debits = labor.lines.reduce((t, l) => t + l.debitCents, 0);
+    expect(debits).toBe(labor.lines.reduce((t, l) => t + l.creditCents, 0));
+    expect(led.amounts.directLaborActual).toBe(led.amounts.directLaborStandard);
+    expect(led.notes.join(' ')).toMatch(/No crew hours on the sowing record: labor posts at the approved standard/);
+    expect(FARM_COA.some((a) => a.code === '5130' || a.code === '5140')).toBe(false);
   });
 
   it('keeps pack-rounded over-purchase in raw materials at the price paid', () => {
@@ -159,15 +172,31 @@ describe('the production sowing journal', () => {
   });
 });
 
-describe('variances and spoilage when the sowing does not run to standard', () => {
-  it('splits a labor miss into rate and efficiency', () => {
+describe('labor as recorded', () => {
+  const wip = (led: ReturnType<typeof ledgerFor>) => {
+    const labor = led.entries.find((e) => e.id.endsWith('-LABOR'))!;
+    return labor.lines.filter((l) => [ACC_WIP_SOW, ACC_WIP_GROW, ACC_WIP_PACK].includes(l.accountCode)).reduce((t, l) => t + l.debitCents, 0);
+  };
+
+  it('charges the crew hours at the recorded rate into work in process', () => {
     const b = sowingAtStandard();
     b.actualLaborHours = 30;
     b.actualLaborRate = 31;
     const led = ledgerFor(b);
     expect(led.balanced).toBe(true);
-    expect(led.variances.laborRate).not.toBeCloseTo(0, 3);
-    expect(led.variances.laborEfficiency).not.toBeCloseTo(0, 3);
+    expect(wip(led)).toBe(30 * 31 * 100);
+    expect(led.amounts.directLaborActual).toBeCloseTo(930, 6);
+    for (const code of [ACC_WIP_SOW, ACC_WIP_GROW, ACC_WIP_PACK]) expect(net(led.entries, code)).toBe(0);
+    expect(led.amounts.finishedGoodsCost).toBeGreaterThan(930);
+  });
+
+  it('charges hours recorded without a rate at the standard rate, and says so', () => {
+    const b = sowingAtStandard();
+    b.actualLaborHours = 30;
+    b.actualLaborRate = null;
+    const led = ledgerFor(b);
+    expect(wip(led)).toBe(Math.round(30 * assumptions.labor.blendedLoadedWage.value * 100));
+    expect(led.notes.join(' ')).toMatch(/without a rate/);
   });
 
 });
@@ -221,6 +250,9 @@ describe('issues at the cost of the lots drawn', () => {
     expect(led.amounts.materialIssuedToWip).toBeCloseTo(atPlanPrice.amounts.materialIssuedToWip, 6);
   });
 
+});
+
+describe('spoilage, overhead and fixed labor', () => {
   it('trays removed at the harvest check leave as abnormal spoilage from the pack stage; a packed tray still costs the standard', () => {
     const atStd = ledgerFor(sowingAtStandard());
     const b = sowingAtStandard();
@@ -238,7 +270,9 @@ describe('issues at the cost of the lots drawn', () => {
     expect(spoil.lines.some((l) => l.accountCode === ACC_ABNORMAL_SPOILAGE && l.debitCents > 0)).toBe(true);
     expect(spoil.lines.some((l) => l.accountCode === ACC_WIP_PACK && l.creditCents > 0)).toBe(true);
     expect(led.amounts.materialIssuedToWip).toBeCloseTo(atStd.amounts.materialIssuedToWip, 6);
-    expect(led.amounts.standardCostPerUnit).toBeCloseTo(atStd.amounts.standardCostPerUnit, 1);
+    expect(led.amounts.costPerUnit).toBeCloseTo(atStd.amounts.costPerUnit, 1);
+    const el = led.amounts.finishedGoodsByElementCents;
+    expect(el.materials + el.labor + el.overhead).toBe(Math.round(led.amounts.finishedGoodsCost * 100));
   });
 
   it('seed dropped at sowing is issued and relieved from the sow stage at its price', () => {
@@ -280,7 +314,7 @@ describe('issues at the cost of the lots drawn', () => {
     const inc = led.entries.find((e) => e.id.endsWith('OH-INCURRED'))!;
     expect(inc.lines.some((l) => l.accountCode === ACC_OH_CONTROL && l.debitCents > 0)).toBe(true);
     // Under-absorption for the day = incurred − fixed applied, and it never reaches inventory.
-    expect(led.variances.overheadVolume).toBeCloseTo(incurred - led.amounts.overheadAbsorbed, 6);
+    expect(led.amounts.overheadVolume).toBeCloseTo(incurred - led.amounts.overheadAbsorbed, 6);
     expect(-net(led.entries, ACC_OH_APPLIED)).toBe(Math.round(led.amounts.overheadAbsorbed * 100));
     expect(led.notes.join(' ')).toMatch(/absorbed/);
   });
@@ -290,8 +324,7 @@ describe('issues at the cost of the lots drawn', () => {
     const led = ledgerFor(sowingAtStandard(), phase1);
     expect(led.balanced).toBe(true);
     expect(led.entries.some((e) => e.id.endsWith('OHVOL'))).toBe(false);
-    expect(led.variances.overheadVolume).toBe(0);
-    expect(led.variances.disposition).toBe('TO_COGS');
+    expect(led.amounts.overheadVolume).toBe(0);
   });
 
   it('charges fixed labor once per sowing the record covers', () => {
@@ -304,14 +337,6 @@ describe('issues at the cost of the lots drawn', () => {
     }, growPlan);
     expect(two.amounts.directLaborStandard).toBeGreaterThanOrEqual(one.amounts.directLaborStandard);
     expect(two.balanced).toBe(true);
-  });
-
-  it('flags a material net variance for proration rather than dumping it in COGS', () => {
-    const b = sowingAtStandard();
-    b.actualLaborHours = 200;
-    b.actualLaborRate = 60;
-    const led = ledgerFor(b);
-    expect(led.variances.disposition).toBe('PRORATE');
   });
 });
 

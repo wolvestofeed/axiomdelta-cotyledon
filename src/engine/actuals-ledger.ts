@@ -14,7 +14,8 @@
  *                without its own receipt or shipment; its issues at the
  *                cost of the lots drawn)
  *   distribution     Dr AR (invoiced channels) or Dr Processor Clearing (paid at
- *                order), Cr revenue; Dr COGS @ standard/unit, Cr FG;
+ *                order), Cr revenue; Dr COGS by element, Cr FG, first in,
+ *                first out by sowing within the grow plan distributed;
  *                distribution expense; retail commission                  (distribution record)
  *   payment      Dr Cash, Cr AR (subscriber); Dr SEED, Cr Cash (supplier)
  *   bill         Dr Accrued Overhead / G&A / named account, Cr SEED;
@@ -37,8 +38,6 @@ import {
 import {
   FARM_COA,
   ACC_RAW_MATERIALS,
-  ACC_FINISHED_GOODS,
-  ACC_COGS,
   ACC_OH_VOLUME_VAR,
   ACC_OH_CONTROL,
   ACC_OH_APPLIED,
@@ -63,7 +62,9 @@ import {
   type DepreciationYears,
 } from '@/engine/fixed-costs';
 import { CHANNEL_COMMISSION_PHASE3 } from '@/engine/phase';
-import { productionSowingLedger, type ProductionSowingLedger } from '@/engine/production-ledger';
+import { productionSowingLedger, cogsLegs, COST_ELEMENTS, type CostElements, type ProductionSowingLedger } from '@/engine/production-ledger';
+import { costPlan } from '@/engine/grow-costing';
+import { costPerUnit } from '@/engine';
 import {
   receivableBillingsCents,
   tradePurchasesCents,
@@ -152,13 +153,8 @@ export interface PostedPeriod {
   period: string;
   entries: JournalEntry[];
   sowings: ProductionSowingLedger[];
-  /**
-   * Finished-goods cost ÷ units for the sowings in this period, or the carried
-   * standard. Cents, UNROUNDED: a distribution rounds only its extended cost, so a
-   * period whose distributions equal its production relieves finished goods to
-   * within a cent rather than leaving half a cent per unit behind.
-   */
-  standardCostPerUnitCents: number;
+  /** Finished-goods cost ÷ units for the sowings made in this period, cents, unrounded; null when none was. */
+  costPerUnitCents: number | null;
   servingsProduced: number;
   unitsDistributed: number;
   overhead: {
@@ -227,8 +223,6 @@ export interface PostActualsOptions {
   depreciationFor?: (period: string) => number;
   /** Periods posted even when no record falls in them — every month of a forecast. */
   periods?: readonly string[];
-  /** The standard cost per unit before any sowing is posted, cents. Omitted = zero. */
-  openingStandardCostPerUnitCents?: number;
   /**
    * The Plan ledger costs every sowing at the live library by definition — the plan is where
    * standards come from — so the per-sowing "no approved standard" note is not written.
@@ -265,9 +259,6 @@ export function postActuals(
 ): PostedActuals {
   const budget = manufacturingOverheadBudget(inputs, depreciation);
   const absorption: OverheadAbsorption = options.absorption ?? bundleAbsorption(bundle, inputs, budget.annual);
-  // Before any sowing is posted there is no standard per unit to relieve; the first
-  // period with sowings sets it (the fiscal-year plan standard retired in Roadmap N6).
-  const planStandardCents = options.openingStandardCostPerUnitCents ?? 0;
   const distributionPerUnitCents = Math.round(inputs.assumptions.perUnit.distribution.value * 100);
   const punches = bundle.punches ?? [];
   const payrollPeriods = bundle.payrollPeriods ?? [];
@@ -291,9 +282,11 @@ export function postActuals(
 
   const all: JournalEntry[] = [];
   const periods: PostedPeriod[] = [];
-  let carriedStandardCents = planStandardCents;
-  /** Each grow plan's standard cost per unit, carried from the last period that made it (audit A9). */
-  const carriedByGrowPlan = new Map<string, number>();
+  /** Finished goods by sowing: the units and the cost by element each has left to relieve, cents. */
+  const layers: { sowingId: string; growPlanCode: string; date: string; units: number; cents: CostElements }[] = [];
+  /** Each grow plan's most recent sowing cost per unit by element, cents, unrounded (audit A9). */
+  const lastByGrowPlan = new Map<string, CostElements>();
+  let lastAny: CostElements | null = null;
 
   for (const period of periodList) {
     const p = bundleForPeriod(bundle, period);
@@ -418,7 +411,6 @@ export function postActuals(
     const sowings: ProductionSowingLedger[] = [];
     let fgCents = 0;
     let servingsProduced = 0;
-    const fgByGrowPlan = new Map<string, { cents: number; units: number }>();
     for (const doc of p.sowings) {
       const std = standardFor(doc.growPlanCode, doc.productionDate);
       if (!std.approved && !options.liveLibraryIsStandard) notes.push(`${doc.sowingId}: no approved standard in force for ${doc.growPlanCode} on ${doc.productionDate}; costed at the live library (${std.label}).`);
@@ -445,27 +437,78 @@ export function postActuals(
       entries.push(...led.entries);
       fgCents += Math.round(led.amounts.finishedGoodsCost * 100);
       servingsProduced += led.amounts.servingsProduced;
-      const byGrowPlan = fgByGrowPlan.get(doc.growPlanCode) ?? { cents: 0, units: 0 };
-      byGrowPlan.cents += led.amounts.finishedGoodsCost * 100;
-      byGrowPlan.units += led.amounts.servingsProduced;
-      fgByGrowPlan.set(doc.growPlanCode, byGrowPlan);
+      const units = led.amounts.servingsProduced;
+      if (units > 0) {
+        const el = led.amounts.finishedGoodsByElementCents;
+        layers.push({ sowingId: doc.sowingId, growPlanCode: doc.growPlanCode, date: doc.productionDate, units, cents: { ...el } });
+        const per = { materials: el.materials / units, labor: el.labor / units, overhead: el.overhead / units };
+        lastByGrowPlan.set(doc.growPlanCode, per);
+        lastAny = per;
+      }
       notes.push(...led.notes.map((n) => `${doc.sowingId}: ${n}`));
       if (!led.massBalance.balanced) notes.push(...led.massBalance.failures.map((f) => `${doc.sowingId}: ${f}`));
     }
-    const standardCostPerUnitCents = servingsProduced > 0 ? fgCents / servingsProduced : carriedStandardCents;
-    carriedStandardCents = standardCostPerUnitCents;
-    for (const [code, v] of fgByGrowPlan) if (v.units > 0) carriedByGrowPlan.set(code, v.cents / v.units);
+    const costPerUnitCents = servingsProduced > 0 ? fgCents / servingsProduced : null;
 
-    // ── Distributions: revenue and COGS at the standard per unit; distribution expense; commission.
-    //    Subscriptions and Restaurants go to receivables; Retail and wholesale was paid at order.
+    // ── What a grow plan's unit costs on its cost card, by element, cents: the plan's price for its
+    //    lines, its labor standard and the overhead rate in force. Used only for units distributed
+    //    beyond the finished goods on hand when the plan has made none.
+    const cardPerUnit = (code: string, date: string): CostElements | null => {
+      if (!inputs.growPlans.some((g) => g.code === code)) return null;
+      const std = standardFor(code, date);
+      const card = costPlan(std.growPlan);
+      if (!card) return null;
+      const grossUp = 1 + std.assumptions.yield.shrinkAllowance.value;
+      return {
+        materials: ((card.perTray.seed + card.perTray.medium + card.perTray.nutrient) * grossUp + std.assumptions.perUnit.packaging.value) * 100,
+        labor: costPerUnit(std.growPlan, std.assumptions, inputs.capacityInputs).directLabor * 100,
+        overhead: ((card.perTray.light + card.perTray.consumables) * grossUp + (std.overheadRatePerUnit ?? absorption.ratePerUnit)) * 100,
+      };
+    };
+
+    // ── Distributions: revenue; cost of goods sold by element, relieving finished goods first in,
+    //    first out by sowing within the grow plan distributed (else across every grow plan);
+    //    distribution expense; commission. Subscriptions and Restaurants go to receivables;
+    //    Retail and wholesale was paid at order.
     let unitsDistributed = 0;
     let billedCents = 0;
     let paidAtOrderCents = 0;
-    for (const d of p.distributions) {
+    // In date order, so the earlier distribution takes the older finished goods.
+    for (const d of [...p.distributions].sort((x, y) => x.distributedOn.localeCompare(y.distributedOn))) {
       const revenueCents = Math.round(d.units * d.pricePerUnitCents);
-      // The grow plan distributed, at its own standard per unit where the distribution names it (audit A9).
-      const growPlanStd = d.growPlanCode ? carriedByGrowPlan.get(d.growPlanCode) : undefined;
-      const cogsCents = Math.round(d.units * (growPlanStd ?? standardCostPerUnitCents));
+      const code = d.growPlanCode ?? null;
+      const cogs: CostElements = { materials: 0, labor: 0, overhead: 0 };
+      const drawn: string[] = [];
+      let left = d.units;
+      const open = layers
+        .filter((l) => l.units > 1e-9 && l.date <= d.distributedOn && (code === null || l.growPlanCode === code))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      for (const layer of open) {
+        if (left <= 1e-9) break;
+        const n = Math.min(layer.units, left);
+        const whole = n >= layer.units - 1e-9;
+        for (const e of COST_ELEMENTS) {
+          const c = whole ? layer.cents[e] : Math.round((layer.cents[e] * n) / layer.units);
+          cogs[e] += c;
+          layer.cents[e] -= c;
+        }
+        layer.units = whole ? 0 : layer.units - n;
+        left -= n;
+        drawn.push(layer.sowingId);
+      }
+      if (left > 1e-9) {
+        // Units beyond the finished goods on hand: the grow plan's most recent sowing cost per unit,
+        // else its cost card; with neither, zero. Finished goods goes negative by what they take.
+        const last = code !== null ? lastByGrowPlan.get(code) : lastAny;
+        const card = !last && code !== null ? cardPerUnit(code, d.distributedOn) : null;
+        const per = last ?? card;
+        const beyond = { materials: 0, labor: 0, overhead: 0 };
+        if (per) for (const e of COST_ELEMENTS) beyond[e] = Math.round(left * per[e]);
+        for (const e of COST_ELEMENTS) cogs[e] += beyond[e];
+        const basis = last ? `the most recent sowing's cost per unit${code !== null ? ` of ${code}` : ''}` : card ? `${code}'s cost card` : 'zero, with no sowing or cost card to price them';
+        notes.push(`Distribution ${short(d.id)} on ${d.distributedOn}: ${+left.toFixed(3)} units beyond the finished goods on hand${code !== null ? ` for ${code}` : ''}, costed at ${basis}; finished goods is negative by ${usd(beyond.materials + beyond.labor + beyond.overhead)}.`);
+      }
+      const cogsMemo = `${d.units.toLocaleString()} units${drawn.length > 0 ? `, first in, first out from ${drawn.join(', ')}` : ''}`;
       const distributionCents = Math.round(d.units * distributionPerUnitCents);
       const commissionCents = d.phase === 3 ? Math.round(revenueCents * CHANNEL_COMMISSION_PHASE3) : 0;
       const paidAtOrder = PAID_AT_ORDER_CHANNELS.includes(d.phase);
@@ -477,8 +520,7 @@ export function postActuals(
         entryCents(`DLV-${short(d.id)}`, d.distributedOn, `Distribute ${d.units.toLocaleString()} units — ${inputs.phases.find((ph) => ph.phase === d.phase)?.market ?? `Channel ${d.phase}`}${d.pickupPointName ? ` — ${d.pickupPointName}` : ''}`, [
           { account: debitAccount, cents: revenueCents, memo: paidAtOrder ? 'Paid at the time of ordering — captured, not yet deposited' : 'Accounts receivable' },
           { account: d.phase === 2 ? ACC_RESTAURANT_SALES : ACC_FOOD_SALES, cents: -revenueCents, memo: `${d.units.toLocaleString()} units at $${(d.pricePerUnitCents / 100).toFixed(2)}` },
-          { account: ACC_COGS, cents: cogsCents, memo: `at $${((growPlanStd ?? standardCostPerUnitCents) / 100).toFixed(4)} standard per unit${growPlanStd !== undefined ? ` (${d.growPlanCode})` : ''}` },
-          { account: ACC_FINISHED_GOODS, cents: -cogsCents, memo: 'Finished goods relieved' },
+          ...cogsLegs(cogs, cogsMemo),
           { account: ACC_DISTRIBUTION, cents: distributionCents, memo: 'Distribution to pickup points — period cost' },
           { account: ACC_SEED, cents: -distributionCents, memo: 'Own fleet accrual' },
           { account: ACC_MARKETPLACE_COMMISSION, cents: commissionCents, memo: 'Marketplace commission' },
@@ -674,7 +716,7 @@ export function postActuals(
       period,
       entries: posted,
       sowings,
-      standardCostPerUnitCents,
+      costPerUnitCents,
       servingsProduced,
       unitsDistributed,
       overhead: { appliedCents, incurredCents, volumeVarianceCents, ratePerUnit: absorption.ratePerUnit, budgetCents, billedCents: overheadBilledCents, spendingVarianceCents, accruedUnbilledCents },
@@ -781,7 +823,7 @@ export function postActualLedger(
 ): ActualLedger {
   const onFile = periodsIn(bundle);
   const empty = onFile.length === 0;
-  const posted = postActuals(bundle, inputs, depreciation, { payrollPaidThrough: asOf, absorption: options.absorption, openingStandardCostPerUnitCents: options.absorption ? 0 : undefined });
+  const posted = postActuals(bundle, inputs, depreciation, { payrollPaidThrough: asOf, absorption: options.absorption });
   const firstPeriod = onFile[0] ?? periodOf(asOf);
   const lastPeriod = [onFile.at(-1) ?? periodOf(asOf), periodOf(asOf)].sort().at(-1)!;
   const from = periodStart(firstPeriod);
