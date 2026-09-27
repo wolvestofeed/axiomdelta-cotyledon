@@ -42,6 +42,12 @@ export interface SeedLine {
   gramsPerTray: Tagged;
   /** This variety's share of the tray's area, 0 to 1. One on a single-variety plan. */
   share: number;
+  /**
+   * Harvest grams of this variety in one tray of the plan, as the plan's experiments measured it:
+   * written DERIVED when the plan goes in service. Absent, the variety record's harvest per 1020
+   * scaled to the format and the share (`seedLineHarvest`).
+   */
+  harvestGramsPerTray?: Tagged;
 }
 
 export interface MediumLine {
@@ -189,6 +195,20 @@ export function seedLineFor(variety: VarietyDef, format: TrayFormatKey, share = 
     gramsPerTray: tagged(defaultGramsPerTray(variety, format, share), density.status, 'g', `${density.note ?? ''}${share < 1 ? ` × ${share} share of the tray` : ''}`.trim()),
     share,
   };
+}
+
+/**
+ * A seed line's harvest grams in one tray of the plan: what the plan's experiments measured, where
+ * the line carries it, else the variety record's harvest per 1020 scaled to the format and the
+ * share, with the record's tag.
+ */
+export function seedLineHarvest(line: SeedLine, format: TrayFormatKey, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): Tagged {
+  if (line.harvestGramsPerTray) return line.harvestGramsPerTray;
+  const v = byKey[line.varietyKey];
+  if (!v) return tagged(0, 'PLACEHOLDER', 'g', 'No variety record');
+  const f = TRAY_FORMAT_BY_KEY[format];
+  const h = growthFor(v, f.kind !== 'sprout').harvestGramsPer1020;
+  return tagged(h.value * densityFactorOf(f) * line.share, h.status, 'g', h.note);
 }
 
 /**

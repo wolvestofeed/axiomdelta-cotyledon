@@ -12,11 +12,10 @@
 
 import { isoAddDays } from '@/engine/orders';
 import { daysFrom } from '@/engine/grow-calendar';
-import { planStageDays, seedLines, type GrowPlanDef } from '@/data/grow-plan';
+import { planStageDays, seedLineHarvest, seedLines, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
-import { TRAY_FORMAT_BY_KEY, densityFactorOf } from '@/data/tray-formats';
-import { VARIETY_BY_KEY, growthFor, type VarietyDef } from '@/data/varieties';
-import type { StatusTag } from '@/data/tagged';
+import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
+import { tagged, type StatusTag } from '@/data/tagged';
 import type { SowingRecordDoc } from '@/engine/actuals';
 
 export interface ExperimentDoc {
@@ -79,13 +78,11 @@ export function expectedHarvestPerTray(
   plan: GrowPlanDef,
   varieties: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY,
 ): { varietyKey: string; name: string; grams: number; status: StatusTag }[] {
-  const format = TRAY_FORMAT_BY_KEY[plan.format];
-  const density = densityFactorOf(format);
   return seedLines(plan).flatMap((line) => {
     const v = varieties[line.varietyKey];
     if (!v) return [];
-    const h = growthFor(v, format.kind !== 'sprout').harvestGramsPer1020;
-    return [{ varietyKey: v.key, name: v.name, grams: h.value * density * line.share, status: h.status }];
+    const h = seedLineHarvest(line, plan.format, varieties);
+    return [{ varietyKey: v.key, name: v.name, grams: h.value, status: h.status }];
   });
 }
 
@@ -151,4 +148,36 @@ export function yieldAcross(
       return { varietyKey: key, name, n, perTray, mean, min: n ? Math.min(...perTray) : null, max: n ? Math.max(...perTray) : null, sd, expected: exp ? { grams: exp.grams, status: exp.status } : null };
     }),
   };
+}
+
+export interface Promotion {
+  /** The plan in service, each measured variety's harvest per tray written on its seed line. */
+  plan: GrowPlanDef;
+  /** Varieties whose harvest per tray is now the experiments' mean. */
+  measured: { name: string; grams: number; n: number }[];
+  /** Varieties no closed experiment packed, left on the variety record's figure. */
+  unmeasured: string[];
+}
+
+/**
+ * The plan moved to in service (outline §4 Experiment): each variety a closed experiment packed takes
+ * the mean grams per tray packed as its seed line's harvest, DERIVED with the count; a variety none
+ * packed keeps the variety record's figure. Its approved time studies stay its labor standard.
+ */
+export function promotePlan(plan: GrowPlanDef, experiments: readonly ExperimentDoc[], sowings: readonly SowingRecordDoc[], today: string): Promotion {
+  const y = yieldAcross(plan, experiments, sowings);
+  const measured: Promotion['measured'] = [];
+  const unmeasured: string[] = [];
+  const lines = plan.lines.map((line) => {
+    if (line.kind !== 'seed') return line;
+    const v = y.varieties.find((x) => x.varietyKey === line.varietyKey);
+    if (!v || v.mean === null) {
+      unmeasured.push(v?.name ?? line.varietyKey);
+      return line;
+    }
+    measured.push({ name: v.name, grams: v.mean, n: v.n });
+    const spread = v.min !== null && v.max !== null && v.n > 1 ? `, ${Math.round(v.min)} to ${Math.round(v.max)} g` : '';
+    return { ...line, harvestGramsPerTray: tagged(v.mean, 'DERIVED', 'g', `Mean grams per tray packed across ${v.n} closed experiment${v.n === 1 ? '' : 's'}${spread}; written when ${plan.code} went in service on ${today}`) };
+  });
+  return { plan: { ...plan, status: 'in_service', lines }, measured, unmeasured };
 }

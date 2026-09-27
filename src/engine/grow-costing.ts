@@ -38,8 +38,8 @@ import {
 } from '@/data/inputs-catalog';
 import { cycleDays, daysToHarvest, lightDaysFrom, FL_OZ_PER_GAL, waterOzFrom, type StageDays } from '@/data/stage-schedule';
 import { GRAMS_PER_OZ, GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
-import { VARIETY_BY_KEY, growthFor, type VarietyDef } from '@/data/varieties';
-import { leadVariety, purchaseName, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
+import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
+import { leadVariety, purchaseName, planStageDays, planStages, seedLineHarvest, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 
 export { GRAMS_PER_LB };
 
@@ -135,7 +135,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
         const override = ctx.seedPricePerLb[v.key];
         const pricePerLb = override ?? v.seedPricePerLb.value;
         seedGrams += grams;
-        harvestGrams += growthFor(v, format.kind !== 'sprout').harvestGramsPer1020.value * density * line.share;
+        harvestGrams += seedLineHarvest(line, plan.format, ctx.varieties).value;
         lines.push({
           line,
           label: v.name,

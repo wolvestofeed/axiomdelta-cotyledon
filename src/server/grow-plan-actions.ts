@@ -33,7 +33,9 @@ function refuse(e: unknown): { ok: false; error: string } {
 const STAGE_KEYS = ['soak', 'sow', 'germination', 'blackout', 'light', 'harvest-window'] as const;
 const TYPED = 'Typed in the grow plan editor';
 
-const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1) });
+/** What the plan's experiments measured, written at promotion; the editor carries it back unchanged or drops it. */
+const MeasuredHarvestIn = z.object({ value: z.number().min(0).max(100_000), status: z.literal('DERIVED'), unit: z.string().max(20).optional(), note: z.string().max(2000).optional() });
+const SeedLineIn = z.object({ kind: z.literal('seed'), varietyKey: z.string().trim().min(1).max(60), gramsPerTray: z.number().positive('Grams per tray is above zero').max(100_000), share: z.number().positive().max(1).default(1), harvestGramsPerTray: MeasuredHarvestIn.nullable().default(null) });
 const MediumLineIn = z.object({ kind: z.literal('medium'), mediumKey: z.string().trim().min(1).max(60), qtyPerTray: z.number().min(0).max(100_000).nullable().default(null) });
 const NutrientLineIn = z.object({ kind: z.literal('nutrient'), nutrientKey: z.string().trim().min(1).max(60), mlPerGal: z.number().min(0).max(4_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
 const LightLineIn = z.object({ kind: z.literal('light'), regimeKey: z.enum(['yield', 'balanced', 'nutrition-forward', 'biofortify-far-red', 'continuous']), ppfd: z.number().min(0).max(2_000).nullable().default(null), startsAt: z.enum(STAGE_KEYS) });
@@ -59,7 +61,7 @@ function toGrowPlan(d: z.infer<typeof GrowPlanInput>): GrowPlanDef {
   const lines: GrowPlanLine[] = d.lines.map((l): GrowPlanLine => {
     switch (l.kind) {
       case 'seed':
-        return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: tagged(l.gramsPerTray, 'STATED', 'g', TYPED), share: l.share };
+        return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: tagged(l.gramsPerTray, 'STATED', 'g', TYPED), share: l.share, ...(l.harvestGramsPerTray ? { harvestGramsPerTray: tagged(l.harvestGramsPerTray.value, 'DERIVED', l.harvestGramsPerTray.unit ?? 'g', l.harvestGramsPerTray.note) } : {}) };
       case 'medium':
         return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray === null ? null : tagged(l.qtyPerTray, 'STATED', 'per tray', TYPED) };
       case 'nutrient':

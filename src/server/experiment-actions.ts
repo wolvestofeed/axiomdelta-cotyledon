@@ -3,16 +3,21 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { farmExperiments, farmSowingRecords } from '@/db';
+import { farmExperiments, farmGrowPlanLines, farmGrowPlans, farmSowingRecords } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/server/access';
 import { listGrowPlans } from '@/server/grow-plans';
 import { withWorkspace } from '@/server/workspace';
+import { listExperiments } from '@/server/experiments';
+import { loadProductionRecords } from '@/server/actuals';
+import { promotePlan } from '@/engine/experiments';
+import { growPlanToRows } from '@/engine/grow-plan-library';
 
 /**
  * MicroFarm — experiments in R&D, writes. An operator starts an experiment: a title, a grow plan
  * not in service, a sow date and whole trays. It closes through the grow form, whose sowing record
- * names it. An experiment no record names can be removed by a super admin; a closed one cannot.
+ * names it. An experiment no record names can be removed by a super admin; a closed one cannot. A
+ * super admin moves a plan to in service.
  */
 
 type Result<T = unknown> = ({ ok: true } & (T extends object ? T : object)) | { ok: false; error: string };
@@ -74,4 +79,40 @@ async function deleteExperimentInner(id: unknown): Promise<Result> {
   await db.delete(farmExperiments).where(eq(farmExperiments.id, parsed.data));
   revalidatePath('/farm', 'layout');
   return { ok: true };
+}
+
+export async function moveToInService(...args: Parameters<typeof moveToInServiceInner>): ReturnType<typeof moveToInServiceInner> {
+  return withWorkspace(() => moveToInServiceInner(...args));
+}
+
+/**
+ * Move a plan under development to in service, as Rob judges its experiments: each variety a closed
+ * experiment packed takes the mean grams per tray packed as its harvest (`promotePlan`), the plan's
+ * version steps up, and it enters forecasts and production on the channels set in the editor.
+ */
+async function moveToInServiceInner(growPlanCode: unknown): Promise<Result<{ measured: string[]; unmeasured: string[] }>> {
+  const parsed = z.string().trim().min(1).safeParse(growPlanCode);
+  if (!parsed.success) return { ok: false, error: 'Unknown grow plan.' };
+  try {
+    await requireFarmSuperAdmin();
+  } catch (e) {
+    return refuse(e);
+  }
+  const plan = (await listGrowPlans()).find((p) => p.code === parsed.data);
+  if (!plan) return { ok: false, error: `${parsed.data} is not in the grow plan library.` };
+  if (plan.status === 'in_service') return { ok: false, error: `${plan.code} is already in service.` };
+  const [experiments, { sowings }] = await Promise.all([listExperiments(), loadProductionRecords()]);
+  const today = new Date().toISOString().slice(0, 10);
+  const promoted = promotePlan(plan, experiments, sowings, today);
+  const { header, lines } = growPlanToRows(promoted.plan);
+  const current = await db.select({ version: farmGrowPlans.version }).from(farmGrowPlans).where(eq(farmGrowPlans.id, plan.id)).limit(1);
+  if (!current[0]) return { ok: false, error: 'Grow plan not found.' };
+  await db
+    .update(farmGrowPlans)
+    .set({ status: header.status, version: current[0].version + 1, effectiveFrom: today, updatedAt: new Date() })
+    .where(eq(farmGrowPlans.id, plan.id));
+  await db.delete(farmGrowPlanLines).where(eq(farmGrowPlanLines.growPlanId, plan.id));
+  await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: plan.id, ...l })));
+  revalidatePath('/farm', 'layout');
+  return { ok: true, measured: promoted.measured.map((m) => `${m.name} ${Math.round(m.grams)} g (${m.n})`), unmeasured: promoted.unmeasured };
 }

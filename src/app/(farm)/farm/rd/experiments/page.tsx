@@ -13,6 +13,7 @@ import { standardInForce, standardLabel } from '@/engine/standards';
 import { EXPERIMENT_STATUS_LABELS, experimentStatus, experimentWindow, recordOf, yieldAcross } from '@/engine/experiments';
 import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { ExperimentsClient, type ExperimentRow } from './ExperimentsClient';
+import { MoveToInService } from './MoveToInService';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,7 +63,7 @@ async function ExperimentsPageInner() {
       <PageHeader
         title="Experiments"
         purpose="Run grow plans under development as titled experiments on the grow units, and read each variety's yield across them."
-        functions={['Start an experiment', 'Experiments', 'Yield per variety']}
+        functions={['Start an experiment', 'Experiments', 'Yield per variety', 'Move to in service']}
         connects={[
           { href: '/farm/rd/blends', dir: 'from' },
           { href: '/farm/production-planning/grow-calendar', dir: 'to' },
@@ -75,6 +76,8 @@ async function ExperimentsPageInner() {
             <li>It closes through the grow form here, one lot per variety with each variety&rsquo;s harvest weighed sorted from the trays; the sowing record names the experiment.</li>
             <li>A variety&rsquo;s yield in one experiment is its packed grams over the trays packed. Across the plan&rsquo;s closed experiments it is read as the mean, the lowest and highest and the standard deviation, beside the figure the plan is costed at.</li>
             <li>An experiment&rsquo;s time study is recorded on Time Studies against its plan.</li>
+            <li>An experiment&rsquo;s cost, packed or lost, is charged to Research and Development (7920), never finished goods.</li>
+            <li>Moving a plan to in service writes each measured variety&rsquo;s mean grams per tray onto its seed line, DERIVED; the cost card, the sowing record&rsquo;s standard and unit economics read it from then on.</li>
           </ul>
         }
         status="partial"
@@ -120,6 +123,18 @@ async function ExperimentsPageInner() {
                 {y.closed} closed of {experiments.filter((e) => e.growPlanCode === plan.code).length} experiments{y.nonePacked ? `, ${y.nonePacked} with no tray packed` : ''}; {num(y.traysSown)} trays sown, {num(y.traysRemoved)} removed at the harvest check.
                 {' '}Time studies recorded on the plan: {ts.length}, {ts.filter((s) => s.approvedAt).length} approved.
               </p>
+              {plan.status === 'in_service' ? (
+                <p className="farm-kpi-sub mt-1">In service. The plan&rsquo;s figure is what it is costed at: DERIVED where its experiments measured the variety.</p>
+              ) : (
+                <>
+                  <p className="farm-kpi-sub mt-1">
+                    {GROW_PLAN_STATUS_LABELS[plan.status]}. Moving it to in service writes each measured variety&rsquo;s mean onto its seed line as its harvest per tray, DERIVED with the count
+                    {y.varieties.some((v) => v.mean === null) ? `; ${y.varieties.filter((v) => v.mean === null).map((v) => v.name).join(', ')} keep${y.varieties.filter((v) => v.mean === null).length === 1 ? 's' : ''} the variety record's figure` : ''}.
+                    {' '}Its approved time studies are its labor standard, the estimate until one is approved. Channels set in the grow plan editor: {plan.channels.length ? plan.channels.join(', ') : 'none'}; forecasts and the Flat Builder list a plan on its channels.
+                  </p>
+                  {access.isSuperAdmin && <MoveToInService code={plan.code} />}
+                </>
+              )}
             </div>
           ))
         )}

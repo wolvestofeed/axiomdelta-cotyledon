@@ -15,8 +15,11 @@ import {
   experimentsOnShelves,
   expectedHarvestPerTray,
   yieldAcross,
+  promotePlan,
   type ExperimentDoc,
 } from '@/engine/experiments';
+import { seedLineHarvest, type SeedLine } from '@/data/grow-plan';
+import { costPlan } from '@/engine/grow-costing';
 
 const plan = blendSeed.find((p) => p.code === 'BLEND-09')!;
 const G = resolveScenarioInputs({});
@@ -102,5 +105,46 @@ describe('yield per variety across a plan\'s experiments', () => {
     expect(y.varieties.map((v) => v.expected)).toEqual(expected.map((x) => ({ grams: x.grams, status: x.status })));
     expect(y.varieties.every((v) => v.sd === null && v.n === 1)).toBe(true);
     expect(yieldAcross(plan, [exp('z', '2026-10-05')], []).varieties.every((v) => v.n === 0 && v.mean === null)).toBe(true);
+  });
+});
+
+describe('moving a plan to in service', () => {
+  const a = exp('a', '2026-10-05');
+  const b = exp('b', '2026-10-19');
+  const recs = [closed(a, [80, 50, 70]), closed(b, [100, 60, 90])];
+
+  it('writes each measured variety\'s mean onto its seed line, DERIVED with the count, and sets the plan in service', () => {
+    const p = promotePlan(plan, [a, b], recs, '2026-11-01');
+    expect(p.plan.status).toBe('in_service');
+    expect(p.unmeasured).toEqual([]);
+    const lines = seedLines(p.plan);
+    expect(lines.map((l) => l.harvestGramsPerTray?.value)).toEqual([90, 55, 80]);
+    expect(lines.every((l) => l.harvestGramsPerTray?.status === 'DERIVED' && /across 2 closed experiments/.test(l.harvestGramsPerTray.note ?? ''))).toBe(true);
+    expect(p.measured.map((m) => m.n)).toEqual([2, 2, 2]);
+    // Every other line is the plan's own.
+    expect(p.plan.lines.filter((l) => l.kind !== 'seed')).toEqual(plan.lines.filter((l) => l.kind !== 'seed'));
+  });
+
+  it('leaves a variety no experiment packed on the variety record\'s figure', () => {
+    const none = exp('z', '2026-10-05');
+    const p = promotePlan(plan, [none], [closed(none, [0, 0, 0], 0)], '2026-11-01');
+    expect(p.measured).toEqual([]);
+    expect(p.unmeasured).toHaveLength(seedLines(plan).length);
+    expect(seedLines(p.plan).every((l) => l.harvestGramsPerTray === undefined)).toBe(true);
+  });
+
+  it('is what the cost card and the next sowing record read', () => {
+    const p = promotePlan(plan, [a, b], recs, '2026-11-01').plan;
+    expect(costPlan(p).harvestGramsPerTray).toBeCloseTo(90 + 55 + 80, 9);
+    expect(expectedHarvestPerTray(p).map((x) => [x.grams, x.status])).toEqual([[90, 'DERIVED'], [55, 'DERIVED'], [80, 'DERIVED']]);
+    const pre = standardSowingRecordPrefill('2026-11-02', 1, 4, p);
+    expect(pre.lots.map((l) => l.harvestedG)).toEqual([360, 220, 320]);
+  });
+
+  it('without a measured figure, a seed line reads the variety record scaled to the format and the share', () => {
+    const line = seedLines(plan)[0] as SeedLine;
+    const h = seedLineHarvest(line, plan.format);
+    expect(h.value).toBeCloseTo(expectedHarvestPerTray(plan)[0]!.grams, 9);
+    expect(seedLineHarvest({ ...line, harvestGramsPerTray: { value: 42, status: 'DERIVED', unit: 'g' } }, plan.format).value).toBe(42);
   });
 });

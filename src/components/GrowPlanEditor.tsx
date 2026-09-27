@@ -12,7 +12,7 @@ import { LIGHT_REGIMES, type LightRegimeKey, type MediumKey, type NutrientKey } 
 import { useScenario } from '@/state/scenario-store';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { STAGES, SPROUT_STAGES, type StageKey } from '@/data/stage-schedule';
-import { tagged } from '@/data/tagged';
+import { tagged, type Tagged } from '@/data/tagged';
 import { money, num } from '@/components/ui';
 
 /**
@@ -27,7 +27,8 @@ import { money, num } from '@/components/ui';
  */
 
 /** The editor's working copy: plain numbers, null where a line defers to the catalog. */
-interface DraftSeed { kind: 'seed'; varietyKey: string; gramsPerTray: number; share: number }
+/** `harvestGramsPerTray` is what the plan's experiments measured, carried as written at promotion; any change to the line's variety, share or the format drops it. */
+interface DraftSeed { kind: 'seed'; varietyKey: string; gramsPerTray: number; share: number; harvestGramsPerTray: Tagged | null }
 interface DraftMedium { kind: 'medium'; mediumKey: MediumKey; qtyPerTray: number | null }
 interface DraftNutrient { kind: 'nutrient'; nutrientKey: NutrientKey; mlPerGal: number | null; startsAt: StageKey }
 interface DraftLight { kind: 'light'; regimeKey: LightRegimeKey; ppfd: number | null; startsAt: StageKey }
@@ -48,7 +49,7 @@ interface Draft {
 function toDraftLine(l: GrowPlanLine): DraftLine {
   switch (l.kind) {
     case 'seed':
-      return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: l.gramsPerTray.value, share: l.share };
+      return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: l.gramsPerTray.value, share: l.share, harvestGramsPerTray: l.harvestGramsPerTray ?? null };
     case 'medium':
       return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray?.value ?? null };
     case 'nutrient':
@@ -75,7 +76,7 @@ function toPlan(d: Draft): GrowPlanDef {
     lines: d.lines.map((l): GrowPlanLine => {
       switch (l.kind) {
         case 'seed':
-          return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: tagged(l.gramsPerTray, 'STATED', 'g', EDITOR), share: l.share };
+          return { kind: 'seed', varietyKey: l.varietyKey, gramsPerTray: tagged(l.gramsPerTray, 'STATED', 'g', EDITOR), share: l.share, ...(l.harvestGramsPerTray ? { harvestGramsPerTray: l.harvestGramsPerTray } : {}) };
         case 'medium':
           return { kind: 'medium', mediumKey: l.mediumKey, qtyPerTray: l.qtyPerTray === null ? null : tagged(l.qtyPerTray, 'STATED', 'per tray', EDITOR) };
         case 'nutrient':
@@ -147,7 +148,7 @@ export function GrowPlanEditor({
     const v = VARIETY_BY_KEY[key];
     if (!v) return;
     setD((x) => {
-      const lines = x.lines.map((l, li): DraftLine => (li === i && l.kind === 'seed' ? { ...l, varietyKey: key, gramsPerTray: (seedLineFor(v, x.format, l.share) as SeedLine).gramsPerTray.value } : l));
+      const lines = x.lines.map((l, li): DraftLine => (li === i && l.kind === 'seed' ? { ...l, varietyKey: key, gramsPerTray: (seedLineFor(v, x.format, l.share) as SeedLine).gramsPerTray.value, harvestGramsPerTray: null } : l));
       const seeds = lines.filter((l) => l.kind === 'seed');
       const name = seeds.length === 1 && i === 0 && !x.name.includes('(copy)') ? v.name : x.name;
       return recode({ ...x, lines, name });
@@ -159,7 +160,7 @@ export function GrowPlanEditor({
       const sprout = TRAY_FORMAT_BY_KEY[format].kind === 'sprout';
       const lines = x.lines
         .filter((l) => !sprout || l.kind === 'seed')
-        .map((l): DraftLine => (l.kind === 'seed' && VARIETY_BY_KEY[l.varietyKey] ? { ...l, gramsPerTray: (seedLineFor(VARIETY_BY_KEY[l.varietyKey]!, format, l.share) as SeedLine).gramsPerTray.value } : l));
+        .map((l): DraftLine => (l.kind === 'seed' && VARIETY_BY_KEY[l.varietyKey] ? { ...l, gramsPerTray: (seedLineFor(VARIETY_BY_KEY[l.varietyKey]!, format, l.share) as SeedLine).gramsPerTray.value, harvestGramsPerTray: null } : l));
       return { ...x, format, lines };
     });
   }
@@ -215,7 +216,7 @@ export function GrowPlanEditor({
 
       <div className="flex gap-2 items-center flex-wrap mb-2!">
         <span className="farm-card-title m-0!">Lines — one {TRAY_FORMAT_BY_KEY[d.format].name}</span>
-        <button type="button" className="farm-btn" onClick={() => { const v = VARIETIES.find((x) => !d.lines.some((l) => l.kind === 'seed' && l.varietyKey === x.key)) ?? VARIETIES[0]!; const share = 1 / (d.lines.filter((l) => l.kind === 'seed').length + 1); setD((x) => recode({ ...x, lines: [...x.lines.map((l) => (l.kind === 'seed' ? { ...l, share } : l)), toDraftLine(seedLineFor(v, x.format, share))] })); }}>+ seed line</button>
+        <button type="button" className="farm-btn" onClick={() => { const v = VARIETIES.find((x) => !d.lines.some((l) => l.kind === 'seed' && l.varietyKey === x.key)) ?? VARIETIES[0]!; const share = 1 / (d.lines.filter((l) => l.kind === 'seed').length + 1); setD((x) => recode({ ...x, lines: [...x.lines.map((l) => (l.kind === 'seed' ? { ...l, share, harvestGramsPerTray: null } : l)), toDraftLine(seedLineFor(v, x.format, share))] })); }}>+ seed line</button>
         {!isSprout && !d.lines.some((l) => l.kind === 'medium') && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'medium', mediumKey: leadVariety?.media.defaultMedium ?? 'coco-coir', qtyPerTray: null })}>+ medium line</button>}
         {!isSprout && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' })}>+ nutrient line</button>}
         {!isSprout && !d.lines.some((l) => l.kind === 'light') && <button type="button" className="farm-btn" onClick={() => addLine({ kind: 'light', regimeKey: leadVariety?.light.defaultRegime ?? 'balanced', ppfd: null, startsAt: 'light' })}>+ light line</button>}
@@ -257,7 +258,7 @@ export function GrowPlanEditor({
                     {l.kind === 'seed' && (
                       <span className="inline-flex gap-1 items-center">
                         <input className="farm-num-input" type="number" min={0} step={1} value={l.gramsPerTray} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftSeed), gramsPerTray: Number(e.target.value) }))} /> g
-                        {d.lines.filter((x) => x.kind === 'seed').length > 1 && <><input className="farm-num-input" type="number" min={0} max={1} step={0.05} title="Share of the tray" value={l.share} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftSeed), share: Number(e.target.value) }))} /> share</>}
+                        {d.lines.filter((x) => x.kind === 'seed').length > 1 && <><input className="farm-num-input" type="number" min={0} max={1} step={0.05} title="Share of the tray" value={l.share} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftSeed), share: Number(e.target.value), harvestGramsPerTray: null }))} /> share</>}
                       </span>
                     )}
                     {l.kind === 'medium' && <span className="inline-flex gap-1 items-center"><input className="farm-num-input" type="number" min={0} step={0.1} placeholder="library" value={l.qtyPerTray ?? ''} onChange={(e) => setLine(i, (x) => ({ ...(x as DraftMedium), qtyPerTray: numOrNull(e.target.value) }))} /> {mediumByKey[l.mediumKey]?.unit ?? ''}</span>}
