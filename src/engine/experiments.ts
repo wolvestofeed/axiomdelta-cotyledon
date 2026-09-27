@@ -162,9 +162,10 @@ export interface Promotion {
 /**
  * The plan moved to in service (outline §4 Experiment): each variety a closed experiment packed takes
  * the mean grams per tray packed as its seed line's harvest, DERIVED with the count; a variety none
- * packed keeps the variety record's figure. Its approved time studies stay its labor standard.
+ * packed keeps the variety record's figure. Its approved time studies stay its labor standard. The
+ * channels chosen at the move are the ones it is offered on; absent, it keeps its own.
  */
-export function promotePlan(plan: GrowPlanDef, experiments: readonly ExperimentDoc[], sowings: readonly SowingRecordDoc[], today: string): Promotion {
+export function promotePlan(plan: GrowPlanDef, experiments: readonly ExperimentDoc[], sowings: readonly SowingRecordDoc[], today: string, channels?: readonly number[]): Promotion {
   const y = yieldAcross(plan, experiments, sowings);
   const measured: Promotion['measured'] = [];
   const unmeasured: string[] = [];
@@ -179,5 +180,5 @@ export function promotePlan(plan: GrowPlanDef, experiments: readonly ExperimentD
     const spread = v.min !== null && v.max !== null && v.n > 1 ? `, ${Math.round(v.min)} to ${Math.round(v.max)} g` : '';
     return { ...line, harvestGramsPerTray: tagged(v.mean, 'DERIVED', 'g', `Mean grams per tray packed across ${v.n} closed experiment${v.n === 1 ? '' : 's'}${spread}; written when ${plan.code} went in service on ${today}`) };
   });
-  return { plan: { ...plan, status: 'in_service', lines }, measured, unmeasured };
+  return { plan: { ...plan, status: 'in_service', channels: channels ? [...new Set(channels)].sort((a, b) => a - b) : plan.channels, lines }, measured, unmeasured };
 }

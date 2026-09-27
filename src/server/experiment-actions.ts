@@ -88,28 +88,30 @@ export async function moveToInService(...args: Parameters<typeof moveToInService
 /**
  * Move a plan under development to in service, as Rob judges its experiments: each variety a closed
  * experiment packed takes the mean grams per tray packed as its harvest (`promotePlan`), the plan's
- * version steps up, and it enters forecasts and production on the channels set in the editor.
+ * version steps up, and it is offered on the channels chosen at the move.
  */
-async function moveToInServiceInner(growPlanCode: unknown): Promise<Result<{ measured: string[]; unmeasured: string[] }>> {
-  const parsed = z.string().trim().min(1).safeParse(growPlanCode);
-  if (!parsed.success) return { ok: false, error: 'Unknown grow plan.' };
+const MoveInput = z.object({ growPlanCode: z.string().trim().min(1), channels: z.array(z.number().int().min(1).max(3)).max(3) });
+
+async function moveToInServiceInner(input: unknown): Promise<Result<{ measured: string[]; unmeasured: string[] }>> {
+  const parsed = MoveInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Unknown grow plan or channel.' };
   try {
     await requireFarmSuperAdmin();
   } catch (e) {
     return refuse(e);
   }
-  const plan = (await listGrowPlans()).find((p) => p.code === parsed.data);
-  if (!plan) return { ok: false, error: `${parsed.data} is not in the grow plan library.` };
+  const plan = (await listGrowPlans()).find((p) => p.code === parsed.data.growPlanCode);
+  if (!plan) return { ok: false, error: `${parsed.data.growPlanCode} is not in the grow plan library.` };
   if (plan.status === 'in_service') return { ok: false, error: `${plan.code} is already in service.` };
   const [experiments, { sowings }] = await Promise.all([listExperiments(), loadProductionRecords()]);
   const today = new Date().toISOString().slice(0, 10);
-  const promoted = promotePlan(plan, experiments, sowings, today);
+  const promoted = promotePlan(plan, experiments, sowings, today, parsed.data.channels);
   const { header, lines } = growPlanToRows(promoted.plan);
   const current = await db.select({ version: farmGrowPlans.version }).from(farmGrowPlans).where(eq(farmGrowPlans.id, plan.id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Grow plan not found.' };
   await db
     .update(farmGrowPlans)
-    .set({ status: header.status, version: current[0].version + 1, effectiveFrom: today, updatedAt: new Date() })
+    .set({ status: header.status, channels: header.channels, version: current[0].version + 1, effectiveFrom: today, updatedAt: new Date() })
     .where(eq(farmGrowPlans.id, plan.id));
   await db.delete(farmGrowPlanLines).where(eq(farmGrowPlanLines.growPlanId, plan.id));
   await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: plan.id, ...l })));

@@ -55,6 +55,7 @@ async function ExperimentsPageInner() {
     };
   });
 
+  const channelNames = (phases: readonly number[]) => phases.map((ph) => inputs.phases.find((p) => p.phase === ph)?.market ?? `Channel ${ph}`).join(', ');
   const plansRun = [...new Set(experiments.map((e) => e.growPlanCode))].map(planOf).filter((p) => p !== undefined);
   const yields = plansRun.map((p) => ({ plan: p, y: yieldAcross(p, experiments, actuals.sowings), studies: studies.studies.filter((s) => s.growPlanCode === p.code && s.studiedOn !== null) }));
 
@@ -77,7 +78,7 @@ async function ExperimentsPageInner() {
             <li>A variety&rsquo;s yield in one experiment is its packed grams over the trays packed. Across the plan&rsquo;s closed experiments it is read as the mean, the lowest and highest and the standard deviation, beside the figure the plan is costed at.</li>
             <li>An experiment&rsquo;s time study is recorded on Time Studies against its plan.</li>
             <li>An experiment&rsquo;s cost, packed or lost, is charged to Research and Development (7920), never finished goods.</li>
-            <li>Moving a plan to in service writes each measured variety&rsquo;s mean grams per tray onto its seed line, DERIVED; the cost card, the sowing record&rsquo;s standard and unit economics read it from then on.</li>
+            <li>Moving a plan to in service writes each measured variety&rsquo;s mean grams per tray onto its seed line, DERIVED; the cost card, the sowing record&rsquo;s standard and unit economics read it from then on. The channels picked at the move, Subscriptions, Restaurants and Retail and wholesale ticked to start, are the ones it is offered on.</li>
           </ul>
         }
         status="partial"
@@ -124,15 +125,15 @@ async function ExperimentsPageInner() {
                 {' '}Time studies recorded on the plan: {ts.length}, {ts.filter((s) => s.approvedAt).length} approved.
               </p>
               {plan.status === 'in_service' ? (
-                <p className="farm-kpi-sub mt-1">In service. The plan&rsquo;s figure is what it is costed at: DERIVED where its experiments measured the variety.</p>
+                <p className="farm-kpi-sub mt-1">In service on {plan.channels.length ? channelNames(plan.channels) : 'no channel'}. The plan&rsquo;s figure is what it is costed at: DERIVED where its experiments measured the variety.</p>
               ) : (
                 <>
                   <p className="farm-kpi-sub mt-1">
                     {GROW_PLAN_STATUS_LABELS[plan.status]}. Moving it to in service writes each measured variety&rsquo;s mean onto its seed line as its harvest per tray, DERIVED with the count
                     {y.varieties.some((v) => v.mean === null) ? `; ${y.varieties.filter((v) => v.mean === null).map((v) => v.name).join(', ')} keep${y.varieties.filter((v) => v.mean === null).length === 1 ? 's' : ''} the variety record's figure` : ''}.
-                    {' '}Its approved time studies are its labor standard, the estimate until one is approved. Channels set in the grow plan editor: {plan.channels.length ? plan.channels.join(', ') : 'none'}; forecasts and the Flat Builder list a plan on its channels.
+                    {' '}Its approved time studies are its labor standard, the estimate until one is approved. It is offered on the channels picked below: the Flat Builder and a subscriber&rsquo;s flat plan offer a plan only on the subscriber&rsquo;s channel, and Production Planning costs a run on a channel the plan is not on at that channel&rsquo;s unit factor. On the plan now: {plan.channels.length ? channelNames(plan.channels) : 'no channel'}.
                   </p>
-                  {access.isSuperAdmin && <MoveToInService code={plan.code} />}
+                  {access.isSuperAdmin && <MoveToInService code={plan.code} channels={inputs.phases.map((p) => ({ phase: p.phase, market: p.market }))} />}
                 </>
               )}
             </div>

@@ -125,6 +125,13 @@ describe('moving a plan to in service', () => {
     expect(p.plan.lines.filter((l) => l.kind !== 'seed')).toEqual(plan.lines.filter((l) => l.kind !== 'seed'));
   });
 
+  it('puts the plan on the channels picked at the move, else keeps its own', () => {
+    expect(plan.channels).toEqual([]);
+    expect(promotePlan(plan, [a, b], recs, '2026-11-01', [3, 1, 2, 1]).plan.channels).toEqual([1, 2, 3]);
+    expect(promotePlan(plan, [a, b], recs, '2026-11-01', []).plan.channels).toEqual([]);
+    expect(promotePlan({ ...plan, channels: [2] }, [a, b], recs, '2026-11-01').plan.channels).toEqual([2]);
+  });
+
   it('leaves a variety no experiment packed on the variety record\'s figure', () => {
     const none = exp('z', '2026-10-05');
     const p = promotePlan(plan, [none], [closed(none, [0, 0, 0], 0)], '2026-11-01');
