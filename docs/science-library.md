@@ -186,8 +186,8 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 
 | Claim | Varieties | Evidence | Rows |
 |---|---|---|---|
-| 1.09% red cabbage microgreens in a high-fat diet: 34% lower LDL, 23% lower liver triglycerides, less liver inflammation. | red cabbage | *animal* | 31 |
-| Microgreen extracts reduce AGE formation and inflammatory markers (RAGE, MCP-1, ICAM-1) while raising eNOS. | brassicas | *cell/animal* | 35 |
+| In mice on a high-fat diet, 1.09% red cabbage microgreens lowered LDL 34% and liver triglycerides 23%, with less liver inflammation. | red cabbage | *animal* | 31 |
+| In cell and animal studies, a glucoraphanin-rich broccoli sprout extract reduced AGE formation and inflammatory markers (RAGE, MCP-1, ICAM-1) while raising eNOS. | broccoli | *cell/animal* | 35 |
 | Two cups a day of red cabbage or beet microgreens for two weeks: 95.6% compliance; gastrointestinal inflammation symptoms improved with red cabbage. | red cabbage, bull's blood beet | primary, human | 36 |
 | Meta-analysis of broccoli sprout trials: systolic pressure down 10.9 mmHg, diastolic down 6.95 mmHg. | broccoli | meta-analysis | 37 |
 | Rutin in buckwheat supports capillary resilience and blood pressure regulation. | buckwheat | review | 16, 49 |
@@ -198,8 +198,8 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 |---|---|---|---|
 | 10 g/day broccoli sprout powder for 4 weeks lowered fasting insulin and HOMA-IR in type 2 diabetes. | broccoli | primary, human | 38 |
 | 10 g/day broccoli sprout powder lowered malondialdehyde and oxidized LDL. | broccoli | primary, human | 29 |
-| Sulforaphane redirects glucose toward the pentose phosphate pathway and one-carbon metabolism, generating NADPH for glutathione synthesis; entirely Nrf2-dependent. | broccoli | *cell* | 21 |
-| Sulforaphane suppresses liver gluconeogenesis and fat formation, promotes browning of white fat and fatty-acid oxidation. | broccoli | *animal* | 40, 41, 42 |
+| In cells under high glucose, sulforaphane redirects glucose toward the pentose phosphate pathway and one-carbon metabolism, generating NADPH for glutathione synthesis; entirely Nrf2-dependent. | broccoli | *cell* | 21 |
+| In animal models, sulforaphane suppresses liver gluconeogenesis and fat formation and promotes browning of white fat and fatty-acid oxidation. | broccoli | *animal* | 40, 41, 42 |
 
 ### Neurological, respiratory, hematological, gastric
 

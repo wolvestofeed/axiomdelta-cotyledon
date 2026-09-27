@@ -36,13 +36,12 @@ describe('science library', () => {
     expect(SCIENCE_SOURCES.at(-1)!.row).toBe(103);
   });
 
-  it('document C\'s clinical claims state animal and in-vitro results as such, and carry the borage alkaloid caution', () => {
+  it('every animal and in-vitro claim names its model in its text; document C carries the borage alkaloid caution', () => {
     const byId = Object.fromEntries(SCIENCE_CLAIMS.map((c) => [c.id, c]));
     expect(byId['borage-fat-oxidation']!.evidence).toBe('animal');
     expect(byId['fenugreek-enzyme-inhibition']!.evidence).toBe('cell');
     expect(byId['borage-pyrrolizidine']).toMatchObject({ topic: 'safety', varieties: ['borage'] });
-    const fromC = (c: (typeof SCIENCE_CLAIMS)[number]) => c.rows.some((r) => r >= 76 && r <= 92);
-    for (const c of SCIENCE_CLAIMS.filter((x) => fromC(x) && (x.evidence === 'animal' || x.evidence === 'cell'))) {
+    for (const c of SCIENCE_CLAIMS.filter((x) => x.evidence === 'animal' || x.evidence === 'cell')) {
       expect(/(in vitro|in c\. elegans|in drosophila|rats|mice|mouse|cells|model|animal|fruit flies)/i.test(c.text), c.id).toBe(true);
     }
   });
