@@ -6,7 +6,7 @@
  * testable and keeps the ~600KB JSON out of any client bundle.
  */
 
-import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
+import { purchaseName, type GrowPlanDef } from '@/data/grow-plan';
 import type { SupplierOperation, Region } from '@/data/suppliers';
 
 export interface SupplierFilters {
@@ -101,8 +101,8 @@ export function matchGrowPlanToSuppliers(
   targetGrowPlan: MatchableGrowPlan,
 ): GrowPlanLineMatch[] {
   const pool = region === 'all' ? ops : ops.filter((o) => o.region === region);
-  return targetGrowPlan.lines.map((line) => {
-    const ing = { name: lineLabel(line) };
+  return [...new Set(targetGrowPlan.lines.map((line) => purchaseName(line)))].map((name) => {
+    const ing = { name };
     const keywords = LINE_KEYWORDS[ing.name] ?? [];
     const matches = keywords.length
       ? pool.filter((o) => {

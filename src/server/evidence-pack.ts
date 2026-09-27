@@ -1,5 +1,5 @@
 import 'server-only';
-import { lineLabel } from '@/data/grow-plan';
+import { purchaseName } from '@/data/grow-plan';
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
 import { eq } from 'drizzle-orm';
@@ -131,7 +131,7 @@ export async function buildEvidencePack(asOf: string, kind: LedgerKind): Promise
   }
 
   sheet(wb, 'Selections', ['Input', 'LCA basis option', 'Linked supplier id', 'Linked supplier'],
-    [...new Set(R.growPlans.flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort().map((name) => [name, S.inputBasis[name] ?? 'study mean', S.inputSupplier[name] ?? '', suppliers[S.inputSupplier[name] ?? '']?.name ?? '']));
+    [...new Set(R.growPlans.flatMap((r) => r.lines.map((l) => purchaseName(l))))].sort().map((name) => [name, S.inputBasis[name] ?? 'study mean', S.inputSupplier[name] ?? '', suppliers[S.inputSupplier[name] ?? '']?.name ?? '']));
 
   const xlsx = Buffer.from(await wb.xlsx.writeBuffer());
 

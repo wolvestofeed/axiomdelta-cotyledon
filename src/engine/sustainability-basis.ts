@@ -13,7 +13,7 @@
  * and the typed planning day (audit A11). Nothing here is stored.
  */
 
-import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
+import { purchaseName, type GrowPlanDef } from '@/data/grow-plan';
 import type { ActualsBundle } from '@/engine/actuals';
 import type { LedgerKind } from '@/engine/ledger-view';
 import { finishedGoodsOnHand, unitFactorFor } from '@/engine/production-plan';
@@ -208,7 +208,7 @@ export function mixFoodFootprint(input: {
     }
     const pf = unitFactorFor(growPlan, m.channel, input.unitFactorByChannel);
     const dual = growPlanFoodFootprintDual(growPlan, input.selection ?? {}, inputFactors, growPlanFoodCategoryMap, input.options, pf);
-    const missing = growPlan.lines.map((l) => lineLabel(l)).filter((name) => !growPlanFoodCategoryMap[name]);
+    const missing = [...new Set(growPlan.lines.map((l) => purchaseName(l)))].filter((name) => !growPlanFoodCategoryMap[name]);
     if (missing.length > 0) {
       const u = unmapped.get(growPlan.code) ?? { code: growPlan.code, name: growPlan.name, unmapped: missing, units: 0 };
       u.units += m.units;

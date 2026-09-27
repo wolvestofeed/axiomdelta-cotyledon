@@ -114,7 +114,7 @@ export interface VarietyLot {
 /** A medium or nutrient issued to the sowing's trays, in the line's own unit. Light is not issued: it is overhead. */
 export interface SowingIssue {
   kind: 'medium' | 'nutrient';
-  /** The line's name (`lineLabel`): the input a purchase order and a receipt are recorded under. */
+  /** What the line buys (`purchaseName`): the input a purchase order and a receipt are recorded under. */
   input: string;
   lotCode: string;
   qty: number;

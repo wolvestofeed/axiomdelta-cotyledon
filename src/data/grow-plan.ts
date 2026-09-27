@@ -99,7 +99,7 @@ export interface GrowPlanDef {
    */
   measured?: MeasuredConsumption;
   /**
-   * Prices standing over a line's own price, keyed by the line's label (`lineLabel`): a supplier
+   * Prices standing over a line's own price, keyed by what the line buys (`purchaseName`): a supplier
    * catalog price or a what-if typed on the scenario, attached by the resolver with its tag and
    * its source. The cost card reads a seed line's. Never stored.
    */
@@ -243,6 +243,15 @@ export function lineLabel(line: GrowPlanLine, byKey: Readonly<Record<string, Var
     case 'light':
       return `Light: ${line.regimeKey} from ${line.startsAt}`;
   }
+}
+
+/**
+ * What a line buys, the name it is ordered, received, stocked, issued and priced under: the
+ * variety for a seed line, the medium, and the solution for a nutrient line, whatever stage it
+ * starts at, so one bottle is one stock. A light line buys nothing; it keeps its label.
+ */
+export function purchaseName(line: GrowPlanLine, byKey: Readonly<Record<string, VarietyDef>> = VARIETY_BY_KEY): string {
+  return line.kind === 'nutrient' ? `Nutrient: ${line.nutrientKey}` : lineLabel(line, byKey);
 }
 
 /** What a plan must satisfy before it is stored or costed. Empty when it is whole. */

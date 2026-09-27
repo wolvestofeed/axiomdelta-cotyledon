@@ -39,7 +39,7 @@ import {
 import { cycleDays, daysToHarvest, lightDaysFrom, FL_OZ_PER_GAL, waterOzFrom, type StageDays } from '@/data/stage-schedule';
 import { GRAMS_PER_OZ, GRAMS_PER_LB, TRAY_FORMAT_BY_KEY, densityFactorOf, traySetCostPerUnit, type TrayFormatDef } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
-import { leadVariety, lineLabel, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
+import { leadVariety, purchaseName, planStageDays, planStages, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 
 export { GRAMS_PER_LB };
 
@@ -274,7 +274,7 @@ export function costContextFor(plan: GrowPlanDef, over: Partial<GrowCostContext>
   for (const line of plan.lines) {
     if (line.kind !== 'seed') continue;
     const v = VARIETY_BY_KEY[line.varietyKey];
-    const price = plan.prices?.[lineLabel(line)];
+    const price = plan.prices?.[purchaseName(line)];
     if (v && price && Math.abs(price.unitCost - v.seedPricePerLb.value) > 1e-9) seedPricePerLb[line.varietyKey] = price.unitCost;
   }
   return defaultGrowCostContext({ fixture: fixtureFor(plan), seedPricePerLb, ...over });

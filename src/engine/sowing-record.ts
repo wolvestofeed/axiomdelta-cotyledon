@@ -10,7 +10,7 @@
 
 import { costPlan } from '@/engine/grow-costing';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { lineLabel, planStages, seedLines } from '@/data/grow-plan';
+import { purchaseName, planStages, seedLines } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID, STAGE_CONTROL_POINTS, type ControlPointDef } from '@/data/produce-safety';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import { VARIETY_BY_KEY, type VarietyDef } from '@/data/varieties';
@@ -98,7 +98,7 @@ export function growSowingPrefill(
   const sprout = TRAY_FORMAT_BY_KEY[plan.format].kind === 'sprout';
   const issues: SowingIssue[] = costing.lines
     .filter((l): l is typeof l & { line: { kind: 'medium' | 'nutrient' } } => (l.line.kind === 'medium' || l.line.kind === 'nutrient') && l.quantity > 0)
-    .map((l) => ({ kind: l.line.kind, input: lineLabel(l.line, varieties), lotCode: 'not recorded', qty: l.quantity * trays * (1 + shrinkAllowance), unit: l.quantityUnit }));
+    .map((l) => ({ kind: l.line.kind, input: purchaseName(l.line, varieties), lotCode: 'not recorded', qty: l.quantity * trays * (1 + shrinkAllowance), unit: l.quantityUnit }));
   const lots: VarietyLot[] = seedLines(plan).map((line, i) => {
     const v = varieties[line.varietyKey];
     const seedG = line.gramsPerTray.value * trays;

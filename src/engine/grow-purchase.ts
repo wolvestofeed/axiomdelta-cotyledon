@@ -4,8 +4,9 @@
  * A plan's purchase lines are its grow lines as bought for one tray: a seed line in pounds of its
  * variety at the price per pound, a medium or nutrient line in the unit its cost card counts, and
  * a light line, which the fixture's electricity pays for and no purchase order carries. Each line
- * is named by its label (`lineLabel`), the name receipts, purchase orders, supplier links and the
- * scenario's price what-ifs are keyed by. Read at the plan's price (`GrowPlanDef.prices`: a
+ * is named by what it buys (`purchaseName`), the name receipts, purchase orders, supplier links
+ * and the scenario's price what-ifs are keyed by; two lines buying the same thing (one nutrient
+ * started at two stages) are one purchase line, their quantities added. Read at the plan's price (`GrowPlanDef.prices`: a
  * what-if, the last price paid, the catalog) or at the order's (`GrowPlanDef.orderPrices`: a
  * what-if, the catalog, the last price paid), each over the line's own with its tag and source.
  *
@@ -15,7 +16,7 @@
  */
 
 import { assumptions } from '@/data/plan-data';
-import { lineLabel, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
+import { purchaseName, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import type { StatusTag } from '@/data/tagged';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { costPlan, type GrowPlanCosting } from '@/engine/grow-costing';
@@ -41,22 +42,30 @@ export type PriceFor = 'plan' | 'order';
 
 /** The plan's lines as bought for one tray, light included (a purchase order leaves it out). */
 export function purchaseLines(plan: GrowPlanDef, costing: GrowPlanCosting = costPlan(plan), priceFor: PriceFor = 'plan'): PurchaseLine[] {
-  return costing.lines.map((c) => {
-    const name = lineLabel(c.line);
+  const out: PurchaseLine[] = [];
+  for (const c of costing.lines) {
+    const name = purchaseName(c.line);
     const seed = c.line.kind === 'seed';
+    const qtyPerTray = seed ? c.quantity / GRAMS_PER_LB : c.quantity;
+    const same = out.find((x) => x.name === name);
+    if (same) {
+      same.qtyPerTray += qtyPerTray;
+      continue;
+    }
     const price = priceFor === 'order' ? (plan.orderPrices ?? plan.prices)?.[name] : plan.prices?.[name];
-    return {
+    out.push({
       name,
       kind: c.line.kind,
       unit: seed ? 'lb' : 'each',
-      qtyPerTray: seed ? c.quantity / GRAMS_PER_LB : c.quantity,
+      qtyPerTray,
       unitCost: price?.unitCost ?? c.unitCost,
       packSize: 1,
       status: price?.status ?? c.status,
       source: price?.source ?? c.source,
       varietyKey: c.line.kind === 'seed' ? c.line.varietyKey : null,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 export interface PurchaseOrderLine {

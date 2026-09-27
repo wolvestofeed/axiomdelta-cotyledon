@@ -7,17 +7,17 @@ import { describe, expect, it } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import { VARIETY_BY_KEY } from '@/data/varieties';
 import { costPlan } from '@/engine/grow-costing';
-import { lineLabel } from '@/data/grow-plan';
+import { lineLabel, purchaseName, type GrowPlanDef } from '@/data/grow-plan';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { buildPurchaseOrder, purchaseLines, purchaseOrderForRun } from '@/engine/grow-purchase';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
 describe('purchase lines', () => {
-  it('are the grow lines by label: seed in pounds at the variety price, the rest in the cost card unit', () => {
+  it('are the grow lines by what they buy: seed in pounds at the variety price, the rest in the cost card unit', () => {
     for (const plan of growPlanSeed) {
       const costing = costPlan(plan);
       const lines = purchaseLines(plan, costing);
-      expect(lines.map((l) => l.name)).toEqual(plan.lines.map((l) => lineLabel(l)));
+      expect(lines.map((l) => l.name)).toEqual(plan.lines.map((l) => purchaseName(l)));
       lines.forEach((l, i) => {
         const c = costing.lines[i]!;
         expect(l.packSize).toBe(1);
@@ -32,6 +32,21 @@ describe('purchase lines', () => {
         }
       });
     }
+  });
+
+  it('a nutrient is bought under the solution alone: started at two stages it is one purchase line, its quantities added', () => {
+    const plan = growPlanSeed.find((p) => p.lines.some((l) => l.kind === 'nutrient'))!;
+    const nutrient = plan.lines.find((l) => l.kind === 'nutrient')!;
+    if (nutrient.kind !== 'nutrient') throw new Error('no nutrient line');
+    const other = plan.lines.find((l) => (l.kind === 'nutrient' || l.kind === 'light') && l.startsAt !== nutrient.startsAt) as { startsAt: string } | undefined;
+    const twice: GrowPlanDef = { ...plan, lines: [...plan.lines, { ...nutrient, startsAt: (other?.startsAt ?? 'germination') as typeof nutrient.startsAt }] };
+    const once = purchaseLines(plan).filter((l) => l.kind === 'nutrient');
+    const both = purchaseLines(twice).filter((l) => l.kind === 'nutrient');
+    expect(once.map((l) => l.name)).toEqual([`Nutrient: ${nutrient.nutrientKey}`]);
+    expect(both.map((l) => l.name)).toEqual([`Nutrient: ${nutrient.nutrientKey}`]);
+    const byStage = costPlan(twice).lines.filter((c) => c.line.kind === 'nutrient');
+    expect(byStage.map((c) => lineLabel(c.line))).toHaveLength(2);
+    expect(both[0]!.qtyPerTray).toBeCloseTo(byStage.reduce((t, c) => t + c.quantity, 0), 12);
   });
 
   it('a what-if the resolver attached prices the seed line, with its tag', () => {
