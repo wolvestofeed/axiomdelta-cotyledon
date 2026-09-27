@@ -187,7 +187,6 @@ async function ActualsPageInner({
                 <tr><td>Lease + utilities: budget accrued / billed</td><td className="num">{money(fromCents(p.overhead.budgetCents), 0)} / {money(fromCents(p.overhead.billedCents), 0)}</td></tr>
                 <tr><td>Overhead spending variance</td><td className="num">{signed(p.overhead.spendingVarianceCents)}</td></tr>
                 {p.overhead.accruedUnbilledCents > 0 && <tr><td>Accrued, not yet billed</td><td className="num">{money(fromCents(p.overhead.accruedUnbilledCents), 0)}</td></tr>}
-                <tr><td>Purchase price variance</td><td className="num">{signed(p.purchasePriceVarianceCents)}</td></tr>
                 <tr><td>Mass balance</td><td className="num"><CheckPill ok={p.massBalanceFailures.length === 0} okLabel="Reconciled" overLabel={`${p.massBalanceFailures.length} failure${p.massBalanceFailures.length === 1 ? '' : 's'}`} /></td></tr>
                 <tr><td>Input lots not recorded</td><td className="num">{p.traceabilityGaps}</td></tr>
               </tbody>

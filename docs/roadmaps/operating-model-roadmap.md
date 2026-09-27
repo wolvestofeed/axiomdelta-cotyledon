@@ -491,7 +491,7 @@ edits included. Built in four slices, each reviewed before the next.
 | A2 | Every grow plan carries its own labor standard |
 | A3 | Wage has one source: Staffing; the staff register holds no pay |
 | A4 | Payroll burden has one source: the timeline and the sowing posting read the resolved burden |
-| A5 | A receipt of any grow plan's input posts at that input's standard, with its price variance |
+| A5 | A receipt of any grow plan's input posts into raw materials at the price received, with no price variance |
 | A6 | Packaging is each grow plan's own picks |
 | A7 | The cost of a unit is food, labor and packaging only; fixed cost is not in it |
 | A8 | The forecast is costed grow plan by grow plan, not as one grow plan for the year |

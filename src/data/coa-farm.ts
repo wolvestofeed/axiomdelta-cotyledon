@@ -23,8 +23,6 @@ export const ACC_FINISHED_GOODS = '1450';
 export const ACC_GRIR = '2015';
 
 export const ACC_COGS = '5010';
-export const ACC_PPV = '5110';
-export const ACC_MATERIAL_USAGE_VAR = '5120';
 export const ACC_LABOR_RATE_VAR = '5130';
 export const ACC_LABOR_EFFICIENCY_VAR = '5140';
 export const ACC_OH_SPENDING_VAR = '5150';
@@ -106,20 +104,6 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     type: 'liability',
     description:
       'Budgeted occupancy and utilities accrued into Overhead Control at month end; a bill recorded for the period settles it, and the difference between bill and budget is the spending variance. A balance is overhead accrued but not yet billed.',
-  },
-  {
-    code: ACC_PPV,
-    name: 'Purchase Price Variance',
-    type: 'expense',
-    description:
-      'Actual purchase price against standard, at receipt. Case-rounding is NOT a variance — over-ordered quantity is inventory on hand and nets against the next requirement.',
-  },
-  {
-    code: ACC_MATERIAL_USAGE_VAR,
-    name: 'Material Usage Variance',
-    type: 'expense',
-    description:
-      'Actual quantity issued against standard quantity for the units produced, at standard price. Yield loss beyond the standard shows up here.',
   },
   {
     code: ACC_LABOR_RATE_VAR,
@@ -205,8 +189,6 @@ export const FARM_INVENTORY_FLOW = [
 
 /** Variance accounts, for period-end disposition. */
 export const FARM_VARIANCE_ACCOUNTS = [
-  ACC_PPV,
-  ACC_MATERIAL_USAGE_VAR,
   ACC_LABOR_RATE_VAR,
   ACC_LABOR_EFFICIENCY_VAR,
   ACC_OH_SPENDING_VAR,

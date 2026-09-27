@@ -12,7 +12,6 @@ import {
   standardSowingRecordPrefill,
   finishedLotsOf,
   laborFromCrew,
-  costReceiptLines,
   BILL_ACCOUNTS,
   type ActualsBundle,
   type SowingRecordDoc,
@@ -22,7 +21,8 @@ import {
 } from '@/engine/actuals';
 import { postActuals, postActualLedger, periodWorkingCapital } from '@/engine/actuals-ledger';
 import { resolveScenarioInputs } from '@/engine/scenario';
-import { massBalance } from '@/engine/sowing';
+import { massBalance, issuesOf } from '@/engine/sowing';
+import { receiptValueCents } from '@/engine/working-capital';
 import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 
 const DATE = '2026-09-14';
@@ -120,18 +120,6 @@ describe('actuals — documents and periods', () => {
     expect(p.receipts).toHaveLength(1);
     expect(bundleForPeriod(bundle, '2026-08').sowings).toHaveLength(0);
   });
-
-  it('receipt lines are costed against the grow plan standard', () => {
-    const c = costReceiptLines(receiptDoc(1.04).lines, purchaseLines(growPlan));
-    const std = c.reduce((s, x) => s + x.standardCents, 0);
-    const inv = c.reduce((s, x) => s + x.invoiceCents, 0);
-    // Invoice prices are whole cents, so a line priced in fractions of a cent rounds; the premium is 4% within that.
-    expect(inv).toBeGreaterThan(std);
-    expect(inv / std).toBeCloseTo(1.04, 1);
-    const unknown = costReceiptLines([{ input: 'Saffron', qty: 1, unit: 'lb', lotCode: 'x', unitPriceCents: 500000 }], purchaseLines(growPlan));
-    expect(unknown[0].standardUnitPriceCents).toBeNull();
-    expect(unknown[0].purchasePriceVarianceCents).toBe(0);
-  });
 });
 
 describe('actuals — posting a period', () => {
@@ -146,14 +134,27 @@ describe('actuals — posting a period', () => {
     expect(p.period).toBe(PERIOD);
   });
 
-  it('receives raw materials at standard with the invoice premium as purchase price variance', () => {
-    expect(net(posted.entries, '5110')).toBe(p.purchasePriceVarianceCents);
-    expect(p.purchasePriceVarianceCents).toBeGreaterThan(0);
+  it('receives raw materials by lot at the price received, with no price variance', () => {
     const rcpt = posted.entries.find((e) => e.id.startsWith('RCPT-'))!;
-    expect(rcpt.lines.some((l) => l.accountCode === '1410' && l.debitCents > 0)).toBe(true);
+    expect(rcpt.lines.find((l) => l.accountCode === '1410')!.debitCents).toBe(receiptValueCents(bundle.receipts[0]!));
+    expect(posted.entries.flatMap((e) => e.lines).some((l) => l.accountCode === '5110' || l.accountCode === '5120')).toBe(false);
     // Roadmap K2: the receipt waits in goods received not invoiced until the supplier's bill clears it.
     expect(rcpt.lines.some((l) => l.accountCode === '2015' && l.creditCents > 0)).toBe(true);
     expect(rcpt.lines.some((l) => l.accountCode === '2010')).toBe(false);
+  });
+
+  it('the sowing issues the lots at the price received, and what the receipt did not cover at the plan price', () => {
+    const received = new Map(bundle.receipts[0]!.lines.map((l) => [l.input, l]));
+    const plan = new Map(purchaseLines(growPlan).map((l) => [l.name, l.unitCost]));
+    let expected = 0;
+    for (const i of issuesOf(bundle.sowings[0]!)) {
+      const lot = received.get(i.input);
+      const fromLot = Math.min(i.qty, lot?.qty ?? 0);
+      expected += (fromLot * (lot?.unitPriceCents ?? 0)) / 100 + (i.qty - fromLot) * (plan.get(i.input) ?? 0);
+    }
+    expect(p.sowings[0]!.amounts.materialIssuedToWip).toBeCloseTo(expected, 6);
+    // The receipt covers the trays but not the shrink allowance, so the rest is named.
+    expect(p.notes.join(' ')).toMatch(/No lot on hand for .*costed at the plan's price/);
   });
 
   it('the sowing posts without its own receipt or shipment', () => {
@@ -272,7 +273,8 @@ describe('actuals — the Actual ledger by period (Roadmap N6)', () => {
     expect(ledger.balanced).toBe(true);
     expect(s.balanced && s.cashFlowTies).toBe(true);
     expect(s.incomeStatement.revenueCents).toBe(sowingSize * 2000);
-    expect(s.incomeStatement.manufacturingVariances.some((r) => r.code === '5110')).toBe(true);
+    // Materials are at actual cost: no purchase price or material usage variance row.
+    expect(s.incomeStatement.manufacturingVariances.some((r) => r.code === '5110' || r.code === '5120')).toBe(false);
   });
 
   it('the position is cumulative and balances', () => {

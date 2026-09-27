@@ -11,7 +11,6 @@
  */
 
 import type { GrowPlanDef } from '@/data/grow-plan';
-import type { PurchaseLine } from '@/engine/grow-purchase';
 import { assumptions as defaultAssumptions } from '@/data/plan-data';
 import type { SowingExecution, SowingIssue, VarietyLot } from '@/engine/sowing';
 import { libraryLabel, type StandardVersionDoc } from '@/engine/standards';
@@ -434,33 +433,4 @@ export function standardSowingRecordPrefill(
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> {
   const sowingId = sowingIdFor(productionDate, sequence);
   return growSowingPrefill(growPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
-}
-
-// ── Receipts against the standard ───────────────────────────────────────────
-
-export interface ReceiptLineCost {
-  line: ReceiptLine;
-  /** Standard price per unit in cents, from the grow plan line; null when the input is not on the grow plan. */
-  standardUnitPriceCents: number | null;
-  standardCents: number;
-  invoiceCents: number;
-  /** Positive = paid more than standard. */
-  purchasePriceVarianceCents: number;
-}
-
-/** Receipt lines against the standard: `standard` is the purchase lines of the plans in force (`purchaseLines`). */
-export function costReceiptLines(lines: readonly ReceiptLine[], standard: readonly PurchaseLine[]): ReceiptLineCost[] {
-  return lines.map((line) => {
-    const ing = standard.find((i) => i.name === line.input);
-    const stdUnit = ing ? Math.round(ing.unitCost * 100) : null;
-    const invoiceCents = Math.round(line.qty * line.unitPriceCents);
-    const standardCents = stdUnit === null ? invoiceCents : Math.round(line.qty * stdUnit);
-    return {
-      line,
-      standardUnitPriceCents: stdUnit,
-      standardCents,
-      invoiceCents,
-      purchasePriceVarianceCents: invoiceCents - standardCents,
-    };
-  });
 }

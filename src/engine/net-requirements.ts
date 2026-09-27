@@ -6,6 +6,8 @@
  *   raw stock on hand  = receipts − issues, by lot, oldest first (an issue that
  *                        names its input lot draws that lot; one that does not
  *                        draws the oldest lot of the input)
+ *   issue cost         = the lots each issue drew, at the price each was received
+ *                        at: the cost the ledger issues to work in process
  *   on order           = issued purchase orders less what receipts have already
  *                        booked against them
  *   net requirement    = gross production requirement − stock on hand − on
@@ -58,8 +60,29 @@ export interface RawStock {
   unmatchedIssues: Record<string, number>;
 }
 
-function drawRaw(lots: RawLot[], input: string, date: string, qty: number, preferLot: string | null): number {
+/** One lot's share of an issue: the quantity drawn and the price the lot was received at. */
+export interface LotDraw {
+  lotCode: string;
+  receiptId: string;
+  qty: number;
+  unitPriceCents: number;
+}
+
+/** What a sowing issued of one input, and what the lots it drew cost. */
+export interface IssueCost {
+  input: string;
+  unit: string;
+  qty: number;
+  draws: LotDraw[];
+  /** The lots drawn at the price each was received at, cents, unrounded. */
+  drawnCents: number;
+  /** The quantity no lot on hand covered. */
+  unmatchedQty: number;
+}
+
+function drawRaw(lots: RawLot[], input: string, date: string, qty: number, preferLot: string | null): { draws: LotDraw[]; left: number } {
   let left = qty;
+  const draws: LotDraw[] = [];
   const ordered = [...lots.filter((l) => l.input === input && l.remaining > 0 && l.receivedOn <= date)];
   ordered.sort((a, b) => (a.lotCode === preferLot ? -1 : b.lotCode === preferLot ? 1 : 0) || a.receivedOn.localeCompare(b.receivedOn));
   for (const lot of ordered) {
@@ -67,12 +90,24 @@ function drawRaw(lots: RawLot[], input: string, date: string, qty: number, prefe
     const take = Math.min(lot.remaining, left);
     lot.remaining -= take;
     left -= take;
+    draws.push({ lotCode: lot.lotCode, receiptId: lot.receiptId, qty: take, unitPriceCents: lot.unitPriceCents });
   }
-  return Math.max(0, left);
+  return { draws, left: Math.max(0, left) };
 }
 
-/** Raw stock on a date: every receipt line is a lot; every sowing record's seed lots and medium and nutrient are issues. */
-export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings: readonly SowingRecordDoc[]; asOf: string }): RawStock {
+export interface LotRegister {
+  stock: RawStock;
+  /** By sowing record id: each input it issued, with the lots drawn and their cost. */
+  issueCosts: Map<string, IssueCost[]>;
+}
+
+/**
+ * The lot register on a date: every accepted receipt line is a lot at the price received; every
+ * sowing record's seed lots and medium and nutrient are issues, drawn in sow-date order (the lot
+ * the issue names, else the oldest). What remains is raw stock on hand; what each sowing drew is
+ * its issue cost (`accounting-policy.md` §1).
+ */
+export function lotRegister(input: { receipts: readonly ReceiptDoc[]; sowings: readonly SowingRecordDoc[]; asOf: string }): LotRegister {
   const lots: RawLot[] = [];
   for (const r of input.receipts) {
     if (r.receivedOn > input.asOf) continue;
@@ -85,13 +120,21 @@ export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings
   lots.sort((a, b) => a.receivedOn.localeCompare(b.receivedOn) || a.lotCode.localeCompare(b.lotCode));
   const issues = input.sowings
     .filter((b) => b.productionDate <= input.asOf)
-    .flatMap((b) => issuesOf(b).map((x) => ({ date: b.productionDate, input: x.input, lot: x.lotCode, qty: x.qty })))
+    .flatMap((b) => issuesOf(b).map((x) => ({ sowing: b.id, date: b.productionDate, input: x.input, unit: x.unit, lot: x.lotCode, qty: x.qty })))
     .sort((a, b) => a.date.localeCompare(b.date));
   const unmatchedIssues: Record<string, number> = {};
+  const issueCosts = new Map<string, IssueCost[]>();
   for (const i of issues) {
     const named = i.lot && i.lot !== 'not recorded' ? i.lot : null;
-    const left = drawRaw(lots, i.input, i.date, i.qty, named);
+    const { draws, left } = drawRaw(lots, i.input, i.date, i.qty, named);
     if (left > 1e-9) unmatchedIssues[i.input] = (unmatchedIssues[i.input] ?? 0) + left;
+    const costs = issueCosts.get(i.sowing) ?? [];
+    const row = costs.find((c) => c.input === i.input) ?? (costs.push({ input: i.input, unit: i.unit, qty: 0, draws: [], drawnCents: 0, unmatchedQty: 0 }), costs.at(-1)!);
+    row.qty += i.qty;
+    row.draws.push(...draws);
+    row.drawnCents += draws.reduce((t, d) => t + d.qty * d.unitPriceCents, 0);
+    row.unmatchedQty += left > 1e-9 ? left : 0;
+    issueCosts.set(i.sowing, costs);
   }
   const byInput: Record<string, RawStockLine> = {};
   for (const lot of lots) {
@@ -102,7 +145,12 @@ export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings
     row.valueCents += Math.round(lot.remaining * lot.unitPriceCents);
     byInput[lot.input] = row;
   }
-  return { asOf: input.asOf, lots, byInput, unmatchedIssues };
+  return { stock: { asOf: input.asOf, lots, byInput, unmatchedIssues }, issueCosts };
+}
+
+/** Raw stock on a date: the lot register's lots less what the sowing records drew. */
+export function rawStockOnHand(input: { receipts: readonly ReceiptDoc[]; sowings: readonly SowingRecordDoc[]; asOf: string }): RawStock {
+  return lotRegister(input).stock;
 }
 
 // ── Raw lots by use-by (Roadmap I5) ─────────────────────────────────────────

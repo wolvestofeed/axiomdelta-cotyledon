@@ -6,12 +6,13 @@
  * the pages show the forecast instead. The same chain as the forecast:
  *
  *   opening      Dr Cash, Dr Fixed Assets, Cr Long-Term Debt, Cr Owners' Equity
- *   receipt      Dr Raw Materials @ standard, Dr/Cr PPV, Cr GR/IR at the price
- *                received (accepted lines only)                       (receipt record)
- *   supplier bill Dr GR/IR at what was received, Dr/Cr PPV for any difference,
- *                Cr SEED at the bill                                     (supplier bill)
- *   sowing        issue → labor → overhead → sow → blackout → pack → FG   (sowing record,
- *                without its own receipt or shipment)
+ *   receipt      Dr Raw Materials by lot, Cr GR/IR, at the price received
+ *                (accepted lines only)                                   (receipt record)
+ *   supplier bill Dr GR/IR, Cr SEED, at the bill, when it equals what its
+ *                receipts received; a bill that differs is not posted    (supplier bill)
+ *   sowing        issue → labor → overhead → sow → grow → pack → FG       (sowing record,
+ *                without its own receipt or shipment; its issues at the
+ *                cost of the lots drawn)
  *   distribution     Dr AR (invoiced channels) or Dr Processor Clearing (paid at
  *                order), Cr revenue; Dr COGS @ standard/unit, Cr FG;
  *                distribution expense; retail commission                  (distribution record)
@@ -28,7 +29,6 @@
  * Receivables and payables stay open until a payment record applies to them.
  */
 
-import { purchaseLines, type PurchaseLine } from '@/engine/grow-purchase';
 import {
   journalIsBalanced,
   type Account,
@@ -39,7 +39,6 @@ import {
   ACC_RAW_MATERIALS,
   ACC_FINISHED_GOODS,
   ACC_COGS,
-  ACC_PPV,
   ACC_OH_VOLUME_VAR,
   ACC_OH_CONTROL,
   ACC_OH_APPLIED,
@@ -73,7 +72,6 @@ import {
 import { resolveScenarioInputs, type ResolvedInputs } from '@/engine/scenario';
 import {
   bundleForPeriod,
-  costReceiptLines,
   openingCashCents,
   periodEnd,
   periodOf,
@@ -84,6 +82,7 @@ import {
   type ActualsBundle,
 } from '@/engine/actuals';
 import { standardInForce, standardLabel, libraryLabel } from '@/engine/standards';
+import { lotRegister } from '@/engine/net-requirements';
 import {
   amortizationSchedule,
   addMonths,
@@ -177,8 +176,8 @@ export interface PostedPeriod {
     /** Accrued budget for categories with no bill yet: the balance left in 2160 for the period. */
     accruedUnbilledCents: number;
   };
-  purchasePriceVarianceCents: number;
   receivables: { billedCents: number; paidAtOrderCents: number; collectedCents: number };
+  /** `billDifferenceCents`: billed less received on the bills not posted because they differ from their receipts. */
   payables: { receivedCents: number; billedCents: number; billDifferenceCents: number; paidCents: number };
   /** Null when the month has no closed pay period, no pay date and no shift on the clock. */
   payroll: {
@@ -286,6 +285,10 @@ export function postActuals(
     periodList = monthsBetween(known[0]!, known.at(-1)!);
   }
 
+  // The lot register across the whole bundle: lots outlive the period they were received in,
+  // so each sowing's issues draw on every receipt dated on or before its sow date.
+  const { issueCosts } = lotRegister({ receipts: bundle.receipts, sowings: bundle.sowings, asOf: '9999-12-31' });
+
   const all: JournalEntry[] = [];
   const periods: PostedPeriod[] = [];
   let carriedStandardCents = planStandardCents;
@@ -371,66 +374,45 @@ export function postActuals(
       );
     }
 
-    // ── Receipts: accepted lines at standard into raw materials, the price
-    //    received against standard to PPV, and GR/IR until the bill arrives.
-    //    An input's standard is read from any grow plan in the library that
-    //    uses it, at the version in force on the receipt date (audit A5).
-    const receiptStandard = (date: string): PurchaseLine[] => {
-      const byName = new Map<string, PurchaseLine>();
-      for (const r of inputs.growPlans) {
-        for (const ing of purchaseLines(standardFor(r.code, date).growPlan)) if (!byName.has(ing.name)) byName.set(ing.name, ing);
-      }
-      return [...byName.values()];
-    };
-    const receiptStandards = new Map<string, ReturnType<typeof receiptStandard>>();
-    let ppvCents = 0;
+    // ── Receipts: accepted lines into raw materials by lot at the price received,
+    //    and GR/IR until the bill arrives (`accounting-policy.md` §14, §16).
     let receivedCents = 0;
     for (const r of p.receipts) {
       const acceptedLines = r.lines.filter((l) => l.condition !== 'rejected');
       const rejected = r.lines.length - acceptedLines.length;
-      let std = receiptStandards.get(r.receivedOn);
-      if (!std) receiptStandards.set(r.receivedOn, (std = receiptStandard(r.receivedOn)));
-      const costed = costReceiptLines(acceptedLines, std);
-      const standardCents = costed.reduce((s, c) => s + c.standardCents, 0);
-      const valueCents = costed.reduce((s, c) => s + c.invoiceCents, 0);
-      const variance = valueCents - standardCents;
-      ppvCents += variance;
+      const valueCents = receiptValueCents(r);
       receivedCents += valueCents;
-      const unknown = costed.filter((c) => c.standardUnitPriceCents === null).map((c) => c.line.input);
-      if (unknown.length > 0) {
-        notes.push(`Receipt ${r.invoiceNumber ?? short(r.id)}: ${unknown.join(', ')} not on the grow plan, received at the price received with no standard to vary against.`);
-      }
       if (rejected > 0) notes.push(`Receipt ${short(r.id)}: ${rejected} rejected line${rejected === 1 ? '' : 's'} on the record, not received into stock and not payable.`);
       entries.push(
         entryCents(`RCPT-${short(r.id)}`, r.receivedOn, `Receive ${r.supplierName ?? 'goods'}`, [
-          { account: ACC_RAW_MATERIALS, cents: standardCents, memo: `${acceptedLines.length} line${acceptedLines.length === 1 ? '' : 's'} at standard` },
-          { account: ACC_PPV, cents: variance, memo: 'Purchase price variance — price received against standard' },
+          { account: ACC_RAW_MATERIALS, cents: valueCents, memo: `${acceptedLines.length} lot${acceptedLines.length === 1 ? '' : 's'} at the price received` },
           { account: ACC_GRIR, cents: -valueCents, memo: 'Goods received, not invoiced' },
         ]),
       );
     }
 
-    // ── Supplier bills (Roadmap K2): clear GR/IR at what the named receipts
-    //    received; any difference is the bill against the receipt, charged to
-    //    PPV while the bill is flagged, and gone once the bill is rectified.
+    // ── Supplier bills (Roadmap K2): a bill that equals what its receipts received
+    //    clears GR/IR to the payable. One that differs is not posted: GR/IR carries the
+    //    liability at what was received until a bill that matches is recorded (§16).
     let supplierBilledCents = 0;
     let billDifferenceCents = 0;
     for (const b of p.supplierBills ?? []) {
       const covered = bundle.receipts.filter((r) => b.receiptIds.includes(r.id));
       const received = covered.reduce((s, r) => s + receiptValueCents(r), 0);
       const billed = billTotalCents(b);
+      if (billed !== received) {
+        billDifferenceCents += billed - received;
+        notes.push(`Bill ${b.billNumber} (${b.supplierName}): billed ${usd(billed)} against ${usd(received)} received; not posted. Goods received not invoiced carries ${usd(received)} until a bill that equals its receipts is recorded.`);
+        continue;
+      }
       supplierBilledCents += billed;
-      billDifferenceCents += billed - received;
-      if (billed !== received) notes.push(`Bill ${b.billNumber} (${b.supplierName}): billed ${usd(billed)} against ${usd(received)} received; the difference is in purchase price variance until the bill is rectified.`);
       entries.push(
         entryCents(`SBILL-${short(b.id)}`, b.billDate, `Bill ${b.billNumber} — ${b.supplierName}`, [
           { account: ACC_GRIR, cents: received, memo: `Clear goods received on ${covered.length} receipt${covered.length === 1 ? '' : 's'}` },
-          { account: ACC_PPV, cents: billed - received, memo: 'Billed against received' },
           { account: ACC_SEED, cents: -billed, memo: 'Accounts payable at the bill' },
         ]),
       );
     }
-    ppvCents += billDifferenceCents;
 
     // ── Sowings: the chain without its own receipt or shipment.
     const sowings: ProductionSowingLedger[] = [];
@@ -454,6 +436,7 @@ export function postActuals(
           overhead: std.overheadRatePerUnit === null ? absorption : { ...absorption, ratePerUnit: std.overheadRatePerUnit },
           purchaseOrderCost: 0,
           receiptRecorded: true,
+          issueCosts: issueCosts.get(doc.id) ?? [],
           shipments: [],
         },
         std.growPlan,
@@ -695,7 +678,6 @@ export function postActuals(
       servingsProduced,
       unitsDistributed,
       overhead: { appliedCents, incurredCents, volumeVarianceCents, ratePerUnit: absorption.ratePerUnit, budgetCents, billedCents: overheadBilledCents, spendingVarianceCents, accruedUnbilledCents },
-      purchasePriceVarianceCents: ppvCents,
       receivables: { billedCents, paidAtOrderCents, collectedCents },
       payables: { receivedCents, billedCents: supplierBilledCents, billDifferenceCents, paidCents: supplierPaidCents },
       payroll,

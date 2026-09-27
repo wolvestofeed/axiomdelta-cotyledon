@@ -18,6 +18,7 @@ import {
   monthlyInvoiceOutstandingShare,
   nextInvoiceSequence,
   routeCompletion,
+  receiptValueCents,
   threeWayMatch,
   unbilledReceipts,
   type InvoiceDoc,
@@ -332,12 +333,16 @@ describe('Phase K — actuals', () => {
     expect(paid.balanced).toBe(true);
   });
 
-  it('a bill above what was received posts the difference to PPV', () => {
+  it('a bill above what was received is not posted: goods received not invoiced carries what was received', () => {
     const billLines = lines.map((l) => ({ input: l.input, qty: l.qty, unit: l.unit, unitPriceCents: l.unitPriceCents + 10 }));
     const p = postActuals({ ...base, supplierBills: [{ ...bill(billLines), billDate: '2027-02-06' }] });
     const feb = p.periods.find((x) => x.period === '2027-02')!;
     expect(feb.payables.billDifferenceCents).toBeGreaterThan(0);
-    expect(net(p.entries, '2015')).toBe(0);
+    expect(feb.payables.billedCents).toBe(0);
+    expect(p.entries.some((e) => e.id.startsWith('SBILL-'))).toBe(false);
+    expect(net(p.entries, '2015')).toBe(-receiptValueCents(r1));
+    expect(feb.notes.join(' ')).toMatch(/not posted/);
+    expect(p.balanced).toBe(true);
   });
 
   it('invoiced distributions go to receivables, retail and wholesale to processor clearing; a payment collects', () => {

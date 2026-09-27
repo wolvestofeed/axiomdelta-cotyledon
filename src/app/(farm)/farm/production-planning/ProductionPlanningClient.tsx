@@ -347,7 +347,7 @@ export function ProductionPlanningClient({
                   <tbody>
                     <tr><td>Purchase order, pack-rounded, incl. the {(shrink * 100).toFixed(0)}% shrink allowance</td><td className="num">{money(run.purchase.total)}</td></tr>
                     <tr><td>Plan standard for {num(run.produced)} trays, incl. the same allowance</td><td className="num">{money(run.inputCostStandard)}</td></tr>
-                    <tr className="total"><td>Difference held in raw materials (pack rounding, not a price variance)</td><td className="num">{money(run.carriedForward)}</td></tr>
+                    <tr className="total"><td>Difference held in raw materials (pack rounding)</td><td className="num">{money(run.carriedForward)}</td></tr>
                     <tr><td>Closing finished inventory after the {num(run.units)} trays ship</td><td className="num">{num(run.closing)} trays</td></tr>
                   </tbody>
                 </table>

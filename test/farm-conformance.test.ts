@@ -64,13 +64,13 @@ describe('C1 — a grow plan costs the same per unit on every surface', () => {
       const bundle: ActualsBundle = { ...EMPTY_BUNDLE, sowings: [doc] };
       const onPlan = postActuals(bundle, R, undefined, { liveLibraryIsStandard: true }).periods[0].sowings[0].amounts;
       const onActual = postActuals(bundle, R).periods[0].sowings[0].amounts;
-      const perUnit = (x: typeof onPlan) => (x.standardMaterialCost + x.lightApplied + x.consumablesApplied) / x.traysSown;
+      const perUnit = (x: typeof onPlan) => (x.materialIssuedToWip + x.lightApplied + x.consumablesApplied) / x.traysSown;
 
       for (const [surface, v] of [['Unit Economics', unitEconomics], ['Unit Economics by channel', channelRow.inputCostPerUnit], ['Production Planning', productionPlanning]] as const) {
         expect(v, `${growPlan.code} on ${surface}`).toBeCloseTo(growPlansPage, 6);
       }
-      // The ledgers cost a sowing by its cost card on the trays sown: seed, medium and nutrient
-      // as material, light, tray wear and sanitizer as variable overhead applied.
+      // With no lot on hand the ledgers issue seed, medium and nutrient at the plan's price, and
+      // apply light, tray wear and sanitizer as variable overhead, on the trays sown: the cost card.
       // A sowing of zero trays is never recorded, so the ledgers have nothing to cost.
       if (sowing === 0) return;
       for (const [surface, v] of [['Plan ledger', perUnit(onPlan)], ['Actual ledger', perUnit(onActual)]] as const) {
@@ -167,15 +167,16 @@ describe('C5 — the audit findings of §5 are gone', () => {
     expect(src('engine', 'production-ledger.ts')).toContain('assumptions.labor.payrollBurden.value');
   });
 
-  it('A5: a receipt of another grow plan’s input posts at that input’s standard, with its price variance', () => {
+  it('A5: a receipt of any grow plan’s input posts into raw materials at the price received, with no price variance', () => {
     const own = purchaseLines(L.growPlan);
     const other = L.growPlans.find((r) => r.code !== L.growPlan.code && purchaseLines(r).some((i) => i.unit === 'lb' && !own.some((x) => x.name === i.name)))!;
     const line = purchaseLines(other).find((i) => i.unit === 'lb' && !own.some((x) => x.name === i.name))!;
     const std = Math.round(line.unitCost * 100);
     const receipt = { id: 'R', poId: null, supplierId: null, supplierName: null, receivedOn: DATE, invoiceNumber: null, invoiceTotalCents: 0, receivedBy: null, notes: null, lines: [{ input: line.name, qty: 10, unit: 'lb' as const, lotCode: 'L', unitPriceCents: std + 50 }] };
     const posted = postActuals({ ...EMPTY_BUNDLE, receipts: [receipt] }, L);
-    const ppv = posted.entries.flatMap((e) => e.lines).filter((l) => l.accountCode === '5110').reduce((t, l) => t + l.debitCents - l.creditCents, 0);
-    expect(ppv).toBe(500);
+    const lines = posted.entries.flatMap((e) => e.lines);
+    expect(lines.filter((l) => l.accountCode === '1410').reduce((t, l) => t + l.debitCents - l.creditCents, 0)).toBe(10 * (std + 50));
+    expect(lines.some((l) => l.accountCode === '5110')).toBe(false);
   });
 
   it('A6: packaging is each grow plan’s own picks, not a flat charge on every grow plan', () => {
