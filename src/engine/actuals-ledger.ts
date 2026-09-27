@@ -289,8 +289,8 @@ export function postActuals(
   const all: JournalEntry[] = [];
   const periods: PostedPeriod[] = [];
   let carriedStandardCents = planStandardCents;
-  /** Each crop plan's standard cost per unit, carried from the last period that made it (audit A9). */
-  const carriedByCropPlan = new Map<string, number>();
+  /** Each grow plan's standard cost per unit, carried from the last period that made it (audit A9). */
+  const carriedByGrowPlan = new Map<string, number>();
 
   for (const period of periodList) {
     const p = bundleForPeriod(bundle, period);
@@ -312,26 +312,26 @@ export function postActuals(
     }
 
     // ── The standard in force on a date (Roadmap J5): the approved snapshot,
-    //    else the live library crop plan and the plan's assumptions, with a note.
+    //    else the live library grow plan and the plan's assumptions, with a note.
     const standards = bundle.standards ?? [];
-    const standardFor = (cropPlanCode: string, date: string) => {
-      const v = standardInForce(standards, cropPlanCode, date);
+    const standardFor = (growPlanCode: string, date: string) => {
+      const v = standardInForce(standards, growPlanCode, date);
       if (v) {
         return {
-          cropPlan: v.snapshot.cropPlan,
+          growPlan: v.snapshot.growPlan,
           assumptions: v.snapshot.assumptions,
           overheadRatePerUnit: v.snapshot.overheadRatePerUnit ?? null,
           label: standardLabel(v),
           approved: true,
         };
       }
-      // No version in force: the live library crop plan at its OWN assumptions — its
+      // No version in force: the live library grow plan at its OWN assumptions — its
       // labor standard and packaging (Roadmap N3) — and the live overhead rate.
       return {
-        cropPlan: inputs.cropPlans.find((r) => r.code === cropPlanCode) ?? inputs.cropPlan,
-        assumptions: assumptionsFor(inputs, cropPlanCode),
+        growPlan: inputs.growPlans.find((r) => r.code === growPlanCode) ?? inputs.growPlan,
+        assumptions: assumptionsFor(inputs, growPlanCode),
         overheadRatePerUnit: null,
-        label: libraryLabel(cropPlanCode),
+        label: libraryLabel(growPlanCode),
         approved: false,
       };
     };
@@ -373,12 +373,12 @@ export function postActuals(
 
     // ── Receipts: accepted lines at standard into raw materials, the price
     //    received against standard to PPV, and GR/IR until the bill arrives.
-    //    An input's standard is read from any crop plan in the library that
+    //    An input's standard is read from any grow plan in the library that
     //    uses it, at the version in force on the receipt date (audit A5).
     const receiptStandard = (date: string): PurchaseLine[] => {
       const byName = new Map<string, PurchaseLine>();
-      for (const r of inputs.cropPlans) {
-        for (const ing of purchaseLines(standardFor(r.code, date).cropPlan)) if (!byName.has(ing.name)) byName.set(ing.name, ing);
+      for (const r of inputs.growPlans) {
+        for (const ing of purchaseLines(standardFor(r.code, date).growPlan)) if (!byName.has(ing.name)) byName.set(ing.name, ing);
       }
       return [...byName.values()];
     };
@@ -398,7 +398,7 @@ export function postActuals(
       receivedCents += valueCents;
       const unknown = costed.filter((c) => c.standardUnitPriceCents === null).map((c) => c.line.input);
       if (unknown.length > 0) {
-        notes.push(`Receipt ${r.invoiceNumber ?? short(r.id)}: ${unknown.join(', ')} not on the crop plan, received at the price received with no standard to vary against.`);
+        notes.push(`Receipt ${r.invoiceNumber ?? short(r.id)}: ${unknown.join(', ')} not on the grow plan, received at the price received with no standard to vary against.`);
       }
       if (rejected > 0) notes.push(`Receipt ${short(r.id)}: ${rejected} rejected line${rejected === 1 ? '' : 's'} on the record, not received into stock and not payable.`);
       entries.push(
@@ -436,10 +436,10 @@ export function postActuals(
     const sowings: ProductionSowingLedger[] = [];
     let fgCents = 0;
     let servingsProduced = 0;
-    const fgByCropPlan = new Map<string, { cents: number; units: number }>();
+    const fgByGrowPlan = new Map<string, { cents: number; units: number }>();
     for (const doc of p.sowings) {
-      const std = standardFor(doc.cropPlanCode, doc.productionDate);
-      if (!std.approved && !options.liveLibraryIsStandard) notes.push(`${doc.sowingId}: no approved standard in force for ${doc.cropPlanCode} on ${doc.productionDate}; costed at the live library (${std.label}).`);
+      const std = standardFor(doc.growPlanCode, doc.productionDate);
+      if (!std.approved && !options.liveLibraryIsStandard) notes.push(`${doc.sowingId}: no approved standard in force for ${doc.growPlanCode} on ${doc.productionDate}; costed at the live library (${std.label}).`);
       else if (doc.standardVersion !== std.label) notes.push(`${doc.sowingId}: the record names ${doc.standardVersion}; the version in force on ${doc.productionDate} is ${std.label}, which is what it is costed at.`);
       if (std.approved && std.overheadRatePerUnit === null) {
         notes.push(`${doc.sowingId}: ${std.label} was approved before standards froze the overhead rate; it absorbs at the live rate.`);
@@ -456,22 +456,22 @@ export function postActuals(
           receiptRecorded: true,
           shipments: [],
         },
-        std.cropPlan,
+        std.growPlan,
       );
       sowings.push(led);
       entries.push(...led.entries);
       fgCents += Math.round(led.amounts.finishedGoodsCost * 100);
       servingsProduced += led.amounts.servingsProduced;
-      const byCropPlan = fgByCropPlan.get(doc.cropPlanCode) ?? { cents: 0, units: 0 };
-      byCropPlan.cents += led.amounts.finishedGoodsCost * 100;
-      byCropPlan.units += led.amounts.servingsProduced;
-      fgByCropPlan.set(doc.cropPlanCode, byCropPlan);
+      const byGrowPlan = fgByGrowPlan.get(doc.growPlanCode) ?? { cents: 0, units: 0 };
+      byGrowPlan.cents += led.amounts.finishedGoodsCost * 100;
+      byGrowPlan.units += led.amounts.servingsProduced;
+      fgByGrowPlan.set(doc.growPlanCode, byGrowPlan);
       notes.push(...led.notes.map((n) => `${doc.sowingId}: ${n}`));
       if (!led.massBalance.balanced) notes.push(...led.massBalance.failures.map((f) => `${doc.sowingId}: ${f}`));
     }
     const standardCostPerUnitCents = servingsProduced > 0 ? fgCents / servingsProduced : carriedStandardCents;
     carriedStandardCents = standardCostPerUnitCents;
-    for (const [code, v] of fgByCropPlan) if (v.units > 0) carriedByCropPlan.set(code, v.cents / v.units);
+    for (const [code, v] of fgByGrowPlan) if (v.units > 0) carriedByGrowPlan.set(code, v.cents / v.units);
 
     // ── Distributions: revenue and COGS at the standard per unit; distribution expense; commission.
     //    Subscriptions and Restaurants go to receivables; Retail and wholesale was paid at order.
@@ -480,9 +480,9 @@ export function postActuals(
     let paidAtOrderCents = 0;
     for (const d of p.distributions) {
       const revenueCents = Math.round(d.units * d.pricePerUnitCents);
-      // The crop plan distributed, at its own standard per unit where the distribution names it (audit A9).
-      const cropPlanStd = d.cropPlanCode ? carriedByCropPlan.get(d.cropPlanCode) : undefined;
-      const cogsCents = Math.round(d.units * (cropPlanStd ?? standardCostPerUnitCents));
+      // The grow plan distributed, at its own standard per unit where the distribution names it (audit A9).
+      const growPlanStd = d.growPlanCode ? carriedByGrowPlan.get(d.growPlanCode) : undefined;
+      const cogsCents = Math.round(d.units * (growPlanStd ?? standardCostPerUnitCents));
       const distributionCents = Math.round(d.units * distributionPerUnitCents);
       const commissionCents = d.phase === 3 ? Math.round(revenueCents * CHANNEL_COMMISSION_PHASE3) : 0;
       const paidAtOrder = PAID_AT_ORDER_CHANNELS.includes(d.phase);
@@ -494,7 +494,7 @@ export function postActuals(
         entryCents(`DLV-${short(d.id)}`, d.distributedOn, `Distribute ${d.units.toLocaleString()} units — ${inputs.phases.find((ph) => ph.phase === d.phase)?.market ?? `Channel ${d.phase}`}${d.pickupPointName ? ` — ${d.pickupPointName}` : ''}`, [
           { account: debitAccount, cents: revenueCents, memo: paidAtOrder ? 'Paid at the time of ordering — captured, not yet deposited' : 'Accounts receivable' },
           { account: d.phase === 2 ? ACC_RESTAURANT_SALES : ACC_FOOD_SALES, cents: -revenueCents, memo: `${d.units.toLocaleString()} units at $${(d.pricePerUnitCents / 100).toFixed(2)}` },
-          { account: ACC_COGS, cents: cogsCents, memo: `at $${((cropPlanStd ?? standardCostPerUnitCents) / 100).toFixed(4)} standard per unit${cropPlanStd !== undefined ? ` (${d.cropPlanCode})` : ''}` },
+          { account: ACC_COGS, cents: cogsCents, memo: `at $${((growPlanStd ?? standardCostPerUnitCents) / 100).toFixed(4)} standard per unit${growPlanStd !== undefined ? ` (${d.growPlanCode})` : ''}` },
           { account: ACC_FINISHED_GOODS, cents: -cogsCents, memo: 'Finished goods relieved' },
           { account: ACC_DISTRIBUTION, cents: distributionCents, memo: 'Distribution to pickup points — period cost' },
           { account: ACC_SEED, cents: -distributionCents, memo: 'Own fleet accrual' },

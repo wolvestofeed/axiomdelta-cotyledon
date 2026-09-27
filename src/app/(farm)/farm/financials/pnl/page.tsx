@@ -59,7 +59,7 @@ export default function PnlPage() {
           <div className="grid gap-4 mt-4 farm-autofit-22">
             <IncomeStatementCard period={period}>
               <p className="farm-kpi-sub mt-2">
-                Cost of goods sold carries material at standard including the normal-spoilage allowance, direct labor at the cropPlan&rsquo;s
+                Cost of goods sold carries material at standard including the normal-spoilage allowance, direct labor at the growPlan&rsquo;s
                 standard, packaging, and fixed manufacturing overhead at the normal-capacity rate. A variance in brackets is unfavourable.
                 Principal repaid on the loans is financing, not expense: see <Link className="farm-link" href="/farm/financials/cash-flow">Cash Flow</Link>.
               </p>

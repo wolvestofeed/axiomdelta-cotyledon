@@ -4,9 +4,9 @@
  * Ledger-free, database-free.
  *
  *   * A channel groups a subscriber with its revenue channel and limits which
- *     crop plans are offered. It never decides what the subscriber is served.
+ *     grow plans are offered. It never decides what the subscriber is served.
  *   * Every subscriber has its own flat plan: a saved subscription cycle copied onto the
- *     subscriber in one click, or a crop plan sequence programmed for that subscriber
+ *     subscriber in one click, or a grow plan sequence programmed for that subscriber
  *     alone. Both are `SubscriptionCycleDef` rows carrying `subscriberId`.
  *   * Subscription cycles are the shared list — `subscriberId` null. Editing one moves
  *     only the plans picked in the apply-to picker.
@@ -15,7 +15,7 @@
  */
 
 import type { SubscriptionCycleDef } from '@/data/subscription-cycles';
-import { cycleCropPlanOn } from '@/engine/orders';
+import { cycleGrowPlanOn } from '@/engine/orders';
 
 export const isSavedCycle = (c: Pick<SubscriptionCycleDef, 'subscriberId'>): boolean => c.subscriberId === null;
 export const savedCycles = (cycles: readonly SubscriptionCycleDef[]): SubscriptionCycleDef[] => cycles.filter(isSavedCycle);
@@ -38,12 +38,12 @@ export function flatPlanInForce(plans: readonly SubscriptionCycleDef[], serviceI
   return pick(plans.filter((c) => c.subscriberServiceId === null));
 }
 
-/** The crop plan a subscriber's service is served on a date, with the plan it came from. */
-export function flatPlanCropPlanOn(plans: readonly SubscriptionCycleDef[], serviceId: string | null, date: string): { cropPlanCode: string; plan: SubscriptionCycleDef } | null {
+/** The grow plan a subscriber's service is served on a date, with the plan it came from. */
+export function flatPlanGrowPlanOn(plans: readonly SubscriptionCycleDef[], serviceId: string | null, date: string): { growPlanCode: string; plan: SubscriptionCycleDef } | null {
   const plan = flatPlanInForce(plans, serviceId, date);
   if (!plan) return null;
-  const cropPlanCode = cycleCropPlanOn(plan, date);
-  return cropPlanCode ? { cropPlanCode, plan } : null;
+  const growPlanCode = cycleGrowPlanOn(plan, date);
+  return growPlanCode ? { growPlanCode, plan } : null;
 }
 
 /** A copy of a saved cycle as a subscriber's flat plan — the one-click assign. */
@@ -66,7 +66,7 @@ export const plansFromCycle = (cycles: readonly SubscriptionCycleDef[], cycleId:
 
 /**
  * Apply a saved cycle's sequence to the picked plans: length, weekdays and the
- * crop plan per day follow the cycle; each plan keeps its own subscriber, service,
+ * grow plan per day follow the cycle; each plan keeps its own subscriber, service,
  * start and end. Plans not picked are returned unchanged.
  */
 export function applyCycleToPlans(cycle: SubscriptionCycleDef, plans: readonly SubscriptionCycleDef[], pickedPlanIds: ReadonlySet<string>): SubscriptionCycleDef[] {

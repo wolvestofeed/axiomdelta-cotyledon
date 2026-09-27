@@ -20,9 +20,9 @@ const cap = resolveScenarioInputs({}, lib).capacityInputs;
 const byCode = (code: string) => lib.find((r) => r.code === code)!;
 const standardFor = (code: string): TimeStudyDoc => {
   const r = byCode(code);
-  return { id: `s-${code}`, cropPlanCode: code, approvedAt: null, approvedBy: null, source: 'seed', ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, cap).sowingSize)) };
+  return { id: `s-${code}`, growPlanCode: code, approvedAt: null, approvedBy: null, source: 'seed', ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, cap).sowingSize)) };
 };
-const route = (code: string, overlay?: Parameters<typeof deriveRoute>[0]['overlay']) => deriveRoute({ cropPlan: byCode(code), standard: standardFor(code), equipment: equipmentSeed, overlay });
+const route = (code: string, overlay?: Parameters<typeof deriveRoute>[0]['overlay']) => deriveRoute({ growPlan: byCode(code), standard: standardFor(code), equipment: equipmentSeed, overlay });
 const step = (r: ReturnType<typeof route>, id: string) => r.steps.find((s) => s.id === id)!;
 const aResource = routeResources(equipmentSeed)[0]!.key;
 
@@ -41,7 +41,7 @@ describe('farm routing — a route for every plan', () => {
   });
 
   it('a plan with no study has no route', () => {
-    const rt = deriveRoute({ cropPlan: byCode('BROC-01'), standard: null, equipment: equipmentSeed });
+    const rt = deriveRoute({ growPlan: byCode('BROC-01'), standard: null, equipment: equipmentSeed });
     expect(rt.steps).toEqual([]);
     expect(rt.findings.map((f) => f.kind)).toEqual(['no-study']);
   });
@@ -144,7 +144,7 @@ describe('farm scenario — the scheduler’s sections', () => {
     const routing = { [routeKey('BROC-01', 'sow#5')]: { after: ['prep#1'] } };
     const r = resolveScenarioInputs({ routing });
     expect(r.routing).toEqual(routing);
-    const rt = deriveRoute({ cropPlan: byCode('BROC-01'), standard: standardFor('BROC-01'), equipment: r.equipment, overlay: routeOverlayFor(r.routing, 'BROC-01') });
+    const rt = deriveRoute({ growPlan: byCode('BROC-01'), standard: standardFor('BROC-01'), equipment: r.equipment, overlay: routeOverlayFor(r.routing, 'BROC-01') });
     expect(step(rt, 'sow#5').after).toEqual(['prep#1']);
   });
 });

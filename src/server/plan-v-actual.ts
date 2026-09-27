@@ -34,10 +34,10 @@ import { NOT_RATED, ratingFor, supplierRatings } from '@/data/mark';
 
 export interface PvaSideMonth {
   measures: PvaMeasures;
-  breakdown: { cropPlan: PvaBreakdownRow[]; channel: PvaBreakdownRow[]; subscriber: PvaBreakdownRow[] };
-  cropPlansDistributedWithNoSowing: string[];
-  /** Crop plans served whose inputs have no food-factor mapping: their food emissions and mass read low. */
-  cropPlansWithUnmappedLines: string[];
+  breakdown: { growPlan: PvaBreakdownRow[]; channel: PvaBreakdownRow[]; subscriber: PvaBreakdownRow[] };
+  growPlansDistributedWithNoSowing: string[];
+  /** Grow plans served whose inputs have no food-factor mapping: their food emissions and mass read low. */
+  growPlansWithUnmappedLines: string[];
 }
 
 export interface PvaMonth {
@@ -158,8 +158,8 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     });
     const statement = input.statement;
     const pf = pfOf(inputs);
-    const basis = sustainabilityBasis({ kind: input.kind, bundle: input.docs, from, to, shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, cropPlans: inputs.cropPlans, unitFactorByChannel: pf });
-    const food = mixFoodFootprint({ basis, cropPlans: inputs.cropPlans, unitFactorByChannel: pf, selection: inputs.sustainability.inputBasis, options });
+    const basis = sustainabilityBasis({ kind: input.kind, bundle: input.docs, from, to, shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, growPlans: inputs.growPlans, unitFactorByChannel: pf });
+    const food = mixFoodFootprint({ basis, growPlans: inputs.growPlans, unitFactorByChannel: pf, selection: inputs.sustainability.inputBasis, options });
     const suppliers = leanSuppliersById(Object.values(inputs.sustainability.inputSupplier));
     const inventory = fullInventory(inputs, to, { basis, energy: input.energy, refrigerantService: input.refrigerantService }, suppliers, options);
     const supplierIds = [...new Set(month.receipts.map((r) => r.supplierId).filter((x): x is string => Boolean(x)))];
@@ -178,16 +178,16 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       energy: input.energy,
       waterGal: input.waterGal,
       shrinkAllowance: inputs.assumptions.yield.shrinkAllowance.value,
-      cropPlans: inputs.cropPlans,
+      growPlans: inputs.growPlans,
       subscribers: input.subscriberIds.map((id) => ({ id, name: nameOf.get(id) ?? id, rating: ratingOf.get(id) ?? NOT_RATED })),
       suppliers: supplierIds.map((id) => ({ id, rating: ratingFor(supplierRatings, id) })),
     };
-    const r = pvaBreakdown(sideInput, 'cropPlan');
+    const r = pvaBreakdown(sideInput, 'growPlan');
     return {
       measures: pvaMeasures(sideInput),
-      breakdown: { cropPlan: r.rows, channel: pvaBreakdown(sideInput, 'channel').rows, subscriber: pvaBreakdown(sideInput, 'subscriber').rows },
-      cropPlansDistributedWithNoSowing: r.cropPlansDistributedWithNoSowing,
-      cropPlansWithUnmappedLines: food.cropPlansWithUnmappedLines.map((x) => x.code),
+      breakdown: { growPlan: r.rows, channel: pvaBreakdown(sideInput, 'channel').rows, subscriber: pvaBreakdown(sideInput, 'subscriber').rows },
+      growPlansDistributedWithNoSowing: r.growPlansDistributedWithNoSowing,
+      growPlansWithUnmappedLines: food.growPlansWithUnmappedLines.map((x) => x.code),
     };
   };
 

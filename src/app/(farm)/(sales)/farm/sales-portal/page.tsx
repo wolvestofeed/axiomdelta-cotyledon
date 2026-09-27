@@ -97,14 +97,14 @@ async function SalesPortalPageInner() {
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Date</th><th>Subscriber</th><th>Channel</th><th>Crop plan</th><th className="num">Units</th><th>Status</th></tr></thead>
+              <thead><tr><th>Date</th><th>Subscriber</th><th>Channel</th><th>Grow plan</th><th className="num">Units</th><th>Status</th></tr></thead>
               <tbody>
                 {upcoming.map((o) => (
                   <tr key={o.id}>
                     <td>{o.orderDate}</td>
                     <td>{nameOf.get(o.subscriberId) ?? '—'}</td>
                     <td>{channelName(o.channel)}</td>
-                    <td>{o.cropPlanCode}</td>
+                    <td>{o.growPlanCode}</td>
                     <td className="num">{num(o.units)}</td>
                     <td className="capitalize!">{o.status}</td>
                   </tr>

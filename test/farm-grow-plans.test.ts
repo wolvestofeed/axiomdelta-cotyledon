@@ -26,8 +26,8 @@ import {
 import { growPlanSeed, GROW_PLAN_SEED_CODES } from '@/data/grow-plans-seed';
 import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor, costPlan, costContextFor } from '@/engine/grow-costing';
 import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
-import { cropPlanToRows, rowsToCropPlan, rowsToGrowPlan, nextCropPlanCode, SEED_GROW_PLANS } from '@/engine/crop-plan-library';
-import { costCropPlan, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
+import { growPlanToRows, rowsToLibraryPlan, rowsToGrowPlan, SEED_GROW_PLANS } from '@/engine/grow-plan-library';
+import { costPlanPerUnit, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
@@ -55,7 +55,7 @@ describe('codes', () => {
     expect(GROW_PLAN_CODE_RX.test('AMK-E-001')).toBe(false);
     expect(nextGrowPlanCode([], 'BROC')).toBe('BROC-01');
     expect(nextGrowPlanCode(['BROC-01', 'BROC-07', 'RAD-02'], 'BROC')).toBe('BROC-08');
-    expect(nextCropPlanCode(['MIX-01'], 'MIX')).toBe('MIX-02');
+    expect(nextGrowPlanCode(['MIX-01'], 'MIX')).toBe('MIX-02');
     const mixed: GrowPlanDef = { ...broccoli(), lines: [seedLineFor(VARIETY_BY_KEY['broccoli']!, 'flat-1020', 0.5), seedLineFor(VARIETY_BY_KEY['radish']!, 'flat-1020', 0.5)] };
     expect(codePrefixFor(mixed)).toBe('MIX');
     expect(codePrefixFor(broccoli())).toBe('BROC');
@@ -248,12 +248,12 @@ describe('capacity in trays and cycle days', () => {
 
 describe('the library: rows round-trip the plan', () => {
   const rows = (p: GrowPlanDef) => {
-    const { header, lines } = cropPlanToRows(p);
-    return rowsToCropPlan({ ...header, id: 'x', version: 1, effectiveFrom: '2026-09-25', updatedAt: '2026-09-25T00:00:00.000Z' }, lines);
+    const { header, lines } = growPlanToRows(p);
+    return rowsToLibraryPlan({ ...header, id: 'x', version: 1, effectiveFrom: '2026-09-25', updatedAt: '2026-09-25T00:00:00.000Z' }, lines);
   };
 
   it('a stored plan comes back as written, lines in position order even when stored out of order', () => {
-    const { header, lines } = cropPlanToRows(broccoli());
+    const { header, lines } = growPlanToRows(broccoli());
     expect(header.format).toBe('flat-1020');
     expect(header.allergensPresent).toBe('');
     expect(lines.map((l) => l.name)).toEqual(broccoli().lines.map((l) => lineLabel(l)));
@@ -272,26 +272,26 @@ describe('the library: rows round-trip the plan', () => {
   it('the engine costs a library plan on its grow costing: the same total, the mass on the seed line', () => {
     const lib = rows(broccoli());
     const g = costPlan(lib);
-    const c = costCropPlan(lib, 0);
+    const c = costPlanPerUnit(lib, 0);
     expect(c.totalInputCostPerUnit).toBeCloseTo(g.perTray.total, 9);
     expect(c.lines[0]!.costPerUnit).toBeCloseTo(g.perTray.seed, 9);
     expect(c.seedOzPerUnit).toBeCloseTo(40 / 28.349523125, 9);
     expect(c.packedOzPerUnit).toBeCloseTo(250 / 28.349523125, 9);
     expect(packedUnitOz(lib).totalOz).toBeCloseTo(250 / 28.349523125, 9);
     expect(canopyMassPerUnit(lib)).toBeCloseTo(250 / 453.59237, 9);
-    const shrunk = costCropPlan(lib, 0.03);
+    const shrunk = costPlanPerUnit(lib, 0.03);
     expect(shrunk.totalInputCostPerUnit).toBeCloseTo(g.perTray.total * 1.03, 9);
   });
 
   it('a scenario what-if price on the projected seed line reaches the grow costing', () => {
     const lib = rows(broccoli());
     const r = resolveScenarioInputs({ inputs: { [`BROC-01::${VARIETY_BY_KEY['broccoli']!.name}`]: { seedUnitCost: 30 } } }, [lib]);
-    const edited = r.cropPlans[0]!;
+    const edited = r.growPlans[0]!;
     expect(costContextFor(edited).seedPricePerLb).toEqual({ broccoli: 30 });
     expect(edited.prices?.[VARIETY_BY_KEY['broccoli']!.name]?.unitCost).toBe(30);
     expect(costPlan(edited).lines[0]!.costPerTray).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
-    expect(resolveScenarioInputs({}, [lib]).cropPlans[0]!.prices).toBeUndefined();
-    expect(costCropPlan(edited, 0).lines[0]!.costPerUnit).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
+    expect(resolveScenarioInputs({}, [lib]).growPlans[0]!.prices).toBeUndefined();
+    expect(costPlanPerUnit(edited, 0).lines[0]!.costPerUnit).toBeCloseTo((40 / GRAMS_PER_LB) * 30, 9);
   });
 
   it('the engine sizes a library plan in trays on the grow units, never off mass', () => {
@@ -307,7 +307,7 @@ describe('the library: rows round-trip the plan', () => {
     expect(s.sowingUnits).toBe(20);
     expect(s.sowingInputCost).toBeCloseTo(20 * costPlan(lib).perTray.total, 6);
     const u = costPerUnit(lib, R.assumptions, R.capacityInputs);
-    expect(u.food).toBeCloseTo(costCropPlan(lib, R.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 9);
+    expect(u.food).toBeCloseTo(costPlanPerUnit(lib, R.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 9);
     expect(u.total).toBeGreaterThanOrEqual(u.food);
   });
 
@@ -328,17 +328,17 @@ describe('the library: rows round-trip the plan', () => {
   it('every seed plan projects, costs, sizes, estimates a study and seeds a cycle without throwing', () => {
     const libs = growPlanSeed.map(rows);
     const R = resolveScenarioInputs({}, libs);
-    expect(R.cropPlans).toHaveLength(12);
-    expect(R.cropPlan.code).toBe('BROC-01');
+    expect(R.growPlans).toHaveLength(12);
+    expect(R.growPlan.code).toBe('BROC-01');
     for (const lib of libs) {
-      expect(costCropPlan(lib).totalInputCostPerUnit).toBeGreaterThan(0);
+      expect(costPlanPerUnit(lib).totalInputCostPerUnit).toBeGreaterThan(0);
       const cap = deriveCapacity(lib, R.capacityInputs);
       expect(Number.isFinite(cap.sowingSize)).toBe(true);
       expect(estimatedTimeStudy(lib, Math.max(1, cap.sowingSize)).lines.length).toBeGreaterThan(0);
     }
     const cycles = seedSubscriptionCycles(libs, '2026-09-28');
     expect(cycles.length).toBeGreaterThan(0);
-    expect(cycles.every((c) => c.days.every((d) => d.cropPlanCode === 'BROC-01'))).toBe(true);
+    expect(cycles.every((c) => c.days.every((d) => d.growPlanCode === 'BROC-01'))).toBe(true);
   });
 
   it('a plan is labelled by its format and its varieties', () => {

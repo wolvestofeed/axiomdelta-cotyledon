@@ -20,7 +20,7 @@ const line = (over: Partial<TimeStudyLine>): TimeStudyLine => ({ task: 'Sow', st
 
 const study = (over: Partial<TimeStudyDoc> = {}): TimeStudyDoc => ({
   id: 's1',
-  cropPlanCode: 'BROC-01',
+  growPlanCode: 'BROC-01',
   studiedOn: '2026-10-01',
   sowingSize: 10,
   cycleDays: 10,
@@ -137,9 +137,9 @@ describe('the costing reads the measured figures', () => {
     const library = growPlanSeed;
     const approved = study({ consumption: { water: [], supplements: [{ day: '2026-10-06', stage: 'light', nutrientKey: 'floragrow-npk', ml: 30, trays: 10 }] } });
     const resolved = resolveScenarioInputs({}, library, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, [approved]);
-    const broc = resolved.cropPlans.find((r) => r.code === 'BROC-01')!;
+    const broc = resolved.growPlans.find((r) => r.code === 'BROC-01')!;
     expect(broc.measured?.mlPerTray['floragrow-npk']).toBeCloseTo(3, 9);
-    const other = resolved.cropPlans.find((r) => r.code !== 'BROC-01')!;
+    const other = resolved.growPlans.find((r) => r.code !== 'BROC-01')!;
     expect(other.measured).toBeUndefined();
   });
 

@@ -36,7 +36,7 @@ export const NOT_RATED: MarkRating = { status: 'not_rated' };
 /** Ratings on file for suppliers, keyed by supplier operation id. Empty: none on file. */
 export const supplierRatings: Record<string, MarkRating> = {};
 
-/** Ratings on file for crop plan input supply, keyed by input name. Empty: none on file. */
+/** Ratings on file for grow plan input supply, keyed by input name. Empty: none on file. */
 export const inputRatings: Record<string, MarkRating> = {};
 
 export function ratingFor(table: Record<string, MarkRating>, key: string): MarkRating {

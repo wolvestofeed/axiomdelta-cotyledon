@@ -10,7 +10,7 @@ import {
   type OrderSource,
   type OrderStatus,
 } from '@/data/subscription-cycles';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { withSeedLock, insertSubscriptionCycles, dbSeedSubscriptionCycles, insertMissingFlatPlans } from '@/server/seed-writes';
 
 /**
@@ -30,7 +30,7 @@ const iso = (d: string | Date | null): string | null =>
 async function seedIfEmpty(): Promise<void> {
   const any = await db.select({ id: farmSubscriptionCycles.id }).from(farmSubscriptionCycles).limit(1);
   if (any[0]) return;
-  const library = await listCropPlans();
+  const library = await listGrowPlans();
   const today = new Date().toISOString().slice(0, 10);
   await withSeedLock(db, 'cycles', async (tx) => {
     const again = await tx.select({ id: farmSubscriptionCycles.id }).from(farmSubscriptionCycles).limit(1);
@@ -69,7 +69,7 @@ export async function listSubscriptionCycles(): Promise<SubscriptionCycleDef[]> 
     status: (r.status === 'inactive' ? 'inactive' : 'active') as SubscriptionCycleStatus,
     notes: r.notes,
     source: r.source === 'seed' ? 'seed' : 'user_built',
-    days: (byCycle.get(r.id) ?? []).map((d) => ({ day: d.day, cropPlanCode: d.cropPlanCode })),
+    days: (byCycle.get(r.id) ?? []).map((d) => ({ day: d.day, growPlanCode: d.growPlanCode })),
   }));
 }
 
@@ -86,7 +86,7 @@ export async function listOrders(): Promise<OrderDef[]> {
     subscriberPickupPointId: r.subscriberPickupPointId,
     subscriberServiceId: r.subscriberServiceId,
     channel: r.channel,
-    cropPlanCode: r.cropPlanCode,
+    growPlanCode: r.growPlanCode,
     units: r.units,
     status: ORDER_STATUSES.includes(r.status as OrderStatus) ? (r.status as OrderStatus) : 'forecast',
     pricePerUnitCents: r.pricePerUnitCents,

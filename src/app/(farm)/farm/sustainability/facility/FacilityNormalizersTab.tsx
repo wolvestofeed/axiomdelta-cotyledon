@@ -60,13 +60,13 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          {world.isPlan ? <>Units come from the forecast&rsquo;s subscribers, services and flat plans on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.</> : <>Units come from the distributions on record on <Link className="farm-link" href="/farm/orders">Orders</Link>.</>} Each unit is footprinted on its own cropPlan at its channel&rsquo;s unit.
+          {world.isPlan ? <>Units come from the forecast&rsquo;s subscribers, services and flat plans on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.</> : <>Units come from the distributions on record on <Link className="farm-link" href="/farm/orders">Orders</Link>.</>} Each unit is footprinted on its own growPlan at its channel&rsquo;s unit.
         </p>
       </Card>
 
       <Card title="Intensity of the annual food footprint" className="mt-4">
         <div className="grid gap-3 farm-autofit-11">
-          <Kpi value={`${(n.kgPerUnit ?? 0).toFixed(2)} kg`} label="CO2e per unit" sub="Across the crop plans distributed" />
+          <Kpi value={`${(n.kgPerUnit ?? 0).toFixed(2)} kg`} label="CO2e per unit" sub="Across the grow plans distributed" />
           <Kpi value={n.kgPerSqFt === undefined ? '—' : `${n.kgPerSqFt.toFixed(0)} kg`} label="CO2e per sq ft / yr" sub={resolved.facilitySqFt === null ? 'No facility size stated' : `Food only, on the stated ${num(resolved.facilitySqFt)} sq ft`} />
           <Kpi value={view.selected ? `${(nDerived.kgPerSqFt ?? 0).toFixed(0)} kg` : '—'} label="CO2e per sq ft / yr" sub={view.selected ? `Food only, on the derived ${num(Math.round(derivedGross))} sq ft` : 'No facility derived'} />
           <Kpi value={`${((n.kgPerOperatingDay ?? 0) / 1000).toFixed(2)} t`} label="CO2e per operating day" sub="Food only" />

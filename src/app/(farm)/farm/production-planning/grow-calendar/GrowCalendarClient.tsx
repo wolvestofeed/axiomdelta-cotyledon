@@ -40,7 +40,7 @@ export function GrowCalendarClient({
   cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
-  sowings: { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number }[];
+  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
   distributions: { id: string; distributedOn: string; units: number }[];
 }) {
   const { resolved } = useScenario();
@@ -74,24 +74,24 @@ export function GrowCalendarClient({
         from: today,
         to: horizonTo,
         channelPriceCents: Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-        cropPlanNames: Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])),
+        growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.cropPlans, cycles, orders, today, horizonTo, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, horizonTo, closures],
   );
-  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.cropPlans]);
+  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   // Recorded sowings still inside their cycle are on the shelves when the window opens.
   const openingSowings = useMemo(
     () =>
       sowings
         .filter((b) => b.goodUnits > 0)
-        .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+        .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
         .filter((b) => {
-          const r = resolved.cropPlans.find((x) => x.code === b.cropPlanCode);
+          const r = resolved.growPlans.find((x) => x.code === b.growPlanCode);
           return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off';
         }),
-    [sowings, resolved.cropPlans, today],
+    [sowings, resolved.growPlans, today],
   );
   const horizon = useMemo(
     () =>
@@ -100,10 +100,10 @@ export function GrowCalendarClient({
         from: today,
         to: horizonTo,
         book,
-        cropPlans: resolved.cropPlans,
+        growPlans: resolved.growPlans,
         capacityInputs: C,
         assumptions: A,
-        cropPlanAssumptions: resolved.cropPlanAssumptions,
+        growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
         openingSowings,
@@ -111,7 +111,7 @@ export function GrowCalendarClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, today, horizonTo, book, resolved.cropPlans, resolved.phases, resolved.cropPlanAssumptions, C, A, pfByChannel, openingLots, openingSowings],
+    [closures, today, horizonTo, book, resolved.growPlans, resolved.phases, resolved.growPlanAssumptions, C, A, pfByChannel, openingLots, openingSowings],
   );
   const cal = horizon.growCalendar;
   const dayByDate = useMemo(() => new Map((cal?.days ?? []).map((d) => [d.date, d])), [cal]);
@@ -141,9 +141,9 @@ export function GrowCalendarClient({
   const sowingsInMonth = inMonth.reduce((t, d) => t + d.sowingsStarted, 0);
   const noRoom = (cal?.sowings ?? []).filter((s) => !s.placed && monthOf(s.sowDate) === month);
   const selectedDay = selected ? dayByDate.get(selected) : undefined;
-  const sowingsShown = useMemo(() => (cal?.sowings ?? []).filter((s) => s.harvestTo >= `${month}-01` && s.sowDate <= last).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.cropPlanCode.localeCompare(b.cropPlanCode)), [cal, month, last]);
+  const sowingsShown = useMemo(() => (cal?.sowings ?? []).filter((s) => s.harvestTo >= `${month}-01` && s.sowDate <= last).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.growPlanCode.localeCompare(b.growPlanCode)), [cal, month, last]);
   const planOf = (s: CalendarSowing) => {
-    const r = resolved.cropPlans.find((x) => x.code === s.cropPlanCode);
+    const r = resolved.growPlans.find((x) => x.code === s.growPlanCode);
     return r ?? null;
   };
 
@@ -159,7 +159,7 @@ export function GrowCalendarClient({
 
       {!cal && (
         <Card title="No grow plan in the library">
-          <p className="farm-kpi-sub">The calendar places grow plans; the library holds none. Add one on <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>.</p>
+          <p className="farm-kpi-sub">The calendar places grow plans; the library holds none. Add one on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>.</p>
         </Card>
       )}
 
@@ -224,7 +224,7 @@ export function GrowCalendarClient({
                     const st = plan ? stageOn(plan, s.sowDate, today) : null;
                     return (
                       <tr key={s.id} className={s.placed ? '' : 'farm-c-accent'}>
-                        <td>{s.cropPlanCode} · {s.cropPlanName}</td>
+                        <td>{s.growPlanCode} · {s.growPlanName}</td>
                         <td className="whitespace-nowrap!">{s.sowDate}</td>
                         <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
                         <td className="whitespace-nowrap!">{s.distributionDate ?? 'recorded'}</td>

@@ -11,12 +11,12 @@
  * the same functions as the Actual ledger.
  *
  *   orders          the order book: every service on every date it runs, the
- *                   subscriber's flat plan crop plan (`orderBook`)
+ *                   subscriber's flat plan grow plan (`orderBook`)
  *   production      the rolling horizon — whole sowings net of stock, lines in
  *                   service on the date, shelf life (`planHorizon`)
  *   sowing records   each production day's runs at standard, labor at the
- *                   crop plan's own standard
- *   distributions      each order at the share its crop plan could be filled that day,
+ *                   grow plan's own standard
+ *   distributions      each order at the share its grow plan could be filled that day,
  *                   at the contracted price, else the channel price
  *   purchasing      each production day's inputs in whole cases, net of
  *                   what earlier case rounding left on hand; received on the
@@ -168,8 +168,8 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
 
   // ── Orders ────────────────────────────────────────────────────────────────
   const channelPriceCents = Object.fromEntries(inputs.phases.map((p) => [p.phase, cents(p.pricePerUnit)]));
-  const cropPlanNames = Object.fromEntries(inputs.cropPlans.map((r) => [r.code, r.name]));
-  const orders = orderBook({ pickupPoints: inputs.demand.pickupPoints, subscribers: inputs.subscribers, cycles: input.cycles, orders: [], from, to, channelPriceCents, cropPlanNames, closures: inputs.closures });
+  const growPlanNames = Object.fromEntries(inputs.growPlans.map((r) => [r.code, r.name]));
+  const orders = orderBook({ pickupPoints: inputs.demand.pickupPoints, subscribers: inputs.subscribers, cycles: input.cycles, orders: [], from, to, channelPriceCents, growPlanNames, closures: inputs.closures });
 
   // ── Production ────────────────────────────────────────────────────────────
   const assumptions = inputs.assumptions;
@@ -179,10 +179,10 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     from,
     to,
     book: orders,
-    cropPlans: inputs.cropPlans,
+    growPlans: inputs.growPlans,
     capacityInputs: inputs.capacityInputs,
     assumptions,
-    cropPlanAssumptions: inputs.cropPlanAssumptions,
+    growPlanAssumptions: inputs.growPlanAssumptions,
     unitFactorByChannel,
     openingLots: [],
     shelfLifeDays,
@@ -204,12 +204,12 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     let seq = 0;
     for (const run of day.runs) {
       if (run.produced <= 0) continue;
-      const cropPlan = inputs.cropPlans.find((r) => r.code === run.cropPlanCode);
-      if (!cropPlan) continue;
-      const a = assumptionsFor(inputs, cropPlan.code);
+      const growPlan = inputs.growPlans.find((r) => r.code === run.growPlanCode);
+      if (!growPlan) continue;
+      const a = assumptionsFor(inputs, growPlan.code);
       seq += 1;
       const labor = laborForDay(run.sowingsScheduled, run.produced, a);
-      const prefill = standardSowingRecordPrefill(day.productionDate, seq, run.produced, cropPlan, shrink, libraryLabel(cropPlan.code));
+      const prefill = standardSowingRecordPrefill(day.productionDate, seq, run.produced, growPlan, shrink, libraryLabel(growPlan.code));
       sowings.push({
         ...prefill,
         id: `PLAN-sowing-${day.productionDate}-${seq}`,
@@ -224,16 +224,16 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     }
   }
 
-  // ── Distributions at the share each crop plan was filled ────────────────────────
+  // ── Distributions at the share each grow plan was filled ────────────────────────
   const fillOn = new Map<string, Map<string, number>>();
   for (const d of horizon.distributionDays) {
-    fillOn.set(d.date, new Map(d.byCropPlan.map((r) => [r.cropPlanCode, r.orderedBase > 0 ? r.filledBase / r.orderedBase : 1])));
+    fillOn.set(d.date, new Map(d.byGrowPlan.map((r) => [r.growPlanCode, r.orderedBase > 0 ? r.filledBase / r.orderedBase : 1])));
   }
   const distributions: DistributionDoc[] = [];
   let unfilledUnits = 0;
   const seqByDate = new Map<string, number>();
   for (const o of orders) {
-    const share = fillOn.get(o.orderDate)?.get(o.cropPlanCode) ?? 0;
+    const share = fillOn.get(o.orderDate)?.get(o.growPlanCode) ?? 0;
     const units = o.units * share;
     unfilledUnits += o.units - units;
     if (units <= 0) continue;
@@ -252,8 +252,8 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       distributedBy: null,
       subscriberId: o.subscriberId,
       invoiceId: null,
-      cropPlanCode: o.cropPlanCode,
-      notes: `${o.subscriberName} · ${o.serviceName ?? 'service'} · ${o.cropPlanCode} · ${o.priceBasis === 'contract' ? 'contracted price' : 'channel price'}`,
+      growPlanCode: o.growPlanCode,
+      notes: `${o.subscriberName} · ${o.serviceName ?? 'service'} · ${o.growPlanCode} · ${o.priceBasis === 'contract' ? 'contracted price' : 'channel price'}`,
     });
   }
   if (unfilledUnits > 1e-6) gap('unfilled_units', 'Units ordered that no grow unit had room to sow in time: not distributed and not invoiced.', Math.round(unfilledUnits));
@@ -321,7 +321,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       }
     }
   }
-  if (noSupplierReceipts > 0) gap('no_supplier', 'Receipts for inputs with no supplier linked: received at the crop plan line price, billed on receipt and paid the same day.', noSupplierReceipts);
+  if (noSupplierReceipts > 0) gap('no_supplier', 'Receipts for inputs with no supplier linked: received at the grow plan line price, billed on receipt and paid the same day.', noSupplierReceipts);
   if (noTermsReceipts > 0) gap('no_supplier_terms', 'Receipts from a supplier with no payment terms on file: billed on receipt and paid the same day.', noTermsReceipts);
 
   // ── Invoices and collections ──────────────────────────────────────────────

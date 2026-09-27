@@ -37,11 +37,11 @@ BEGIN
     'supplier_items', 'supplier_item_prices', 'loans', 'fixed_cost_lines', 'leasehold_lines', 'training_docs',
     'training_assignments', 'purchase_orders', 'purchase_order_lines', 'sowing_records', 'receipts',
     'distributions', 'period_bills', 'fiscal_periods', 'calendar_closures', 'posting_log', 'standard_versions',
-    'crop_plans', 'crop_plan_lines', 'subscribers', 'subscriber_pickup_points', 'subscriber_services',
+    'grow_plans', 'grow_plan_lines', 'subscribers', 'subscriber_pickup_points', 'subscriber_services',
     'service_volume_picks', 'pickup_point_calendar_ranges', 'subscription_cycles', 'subscription_cycle_days',
     'orders', 'supplier_terms', 'invoices', 'subscriber_payments', 'supplier_bills', 'supplier_payments',
     'opening_balances', 'staff', 'time_punches', 'equipment', 'facility_layouts', 'packages',
-    'crop_plan_packages', 'payroll_periods', 'time_studies', 'time_study_lines', 'time_study_intervals',
+    'grow_plan_packages', 'payroll_periods', 'time_studies', 'time_study_lines', 'time_study_intervals',
     'sustainability_readings', 'refrigerant_service'
   ] LOOP
     -- Rows from before workspaces existed are the Phase 0 seed, which the app re-seeds per workspace on
@@ -79,8 +79,8 @@ ALTER TABLE farm.purchase_orders ADD CONSTRAINT purchase_orders_po_number_key UN
 ALTER TABLE farm.sowing_records DROP CONSTRAINT IF EXISTS sowing_records_sowing_id_key;
 ALTER TABLE farm.sowing_records ADD CONSTRAINT sowing_records_sowing_id_key UNIQUE (workspace_id, sowing_id);
 
-ALTER TABLE farm.crop_plans DROP CONSTRAINT IF EXISTS crop_plans_code_key;
-ALTER TABLE farm.crop_plans ADD CONSTRAINT crop_plans_code_key UNIQUE (workspace_id, code);
+ALTER TABLE farm.grow_plans DROP CONSTRAINT IF EXISTS grow_plans_code_key;
+ALTER TABLE farm.grow_plans ADD CONSTRAINT grow_plans_code_key UNIQUE (workspace_id, code);
 
 ALTER TABLE farm.invoices DROP CONSTRAINT IF EXISTS invoices_invoice_number_key;
 ALTER TABLE farm.invoices ADD CONSTRAINT invoices_invoice_number_key UNIQUE (workspace_id, invoice_number);
@@ -91,8 +91,8 @@ ALTER TABLE farm.equipment ADD CONSTRAINT equipment_key_key UNIQUE (workspace_id
 ALTER TABLE farm.payroll_periods DROP CONSTRAINT IF EXISTS payroll_periods_staffing_ref_key;
 ALTER TABLE farm.payroll_periods ADD CONSTRAINT payroll_periods_staffing_ref_key UNIQUE (workspace_id, staffing_ref);
 
-ALTER TABLE farm.standard_versions DROP CONSTRAINT IF EXISTS standard_versions_crop_plan_code_version_key;
-ALTER TABLE farm.standard_versions ADD CONSTRAINT standard_versions_crop_plan_code_version_key UNIQUE (workspace_id, crop_plan_code, version);
+ALTER TABLE farm.standard_versions DROP CONSTRAINT IF EXISTS standard_versions_grow_plan_code_version_key;
+ALTER TABLE farm.standard_versions ADD CONSTRAINT standard_versions_grow_plan_code_version_key UNIQUE (workspace_id, grow_plan_code, version);
 
 ALTER TABLE farm.facility_layouts DROP CONSTRAINT IF EXISTS farm_facility_layouts_version;
 ALTER TABLE farm.facility_layouts ADD CONSTRAINT farm_facility_layouts_version UNIQUE (workspace_id, scenario_key, build_phase, version);

@@ -9,7 +9,7 @@
  *
  * Two storage rules, and they are not interchangeable:
  *   - A link that changes a model input is a SCENARIO EDIT (the overlay in
- *     `scenario.ts`): input → supplier, pickup point → prospect, prospect → crop plan,
+ *     `scenario.ts`): input → supplier, pickup point → prospect, prospect → grow plan,
  *     activity input → document.
  *   - A link that is a fact of record is a DATABASE ROW (`farm.entity_links`):
  *     lot → supplier, lot → pickup point, journal entry → document, role → course.
@@ -26,7 +26,7 @@ export type EntityKind =
   | 'supplier'
   | 'prospect'
   | 'source'
-  | 'cropPlan'
+  | 'growPlan'
   | 'equipment'
   | 'pickupPoint'
   | 'course'
@@ -36,7 +36,7 @@ export const ENTITY_KINDS: EntityKind[] = [
   'supplier',
   'prospect',
   'source',
-  'cropPlan',
+  'growPlan',
   'equipment',
   'pickupPoint',
   'course',
@@ -47,7 +47,7 @@ export const ENTITY_KIND_LABEL: Record<EntityKind, string> = {
   supplier: 'Supplier',
   prospect: 'Prospect',
   source: 'Source',
-  cropPlan: 'Crop plan',
+  growPlan: 'Grow plan',
   equipment: 'Equipment',
   pickupPoint: 'Pickup point',
   course: 'Course',
@@ -59,7 +59,7 @@ export const ENTITY_KIND_PLURAL: Record<EntityKind, string> = {
   supplier: 'Suppliers',
   prospect: 'Prospects',
   source: 'Sources',
-  cropPlan: 'Crop plans',
+  growPlan: 'Grow plans',
   equipment: 'Equipment',
   pickupPoint: 'Pickup points',
   course: 'Courses',
@@ -136,7 +136,7 @@ export function groupRefsByKind(refs: string[]): Partial<Record<EntityKind, stri
 
 export interface SupplierReverseRow {
   supplierId: string;
-  /** crop-plan/purchase-order lines linked to this operation. */
+  /** grow-plan/purchase-order lines linked to this operation. */
   inputs: string[];
   /** Extended cost of those lines on the current purchase order. */
   orderedSpend: number;
@@ -313,7 +313,7 @@ export interface LinkSurface {
  */
 export const LINK_SURFACES: Record<EntityKind, LinkSurface[]> = {
   supplier: [
-    { label: 'Crop plans — set a line’s source', href: '/farm/crop-plans' },
+    { label: 'Grow plans — set a line’s source', href: '/farm/grow-plans' },
     { label: 'Procurement — on the order line', href: '/farm/procurement' },
     { label: 'Inputs (Scope 3)', href: '/farm/sustainability/inputs' },
     { label: 'Suppliers — link a line from the row', href: '/farm/suppliers' },
@@ -333,7 +333,7 @@ export const LINK_SURFACES: Record<EntityKind, LinkSurface[]> = {
     { label: 'Supplier LCA Data — the vendor’s document', href: '/farm/sustainability/supplier-lca' },
     { label: 'Training — a role’s certificate', href: '/farm/training' },
   ],
-  cropPlan: [{ label: 'Sales — crop plans quoted to a prospect', href: '/farm/prospects' }],
+  growPlan: [{ label: 'Sales — grow plans quoted to a prospect', href: '/farm/prospects' }],
   equipment: [
     { label: 'Equipment & Rebates — attributes and spec sheet', href: '/farm/sustainability/equipment' },
   ],

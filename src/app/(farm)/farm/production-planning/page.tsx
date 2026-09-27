@@ -47,7 +47,7 @@ async function ProductionPlanningPageInner() {
         closures={calendar.closures}
         cycles={cycles}
         orders={orders}
-        sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, cropPlanCode: b.cropPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits, closedBy: b.closedBy }))}
+        sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, growPlanCode: b.growPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits, closedBy: b.closedBy }))}
         distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units }))}
         receipts={actuals.receipts}
         rawSowings={actuals.sowings}

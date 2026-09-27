@@ -74,10 +74,10 @@ export const laborMinutesForSowing = (
   units: number,
 ): number => s.fixedMinutesPerSowing + s.variableMinutesPerUnit * units + ((s.dailyFixedMinutesPerDay ?? 0) + (s.dailyMinutesPerTrayDay ?? 0) * units) * (s.cycleDays ?? 0);
 
-/** A crop plan's studies, newest first; undated studies last. */
-export function studiesForCropPlan(studies: readonly TimeStudyDoc[], cropPlanCode: string): TimeStudyDoc[] {
+/** A grow plan's studies, newest first; undated studies last. */
+export function studiesForGrowPlan(studies: readonly TimeStudyDoc[], growPlanCode: string): TimeStudyDoc[] {
   return studies
-    .filter((s) => s.cropPlanCode === cropPlanCode)
+    .filter((s) => s.growPlanCode === growPlanCode)
     .map((s, i) => ({ s, i }))
     .sort((a, b) => {
       const x = a.s.studiedOn;
@@ -144,8 +144,8 @@ export function averageStudies(approved: readonly TimeStudyDoc[]): TimeStudyDoc 
     return { task: ref.task, station: ref.station, staff, elapsedMinutes: elapsed * perSowing, laborMinutes: labor * perSowing, scalesWith: ref.scalesWith, stream: ref.stream };
   });
   return {
-    id: `average:${latest.cropPlanCode}`,
-    cropPlanCode: latest.cropPlanCode,
+    id: `average:${latest.growPlanCode}`,
+    growPlanCode: latest.growPlanCode,
     studiedOn: approved.reduce<string | null>((m, s) => (s.studiedOn !== null && (m === null || s.studiedOn > m) ? s.studiedOn : m), null),
     sowingSize: size,
     cycleDays: trays > 0 ? trayDays / trays : 0,
@@ -163,7 +163,7 @@ export function averageStudies(approved: readonly TimeStudyDoc[]): TimeStudyDoc 
 }
 
 /**
- * The crop plan's labor standard: its approved studies averaged (the one study itself when one is
+ * The grow plan's labor standard: its approved studies averaged (the one study itself when one is
  * approved); with none approved, the estimated study stands in. A study not yet approved is not in
  * the standard; the approval is an admin's entry on the posting trail.
  */
@@ -174,7 +174,7 @@ export function laborStandard(studies: readonly TimeStudyDoc[]): TimeStudyDoc | 
   return studies.find((s) => s.basis === 'estimated') ?? null;
 }
 
-/** True while the crop plan runs on an estimate: no observed study has been approved. */
+/** True while the grow plan runs on an estimate: no observed study has been approved. */
 export const standardIsEstimated = (standard: TimeStudyDoc | null): boolean => standard !== null && standard.basis === 'estimated';
 
 /** True when a study is in the plan's standard: approved, or the standard itself. */
@@ -284,10 +284,10 @@ export interface TimeStudyLineRowShape {
 
 const isQuality = (v: string | null): v is QualityResult => v === 'pass' || v === 'hold' || v === 'fail';
 
-export function timeStudyFromRows(cropPlanCode: string, r: TimeStudyRowShape, lines: readonly TimeStudyLineRowShape[]): TimeStudyDoc {
+export function timeStudyFromRows(growPlanCode: string, r: TimeStudyRowShape, lines: readonly TimeStudyLineRowShape[]): TimeStudyDoc {
   return {
     id: r.id,
-    cropPlanCode,
+    growPlanCode,
     studiedOn: r.studiedOn === null ? null : typeof r.studiedOn === 'string' ? r.studiedOn : r.studiedOn.toISOString().slice(0, 10),
     sowingSize: r.sowingSize,
     cycleDays: r.cycleDays ?? 0,

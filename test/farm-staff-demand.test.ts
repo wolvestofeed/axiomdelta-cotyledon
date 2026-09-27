@@ -11,7 +11,7 @@ import { growPlanSeed } from '@/data/grow-plans-seed';
 import { distributedConsumption } from '@/engine/production-plan';
 
 const study = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
-  id: 's', cropPlanCode: 'AMK-E-001', studiedOn: '2027-01-04', sowingSize: 500, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: '2027-01-05T09:00:00.000Z', approvedBy: 'admin', source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
+  id: 's', growPlanCode: 'AMK-E-001', studiedOn: '2027-01-04', sowingSize: 500, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: '2027-01-05T09:00:00.000Z', approvedBy: 'admin', source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
   lines: [
     { task: 'Rack load', station: 'Blackout rack', staff: 2, elapsedMinutes: 25, laborMinutes: 50, scalesWith: 'fixed', stream: 'sowing' },
     { task: 'Prep', station: 'Prep bench', staff: 4, elapsedMinutes: 75, laborMinutes: 300, scalesWith: 'variable', stream: 'sowing' },
@@ -19,14 +19,14 @@ const study = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
   ...over,
 });
 
-const run = (cropPlanCode: string, sowingsScheduled: number, produced: number) => ({ cropPlanCode, cropPlanName: cropPlanCode, sowingsScheduled, produced });
-const ship = (cropPlanCode: string, units: number) => ({ cropPlanCode, cropPlanName: cropPlanCode, units });
+const run = (growPlanCode: string, sowingsScheduled: number, produced: number) => ({ growPlanCode, growPlanName: growPlanCode, sowingsScheduled, produced });
+const ship = (growPlanCode: string, units: number) => ({ growPlanCode, growPlanName: growPlanCode, units });
 
 describe('farm staff demand — the sowing stream, from the day’s sowings', () => {
   const studies = [
     study({ id: 'a' }),
-    study({ id: 'b', cropPlanCode: 'AMK-E-002', sowingSize: 400, lines: [{ task: 'Prep', station: 'Prep bench', staff: 3, elapsedMinutes: 60, laborMinutes: 180, scalesWith: 'variable', stream: 'sowing' }] }),
-    study({ id: 'c', cropPlanCode: 'AMK-E-003', approvedAt: null }),
+    study({ id: 'b', growPlanCode: 'AMK-E-002', sowingSize: 400, lines: [{ task: 'Prep', station: 'Prep bench', staff: 3, elapsedMinutes: 60, laborMinutes: 180, scalesWith: 'variable', stream: 'sowing' }] }),
+    study({ id: 'c', growPlanCode: 'AMK-E-003', approvedAt: null }),
   ];
 
   it('counts a fixed sowing line once per sowing and a per-unit sowing line per unit produced', () => {
@@ -40,25 +40,25 @@ describe('farm staff demand — the sowing stream, from the day’s sowings', ()
     expect(day.harvestStaffHours).toBe(0);
   });
 
-  it('sums the same task and station across crop plans, headcount the most any study names', () => {
+  it('sums the same task and station across grow plans, headcount the most any study names', () => {
     const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-01', runs: [run('AMK-E-001', 1, 550), run('AMK-E-002', 1, 400)] }] });
     const prep = d.days[0]!.lines.find((l) => l.task === 'Prep')!;
     expect(prep.hours).toBeCloseTo(((300 / 500) * 550 + (180 / 400) * 400) / 60, 10);
     expect(prep.headcount).toBe(4);
-    expect(prep.cropPlanCodes).toEqual(['AMK-E-001', 'AMK-E-002']);
+    expect(prep.growPlanCodes).toEqual(['AMK-E-001', 'AMK-E-002']);
   });
 
-  it('a crop plan with no adopted study is staffed from its estimated study, and listed as running on an estimate', () => {
+  it('a grow plan with no adopted study is staffed from its estimated study, and listed as running on an estimate', () => {
     const d = staffDemand({
       from: '2027-01-04',
       to: '2027-01-08',
       days: [{ productionDate: '2027-01-04', runs: [run('AMK-E-003', 1, 500)] }],
-      studies: [study({ id: 'e', cropPlanCode: 'AMK-E-003', approvedAt: null, studiedOn: null, observer: null, qualityResult: null, basis: 'estimated' })],
+      studies: [study({ id: 'e', growPlanCode: 'AMK-E-003', approvedAt: null, studiedOn: null, observer: null, qualityResult: null, basis: 'estimated' })],
     });
     expect(d.days[0]!.uncovered).toEqual([]);
     expect(d.days[0]!.staffHours).toBeCloseTo((50 + 300) / 60, 6);
-    expect(d.estimatedCropPlans).toEqual(['AMK-E-003']);
-    expect(d.uncoveredCropPlans).toEqual([]);
+    expect(d.estimatedGrowPlans).toEqual(['AMK-E-003']);
+    expect(d.uncoveredGrowPlans).toEqual([]);
   });
 
   it('an observed study that is not adopted does not stand in; the estimate does', () => {
@@ -67,19 +67,19 @@ describe('farm staff demand — the sowing stream, from the day’s sowings', ()
       to: '2027-01-08',
       days: [{ productionDate: '2027-01-04', runs: [run('AMK-E-003', 2, 1000)] }],
       studies: [
-        study({ id: 'o', cropPlanCode: 'AMK-E-003', approvedAt: null, lines: [{ task: 'Everything', station: null, staff: 1, elapsedMinutes: 999, laborMinutes: 999, scalesWith: 'fixed', stream: 'sowing' }] }),
-        study({ id: 'e', cropPlanCode: 'AMK-E-003', approvedAt: null, studiedOn: null, basis: 'estimated' }),
+        study({ id: 'o', growPlanCode: 'AMK-E-003', approvedAt: null, lines: [{ task: 'Everything', station: null, staff: 1, elapsedMinutes: 999, laborMinutes: 999, scalesWith: 'fixed', stream: 'sowing' }] }),
+        study({ id: 'e', growPlanCode: 'AMK-E-003', approvedAt: null, studiedOn: null, basis: 'estimated' }),
       ],
     });
     expect(d.days[0]!.staffHours).toBeCloseTo((2 * 50 + 300 * 2) / 60, 6);
-    expect(d.estimatedCropPlans).toEqual(['AMK-E-003']);
+    expect(d.estimatedGrowPlans).toEqual(['AMK-E-003']);
   });
 
-  it('a crop plan with sowings and no time study at all is listed and carries no demand', () => {
+  it('a grow plan with sowings and no time study at all is listed and carries no demand', () => {
     const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [{ productionDate: '2027-02-02', runs: [run('AMK-E-003', 1, 500)] }] });
     expect(d.days[0]!.lines).toEqual([]);
-    expect(d.days[0]!.uncovered).toEqual([{ cropPlanCode: 'AMK-E-003', cropPlanName: 'AMK-E-003', sowings: 1, units: 500, unitsShipped: 0 }]);
-    expect(d.uncoveredCropPlans).toEqual(['AMK-E-003']);
+    expect(d.days[0]!.uncovered).toEqual([{ growPlanCode: 'AMK-E-003', growPlanName: 'AMK-E-003', sowings: 1, units: 500, unitsShipped: 0 }]);
+    expect(d.uncoveredGrowPlans).toEqual(['AMK-E-003']);
     expect(d.staffHours).toBe(0);
   });
 
@@ -103,7 +103,7 @@ describe('farm staff demand — the harvest stream, per unit shipped that day', 
     { task: 'Unit and assemble', station: 'Assembly line', staff: 4, elapsedMinutes: 75, laborMinutes: 300, scalesWith: 'variable', stream: 'harvest' },
     { task: 'Load for transport', station: 'Dock', staff: 1, elapsedMinutes: loadMinutes, laborMinutes: loadMinutes, scalesWith: 'fixed', stream: 'harvest' },
   ];
-  const studies = [study({ id: 'a', lines: lines(10) }), study({ id: 'b', cropPlanCode: 'AMK-E-002', sowingSize: 400, lines: lines(12) })];
+  const studies = [study({ id: 'a', lines: lines(10) }), study({ id: 'b', growPlanCode: 'AMK-E-002', sowingSize: 400, lines: lines(12) })];
 
   it('harvest lines fall on the distribution day and scale with the units shipped, not produced', () => {
     const d = staffDemand({
@@ -126,7 +126,7 @@ describe('farm staff demand — the harvest stream, per unit shipped that day', 
     expect(d.distributionDays).toBe(1);
   });
 
-  it('a fixed harvest line counts once per distribution day — the largest any shipped crop plan names — not once per crop plan', () => {
+  it('a fixed harvest line counts once per distribution day — the largest any shipped grow plan names — not once per grow plan', () => {
     const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies, days: [], harvest: [{ date: '2027-02-02', shipments: [ship('AMK-E-001', 125), ship('AMK-E-002', 80)] }] });
     const day = d.days[0]!;
     expect(day.lines.find((l) => l.task === 'Load for transport')!.hours).toBeCloseTo(12 / 60, 10);
@@ -146,7 +146,7 @@ describe('farm staff demand — the harvest stream, per unit shipped that day', 
     const day = d.days[0]!;
     expect(day.sowingStaffHours + day.harvestStaffHours).toBeCloseTo(day.staffHours, 10);
     expect(day.sowingStaffHours).toBeCloseTo(50 / 60, 10);
-    expect(day.uncovered).toEqual([{ cropPlanCode: 'AMK-E-009', cropPlanName: 'AMK-E-009', sowings: 0, units: 0, unitsShipped: 40 }]);
+    expect(day.uncovered).toEqual([{ growPlanCode: 'AMK-E-009', growPlanName: 'AMK-E-009', sowings: 0, units: 0, unitsShipped: 40 }]);
     expect(day.unitsShipped).toBe(165);
   });
 
@@ -163,20 +163,20 @@ describe('farm — what distributed orders drew from finished goods', () => {
   it('takes the linked distribution’s units and date, in base units', () => {
     const c = distributedConsumption(
       [
-        { status: 'distributed', distributionId: 'd1', cropPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-01', units: 100 },
-        { status: 'confirmed', distributionId: null, cropPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-02', units: 100 },
+        { status: 'distributed', distributionId: 'd1', growPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-01', units: 100 },
+        { status: 'confirmed', distributionId: null, growPlanCode: 'AMK-E-001', channel: 1, orderDate: '2027-02-02', units: 100 },
       ],
       [{ id: 'd1', distributedOn: '2027-02-01', units: 96 }],
       [],
       { 1: 1.5 },
     );
-    expect(c).toEqual([{ cropPlanCode: 'AMK-E-001', date: '2027-02-01', baseUnits: 144 }]);
+    expect(c).toEqual([{ growPlanCode: 'AMK-E-001', date: '2027-02-01', baseUnits: 144 }]);
   });
 });
 
 describe('farm staff demand — the daily stream, from the trays on the shelves', () => {
   const daily = study({
-    id: 'd', cropPlanCode: 'BROC-01', sowingSize: 20, cycleDays: 4,
+    id: 'd', growPlanCode: 'BROC-01', sowingSize: 20, cycleDays: 4,
     lines: [
       { task: 'Sow trays', station: 'Prep station', staff: 1, elapsedMinutes: 60, laborMinutes: 60, scalesWith: 'variable', stream: 'sowing' },
       { task: 'Watering', station: 'Grow rack', staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'variable', stream: 'daily' },
@@ -197,7 +197,7 @@ describe('farm staff demand — the daily stream, from the trays on the shelves'
   });
 
   it('a per-tray daily line counts per tray on the shelf; a fixed daily line once a day', () => {
-    const shelf = [{ date: '2027-02-02', trays: [{ cropPlanCode: 'BROC-01', cropPlanName: 'BROC-01', trays: 40 }] }];
+    const shelf = [{ date: '2027-02-02', trays: [{ growPlanCode: 'BROC-01', growPlanName: 'BROC-01', trays: 40 }] }];
     const d = staffDemand({ from: '2027-02-01', to: '2027-02-14', studies: [daily], days: [], shelf });
     const day = d.days.find((x) => x.date === '2027-02-02')!;
     expect(day.traysOnShelf).toBe(40);

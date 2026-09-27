@@ -25,15 +25,15 @@ export default function WastePage() {
     });
   const A = resolved.assumptions;
 
-  // The period's shrink on production, crop plan by crop plan (Roadmap N6 slice 4).
-  const produced = useMemo(() => mixShrinkKg(basis, resolved.cropPlans, A.yield.shrinkAllowance.value), [basis, resolved.cropPlans, A.yield.shrinkAllowance.value]);
+  // The period's shrink on production, grow plan by grow plan (Roadmap N6 slice 4).
+  const produced = useMemo(() => mixShrinkKg(basis, resolved.growPlans, A.yield.shrinkAllowance.value), [basis, resolved.growPlans, A.yield.shrinkAllowance.value]);
   const seedMass = produced.units > 0 ? produced.seedKg / produced.units : 0;
   const shrink = { annualKg: produced.kg, annualShortTons: produced.kg / KG_PER_SHORT_TON };
   const net = useMemo(() => warmNet(shrink.annualShortTons, compostShare), [shrink.annualShortTons, compostShare]);
   const allLandfill = useMemo(() => warmNet(shrink.annualShortTons, 0), [shrink.annualShortTons]);
   const allCompost = useMemo(() => warmNet(shrink.annualShortTons, 1), [shrink.annualShortTons]);
   // Finished units that passed shelf life unshipped in the period.
-  const expired = useMemo(() => expiredMassKg(basis, resolved.cropPlans), [basis, resolved.cropPlans]);
+  const expired = useMemo(() => expiredMassKg(basis, resolved.growPlans), [basis, resolved.growPlans]);
 
   return (
     <>
@@ -113,10 +113,10 @@ export default function WastePage() {
       <Card title="Finished units past shelf life, unshipped" className="mt-4">
         <div className="grid gap-3 farm-autofit-11">
           <Kpi value={num(Math.round(expired.units))} label="Units past shelf life" sub={`${A.inventory.blackoutShelfLife.value}-day shelf life`} />
-          <Kpi value={`${expired.kg.toFixed(0)} kg`} label="Shipped mass" sub="Each crop plan's own shipped mass per unit" />
+          <Kpi value={`${expired.kg.toFixed(0)} kg`} label="Shipped mass" sub="Each grow plan's own shipped mass per unit" />
         </div>
-        {Object.keys(basis.expiredByCropPlan).length > 0 && (
-          <p className="farm-kpi-sub mt-2">{Object.entries(basis.expiredByCropPlan).map(([code, qty]) => `${code} ${num(Math.round(qty))}`).join(' · ')}</p>
+        {Object.keys(basis.expiredByGrowPlan).length > 0 && (
+          <p className="farm-kpi-sub mt-2">{Object.entries(basis.expiredByGrowPlan).map(([code, qty]) => `${code} ${num(Math.round(qty))}`).join(' · ')}</p>
         )}
         <p className="farm-kpi-sub mt-2">
           Whole-sowing production overshoots demand by design; the overshoot is inventory while inside shelf life and waste the moment it is not. Lots are drawn oldest-first by the distributions through the period&rsquo;s end; a lot counts here when its shelf life ends inside the period with units left. Lot by lot on <Link className="farm-link" href="/farm/inventory">Inventory</Link>.

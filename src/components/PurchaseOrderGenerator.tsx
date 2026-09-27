@@ -12,13 +12,13 @@ import { useScenario } from '@/state/scenario-store';
 
 /**
  * Turn a production requirement into purchase orders — one per supplier, grouped
- * by the supplier each crop plan line is linked to.
+ * by the supplier each grow plan line is linked to.
  *
  * The requirement comes from units PRODUCED, not the forecast: whole-sowing
  * production is what you actually have to buy for. The caller computes it —
- * a single crop plan run, or a production day merged across every crop plan on it
+ * a single grow plan run, or a production day merged across every grow plan on it
  * (Roadmap H4) — and passes the case-rounded lines. Each line is priced off the
- * supplier's own catalog where the item matches, and off the crop plan's reference
+ * supplier's own catalog where the item matches, and off the grow plan's reference
  * cost otherwise; the draft states which, because a price from a real sheet and a
  * placeholder are not the same claim.
  *
@@ -36,7 +36,7 @@ export function PurchaseOrderGenerator({
   summary,
 }: {
   canEdit: boolean;
-  /** Case-rounded requirement lines across the crop plans produced — the NET, after stock and open orders. */
+  /** Case-rounded requirement lines across the grow plans produced — the NET, after stock and open orders. */
   requirement: RequirementLine[];
   unitsProduced: number;
   /** The production date the order buys for; defaults to today. */
@@ -151,8 +151,8 @@ export function PurchaseOrderGenerator({
 
       {built.orders.length === 0 ? (
         <p className="farm-kpi-sub mt-0!">
-          No cropPlan line is linked to a supplier, so there is nothing to order against. Link lines on{' '}
-          <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link> or{' '}
+          No growPlan line is linked to a supplier, so there is nothing to order against. Link lines on{' '}
+          <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link> or{' '}
           <Link className="farm-link" href="/farm/procurement">Procurement</Link>.
         </p>
       ) : (
@@ -166,7 +166,7 @@ export function PurchaseOrderGenerator({
               <div className="farm-scroll-x">
                 <table className="farm-table">
                   <thead>
-                    <tr><th>Crop plan line</th><th>Item</th><th className="num">Qty</th><th className="num">Cases</th><th className="num">Unit price</th><th>Priced from</th><th className="num">Extended</th>{needBy && <th>Need by · lead · order by</th>}</tr>
+                    <tr><th>Grow plan line</th><th>Item</th><th className="num">Qty</th><th className="num">Cases</th><th className="num">Unit price</th><th>Priced from</th><th className="num">Extended</th>{needBy && <th>Need by · lead · order by</th>}</tr>
                   </thead>
                   <tbody>
                     {o.lines.map((l) => (
@@ -182,7 +182,7 @@ export function PurchaseOrderGenerator({
                         <td className="num">{money(l.unitPriceCents / 100, 4)}</td>
                         <td>
                           <span className={l.pricedFrom === 'catalog' ? 'farm-pill ok' : 'farm-pill'}>
-                            {l.pricedFrom === 'catalog' ? 'Their catalog' : 'Crop plan reference'}
+                            {l.pricedFrom === 'catalog' ? 'Their catalog' : 'Grow plan reference'}
                           </span>
                         </td>
                         <td className="num">{money(l.extendedCents / 100)}</td>

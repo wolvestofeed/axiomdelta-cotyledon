@@ -93,7 +93,7 @@ export function CompareClient({
         from: today,
         to,
         channelPriceCents: Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-        cropPlanNames: Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])),
+        growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       });
       const openingLots: ReturnType<typeof finishedGoodsOnHand>['lots'] = [];
@@ -102,10 +102,10 @@ export function CompareClient({
         from: today,
         to,
         book,
-        cropPlans: resolved.cropPlans,
+        growPlans: resolved.growPlans,
         capacityInputs: resolved.capacityInputs,
         assumptions: resolved.assumptions,
-        cropPlanAssumptions: resolved.cropPlanAssumptions,
+        growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pf,
         openingLots,
         shelfLifeDays: resolved.assumptions.inventory.blackoutShelfLife.value,
@@ -129,9 +129,9 @@ export function CompareClient({
       const production = s.horizon.productionDays.find((p) => p.productionDate === day);
       const distribution = s.horizon.distributionDays.find((d) => d.date === day);
       const inputs = scheduleInputsForDay({
-        productionRuns: production?.runs.map((r) => ({ cropPlanCode: r.cropPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
-        shipments: distribution?.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, filledBase: r.filledBase })) ?? [],
-        cropPlans: s.resolved.cropPlans,
+        productionRuns: production?.runs.map((r) => ({ growPlanCode: r.growPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
+        shipments: distribution?.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, filledBase: r.filledBase })) ?? [],
+        growPlans: s.resolved.growPlans,
         studies,
         equipment: s.resolved.equipment,
         routing: s.resolved.routing,
@@ -154,7 +154,7 @@ export function CompareClient({
   /** A side's daily stream on the day: the trays on the shelves on each plan's daily lines, as the Day Schedule reads it. */
   const dailyOn = useCallback(
     (s: ReturnType<typeof side>): DailyStreamOnDay => {
-      const shelf = traysOnShelf(s.horizon.productionDays, cycleDaysByCode(s.resolved.cropPlans), day, day)[0];
+      const shelf = traysOnShelf(s.horizon.productionDays, cycleDaysByCode(s.resolved.growPlans), day, day)[0];
       if (!shelf) return { traysOnShelf: 0, minutes: 0 };
       const d = staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0];
       return { traysOnShelf: shelf.trays.reduce((t, x) => t + x.trays, 0), minutes: (d?.dailyStaffHours ?? 0) * 60 };

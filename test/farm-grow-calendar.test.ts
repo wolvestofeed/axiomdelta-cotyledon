@@ -93,7 +93,7 @@ describe('the shelf ledger', () => {
 
 describe('the calendar from requirements', () => {
   it('back-plans each requirement, reads each day by stage and unit, and reports what has no room', () => {
-    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', cropPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-23', cropPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-22', cropPlanCode: 'RAD-01', baseUnits: 4 }], cropPlans: lib, units });
+    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', growPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-23', growPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-22', growPlanCode: 'RAD-01', baseUnits: 4 }], growPlans: lib, units });
     expect(cal.sowings.filter((s) => s.placed)).toHaveLength(1);
     expect(cal.findings.map((f) => f.kind).sort()).toEqual(['no-unit', 'over-capacity']);
     const sow = cal.sowings[0]!;
@@ -112,11 +112,11 @@ describe('the calendar from requirements', () => {
     expect(off.traysOnShelf).toBe(0);
     expect(cal.utilisation[0]!.used).toBe(20 * cycleDays(brocDays));
     expect(cal.utilisation[0]!.available).toBe(20 * 31);
-    expect(calendarFromSowings({ from: '2027-03-01', to: '2027-03-02', sowings: [], cropPlans: lib, units }).days).toHaveLength(2);
+    expect(calendarFromSowings({ from: '2027-03-01', to: '2027-03-02', sowings: [], growPlans: lib, units }).days).toHaveLength(2);
   });
 
   it('a code not in the library is reported, not placed', () => {
-    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', cropPlanCode: 'NONE-01', baseUnits: 100 }], cropPlans: lib, units });
+    const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', growPlanCode: 'NONE-01', baseUnits: 100 }], growPlans: lib, units });
     expect(cal.findings[0]!.kind).toBe('not-in-library');
     expect(cal.sowings).toHaveLength(0);
   });
@@ -125,12 +125,12 @@ describe('the calendar from requirements', () => {
 describe('the horizon on grow plans', () => {
   const order = (date: string, code: string, unitsOrdered: number): BookOrder => ({
     key: `${date}|p|s|${code}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriberServiceId: 's', serviceName: null, distributionPickupPointId: null,
-    channel: 1, cropPlanCode: code, cropPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'cycle', subscriptionCycleId: null, notes: null, editable: true,
+    channel: 1, growPlanCode: code, growPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'cycle', subscriptionCycleId: null, notes: null, editable: true,
   } as unknown as BookOrder);
 
   it('makes an order on its plan\'s sow date, places the sowing on the rack, and carries the calendar', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
     const sowDate = sowDateFor(broc, '2027-03-22');
     expect(h.productionDays.map((p) => p.productionDate)).toEqual([sowDate]);
     expect(h.distributionDays[0]!.productionDate).toBe(sowDate);
@@ -145,7 +145,7 @@ describe('the horizon on grow plans', () => {
 
   it('a second sowing inside the first\'s cycle has no room on one rack: the day does not fit and the calendar says so', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
     expect(h.productionDays).toHaveLength(2);
     expect(h.productionDays[0]!.fits).toBe(true);
     expect(h.productionDays[1]!.fits).toBe(false);
@@ -156,7 +156,7 @@ describe('the horizon on grow plans', () => {
 
   it('an opening sowing on the shelves blocks the rack until its cycle ends', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, openingSowings: [{ cropPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, openingSowings: [{ growPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
     expect(h.productionDays[0]!.fits).toBe(false);
     expect(h.growCalendar!.sowings.filter((s) => s.distributionDate === null && s.placed)).toHaveLength(1);
   });
@@ -164,8 +164,8 @@ describe('the horizon on grow plans', () => {
 
 describe('the route and the day for a grow plan', () => {
   it('a grow plan\'s route is its sow and harvest lines at the stations, the daily lines left to the calendar, and the day places it without a rack', () => {
-    const study = { id: 'e', cropPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed' as const, ...estimatedTimeStudy(lib[0]!, 20) };
-    const route = deriveRoute({ cropPlan: lib[0]!, standard: study, equipment: equipmentSeed });
+    const study = { id: 'e', growPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed' as const, ...estimatedTimeStudy(lib[0]!, 20) };
+    const route = deriveRoute({ growPlan: lib[0]!, standard: study, equipment: equipmentSeed });
     expect(route.findings).toEqual([]);
     expect(route.steps.every((s) => s.stream !== 'daily')).toBe(true);
     expect(route.steps.filter((s) => s.stream === 'sowing')).toHaveLength(5);
@@ -175,7 +175,7 @@ describe('the route and the day for a grow plan', () => {
     expect(sow.after).toEqual(route.steps.filter((s) => s.kind === 'prep').map((s) => s.id));
     expect(route.order).not.toBeNull();
     const R = resolveScenarioInputs({}, lib);
-    const inputs = scheduleInputsForDay({ productionRuns: [{ cropPlanCode: 'BROC-01', sowingsScheduled: 1, produced: 20 }], shipments: [{ cropPlanCode: 'BROC-01', filledBase: 20 }], cropPlans: R.cropPlans, studies: [study], equipment: R.equipment, routing: {} });
+    const inputs = scheduleInputsForDay({ productionRuns: [{ growPlanCode: 'BROC-01', sowingsScheduled: 1, produced: 20 }], shipments: [{ growPlanCode: 'BROC-01', filledBase: 20 }], growPlans: R.growPlans, studies: [study], equipment: R.equipment, routing: {} });
     const day = schedule({ date: '2027-03-08', sowings: inputs.sowings, dispatches: inputs.dispatches, resources: R.resources, crews: [], capacityInputs: R.capacityInputs, policy: R.schedulePolicy });
     expect(day.metrics.sowingsPlaced).toBe(1);
     expect(day.metrics.dispatchesPlaced).toBe(1);

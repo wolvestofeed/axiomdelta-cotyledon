@@ -31,8 +31,8 @@ export interface ClientSupplier {
   geoSource: 'zip' | 'county' | null;
 }
 
-/** One crop plan's input lines matched against suppliers, lean for the client. */
-export interface CropPlanMatchView {
+/** One grow plan's input lines matched against suppliers, lean for the client. */
+export interface GrowPlanMatchView {
   code: string;
   name: string;
   category: string;

@@ -91,7 +91,7 @@ export interface ScenarioStore {
   addCrew: (defaults: NewCrewDefaults) => string;
   /** Take a crew out of this scenario (a seeded crew is marked removed; an added one is dropped). */
   removeCrew: (id: string) => void;
-  /** The crop plan library as loaded (no scenario edits) — the standard the edits are measured against. */
+  /** The grow plan library as loaded (no scenario edits) — the standard the edits are measured against. */
   library: GrowPlanDef[];
   /** The Nutrients & Supplements library as loaded; the seed list when the server passed none. */
   nutrients: NutrientSolutionDef[];
@@ -120,8 +120,8 @@ export interface ScenarioStore {
   setSales: (prospectId: string, fn: (draft: SalesOverlay) => void) => void;
   /** Edit what the forecast is built from (Roadmap N4a); empty entries are pruned. */
   setForecast: (fn: (draft: ForecastOverlay) => void) => void;
-  /** Edit one route step of a crop plan (keyed by crop plan code and step id); undefined fields are cleared. */
-  setRouteStep: (cropPlanCode: string, stepId: string, fn: (draft: RouteStepOverlay) => void) => void;
+  /** Edit one route step of a grow plan (keyed by grow plan code and step id); undefined fields are cleared. */
+  setRouteStep: (growPlanCode: string, stepId: string, fn: (draft: RouteStepOverlay) => void) => void;
   /** Edit one unit's resource attributes (keyed by equipment key); undefined fields are cleared. */
   setResource: (key: string, fn: (draft: ResourceOverlay) => void) => void;
   /** Set one schedule policy field (undefined clears it back to the default). */
@@ -161,7 +161,7 @@ export function ScenarioProvider({
 }: {
   /** The open scenario's config the server loaded; omit for plan-data defaults. */
   initialConfig?: FarmScenarioConfig;
-  /** The crop plan library the server loaded; omit for the seed list. */
+  /** The grow plan library the server loaded; omit for the seed list. */
   library?: GrowPlanDef[];
   /** The subscriber library the server loaded; omit for the seed placeholders. */
   subscribers?: SubscriberDef[];
@@ -179,7 +179,7 @@ export function ScenarioProvider({
   fixedCostLines?: FixedCostLineDef[];
   /** The leasehold schedule the server loaded; omit for the seed. */
   leasehold?: LeaseholdLine[];
-  /** The time-study library the server loaded; omit and each crop plan's labor is its code estimate (Roadmap N3). */
+  /** The time-study library the server loaded; omit and each grow plan's labor is its code estimate (Roadmap N3). */
   timeStudies?: TimeStudyDoc[];
   /** The Nutrients & Supplements library the server loaded; omit for the seed list. */
   nutrients?: NutrientSolutionDef[];
@@ -423,7 +423,7 @@ export function ScenarioProvider({
         const all = (d.sales ??= {});
         const row = (all[prospectId] ??= {});
         fn(row);
-        if (row.cropPlanCodes && row.cropPlanCodes.length === 0) delete row.cropPlanCodes;
+        if (row.growPlanCodes && row.growPlanCodes.length === 0) delete row.growPlanCodes;
         if (Object.keys(row).length === 0) delete all[prospectId];
         if (Object.keys(all).length === 0) delete d.sales;
       });
@@ -455,10 +455,10 @@ export function ScenarioProvider({
   );
 
   const setRouteStep = useCallback<ScenarioStore['setRouteStep']>(
-    (cropPlanCode, stepId, fn) => {
+    (growPlanCode, stepId, fn) => {
       mutate((d) => {
         const all = (d.routing ??= {});
-        const k = routeKey(cropPlanCode, stepId);
+        const k = routeKey(growPlanCode, stepId);
         const row = (all[k] ??= {});
         fn(row);
         for (const f of Object.keys(row) as (keyof RouteStepOverlay)[]) if (row[f] === undefined) delete row[f];

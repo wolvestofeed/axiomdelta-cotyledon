@@ -17,7 +17,7 @@ import { GRAMS_PER_OZ } from '@/data/tray-formats';
 import type { GrowLineCost } from '@/engine/grow-costing';
 import { equipmentSeed } from '@/data/capex';
 import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
-type CropPlan = GrowPlanDef;
+type GrowPlan = GrowPlanDef;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
  * their shelves and fixtures (`grow-capacity.ts`), read from the equipment library
@@ -47,7 +47,7 @@ export interface CostedLine extends GrowLineCost {
   packedOz: number;
 }
 
-export interface CropPlanCosting {
+export interface UnitCosting {
   lines: CostedLine[];
   /** Line costs and the consumables, per unit, before shrink. */
   inputCostPerUnit: number;
@@ -69,11 +69,11 @@ const OZ_PER_LB = 16;
  * as harvested on a live tray), the other lines and the consumables carry cost and no mass; the
  * shrink allowance on top.
  */
-export function costCropPlan(
+export function costPlanPerUnit(
   plan: GrowPlanDef,
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
-): CropPlanCosting {
+): UnitCosting {
   const g = costPlan(plan);
   const density = g.format.kind === 'sprout' ? 1 : g.format.densityFactor.value;
   const lines: CostedLine[] = g.lines.map((l) => {
@@ -201,7 +201,7 @@ export function absorbOverhead(
 
 /** Canopy mass per unit, pounds: the harvest weight of one tray at the unit factor. The sowing is sized off the grow unit, never off this. */
 export function canopyMassPerUnit(plan: GrowPlanDef, unitFactor = 1): number {
-  return costCropPlan(plan, 0, unitFactor).harvestedOzPerUnit / OZ_PER_LB;
+  return costPlanPerUnit(plan, 0, unitFactor).harvestedOzPerUnit / OZ_PER_LB;
 }
 
 /** Packed unit weight, derived from the harvest weight: a live tray packs what it harvests. */
@@ -213,7 +213,7 @@ export interface PackedUnit {
 }
 
 export function packedUnitOz(plan: GrowPlanDef, unitFactor = 1): PackedUnit {
-  const c = costCropPlan(plan, 0, unitFactor);
+  const c = costPlanPerUnit(plan, 0, unitFactor);
   return { totalOz: c.packedOzPerUnit, seedOz: c.seedOzPerUnit };
 }
 
@@ -231,24 +231,24 @@ export interface CapacityProfile {
 }
 
 export function deriveCapacity(
-  cropPlan: CropPlan,
+  growPlan: GrowPlan,
   cap: CapacityInputs = defaultCapacityInputs,
   unitFactor = 1,
 ): CapacityProfile {
-  return deriveGrowProfile(cropPlan, cap, unitFactor);
+  return deriveGrowProfile(growPlan, cap, unitFactor);
 }
 
 /**
- * A grow plan's capacity in the crop plan profile's shape (outline §5 rule 1): the sowing is the
+ * A grow plan's capacity in the grow plan profile's shape (outline §5 rule 1): the sowing is the
  * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. Each grow
  * unit that takes the plan can start one sowing a day, so the sowings a day are the units. The
  * sustained ceiling, trays across the units over the cycle, is on `grow`; the horizon's shelf
  * ledger holds each sowing for its cycle.
  */
-function deriveGrowProfile(cropPlan: CropPlan, cap: CapacityInputs, unitFactor: number): CapacityProfile {
-  const grow = deriveGrowCapacity(cropPlan, cap.growUnits ?? defaultGrowUnits);
+function deriveGrowProfile(growPlan: GrowPlan, cap: CapacityInputs, unitFactor: number): CapacityProfile {
+  const grow = deriveGrowCapacity(growPlan, cap.growUnits ?? defaultGrowUnits);
   return {
-    canopyMassPerUnit: canopyMassPerUnit(cropPlan, unitFactor),
+    canopyMassPerUnit: canopyMassPerUnit(growPlan, unitFactor),
     unitsPerCycleRaw: grow.sowingTrays,
     sowingSize: grow.sowingTrays,
     cyclesPerDay: grow.unitCount,
@@ -360,7 +360,7 @@ export { buildPurchaseOrder, purchaseOrderForRun, purchaseLines, type PurchaseOr
  * (`fixedCostPerUnitByMonth`). The inventory absorption rate the ledger values
  * finished goods at (ASC 330) is a separate figure and is not this one either.
  *
- * Direct labor is the crop plan's time study at its derived sowing size: the fixed
+ * Direct labor is the grow plan's time study at its derived sowing size: the fixed
  * minutes spread over the sowing plus the variable minutes per unit, at the
  * loaded labor rate (a placeholder until Staffing's loaded rates arrive). The
  * flat wage ÷ units-per-labor-hour rate was an invented figure and is deleted
@@ -374,13 +374,13 @@ export interface CostPerUnit {
 }
 
 export function costPerUnit(
-  cropPlan: CropPlan,
+  growPlan: GrowPlan,
   a: typeof assumptions = assumptions,
   cap: CapacityInputs = defaultCapacityInputs,
   laborMinutesPerUnit?: number,
 ): CostPerUnit {
-  const food = costCropPlan(cropPlan, a.yield.shrinkAllowance.value).totalInputCostPerUnit;
-  const sowingSize = deriveCapacity(cropPlan, cap).sowingSize;
+  const food = costPlanPerUnit(growPlan, a.yield.shrinkAllowance.value).totalInputCostPerUnit;
+  const sowingSize = deriveCapacity(growPlan, cap).sowingSize;
   const minutesPerUnit =
     laborMinutesPerUnit ??
     (sowingSize > 0 ? a.laborSplit.fixedMinutesPerSowing.value / sowingSize : 0) +
@@ -427,7 +427,7 @@ export function sowingCosting(
   shrinkAllowance: number = assumptions.yield.shrinkAllowance.value,
   unitFactor = 1,
 ): SowingCosting {
-  const c = costCropPlan(plan, shrinkAllowance, unitFactor);
+  const c = costPlanPerUnit(plan, shrinkAllowance, unitFactor);
   const sowing = deriveCapacity(plan, cap, unitFactor).sowingSize;
   const lb = (ozPerUnit: number) => (ozPerUnit * sowing) / OZ_PER_LB;
   const sowingInputCost = c.inputCostPerUnit * sowing;
@@ -451,12 +451,12 @@ export interface CostToServe extends CostPerUnit {
 }
 
 export function costToServe(
-  cropPlan: CropPlan,
+  growPlan: GrowPlan,
   a: typeof assumptions = assumptions,
   cap: CapacityInputs = defaultCapacityInputs,
   laborMinutesPerUnit?: number,
 ): CostToServe {
-  const unit = costPerUnit(cropPlan, a, cap, laborMinutesPerUnit);
+  const unit = costPerUnit(growPlan, a, cap, laborMinutesPerUnit);
   const distribution = a.perUnit.distribution.value;
   return { ...unit, distribution, costToServe: unit.total + distribution };
 }

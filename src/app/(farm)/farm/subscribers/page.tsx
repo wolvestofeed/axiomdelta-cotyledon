@@ -44,7 +44,7 @@ async function SubscribersPageInner() {
             <li>Each subscriber has its own flat plan.</li>
             <li>Demand on every other page is these figures run across the calendar. Nothing is projected on its own.</li>
             <li>The subscriber record drives real operations. The open forecast keeps its own edits and never changes the record.</li>
-            <li>An order&rsquo;s crop plans and packages come from the libraries for the subscriber&rsquo;s channel; its price is the subscriber&rsquo;s contracted price, or the channel&rsquo;s.</li>
+            <li>An order&rsquo;s grow plans and packages come from the libraries for the subscriber&rsquo;s channel; its price is the subscriber&rsquo;s contracted price, or the channel&rsquo;s.</li>
           </ul>
         }
         status="live"

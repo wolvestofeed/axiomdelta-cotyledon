@@ -258,7 +258,7 @@ function CatalogPanel({
       <>
         <p className="farm-kpi-sub mt-0!">
           No catalog on file. Import the price sheet this operation sends — a pasted spreadsheet or a
-          CSV. Until then, a purchase order for them prices off the cropPlan&apos;s own reference cost
+          CSV. Until then, a purchase order for them prices off the growPlan&apos;s own reference cost
           rather than their actual price.
         </p>
         {canEdit ? <CatalogImport supplierId={supplier.id} sources={sources} hasExisting={false} /> : null}
@@ -550,7 +550,7 @@ function OrdersPanel({ orders, canEdit }: { orders: PoView[]; canEdit: boolean }
               <div className="farm-card-title">{o.poNumber} — {o.supplierName}</div>
               <div className="farm-scroll-x">
                 <table className="farm-table">
-                  <thead><tr><th>Crop plan line</th><th>Item</th><th className="num">Qty</th><th className="num">Cases</th><th className="num">Unit price</th><th className="num">Extended</th></tr></thead>
+                  <thead><tr><th>Grow plan line</th><th>Item</th><th className="num">Qty</th><th className="num">Cases</th><th className="num">Unit price</th><th className="num">Extended</th></tr></thead>
                   <tbody>
                     {o.lines.map((l) => (
                       <tr key={l.id}>
@@ -594,11 +594,11 @@ function ModelPanel({
   return (
     <div className="flex flex-wrap gap-6">
       <div className="flex-[1_1_20rem] min-w-64">
-        <div className="farm-card-title">Crop plan lines sourced here</div>
+        <div className="farm-card-title">Grow plan lines sourced here</div>
         {sourcedLines.length === 0 ? (
           <p className="farm-kpi-sub mt-0!">
             No line of the open forecast names this operation. A line is linked on{' '}
-            <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>, and the link drives the
+            <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>, and the link drives the
             certification and rating shown on Procurement and the inbound ton-miles on Logistics.
           </p>
         ) : (

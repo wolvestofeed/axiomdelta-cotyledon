@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createCropPlan, updateCropPlan } from '@/server/crop-plan-actions';
-import { nextCropPlanCode } from '@/engine/crop-plan-library';
+import { createGrowPlan, updateGrowPlan } from '@/server/grow-plan-actions';
+import { nextGrowPlanCode } from '@/data/grow-plan';
 import { costGrowPlan, defaultGrowCostContext, fixtureFor } from '@/engine/grow-costing';
-import { CROP_PLAN_STATUS_LABELS, type CropPlanStatus } from '@/data/plan-data';
+import { GROW_PLAN_STATUS_LABELS, type GrowPlanStatus } from '@/data/plan-data';
 import { codePrefixFor, growPlanProblems, seedLineFor, type GrowPlanDef, type GrowPlanLine, type SeedLine } from '@/data/grow-plan';
 import { VARIETIES, VARIETY_BY_KEY } from '@/data/varieties';
 import { GROWING_MEDIA, LIGHT_REGIMES, type LightRegimeKey, type MediumKey, type NutrientKey } from '@/data/inputs-catalog';
@@ -36,7 +36,7 @@ type DraftLine = DraftSeed | DraftMedium | DraftNutrient | DraftLight;
 interface Draft {
   code: string;
   name: string;
-  status: CropPlanStatus;
+  status: GrowPlanStatus;
   channels: number[];
   format: TrayFormatKey;
   note: string;
@@ -89,10 +89,10 @@ function toPlan(d: Draft): GrowPlanDef {
 
 const numOrNull = (s: string): number | null => (s.trim() === '' ? null : Number(s));
 
-export function CropPlanEditor({
+export function GrowPlanEditor({
   mode,
   plan,
-  cropPlanId,
+  growPlanId,
   library,
   channels,
   onDone,
@@ -100,7 +100,7 @@ export function CropPlanEditor({
   mode: 'create' | 'edit';
   /** For edit: the library plan. For create: the plan to duplicate, every field copied under the next code, the name marked as a copy. */
   plan?: GrowPlanDef;
-  cropPlanId?: string;
+  growPlanId?: string;
   library: { code: string }[];
   channels: { phase: number; market: string }[];
   onDone: () => void;
@@ -119,7 +119,7 @@ export function CropPlanEditor({
       : { code: '', name: first.name, status: 'developing', channels: [1], format: 'flat-1020', note: '', allergensPresent: '', allergenFreeClaims: '', lines: [toDraftLine(seedLineFor(first, 'flat-1020')), { kind: 'medium', mediumKey: first.media.defaultMedium, qtyPerTray: null }, { kind: 'nutrient', nutrientKey: 'floragrow-npk', mlPerGal: null, startsAt: 'light' }, { kind: 'light', regimeKey: first.light.defaultRegime, ppfd: null, startsAt: 'light' }] };
     if (mode === 'edit') return base;
     const prefix = codePrefixFor(toPlan(base));
-    return { ...base, code: nextCropPlanCode(codes, prefix), name: plan ? `${plan.name} (copy)` : base.name, status: 'developing' };
+    return { ...base, code: nextGrowPlanCode(codes, prefix), name: plan ? `${plan.name} (copy)` : base.name, status: 'developing' };
   }, [mode, plan, codes]);
   const [d, setD] = useState<Draft>(initial);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
@@ -139,7 +139,7 @@ export function CropPlanEditor({
   const [codeTyped, setCodeTyped] = useState(mode === 'edit');
   function recode(next: Draft): Draft {
     if (codeTyped) return next;
-    return { ...next, code: nextCropPlanCode(codes, codePrefixFor(toPlan(next))) };
+    return { ...next, code: nextGrowPlanCode(codes, codePrefixFor(toPlan(next))) };
   }
 
   function setVariety(i: number, key: string) {
@@ -166,8 +166,8 @@ export function CropPlanEditor({
   function save() {
     setErr(null);
     start(async () => {
-      const payload = { ...d, ...(mode === 'edit' && cropPlanId ? { id: cropPlanId } : {}) };
-      const res = mode === 'edit' ? await updateCropPlan(payload) : await createCropPlan(payload);
+      const payload = { ...d, ...(mode === 'edit' && growPlanId ? { id: growPlanId } : {}) };
+      const res = mode === 'edit' ? await updateGrowPlan(payload) : await createGrowPlan(payload);
       if (!res.ok) {
         setErr(res.error);
         return;
@@ -186,8 +186,8 @@ export function CropPlanEditor({
         <label className="farm-kpi-sub">Code<br /><input className="farm-input w-32!" value={d.code} onChange={(e) => { setCodeTyped(true); set('code', e.target.value.toUpperCase()); }} /></label>
         <label className="farm-kpi-sub flex-1! min-w-56!">Name<br /><input className="farm-input w-full!" value={d.name} onChange={(e) => set('name', e.target.value)} /></label>
         <label className="farm-kpi-sub">Status<br />
-          <select className="farm-select" value={d.status} onChange={(e) => set('status', e.target.value as CropPlanStatus)}>
-            {(Object.keys(CROP_PLAN_STATUS_LABELS) as CropPlanStatus[]).map((s) => <option key={s} value={s}>{CROP_PLAN_STATUS_LABELS[s]}</option>)}
+          <select className="farm-select" value={d.status} onChange={(e) => set('status', e.target.value as GrowPlanStatus)}>
+            {(Object.keys(GROW_PLAN_STATUS_LABELS) as GrowPlanStatus[]).map((s) => <option key={s} value={s}>{GROW_PLAN_STATUS_LABELS[s]}</option>)}
           </select>
         </label>
         <label className="farm-kpi-sub">Format<br />

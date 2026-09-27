@@ -44,17 +44,17 @@ export interface SupplierItemPrice {
   packSize: string | null;
 }
 
-/** A package a crop plan picks (`farm.crop_plan_packages`). */
-export interface CropPlanPackagePick {
+/** A package a grow plan picks (`farm.grow_plan_packages`). */
+export interface GrowPlanPackagePick {
   id: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   packageId: string;
   qtyPerUnit: number;
 }
 
 export interface PackagingLibrary {
   packages: PackageDef[];
-  picks: CropPlanPackagePick[];
+  picks: GrowPlanPackagePick[];
   supplierItems: SupplierItemPrice[];
 }
 

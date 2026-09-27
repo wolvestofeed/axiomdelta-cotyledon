@@ -1,10 +1,10 @@
 import 'server-only';
 import { asc, eq } from 'drizzle-orm';
-import { farmCropPlans, farmCropPlanLines } from '@/db';
+import { farmGrowPlans, farmGrowPlanLines } from '@/db';
 import { db } from '@/lib/db';
-import { rowsToCropPlan, type LibraryCropPlan } from '@/engine/crop-plan-library';
-import { withSeedLock, seedMissingCropPlans } from '@/server/seed-writes';
-import { listCropPlansWith } from '@/server/crop-plan-rows';
+import { rowsToLibraryPlan, type LibraryGrowPlan } from '@/engine/grow-plan-library';
+import { withSeedLock, seedMissingGrowPlans } from '@/server/seed-writes';
+import { listGrowPlansWith } from '@/server/grow-plan-rows';
 import { listNutrientsWith } from '@/server/nutrient-rows';
 
 /**
@@ -17,26 +17,26 @@ import { listNutrientsWith } from '@/server/nutrient-rows';
  */
 
 async function seedMissing(): Promise<void> {
-  await withSeedLock(db, 'cropPlans', async (tx) => {
-    await seedMissingCropPlans(tx);
+  await withSeedLock(db, 'growPlans', async (tx) => {
+    await seedMissingGrowPlans(tx);
   });
 }
 
 /** Every library plan, oldest first, seeding the library on first read. */
-export async function listCropPlans(): Promise<LibraryCropPlan[]> {
+export async function listGrowPlans(): Promise<LibraryGrowPlan[]> {
   await seedMissing();
-  return listCropPlansWith(db);
+  return listGrowPlansWith(db);
 }
 
-export async function getCropPlanByCode(code: string): Promise<LibraryCropPlan | null> {
+export async function getGrowPlanByCode(code: string): Promise<LibraryGrowPlan | null> {
   await seedMissing();
-  const h = await db.select().from(farmCropPlans).where(eq(farmCropPlans.code, code)).limit(1);
+  const h = await db.select().from(farmGrowPlans).where(eq(farmGrowPlans.code, code)).limit(1);
   if (!h[0]) return null;
   const lines = await db
     .select()
-    .from(farmCropPlanLines)
-    .where(eq(farmCropPlanLines.cropPlanId, h[0].id))
-    .orderBy(asc(farmCropPlanLines.position));
+    .from(farmGrowPlanLines)
+    .where(eq(farmGrowPlanLines.growPlanId, h[0].id))
+    .orderBy(asc(farmGrowPlanLines.position));
   const nutrients = Object.fromEntries((await listNutrientsWith(db)).map((n) => [n.key, n]));
-  return rowsToCropPlan(h[0], lines, nutrients);
+  return rowsToLibraryPlan(h[0], lines, nutrients);
 }

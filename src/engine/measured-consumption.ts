@@ -13,7 +13,7 @@ import type { MeasuredConsumption, TimeStudyDoc } from '@/data/time-studies';
 import { WATER_PER_WATERING_OZ, type WateringMethod } from '@/data/stage-schedule';
 import type { StatusTag } from '@/data/tagged';
 import { costGrowPlan, defaultGrowCostContext, fixtureFor } from '@/engine/grow-costing';
-import { approvedStudies, laborStandard, measuredConsumption, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import { approvedStudies, laborStandard, measuredConsumption, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
 
 export interface PerWateringRow {
   method: Exclude<WateringMethod, 'none'>;
@@ -47,7 +47,7 @@ export interface MeasuredRow {
 export function measuredRows(plans: readonly GrowPlanDef[], studies: readonly TimeStudyDoc[]): MeasuredRow[] {
   const out: MeasuredRow[] = [];
   for (const plan of plans) {
-    const own = studiesForCropPlan(studies, plan.code);
+    const own = studiesForGrowPlan(studies, plan.code);
     const approved = approvedStudies(own);
     if (approved.length === 0) continue;
     const measured = measuredConsumption(own);

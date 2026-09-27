@@ -76,7 +76,7 @@ const StageRecordsSchema = z.object({
 
 const SowingInput = z.object({
   sowingId: z.string().trim().min(3).max(40),
-  cropPlanCode: z.string().min(1),
+  growPlanCode: z.string().min(1),
   productionDate: isoDate,
   standardVersion: z.string().min(1),
   plannedUnits: z.number().min(0),
@@ -135,7 +135,7 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
     .insert(farmSowingRecords)
     .values({
       sowingId: d.sowingId,
-      cropPlanCode: d.cropPlanCode,
+      growPlanCode: d.growPlanCode,
       productionDate: d.productionDate,
       standardVersion: d.standardVersion,
       plannedUnits: d.plannedUnits,
@@ -160,7 +160,7 @@ async function recordSowingInner(input: unknown): Promise<Result<{ id: string }>
     })
     .returning({ id: farmSowingRecords.id });
     const row = rows[0];
-    if (row) await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_sowing', recordKind: 'sowing', recordId: row.id, period: periodOf(d.productionDate), detail: { sowingId: d.sowingId, cropPlanCode: d.cropPlanCode, productionDate: d.productionDate, goodUnits: d.goodUnits, closedBy: d.closedBy } });
+    if (row) await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_sowing', recordKind: 'sowing', recordId: row.id, period: periodOf(d.productionDate), detail: { sowingId: d.sowingId, growPlanCode: d.growPlanCode, productionDate: d.productionDate, goodUnits: d.goodUnits, closedBy: d.closedBy } });
     return rows;
   });
   if (!inserted[0]) return { ok: false, error: 'Failed to record the sowing.' };

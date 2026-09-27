@@ -10,7 +10,7 @@ DECLARE
 BEGIN
   FOR w IN SELECT id FROM farm.workspaces LOOP
     PERFORM set_config('app.workspace_id', w.id::text, true);
-    UPDATE farm.crop_plan_lines
+    UPDATE farm.grow_plan_lines
        SET line = (line - 'mlPerL') || jsonb_build_object(
              'mlPerGal',
              CASE

@@ -32,17 +32,17 @@ import { seedPackagingLibrary, type PackagingLibrary } from '@/data/packaging';
 import { crews as defaultCrews, newCrew, legacyCrew, LEGACY_SEED_CREWS, type CrewShift } from '@/data/crews';
 import { productionDaysInYear, PLAN_YEAR, type DateRange } from '@/engine/periods';
 import { deriveCapacity, type CapacityInputs } from '@/engine';
-import { assumptionsForCropPlan, cropPlanCostInputs, type CropPlanCostInputs, type CropPlanLaborStandard } from '@/engine/unit-cost';
+import { assumptionsForGrowPlan, growPlanCostInputs, type GrowPlanCostInputs, type GrowPlanLaborStandard } from '@/engine/unit-cost';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { growUnitsFrom } from '@/engine/grow-capacity';
 import { laborRequirement, newCrewDefaultsFor } from '@/engine/staffing';
 import { purchaseLines } from '@/engine/grow-purchase';
-import { measuredConsumption, studiesForCropPlan } from '@/engine/time-studies';
+import { measuredConsumption, studiesForGrowPlan } from '@/engine/time-studies';
 import type { GrowPlanDef, LinePrice } from '@/data/grow-plan';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 /** The seed grow plans as the engine reads them: the library wherever none has been loaded. */
-const seedCropPlans: readonly GrowPlanDef[] = growPlanSeed;
+const seedGrowPlans: readonly GrowPlanDef[] = growPlanSeed;
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price';
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
@@ -67,7 +67,7 @@ export interface AssumptionsOverlay {
     payrollBurden: number;
   }>;
   /**
-   * `packaging` was a typed per-unit placeholder; it is no longer read — a crop plan's packaging is its picks at the library's cost. A value
+   * `packaging` was a typed per-unit placeholder; it is no longer read — a grow plan's packaging is its picks at the library's cost. A value
    * saved on an older forecast is ignored.
    */
   perUnit?: Partial<{ packaging: number; distribution: number }>;
@@ -79,16 +79,16 @@ export interface AssumptionsOverlay {
   }>;
 }
 
-/** Editable per-input fields, keyed by `<crop plan code>::<input name>`. */
-export const inputKey = (cropPlanCode: string, name: string) => `${cropPlanCode}::${name}`;
+/** Editable per-input fields, keyed by `<grow plan code>::<input name>`. */
+export const inputKey = (growPlanCode: string, name: string) => `${growPlanCode}::${name}`;
 
 /**
- * The assumptions to cost a given crop plan at: its own labor standard and
- * packaging (Roadmap N3). Falls back to the reference crop plan's for a code the
+ * The assumptions to cost a given grow plan at: its own labor standard and
+ * packaging (Roadmap N3). Falls back to the reference grow plan's for a code the
  * resolver was not given, rather than to a typed figure.
  */
-export function assumptionsFor(inputs: Pick<ResolvedInputs, 'assumptions' | 'cropPlanAssumptions'>, cropPlanCode: string): ResolvedInputs['assumptions'] {
-  return inputs.cropPlanAssumptions[cropPlanCode] ?? inputs.assumptions;
+export function assumptionsFor(inputs: Pick<ResolvedInputs, 'assumptions' | 'growPlanAssumptions'>, growPlanCode: string): ResolvedInputs['assumptions'] {
+  return inputs.growPlanAssumptions[growPlanCode] ?? inputs.assumptions;
 }
 /** A what-if on one purchase line, keyed by `inputKey(plan code, line label)`. */
 export interface InputOverlay {
@@ -269,12 +269,12 @@ export interface PickupPointOverlay {
 
 /**
  * Per-prospect links from the Sales workspace, keyed by prospect prospect id. The
- * pickup point is where the prospect would be served from; the crop plans are what was
+ * pickup point is where the prospect would be served from; the grow plans are what was
  * quoted, which is what makes the quote's input cost computable.
  */
 export interface SalesOverlay {
   pickupPointId?: string;
-  cropPlanCodes?: string[];
+  growPlanCodes?: string[];
 }
 
 export interface CapexOverlay {
@@ -331,7 +331,7 @@ export interface SchedulePolicyOverlay {
 export interface FarmScenarioConfig {
   assumptions?: AssumptionsOverlay;
   capacity?: CapacityOverlay;
-  /** Keyed by `<crop plan code>::<input name>` (a bare name = the seed crop plan). */
+  /** Keyed by `<grow plan code>::<input name>` (a bare name = the seed grow plan). */
   inputs?: Record<string, InputOverlay>;
   /** Keyed by phase number. */
   phases?: Record<number, PhaseOverlay>;
@@ -349,7 +349,7 @@ export interface FarmScenarioConfig {
   subscriberPickupPoints?: Record<string, SubscriberPickupPointOverlay>;
   /** What the forecast is built from beyond the master list: included subscribers, service edits, flat plans, equipment dates (Roadmap N4a). */
   forecast?: ForecastOverlay;
-  /** Route step edits, keyed by `<crop plan code>::<step id>` (`routeKey`). */
+  /** Route step edits, keyed by `<grow plan code>::<step id>` (`routeKey`). */
   routing?: Record<string, RouteStepOverlay>;
   /** Resource attribute edits, keyed by equipment library key. */
   resources?: Record<string, ResourceOverlay>;
@@ -383,14 +383,14 @@ export interface ResolvedInputs {
   /** The plant's capacity inputs, with the Phase 1 grow units read from the equipment library. */
   capacityInputs: CapacityInputs;
   /**
-   * The reference crop plan — the first In Service crop plan in the library — with
-   * the scenario's input edits applied. Single-crop-plan surfaces (the
-   * planning loop, the ledger, capacity) read it until orders carry a crop plan
+   * The reference grow plan — the first In Service grow plan in the library — with
+   * the scenario's input edits applied. Single-grow-plan surfaces (the
+   * planning loop, the ledger, capacity) read it until orders carry a grow plan
    * each (Roadmap Phase H3/H4).
    */
-  cropPlan: GrowPlanDef;
-  /** Every library crop plan with the scenario's input edits applied. */
-  cropPlans: GrowPlanDef[];
+  growPlan: GrowPlanDef;
+  /** Every library grow plan with the scenario's input edits applied. */
+  growPlans: GrowPlanDef[];
   phases: typeof defaultPhases;
   phaseProfiles: typeof defaultPhaseProfiles;
   /** Proposed crews: checked against the labor requirement, never an input to capacity. */
@@ -407,20 +407,20 @@ export interface ResolvedInputs {
   fixedCostLines: FixedCostLineDef[];
   /** The leasehold schedule (Roadmap N1). A line that is not `counted` is on record only. */
   leasehold: LeaseholdLine[];
-  /** Each crop plan's own labor standard — observed, estimated, or a gap (Roadmap N3). */
-  laborStandards: Record<string, CropPlanLaborStandard>;
-  /** Each crop plan's labor standard and packaging, as the cost of its unit reads them (Roadmap N3). */
-  cropPlanCosts: Record<string, CropPlanCostInputs>;
+  /** Each grow plan's own labor standard — observed, estimated, or a gap (Roadmap N3). */
+  laborStandards: Record<string, GrowPlanLaborStandard>;
+  /** Each grow plan's labor standard and packaging, as the cost of its unit reads them (Roadmap N3). */
+  growPlanCosts: Record<string, GrowPlanCostInputs>;
   /**
-   * The assumptions each crop plan is costed at: the shared ones with that crop plan's
+   * The assumptions each grow plan is costed at: the shared ones with that grow plan's
    * labor standard and packaging written in. Read through `assumptionsFor`.
-   * `assumptions` above is the REFERENCE crop plan's, so `crop_plan` and `assumptions`
-   * always describe the same crop plan.
+   * `assumptions` above is the REFERENCE grow plan's, so `grow_plan` and `assumptions`
+   * always describe the same grow plan.
    */
-  cropPlanAssumptions: Record<string, typeof defaultAssumptions>;
+  growPlanAssumptions: Record<string, typeof defaultAssumptions>;
   /** The equipment library: every row with its real-world status (Roadmap N1). */
   equipment: EquipmentLine[];
-  /** The packaging library, supplier catalog prices and crop plan picks (Roadmap N1). */
+  /** The packaging library, supplier catalog prices and grow plan picks (Roadmap N1). */
   packaging: PackagingLibrary;
   /** Opening owners' equity (dollars) and the date the loans start (Roadmap K4, K6). */
   openingPosition: { ownerEquity: number; loanStartDate: string };
@@ -428,8 +428,8 @@ export interface ResolvedInputs {
   supplierTerms: Record<string, PaymentTerms>;
   /**
    * What each input costs and where the figure came from, keyed by
-   * `inputKey(cropPlanCode, name)` (Roadmap N1, decision 7). Every line has
-   * an entry — a line still on its crop plan figure carries the reason why.
+   * `inputKey(growPlanCode, name)` (Roadmap N1, decision 7). Every line has
+   * an entry — a line still on its grow plan figure carries the reason why.
    */
   inputPrices: Record<string, ResolvedInputPrice>;
   /** The biweekly pay calendar (Roadmap K5). */
@@ -450,7 +450,7 @@ export interface ResolvedInputs {
   datedEquipment: DatedEquipmentLine[];
   /** The Phase 1 units as scheduling resources, each attribute tagged. */
   resources: RouteResource[];
-  /** Route step edits, keyed by `<crop plan code>::<step id>`; routes derive from studies with `deriveRoute`. */
+  /** Route step edits, keyed by `<grow plan code>::<step id>`; routes derive from studies with `deriveRoute`. */
   routing: Record<string, RouteStepOverlay>;
   schedulePolicy: SchedulePolicy;
   /** Sustainability selections and activity inputs, defaults filled. */
@@ -480,8 +480,8 @@ function put<T>(target: { value: T }, override: T | undefined): void {
  */
 export function resolveScenarioInputs(
   config: FarmScenarioConfig = {},
-  /** The crop plan library. Omitted = the seed grow plans (tests, engine defaults). */
-  library: readonly GrowPlanDef[] = seedCropPlans,
+  /** The grow plan library. Omitted = the seed grow plans (tests, engine defaults). */
+  library: readonly GrowPlanDef[] = seedGrowPlans,
   /** The subscriber library. Omitted = the seed placeholders built from the channel constants. */
   subscribers: readonly SubscriberDef[] = seedSubscribers(),
   /** Farm closures from the production calendar (Roadmap J1). Omitted = none entered. */
@@ -490,7 +490,7 @@ export function resolveScenarioInputs(
   supplierTerms: Readonly<Record<string, PaymentTerms>> = {},
   /** The equipment library (Roadmap N1). Omitted or empty = the seed. */
   equipment: readonly EquipmentLine[] = equipmentSeed,
-  /** The packaging library, catalog prices and crop plan picks (Roadmap N1). Omitted = the seed packages, no picks. */
+  /** The packaging library, catalog prices and grow plan picks (Roadmap N1). Omitted = the seed packages, no picks. */
   packaging: PackagingLibrary = seedPackagingLibrary(),
   /** Supplier catalog lines keyed by supplier id (Roadmap N1). Omitted = no catalog on file. */
   catalog: Readonly<Record<string, readonly CatalogLine[]>> = {},
@@ -503,9 +503,9 @@ export function resolveScenarioInputs(
   /** The leasehold schedule (Roadmap N1). Omitted = the seed. */
   leasehold: readonly LeaseholdLine[] = leaseholdSeed,
   /**
-   * The time-study library (Roadmap N3). Omitted = not loaded, and each crop plan's
+   * The time-study library (Roadmap N3). Omitted = not loaded, and each grow plan's
    * labor comes from its estimate built in code — the same estimate the database
-   * is seeded with. A loaded library with no study for a crop plan is a labor gap.
+   * is seeded with. A loaded library with no study for a grow plan is a labor gap.
    */
   timeStudies: readonly TimeStudyDoc[] | null = null,
 ): ResolvedInputs {
@@ -541,13 +541,13 @@ export function resolveScenarioInputs(
     ((assumptions.labor.sowWage.value + assumptions.labor.leadWage.value) / 2) *
     (1 + assumptions.labor.payrollBurden.value);
 
-  // Packaging is never typed on a scenario: each crop plan's is
+  // Packaging is never typed on a scenario: each grow plan's is
   // the sum of its picked packages at the library's cost, written in below.
   put(assumptions.perUnit.distribution, a.perUnit?.distribution);
   put(assumptions.yield.shrinkAllowance, a.yield?.shrinkAllowance);
   put(assumptions.inventory.blackoutShelfLife, a.inventory?.blackoutShelfLife);
   put(assumptions.inventory.daysOfCoverTarget, a.inventory?.daysOfCoverTarget);
-  // Labor minutes are never typed (Roadmap N3): each crop plan's come from its own
+  // Labor minutes are never typed (Roadmap N3): each grow plan's come from its own
   // labor standard, written in below. A `laborSplit` saved on an older forecast
   // is ignored, as a legacy phase `unitsPerDay` is — the time study is the source.
 
@@ -563,21 +563,21 @@ export function resolveScenarioInputs(
   // Production days come off the production calendar unless a scenario types them.
   capacityInputs.productionDaysPerYear.value = c.productionDaysPerYear ?? productionDaysInYear(PLAN_YEAR, closures);
 
-  // Crop plans (per-input, per crop plan) ------------------------------------
+  // Grow plans (per-input, per grow plan) ------------------------------------
   //
   // The price of a line has three possible sources, in this order: a what-if
   // the operator typed on this scenario, the supplier catalog (decision 7), and
-  // the crop plan line's own figure, which stands only until a catalog price is on
+  // the grow plan line's own figure, which stands only until a catalog price is on
   // file. Whichever wins, the line's status tag says so and
   // `inputPrices` carries the reason the catalog did not price it.
   const ingOverlay = config.inputs ?? {};
   const inputSupplier = config.sustainability?.inputSupplier ?? {};
   const inputPrices: Record<string, ResolvedInputPrice> = {};
-  const source = library.length > 0 ? library : seedCropPlans;
-  const cropPlans: GrowPlanDef[] = source.map((r) => {
+  const source = library.length > 0 ? library : seedGrowPlans;
+  const growPlans: GrowPlanDef[] = source.map((r) => {
     // What the plan's approved time studies measured stands over the placeholder watering volumes
     // and the nutrient strength (`GrowPlanDef.measured`).
-    const measured = timeStudies ? measuredConsumption(studiesForCropPlan(timeStudies, r.code)) : null;
+    const measured = timeStudies ? measuredConsumption(studiesForGrowPlan(timeStudies, r.code)) : null;
     const plan: GrowPlanDef = structuredClone({ ...r, prices: undefined, ...(measured ? { measured } : {}) });
     delete plan.prices;
     // A catalog price or a typed what-if stands over the line's own price; the plan carries it for
@@ -589,7 +589,7 @@ export function resolveScenarioInputs(
       const priced = resolveInputPrice({
         input: line.name,
         unit: line.unit,
-        cropPlanUnitCost: line.unitCost,
+        growPlanUnitCost: line.unitCost,
         supplierId,
         catalog: (supplierId ? catalog[supplierId] : undefined) ?? [],
         asOf: pricesAsOf,
@@ -607,7 +607,7 @@ export function resolveScenarioInputs(
         inputPrices[key] = {
           ...priced,
           unitPrice: typed,
-          basis: 'cropPlan',
+          basis: 'growPlan',
           gap: priced.basis === 'catalog' ? 'A price typed on this scenario stands over the catalog.' : priced.gap,
         };
       }
@@ -617,7 +617,7 @@ export function resolveScenarioInputs(
     return plan;
   });
   // The library is never empty here: an empty one falls back to the seed grow plans above.
-  const cropPlan = cropPlans.find((r) => r.status === 'in_service') ?? cropPlans[0]!;
+  const growPlan = growPlans.find((r) => r.status === 'in_service') ?? growPlans[0]!;
 
   // Crews: a proposed staffing answer ---------------------------------------
   // No crew is seeded. A scenario that edits one of the retired invented seed
@@ -782,34 +782,34 @@ export function resolveScenarioInputs(
   put(schedulePolicy.crewMode, sp.crewMode);
   put(schedulePolicy.harvestDirection, sp.harvestDirection);
 
-  // Each crop plan's own cost inputs (Roadmap N3). The sowing it is costed at is its
+  // Each grow plan's own cost inputs (Roadmap N3). The sowing it is costed at is its
   // derived sowing on the resolved plant, grow units included — the same sowing the
-  // Crop plans page and production planning use.
+  // Grow plans page and production planning use.
   const finalCapacity = {
     ...(capacityInputs as unknown as typeof defaultCapacityInputs),
     growUnits: growUnitsFrom(selected),
   } as unknown as CapacityInputs;
   const sharedAssumptions = assumptions as unknown as ResolvedInputs['assumptions'];
-  const cropPlanCosts: Record<string, CropPlanCostInputs> = {};
-  const laborStandards: Record<string, CropPlanLaborStandard> = {};
-  const cropPlanAssumptions: Record<string, ResolvedInputs['assumptions']> = {};
-  const costPool = cropPlans.some((r) => r.code === cropPlan.code) ? cropPlans : [...cropPlans, cropPlan];
+  const growPlanCosts: Record<string, GrowPlanCostInputs> = {};
+  const laborStandards: Record<string, GrowPlanLaborStandard> = {};
+  const growPlanAssumptions: Record<string, ResolvedInputs['assumptions']> = {};
+  const costPool = growPlans.some((r) => r.code === growPlan.code) ? growPlans : [...growPlans, growPlan];
   for (const r of costPool) {
     const sowing = deriveCapacity(r, finalCapacity).sowingSize;
-    const inputs = cropPlanCostInputs(r, timeStudies, sowing, packaging);
-    cropPlanCosts[r.code] = inputs;
+    const inputs = growPlanCostInputs(r, timeStudies, sowing, packaging);
+    growPlanCosts[r.code] = inputs;
     laborStandards[r.code] = inputs.labor;
-    cropPlanAssumptions[r.code] = assumptionsForCropPlan(sharedAssumptions, inputs);
+    growPlanAssumptions[r.code] = assumptionsForGrowPlan(sharedAssumptions, inputs);
   }
 
   return {
-    assumptions: cropPlanAssumptions[cropPlan.code] ?? sharedAssumptions,
+    assumptions: growPlanAssumptions[growPlan.code] ?? sharedAssumptions,
     capacityInputs: finalCapacity as unknown as ResolvedInputs['capacityInputs'],
-    cropPlan,
-    cropPlans,
+    growPlan,
+    growPlans,
     laborStandards,
-    cropPlanCosts,
-    cropPlanAssumptions,
+    growPlanCosts,
+    growPlanAssumptions,
     phases: phases as unknown as ResolvedInputs['phases'],
     phaseProfiles: phaseProfiles as unknown as ResolvedInputs['phaseProfiles'],
     crews,

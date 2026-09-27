@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { farmSources, farmSourceFigures } from '@/db';
 import { db } from '@/lib/db';
 import { getActiveScenario } from '@/server/scenarios';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listSubscribers } from '@/server/subscribers';
 import { loadCalendar } from '@/server/periods';
 import { listEquipment } from '@/server/equipment';
@@ -50,7 +50,7 @@ function sheet(wb: ExcelJS.Workbook, name: string, header: string[], rows: (stri
 
 /** Follows the Plan / Actual toggle: Plan the plan of record's first forecast year; Actual the records in the reporting year. */
 export async function buildEvidencePack(asOf: string, kind: LedgerKind): Promise<{ buffer: Buffer; fileName: string }> {
-  const [active, library, subscribers, calendar, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies] = await Promise.all([getActiveScenario(), listCropPlans(), listSubscribers(), loadCalendar(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies()]);
+  const [active, library, subscribers, calendar, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies] = await Promise.all([getActiveScenario(), listGrowPlans(), listSubscribers(), loadCalendar(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies()]);
   const R = resolveScenarioInputs(active?.config, library, subscribers, calendar.closures, undefined, equipment, packaging, catalog, undefined, loans, fixedCostLines, leasehold, timeStudies.studies);
   const supplierOptions = await listSupplierLcaOptions();
   const suppliers = leanSuppliersById(Object.values(R.sustainability.inputSupplier));
@@ -131,7 +131,7 @@ export async function buildEvidencePack(asOf: string, kind: LedgerKind): Promise
   }
 
   sheet(wb, 'Selections', ['Input', 'LCA basis option', 'Linked supplier id', 'Linked supplier'],
-    [...new Set(R.cropPlans.flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort().map((name) => [name, S.inputBasis[name] ?? 'study mean', S.inputSupplier[name] ?? '', suppliers[S.inputSupplier[name] ?? '']?.name ?? '']));
+    [...new Set(R.growPlans.flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort().map((name) => [name, S.inputBasis[name] ?? 'study mean', S.inputSupplier[name] ?? '', suppliers[S.inputSupplier[name] ?? '']?.name ?? '']));
 
   const xlsx = Buffer.from(await wb.xlsx.writeBuffer());
 

@@ -29,8 +29,8 @@ import {
   type FoodFactor,
   type FactorProvenance,
   inputFactors,
-  cropPlanFoodCategoryMap,
-  type CropPlanFoodMapping,
+  growPlanFoodCategoryMap,
+  type GrowPlanFoodMapping,
   KG_PER_LB,
   KG_PER_OZ,
 } from '@/data/emission-factors';
@@ -277,11 +277,11 @@ const STATUS_RANK: Record<FactorProvenance['status'], number> = {
   PLACEHOLDER: 4,
 };
 
-// ── Scope 3: the crop plan's food footprint per unit ────────────────────────
+// ── Scope 3: the grow plan's food footprint per unit ────────────────────────
 
-type CropPlan = GrowPlanDef;
+type GrowPlan = GrowPlanDef;
 
-export interface CropPlanFoodLine {
+export interface GrowPlanFoodLine {
   name: string;
   category: string | null;
   massKgPerUnit: number;
@@ -292,8 +292,8 @@ export interface CropPlanFoodLine {
   excludedReason?: string;
 }
 
-export interface CropPlanFoodFootprint {
-  lines: CropPlanFoodLine[];
+export interface GrowPlanFoodFootprint {
+  lines: GrowPlanFoodLine[];
   totalKgCo2ePerUnit: number;
   /** Share of the total from the single largest line, and that line's name. */
   largestLine: { name: string; share: number } | null;
@@ -305,13 +305,13 @@ export interface CropPlanFoodFootprint {
  * or each × mass per piece), scaled by the channel's unit factor. Lines without a study product are
  * listed as excluded, not silently dropped.
  */
-export function cropPlanFoodFootprint(
-  cropPlan: CropPlan,
+export function growPlanFoodFootprint(
+  growPlan: GrowPlan,
   factors: FoodFactor[] = inputFactors,
-  map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
+  map: Record<string, GrowPlanFoodMapping> = growPlanFoodCategoryMap,
   unitFactor = 1,
-): CropPlanFoodFootprint {
-  const lines: CropPlanFoodLine[] = purchaseLines(cropPlan).map((ing) => {
+): GrowPlanFoodFootprint {
+  const lines: GrowPlanFoodLine[] = purchaseLines(growPlan).map((ing) => {
     const m = map[ing.name];
     if (!m) {
       return { name: ing.name, category: null, massKgPerUnit: 0, kgCo2ePerUnit: 0, factorKgCo2ePerKg: null, status: null, excludedReason: 'No mapping to a study product.' };
@@ -340,7 +340,7 @@ export function cropPlanFoodFootprint(
     };
   });
   const total = lines.reduce((s, l) => s + l.kgCo2ePerUnit, 0);
-  const largest = lines.reduce<CropPlanFoodLine | null>((b, l) => (b === null || l.kgCo2ePerUnit > b.kgCo2ePerUnit ? l : b), null);
+  const largest = lines.reduce<GrowPlanFoodLine | null>((b, l) => (b === null || l.kgCo2ePerUnit > b.kgCo2ePerUnit ? l : b), null);
   const weakest = lines.reduce<FactorProvenance['status'] | null>(
     (w, l) => (l.status && (w === null || STATUS_RANK[l.status] > STATUS_RANK[w]) ? l.status : w),
     null,
@@ -357,12 +357,12 @@ export function cropPlanFoodFootprint(
 
 /** As-purchased food mass per unit, kg, from every mapped input (excluded lines carry no mass). */
 export function seedMassPerUnitKg(
-  cropPlan: CropPlan,
-  map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
+  growPlan: GrowPlan,
+  map: Record<string, GrowPlanFoodMapping> = growPlanFoodCategoryMap,
   unitFactor = 1,
 ): number {
   let perTray = 0;
-  for (const ing of purchaseLines(cropPlan)) {
+  for (const ing of purchaseLines(growPlan)) {
     const m = map[ing.name];
     if (!m || m.category === null) continue;
     if (ing.unit === 'lb') perTray += ing.qtyPerTray * KG_PER_LB;
@@ -372,8 +372,8 @@ export function seedMassPerUnitKg(
 }
 
 /** Shipped mass per unit, kg: the harvest weight a live tray packs. */
-export function shippedMassPerUnitKg(cropPlan: CropPlan, unitFactor = 1): number {
-  return canopyMassPerUnit(cropPlan, unitFactor) * KG_PER_LB;
+export function shippedMassPerUnitKg(growPlan: GrowPlan, unitFactor = 1): number {
+  return canopyMassPerUnit(growPlan, unitFactor) * KG_PER_LB;
 }
 
 // ── Scope 3: waste flows from the operating model ───────────────────────────
@@ -519,15 +519,15 @@ export interface DualFoodFootprint {
  * the selected basis use the retail-aligned value so both columns share one
  * boundary; the raw figure is carried alongside for display.
  */
-export function cropPlanFoodFootprintDual(
-  cropPlan: CropPlan,
+export function growPlanFoodFootprintDual(
+  growPlan: GrowPlan,
   selection: Record<string, string> = {},
   factors: FoodFactor[] = inputFactors,
-  map: Record<string, CropPlanFoodMapping> = cropPlanFoodCategoryMap,
+  map: Record<string, GrowPlanFoodMapping> = growPlanFoodCategoryMap,
   options: LcaOption[] = defaultLcaOptions,
   unitFactor = 1,
 ): DualFoodFootprint {
-  const ref = cropPlanFoodFootprint(cropPlan, factors, map, unitFactor);
+  const ref = growPlanFoodFootprint(growPlan, factors, map, unitFactor);
   const lines: DualFoodLine[] = ref.lines.map((l) => {
     const avail = options.filter((o) => o.input === l.name);
     if (!l.category || l.factorKgCo2ePerKg === null) {

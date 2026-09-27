@@ -8,7 +8,7 @@
  * uses the plan-data defaults.
  */
 
-import { costPerUnit, costCropPlan, deriveCapacity, packedUnitOz } from '@/engine';
+import { costPerUnit, costPlanPerUnit, deriveCapacity, packedUnitOz } from '@/engine';
 import { assumptionsFor, resolveScenarioInputs, type ResolvedInputs } from '@/engine/scenario';
 
 export const CHANNEL_COMMISSION_PHASE3 = 0.25; // marketplace commission, Phase 3 only
@@ -44,21 +44,21 @@ export interface PhaseEconomics {
 }
 
 /**
- * One crop plan's economics at every channel's price and unit (Roadmap N9): the
- * crop plan named, on its own labor standard and packaging picks — never another
- * crop plan's.
+ * One grow plan's economics at every channel's price and unit (Roadmap N9): the
+ * grow plan named, on its own labor standard and packaging picks — never another
+ * grow plan's.
  */
 export function phaseEconomics(
   inputs: ResolvedInputs = resolveScenarioInputs(),
   overrides: PhaseOverrides = {},
-  cropPlan: ResolvedInputs['cropPlan'] = inputs.cropPlan,
+  growPlan: ResolvedInputs['growPlan'] = inputs.growPlan,
 ): PhaseEconomics[] {
   // The cost of a unit is food + labor + packaging (operating-model-roadmap §3.5).
   // Fixed cost is a period expense and never enters it.
-  const a = assumptionsFor(inputs, cropPlan.code);
-  const base = costPerUnit(cropPlan, a, inputs.capacityInputs);
+  const a = assumptionsFor(inputs, growPlan.code);
+  const base = costPerUnit(growPlan, a, inputs.capacityInputs);
   const distributionPerUnit = a.perUnit.distribution.value;
-  const baseFood = costCropPlan(cropPlan, a.yield.shrinkAllowance.value).totalInputCostPerUnit;
+  const baseFood = costPlanPerUnit(growPlan, a.yield.shrinkAllowance.value).totalInputCostPerUnit;
 
   return inputs.phaseProfiles.map((profile) => {
     const meta = inputs.phases.find((p) => p.phase === profile.phase)!;
@@ -71,7 +71,7 @@ export function phaseEconomics(
     const unitCost = inputCostPerUnit + base.directLabor + base.packaging;
     const variablePerUnit = unitCost + distributionPerUnit;
 
-    const cap = deriveCapacity(cropPlan, inputs.capacityInputs, unitFactor);
+    const cap = deriveCapacity(growPlan, inputs.capacityInputs, unitFactor);
     const channelCost = profile.phase === 3 ? pricePerUnit * CHANNEL_COMMISSION_PHASE3 : 0;
     // Contribution before fixed cost: price less the cost of a unit and the selling costs.
     const contribution = pricePerUnit - variablePerUnit - channelCost;
@@ -81,7 +81,7 @@ export function phaseEconomics(
       market: meta.market,
       unitFactor,
       premiumFactor,
-      packedUnitOz: packedUnitOz(cropPlan, unitFactor).totalOz,
+      packedUnitOz: packedUnitOz(growPlan, unitFactor).totalOz,
       inputCostPerUnit,
       costPerUnit: unitCost,
       distributionPerUnit,
@@ -98,28 +98,28 @@ export function phaseEconomics(
 }
 
 
-export interface ChannelCropPlanEconomics {
+export interface ChannelGrowPlanEconomics {
   phase: number;
   market: string;
   pricePerUnit: number;
-  /** In-service crop plans offered on the channel. */
-  cropPlans: { code: string; name: string; costPerUnit: number; contribution: number }[];
-  /** Means across those crop plans; null with none offered. */
+  /** In-service grow plans offered on the channel. */
+  growPlans: { code: string; name: string; costPerUnit: number; contribution: number }[];
+  /** Means across those grow plans; null with none offered. */
   costPerUnit: number | null;
   contribution: number | null;
 }
 
-/** Each channel on the crop plans it offers (Roadmap N9): each crop plan at the channel's price and unit, and the mean. */
-export function channelCropPlanEconomics(inputs: ResolvedInputs, overrides: PhaseOverrides = {}): ChannelCropPlanEconomics[] {
-  const active = inputs.cropPlans.filter((r) => r.status === 'in_service');
+/** Each channel on the grow plans it offers (Roadmap N9): each grow plan at the channel's price and unit, and the mean. */
+export function channelGrowPlanEconomics(inputs: ResolvedInputs, overrides: PhaseOverrides = {}): ChannelGrowPlanEconomics[] {
+  const active = inputs.growPlans.filter((r) => r.status === 'in_service');
   return inputs.phaseProfiles.map((profile) => {
     const meta = inputs.phases.find((p) => p.phase === profile.phase)!;
     const offered = active.filter((r) => (r.channels ?? []).includes(profile.phase));
     const rows = offered.map((r) => {
-      const e = phaseEconomics(inputs, overrides, r as ResolvedInputs['cropPlan']).find((x) => x.phase === profile.phase)!;
+      const e = phaseEconomics(inputs, overrides, r as ResolvedInputs['growPlan']).find((x) => x.phase === profile.phase)!;
       return { code: r.code, name: r.name, costPerUnit: e.costPerUnit, contribution: e.contribution };
     });
     const mean = (pick: (x: (typeof rows)[number]) => number) => (rows.length > 0 ? rows.reduce((t, x) => t + pick(x), 0) / rows.length : null);
-    return { phase: profile.phase, market: meta.market, pricePerUnit: overrides[profile.phase]?.pricePerUnit ?? meta.pricePerUnit, cropPlans: rows, costPerUnit: mean((x) => x.costPerUnit), contribution: mean((x) => x.contribution) };
+    return { phase: profile.phase, market: meta.market, pricePerUnit: overrides[profile.phase]?.pricePerUnit ?? meta.pricePerUnit, growPlans: rows, costPerUnit: mean((x) => x.costPerUnit), contribution: mean((x) => x.contribution) };
   });
 }

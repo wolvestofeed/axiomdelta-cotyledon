@@ -1,5 +1,5 @@
 import { eq, inArray, ne, sql } from 'drizzle-orm';
-import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmCropPlans, farmCropPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle } from '@/db';
+import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmGrowPlans, farmGrowPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle } from '@/db';
 import type { EquipmentLine, LeaseholdLine } from '@/data/capex';
 import { seedLoans, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { PackageSeed } from '@/data/packaging';
@@ -8,12 +8,12 @@ import { planSeedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, DEFAULT_WEEKDAYS, type SubscriptionCycleDef } from '@/data/subscription-cycles';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { cropPlanToRows, type LibraryCropPlan } from '@/engine/crop-plan-library';
+import { growPlanToRows, type LibraryGrowPlan } from '@/engine/grow-plan-library';
 
 /**
  * MicroFarm — the placeholder seed, written once.
  *
- * One writer for the read layers (`_lib/subscribers.ts`, `_lib/crop-plans.ts`,
+ * One writer for the read layers (`_lib/subscribers.ts`, `_lib/grow-plans.ts`,
  * `_lib/orders.ts`) and the reset script (`pnpm farm:reseed`), so the rows the
  * database starts with come from one place. Every seed runs inside a
  * transaction holding an advisory lock: the layout and a page read the same
@@ -26,7 +26,7 @@ import { cropPlanToRows, type LibraryCropPlan } from '@/engine/crop-plan-library
 /** Any Drizzle handle or transaction that can read and write. */
 export type SeedDb = Pick<DbHandle['db'], 'select' | 'insert' | 'delete' | 'update'>;
 
-const LOCK = { cropPlans: 74_001, subscribers: 74_002, cycles: 74_003, equipment: 74_004, packaging: 74_005, timeStudies: 74_006, finance: 74_007, leasehold: 74_008 } as const;
+const LOCK = { growPlans: 74_001, subscribers: 74_002, cycles: 74_003, equipment: 74_004, packaging: 74_005, timeStudies: 74_006, finance: 74_007, leasehold: 74_008 } as const;
 
 export async function withSeedLock<T>(db: DbHandle['db'], key: keyof typeof LOCK, fn: (tx: SeedDb) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
@@ -84,11 +84,11 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
   return lines.length;
 }
 
-/** Insert a time study and its task lines for a crop plan (Roadmap O2). Returns the study id. */
-export async function insertTimeStudy(db: SeedDb, cropPlanId: string, study: TimeStudySeed, source: 'seed' | 'user_built', createdBy: string | null = null): Promise<string | null> {
+/** Insert a time study and its task lines for a grow plan (Roadmap O2). Returns the study id. */
+export async function insertTimeStudy(db: SeedDb, growPlanId: string, study: TimeStudySeed, source: 'seed' | 'user_built', createdBy: string | null = null): Promise<string | null> {
   const rows = await db
     .insert(farmTimeStudies)
-    .values({ cropPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, cycleDays: study.cycleDays, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, consumption: study.consumption, createdBy })
+    .values({ growPlanId, studiedOn: study.studiedOn, sowingSize: study.sowingSize, cycleDays: study.cycleDays, observer: study.observer, qualityResult: study.qualityResult, qualityNotes: study.qualityNotes, source, basis: study.basis, consumption: study.consumption, createdBy })
     .returning({ id: farmTimeStudies.id });
   const id = rows[0]?.id ?? null;
   if (!id) return null;
@@ -124,21 +124,21 @@ export async function insertPackages(db: SeedDb, rows: readonly PackageSeed[]): 
 }
 
 /** Insert every seed grow plan whose code is not in the library. Idempotent on the code. */
-export async function seedMissingCropPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
+export async function seedMissingGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed, effectiveFrom = new Date().toISOString().slice(0, 10)): Promise<string[]> {
   const codes = library.map((r) => r.code);
-  const have = new Set((await db.select({ code: farmCropPlans.code }).from(farmCropPlans).where(inArray(farmCropPlans.code, codes))).map((r) => r.code));
+  const have = new Set((await db.select({ code: farmGrowPlans.code }).from(farmGrowPlans).where(inArray(farmGrowPlans.code, codes))).map((r) => r.code));
   const added: string[] = [];
   for (const r of library) {
     if (have.has(r.code)) continue;
-    const { header, lines } = cropPlanToRows(r);
+    const { header, lines } = growPlanToRows(r);
     const inserted = await db
-      .insert(farmCropPlans)
+      .insert(farmGrowPlans)
       .values({ ...header, source: 'seed', effectiveFrom })
-      .onConflictDoNothing({ target: [farmCropPlans.workspaceId, farmCropPlans.code] })
-      .returning({ id: farmCropPlans.id });
+      .onConflictDoNothing({ target: [farmGrowPlans.workspaceId, farmGrowPlans.code] })
+      .returning({ id: farmGrowPlans.id });
     const id = inserted[0]?.id;
     if (!id) continue;
-    if (lines.length > 0) await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: id, ...l })));
+    if (lines.length > 0) await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: id, ...l })));
     added.push(r.code);
   }
   return added;
@@ -150,20 +150,20 @@ export async function seedMissingCropPlans(db: SeedDb, library: readonly GrowPla
  * row someone has edited is `user_built` and is not touched. Used by the reset script only; the
  * read path inserts and never rewrites.
  */
-export async function syncSeedCropPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed): Promise<string[]> {
-  const rows = await db.select({ id: farmCropPlans.id, code: farmCropPlans.code, source: farmCropPlans.source, version: farmCropPlans.version }).from(farmCropPlans).where(inArray(farmCropPlans.code, library.map((r) => r.code)));
+export async function syncSeedGrowPlans(db: SeedDb, library: readonly GrowPlanDef[] = growPlanSeed): Promise<string[]> {
+  const rows = await db.select({ id: farmGrowPlans.id, code: farmGrowPlans.code, source: farmGrowPlans.source, version: farmGrowPlans.version }).from(farmGrowPlans).where(inArray(farmGrowPlans.code, library.map((r) => r.code)));
   const synced: string[] = [];
   for (const row of rows) {
     if (row.source !== 'seed') continue;
     const r = library.find((x) => x.code === row.code);
     if (!r) continue;
-    const { header, lines } = cropPlanToRows(r);
+    const { header, lines } = growPlanToRows(r);
     await db
-      .update(farmCropPlans)
+      .update(farmGrowPlans)
       .set({ name: header.name, channels: header.channels, format: header.format, stageDays: header.stageDays, note: header.note, version: row.version + 1, effectiveFrom: new Date().toISOString().slice(0, 10), updatedAt: new Date() })
-      .where(eq(farmCropPlans.id, row.id));
-    await db.delete(farmCropPlanLines).where(eq(farmCropPlanLines.cropPlanId, row.id));
-    if (lines.length > 0) await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: row.id, ...l })));
+      .where(eq(farmGrowPlans.id, row.id));
+    await db.delete(farmGrowPlanLines).where(eq(farmGrowPlanLines.growPlanId, row.id));
+    if (lines.length > 0) await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: row.id, ...l })));
     synced.push(row.code);
   }
   return synced;
@@ -322,7 +322,7 @@ export async function insertSubscriptionCycles(db: SeedDb, cycles: readonly Subs
     const id = inserted[0]?.id;
     if (!id) continue;
     n++;
-    if (c.days.length) await db.insert(farmSubscriptionCycleDays).values(c.days.map((d) => ({ cycleId: id, day: d.day, cropPlanCode: d.cropPlanCode })));
+    if (c.days.length) await db.insert(farmSubscriptionCycleDays).values(c.days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
   }
   return n;
 }
@@ -330,20 +330,20 @@ export async function insertSubscriptionCycles(db: SeedDb, cycles: readonly Subs
 /**
  * The database's subscriber seed (Roadmap N1): the one contracted subscriber at its
  * stated 125 units a day, and a prospect per channel carrying no volume. The
- * crop plan library is no longer read for it — seeded demand is what is
+ * grow plan library is no longer read for it — seeded demand is what is
  * contracted, not what the grow units could hold.
  */
 export function dbSeedSubscribers(): SubscriberDef[] {
   return planSeedSubscribers();
 }
 
-export function dbSeedSubscriptionCycles(library: readonly (GrowPlanDef | LibraryCropPlan)[], today: string): SubscriptionCycleDef[] {
+export function dbSeedSubscriptionCycles(library: readonly (GrowPlanDef | LibraryGrowPlan)[], today: string): SubscriptionCycleDef[] {
   return seedSubscriptionCycles(library, today);
 }
 
 /**
  * A flat plan for every subscriber that is not inactive and has none, copied
- * from the saved cycle its channel's crop plans are offered from (Roadmap N4a).
+ * from the saved cycle its channel's grow plans are offered from (Roadmap N4a).
  * Runs after either seed, so whichever of subscribers and cycles lands second
  * completes the pair. Returns the plans inserted.
  */
@@ -368,7 +368,7 @@ export async function insertMissingFlatPlans(db: SeedDb): Promise<number> {
     status: r.status === 'inactive' ? 'inactive' : 'active',
     notes: r.notes,
     source: r.source === 'seed' ? 'seed' : 'user_built',
-    days: days.filter((d) => d.cycleId === r.id).map((d) => ({ day: d.day, cropPlanCode: d.cropPlanCode })),
+    days: days.filter((d) => d.cycleId === r.id).map((d) => ({ day: d.day, growPlanCode: d.growPlanCode })),
   }));
   return insertSubscriptionCycles(db, seedFlatPlans(subscribers, cycles));
 }

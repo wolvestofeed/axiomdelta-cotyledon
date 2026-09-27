@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the dashboard's top row: averages over every active crop plan.
+ * MicroFarm — the dashboard's top row: averages over every active grow plan.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -8,35 +8,35 @@ import { growPlanSeed } from '@/data/grow-plans-seed';
 import { resolveScenarioInputs as resolveLibrary } from '@/engine/scenario';
 import { costToServe, deriveCapacity } from '@/engine';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
-import { activeCropPlanAverages, sowingElapsedMinutes } from '@/engine/active-averages';
+import { activeGrowPlanAverages, sowingElapsedMinutes } from '@/engine/active-averages';
 import type { TimeStudyDoc } from '@/data/time-studies';
 
 const seedLibrary = [...growPlanSeed];
 const capacityInputs = resolveLibrary({}, seedLibrary).capacityInputs;
 const seeded: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
-  id: `s${i}`, cropPlanCode: r.code, approvedAt: null, approvedBy: null, source: 'seed',
+  id: `s${i}`, growPlanCode: r.code, approvedAt: null, approvedBy: null, source: 'seed',
   ...estimatedTimeStudy(r, Math.max(1, deriveCapacity(r, capacityInputs).sowingSize)),
 }));
 
-describe('farm dashboard — averages over the active crop plans', () => {
-  it('counts every In Service crop plan once and no other', () => {
-    const a = activeCropPlanAverages(seedLibrary, capacityInputs, assumptions, seeded);
+describe('farm dashboard — averages over the active grow plans', () => {
+  it('counts every In Service grow plan once and no other', () => {
+    const a = activeGrowPlanAverages(seedLibrary, capacityInputs, assumptions, seeded);
     expect(a.count).toBe(seedLibrary.filter((r) => r.status === 'in_service').length);
     const planned = seedLibrary.map((r) => ({ ...r, status: 'planned' as const }));
-    expect(activeCropPlanAverages(planned, capacityInputs, assumptions, seeded).count).toBe(0);
+    expect(activeGrowPlanAverages(planned, capacityInputs, assumptions, seeded).count).toBe(0);
   });
 
-  it('each crop plan is on its own sowing and its own standard; the averages are the plain mean', () => {
-    const a = activeCropPlanAverages(seedLibrary, capacityInputs, assumptions, seeded);
-    const broc = a.cropPlans.find((r) => r.code === 'BROC-01')!;
+  it('each grow plan is on its own sowing and its own standard; the averages are the plain mean', () => {
+    const a = activeGrowPlanAverages(seedLibrary, capacityInputs, assumptions, seeded);
+    const broc = a.growPlans.find((r) => r.code === 'BROC-01')!;
     expect(broc.sowing).toBe(deriveCapacity(seedLibrary.find((r) => r.code === 'BROC-01')!, capacityInputs).sowingSize);
     expect(broc.laborBasis).toBe('estimated');
     expect(a.onEstimate).toBe(a.count);
     expect(a.withoutStudy).toBe(0);
-    expect(a.inputCostPerUnit).toBeCloseTo(a.cropPlans.reduce((s, r) => s + r.inputCostPerUnit, 0) / a.count, 10);
+    expect(a.inputCostPerUnit).toBeCloseTo(a.growPlans.reduce((s, r) => s + r.inputCostPerUnit, 0) / a.count, 10);
     expect(a.costToServePerUnit).toBeGreaterThan(a.inputCostPerUnit);
     expect(a.inputCostPerUnit).toBeGreaterThan(a.asPurchasedPerUnit);
-    for (const r of a.cropPlans) {
+    for (const r of a.growPlans) {
       expect(r.laborCostPerUnit).toBeCloseTo((r.laborMinutesPerUnit / 60) * assumptions.labor.blendedLoadedWage.value, 8);
       expect(r.costToServePerUnit).toBeCloseTo(costToServe(seedLibrary.find((x) => x.code === r.code)!, assumptions, capacityInputs, r.laborMinutesPerUnit).costToServe, 8);
     }
@@ -52,8 +52,8 @@ describe('farm dashboard — averages over the active crop plans', () => {
     expect(sowingElapsedMinutes(study, 100)).toBe(80);
   });
 
-  it('a crop plan with no study carries no labor — a gap, counted as one (Roadmap N3)', () => {
-    const a = activeCropPlanAverages(seedLibrary, capacityInputs, assumptions, []);
+  it('a grow plan with no study carries no labor — a gap, counted as one (Roadmap N3)', () => {
+    const a = activeGrowPlanAverages(seedLibrary, capacityInputs, assumptions, []);
     expect(a.withoutStudy).toBe(a.count);
     expect(a.sowingMinutes).toBe(0);
     expect(a.laborCostPerUnit).toBe(0);

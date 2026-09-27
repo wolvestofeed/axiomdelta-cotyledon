@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, money } from '@/components/ui';
 import { InlineNumber } from '@/components/InlineCells';
-import { PACKAGE_COST_BASIS_LABELS, PACKAGE_TEMPERATURE_LABELS, packageSizeLabel, packagingOrder, cropPlanPackagingCost } from '@/engine/packaging';
+import { PACKAGE_COST_BASIS_LABELS, PACKAGE_TEMPERATURE_LABELS, packageSizeLabel, packagingOrder, growPlanPackagingCost } from '@/engine/packaging';
 import { useScenario } from '@/state/scenario-store';
-import { addCropPlanPackage, removeCropPlanPackage, updateCropPlanPackage } from '@/server/packaging-actions';
+import { addGrowPlanPackage, removeGrowPlanPackage, updateGrowPlanPackage } from '@/server/packaging-actions';
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-/** The packages a crop plan picks from the packaging library, and its packaging per unit (Roadmap N1). */
-export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChannels }: { cropPlanCode: string; cropPlanId: string | undefined; cropPlanChannels: readonly number[] }) {
+/** The packages a grow plan picks from the packaging library, and its packaging per unit (Roadmap N1). */
+export function GrowPlanPackagingCard({ growPlanCode, growPlanId, growPlanChannels }: { growPlanCode: string; growPlanId: string | undefined; growPlanChannels: readonly number[] }) {
   const { resolved, isSuperAdmin } = useScenario();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -21,11 +21,11 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
   const [qty, setQty] = useState('1');
 
   const lib = resolved.packaging;
-  const cost = cropPlanPackagingCost(cropPlanCode, lib);
+  const cost = growPlanPackagingCost(growPlanCode, lib);
   const picked = new Set(cost.lines.map((l) => l.pick.packageId));
-  const onChannel = (channels: readonly number[]) => channels.some((c) => cropPlanChannels.includes(c));
+  const onChannel = (channels: readonly number[]) => channels.some((c) => growPlanChannels.includes(c));
   const options = lib.packages.filter((p) => !picked.has(p.id)).sort((a, b) => Number(!onChannel(a.channels)) - Number(!onChannel(b.channels)) || packagingOrder(a, b));
-  const canEdit = isSuperAdmin && !!cropPlanId && !pending;
+  const canEdit = isSuperAdmin && !!growPlanId && !pending;
 
   const run = (fn: () => Promise<ActionResult>, after?: () => void) =>
     start(async () => {
@@ -40,17 +40,17 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
 
   const add = () => {
     const n = Number(qty);
-    if (!cropPlanId || !choice || !Number.isFinite(n) || n <= 0) return;
-    run(() => addCropPlanPackage({ cropPlanId, packageId: choice, qtyPerUnit: n }), () => {
+    if (!growPlanId || !choice || !Number.isFinite(n) || n <= 0) return;
+    run(() => addGrowPlanPackage({ growPlanId, packageId: choice, qtyPerUnit: n }), () => {
       setChoice('');
       setQty('1');
     });
   };
 
   return (
-    <Card title={`Packaging — ${cropPlanCode}`} className="mt-4">
+    <Card title={`Packaging — ${growPlanCode}`} className="mt-4">
       {cost.lines.length === 0 ? (
-        <p className="farm-kpi-sub">No packages picked for this cropPlan. Packaging per unit: {money(0, 4)}.</p>
+        <p className="farm-kpi-sub">No packages picked for this growPlan. Packaging per unit: {money(0, 4)}.</p>
       ) : (
         <div className="farm-scroll-x">
           <table className="farm-table compact">
@@ -74,7 +74,7 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
                   <td>{l.pkg?.material ?? '—'}</td>
                   <td>{l.pkg ? packageSizeLabel(l.pkg) : '—'}</td>
                   <td className="num">
-                    <InlineNumber value={l.pick.qtyPerUnit} step={1} minChars={2} disabled={!canEdit} label={`${l.pkg?.name ?? 'Package'} per unit`} onCommit={(n) => n !== null && n > 0 && run(() => updateCropPlanPackage({ id: l.pick.id, qtyPerUnit: n }))} />
+                    <InlineNumber value={l.pick.qtyPerUnit} step={1} minChars={2} disabled={!canEdit} label={`${l.pkg?.name ?? 'Package'} per unit`} onCommit={(n) => n !== null && n > 0 && run(() => updateGrowPlanPackage({ id: l.pick.id, qtyPerUnit: n }))} />
                   </td>
                   <td className="num">
                     {money(l.unit.cost ?? 0, 4)}
@@ -83,7 +83,7 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
                   <td className="num">{money(l.extended, 4)}</td>
                   {isSuperAdmin && (
                     <td>
-                      <button type="button" className="farm-btn py-[0.1rem]! px-[0.45rem]! farm-fs-2xs" disabled={!canEdit} onClick={() => run(() => removeCropPlanPackage({ id: l.pick.id }))}>
+                      <button type="button" className="farm-btn py-[0.1rem]! px-[0.45rem]! farm-fs-2xs" disabled={!canEdit} onClick={() => run(() => removeGrowPlanPackage({ id: l.pick.id }))}>
                         Remove
                       </button>
                     </td>
@@ -99,7 +99,7 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
           </table>
         </div>
       )}
-      {isSuperAdmin && cropPlanId && (
+      {isSuperAdmin && growPlanId && (
         <div className="flex flex-wrap gap-2 items-center mt-3!">
           <select className="farm-input farm-cell-control w-80!" value={choice} aria-label="Package to pick" onChange={(ev) => setChoice(ev.target.value)}>
             <option value="">Pick a package…</option>
@@ -107,7 +107,7 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
               <option key={p.id} value={p.id}>
                 {p.name}
                 {p.sizeValue !== null ? ` · ${packageSizeLabel(p)}` : ''}
-                {onChannel(p.channels) ? '' : ' · not on this crop plan’s channels'}
+                {onChannel(p.channels) ? '' : ' · not on this grow plan’s channels'}
               </option>
             ))}
           </select>
@@ -116,10 +116,10 @@ export function CropPlanPackagingCard({ cropPlanCode, cropPlanId, cropPlanChanne
           <button type="button" className="farm-btn" disabled={!canEdit || !choice} onClick={add}>Add package</button>
         </div>
       )}
-      {isSuperAdmin && !cropPlanId && <p className="farm-kpi-sub mt-2">This crop plan is not saved in the library yet; packages are picked once it is.</p>}
+      {isSuperAdmin && !growPlanId && <p className="farm-kpi-sub mt-2">This grow plan is not saved in the library yet; packages are picked once it is.</p>}
       {error && <p className="farm-kpi-sub mt-2 farm-c-accent">{error}</p>}
       <p className="farm-kpi-sub mt-2">
-        Packages come from the <Link className="farm-link" href="/farm/packaging">packaging library</Link>, each at its supplier price when one is on file, else its manual cost. A package with no cost entered counts as zero; enter its cost in the library and every cropPlan that picks it updates. Packages on this cropPlan&rsquo;s channels are listed first.
+        Packages come from the <Link className="farm-link" href="/farm/packaging">packaging library</Link>, each at its supplier price when one is on file, else its manual cost. A package with no cost entered counts as zero; enter its cost in the library and every growPlan that picks it updates. Packages on this growPlan&rsquo;s channels are listed first.
       </p>
     </Card>
   );

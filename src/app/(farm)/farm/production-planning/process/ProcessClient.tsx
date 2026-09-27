@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, Kpi, num } from '@/components/ui';
 import { InlineNumber } from '@/components/InlineCells';
 import { PageControls } from '@/components/PageControls';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 import { SectionSave } from '@/components/SectionSave';
 import { ProcessMap, type ProcessEdge, type ProcessNode } from '@/components/timeline/ProcessMap';
 import { TIME_STUDY_BASIS_LABELS, TIME_STUDY_STREAM_LABELS, type TimeStudyDoc, type TimeStudyStream } from '@/data/time-studies';
@@ -15,7 +15,7 @@ import { cycleDays, daysToHarvest, type StageDays } from '@/data/stage-schedule'
 import { unitWordsFor } from '@/data/tray-formats';
 import { deriveCapacity } from '@/engine';
 import { deriveRoute, routeDepths, routeOverlayFor, stepDuration, stepLaborMinutes, type RouteStep, type RouteStepOverlay } from '@/engine/routing';
-import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
+import { laborStandard, studiesForGrowPlan } from '@/engine/time-studies';
 import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
 
@@ -27,18 +27,18 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
   // The route is a forecast edit: on Plan only (Roadmap N6 slice 3).
   const { forecastEditing } = useOperationsWorld({});
   const canEdit = canEditRole && forecastEditing;
-  const { cropPlan } = useSelectedCropPlan();
+  const { growPlan } = useSelectedGrowPlan();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const standard = useMemo(() => laborStandard(studiesForCropPlan(studies, cropPlan.code)), [studies, cropPlan.code]);
-  const overlay = useMemo(() => routeOverlayFor(resolved.routing, cropPlan.code), [resolved.routing, cropPlan.code]);
+  const standard = useMemo(() => laborStandard(studiesForGrowPlan(studies, growPlan.code)), [studies, growPlan.code]);
+  const overlay = useMemo(() => routeOverlayFor(resolved.routing, growPlan.code), [resolved.routing, growPlan.code]);
   const route = useMemo(
-    () => deriveRoute({ cropPlan, standard, equipment: resolved.equipment, overlay }),
-    [cropPlan, standard, resolved.equipment, overlay],
+    () => deriveRoute({ growPlan, standard, equipment: resolved.equipment, overlay }),
+    [growPlan, standard, resolved.equipment, overlay],
   );
   // Durations are shown at the sowing the study was timed at, so the map reads against its own basis.
   const basis = route.sowingSize;
-  const derivedSowing = useMemo(() => deriveCapacity(cropPlan, resolved.capacityInputs).sowingSize, [cropPlan, resolved.capacityInputs]);
+  const derivedSowing = useMemo(() => deriveCapacity(growPlan, resolved.capacityInputs).sowingSize, [growPlan, resolved.capacityInputs]);
   const depths = useMemo(() => routeDepths(route.steps), [route.steps]);
   const flagged = useMemo(() => new Set(route.findings.flatMap((f) => (f.stepId ? [f.stepId] : []))), [route.findings]);
   const byId = useMemo(() => new Map(route.steps.map((s) => [s.id, s])), [route.steps]);
@@ -46,7 +46,6 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
   const unitName = (key: string | null) => (key ? resolved.resources.find((r) => r.key === key)?.item ?? key : null);
 
   // A grow plan's cycle on its grow unit, day by day from the sow date, and the daily stream every tray takes.
-  const growPlan = cropPlan;
   const u = unitWordsFor(growPlan?.format ?? 'flat-1020');
   const stageDays = useMemo(() => (growPlan ? planStageDays(growPlan) : null), [growPlan]);
   const stageRows = useMemo(() => {
@@ -87,9 +86,9 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
   const edgesFor = (stream: TimeStudyStream): ProcessEdge[] =>
     route.steps.filter((s) => s.stream === stream).flatMap((s) => s.after.filter((a) => byId.get(a)?.stream === stream).map((a) => ({ fromId: a, toId: s.id })));
 
-  const set = (stepId: string, fn: (d: RouteStepOverlay) => void) => setRouteStep(cropPlan.code, stepId, fn);
+  const set = (stepId: string, fn: (d: RouteStepOverlay) => void) => setRouteStep(growPlan.code, stepId, fn);
   const clear = (stepId: string) =>
-    setRouteStep(cropPlan.code, stepId, (d) => {
+    setRouteStep(growPlan.code, stepId, (d) => {
       for (const k of Object.keys(d) as (keyof RouteStepOverlay)[]) delete d[k];
     });
   const togglePredecessor = (step: RouteStep, id: string) => {
@@ -114,7 +113,7 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
 
   return (
     <>
-      <PageControls><CropPlanSelector /></PageControls>
+      <PageControls><GrowPlanSelector /></PageControls>
       {forecastEditing && (
         <div className="mb-3!">
           <SectionSave sections={['routing']} title="the route" />
@@ -152,7 +151,7 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
               </table>
             </div>
             <p className="farm-kpi-sub mt-2">
-              Day 0 is the sow date. The days are the plan&rsquo;s stage days on <Link className="farm-link" href="/farm/crop-plans">Grow plans</Link>; the {u.many} hold the grow unit from the sow date to the end of the harvest window.
+              Day 0 is the sow date. The days are the plan&rsquo;s stage days on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>; the {u.many} hold the grow unit from the sow date to the end of the harvest window.
             </p>
           </Card>
           <Card title={`Daily stream — every day a ${u.one} is on the shelves`}>
@@ -266,7 +265,7 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
         </Card>
       )}
 
-      <Card title={`The route — ${cropPlan.code} ${cropPlan.name}`} className="mt-4">
+      <Card title={`The route — ${growPlan.code} ${growPlan.name}`} className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table compact">
             <thead>

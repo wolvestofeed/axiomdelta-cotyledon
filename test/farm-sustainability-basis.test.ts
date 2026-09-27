@@ -4,20 +4,20 @@ import { resolveScenarioInputs } from '@/engine/scenario';
 import { standardSowingRecordPrefill, type ActualsBundle, type DistributionDoc } from '@/engine/actuals';
 import { expiredMassKg, mixFoodFootprint, receivedMassKg, sustainabilityBasis } from '@/engine/sustainability-basis';
 import { energyFromReadings, serviceFromRecords, waterFromReadings, type ReadingDoc } from '@/engine/sustainability-records';
-import { cropPlanFoodFootprint } from '@/engine/carbon';
+import { growPlanFoodFootprint } from '@/engine/carbon';
 import { leadDaysFor } from '@/engine/grow-calendar';
 import { isoAddDays } from '@/engine/orders';
 
 const R = resolveScenarioInputs({});
-const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
-const channel = cropPlan.channels[0];
-const seedName = purchaseLines(cropPlan).find((i) => i.unit === 'lb')!.name;
+const growPlan = R.growPlans.find((r) => r.code === R.growPlan.code)!;
+const channel = growPlan.channels[0];
+const seedName = purchaseLines(growPlan).find((i) => i.unit === 'lb')!.name;
 // A grow sowing is stock from its first harvest day: each lot ships on its harvest date.
-const harvest = (sown: string) => isoAddDays(sown, leadDaysFor(cropPlan));
+const harvest = (sown: string) => isoAddDays(sown, leadDaysFor(growPlan));
 const pf = Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
 
-const sowing = (date: string, units: number) => ({ ...standardSowingRecordPrefill(date, 1, units, cropPlan as never), id: `B-${date}`, closedAt: date });
-const distribution = (date: string, units: number, over: Partial<DistributionDoc> = {}): DistributionDoc => ({ id: `D-${date}-${units}`, distributedOn: date, phase: channel, pickupPointId: 'pickup-point-01', pickupPointName: 'Test Pickup point 1', units, pricePerUnitCents: 1000, lotCodes: [], distributedBy: null, cropPlanCode: cropPlan.code, notes: null, ...over });
+const sowing = (date: string, units: number) => ({ ...standardSowingRecordPrefill(date, 1, units, growPlan as never), id: `B-${date}`, closedAt: date });
+const distribution = (date: string, units: number, over: Partial<DistributionDoc> = {}): DistributionDoc => ({ id: `D-${date}-${units}`, distributedOn: date, phase: channel, pickupPointId: 'pickup-point-01', pickupPointName: 'Test Pickup point 1', units, pricePerUnitCents: 1000, lotCodes: [], distributedBy: null, growPlanCode: growPlan.code, notes: null, ...over });
 
 describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
   const bundle: Pick<ActualsBundle, 'sowings' | 'receipts' | 'distributions'> = {
@@ -28,17 +28,17 @@ describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
         { input: seedName, qty: 20, unit: 'lb', lotCode: 'L2', unitPriceCents: 100, condition: 'rejected' },
       ] },
     ],
-    distributions: [distribution(harvest('2025-12-01'), 100), distribution(harvest('2026-03-02'), 400), distribution(isoAddDays(harvest('2026-03-02'), 1), 100, { cropPlanCode: null, pickupPointId: 'pickup-point-02', pickupPointName: 'Test Pickup point 2' })],
+    distributions: [distribution(harvest('2025-12-01'), 100), distribution(harvest('2026-03-02'), 400), distribution(isoAddDays(harvest('2026-03-02'), 1), 100, { growPlanCode: null, pickupPointId: 'pickup-point-02', pickupPointName: 'Test Pickup point 2' })],
   };
-  const basis = sustainabilityBasis({ kind: 'actual', bundle, from: '2026-01-01', to: '2026-12-31', shelfLifeDays: 30, cropPlans: R.cropPlans, unitFactorByChannel: pf });
+  const basis = sustainabilityBasis({ kind: 'actual', bundle, from: '2026-01-01', to: '2026-12-31', shelfLifeDays: 30, growPlans: R.growPlans, unitFactorByChannel: pf });
 
-  it('counts only the window: units by crop plan and channel, days, production and receipts', () => {
+  it('counts only the window: units by grow plan and channel, days, production and receipts', () => {
     expect(basis.totalUnits).toBe(500);
     expect(basis.distributionDays).toBe(2);
     expect(basis.productionDays).toBe(2);
-    expect(basis.producedByCropPlan[cropPlan.code]).toBe(800);
-    expect(basis.unitsWithNoCropPlan).toBe(100);
-    expect(basis.units.find((m) => m.cropPlanCode === cropPlan.code)!.units).toBe(400);
+    expect(basis.producedByGrowPlan[growPlan.code]).toBe(800);
+    expect(basis.unitsWithNoGrowPlan).toBe(100);
+    expect(basis.units.find((m) => m.growPlanCode === growPlan.code)!.units).toBe(400);
     expect(basis.byPickupPoint.map((s) => [s.pickupPointId, s.units, s.distributionDays])).toEqual([['pickup-point-01', 400, 1], ['pickup-point-02', 100, 1]]);
     expect(basis.received).toEqual([{ input: seedName, unit: 'lb', qty: 50 }]);
     expect(receivedMassKg(basis)[0].massKg).toBeCloseTo(50 * 0.45359237, 9);
@@ -46,13 +46,13 @@ describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
 
   it('names units that passed shelf life unshipped inside the window', () => {
     // 500 sown 03-02, 400 shipped at harvest → 100 expire 30 days after it; 300 sown 06-01 expire 30 days after their harvest. Nothing after.
-    expect(basis.expiredByCropPlan[cropPlan.code]).toBeCloseTo(400, 9);
-    expect(expiredMassKg(basis, R.cropPlans).units).toBeCloseTo(400, 9);
+    expect(basis.expiredByGrowPlan[growPlan.code]).toBeCloseTo(400, 9);
+    expect(expiredMassKg(basis, R.growPlans).units).toBeCloseTo(400, 9);
   });
 
-  it('costs food crop plan by crop plan and names units with no crop plan', () => {
-    const food = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: pf });
-    const perUnit = cropPlanFoodFootprint(cropPlan as never).totalKgCo2ePerUnit;
+  it('costs food grow plan by grow plan and names units with no grow plan', () => {
+    const food = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: pf });
+    const perUnit = growPlanFoodFootprint(growPlan as never).totalKgCo2ePerUnit;
     expect(food.referenceKg).toBeCloseTo(perUnit * 400, 6);
     expect(food.selectedKg).toBeCloseTo(food.referenceKg, 9);
     expect(food.unitsNotCosted).toBe(100);

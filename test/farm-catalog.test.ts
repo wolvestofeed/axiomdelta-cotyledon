@@ -68,14 +68,14 @@ describe('farm catalog — seasonality', () => {
   });
 });
 
-describe('farm catalog — matching a crop plan line to a catalog', () => {
+describe('farm catalog — matching a grow plan line to a catalog', () => {
   const catalog = [line({ id: 'a', item: 'Ground beef' }), line({ id: 'b', item: 'Pinto beans, dry' })];
 
   it('prefers an exact name', () => {
     expect(matchCatalogLine('Ground beef', catalog)?.id).toBe('a');
   });
 
-  it('matches on the head of a qualified crop plan name', () => {
+  it('matches on the head of a qualified grow plan name', () => {
     expect(matchCatalogLine('Ground beef, 85/15', catalog)?.id).toBe('a');
   });
 
@@ -194,7 +194,7 @@ describe('farm catalog — building draft purchase orders', () => {
     expect(beef.subtotalCents).toBe(Math.round(4.85 * 80 * 100));
   });
 
-  it('falls back to the crop plan cost when the catalog has no match, and says so', () => {
+  it('falls back to the grow plan cost when the catalog has no match, and says so', () => {
     const r = buildDraftPurchaseOrders(
       requirement,
       { 'Pinto beans, dry': 's2' },
@@ -203,7 +203,7 @@ describe('farm catalog — building draft purchase orders', () => {
       '2026-09-13',
     );
     const beans = r.orders[0].lines[0];
-    expect(beans.pricedFrom).toBe('cropPlan');
+    expect(beans.pricedFrom).toBe('growPlan');
     expect(beans.unitPriceCents).toBe(120);
   });
 
@@ -312,7 +312,7 @@ describe('farm catalog — candidate or approved, and the price in force on a da
     expect(later.orders[0].lines[0].priceEffectiveFrom).toBe('2026-09-01');
   });
 
-  it('a candidate line falls back to the crop plan cost and says why', () => {
+  it('a candidate line falls back to the grow plan cost and says why', () => {
     const req: RequirementLine[] = [
       { input: 'Ground beef, 85/15', qty: 80, unit: 'lb', packSize: 40, casesToOrder: 2, fallbackUnitCost: 5.5 },
     ];
@@ -324,7 +324,7 @@ describe('farm catalog — candidate or approved, and the price in force on a da
       '2026-09-13',
     );
     const l = r.orders[0].lines[0];
-    expect(l.pricedFrom).toBe('cropPlan');
+    expect(l.pricedFrom).toBe('growPlan');
     expect(l.unitPriceCents).toBe(550);
     expect(l.approvalNote).toContain('candidate');
     // The rest of the line still reads off the catalog: only its price is refused.
@@ -343,7 +343,7 @@ describe('farm catalog — candidate or approved, and the price in force on a da
       '2026-09-13',
     );
     const l = r.orders[0].lines[0];
-    expect(l.pricedFrom).toBe('cropPlan');
+    expect(l.pricedFrom).toBe('growPlan');
     expect(l.approvalNote).toContain('no price in force');
   });
 });
@@ -354,7 +354,7 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
     resolveInputPrice({
       input: beef,
       unit: 'lb',
-      cropPlanUnitCost: 7.5,
+      growPlanUnitCost: 7.5,
       supplierId: 's1',
       catalog: [line({ item: 'Ground beef', unitPrice: 4.85 })],
       asOf: '2026-09-13',
@@ -369,13 +369,13 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
     expect(r.gap).toBeNull();
   });
 
-  it('the crop plan figure stands, with the reason, at every point the catalog cannot price it', () => {
+  it('the grow plan figure stands, with the reason, at every point the catalog cannot price it', () => {
     expect(q({ supplierId: null }).gap).toBe('No supplier linked to this line.');
     expect(q({ catalog: [] }).gap).toContain('no catalog on file');
     expect(q({ catalog: [line({ item: 'Pinto beans, dry' })] }).gap).toContain('No approved catalog line');
     expect(q({ catalog: [line({ item: 'Ground beef', status: 'candidate' })] }).gap).toContain('candidate');
     for (const r of [q({ supplierId: null }), q({ catalog: [] })]) {
-      expect(r.basis).toBe('cropPlan');
+      expect(r.basis).toBe('growPlan');
       expect(r.unitPrice).toBe(7.5); // never zero, never a guess
     }
   });
@@ -384,13 +384,13 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
     const r = q({
       catalog: [line({ item: 'Ground beef', prices: [{ effectiveFrom: '2026-01-01', unitPrice: 194, priceBasis: 'case', sourceId: null, note: null }] })],
     });
-    expect(r.basis).toBe('cropPlan');
+    expect(r.basis).toBe('growPlan');
     expect(r.unitPrice).toBe(7.5);
     expect(r.gap).toContain('priced per case');
   });
 
   it('the resolver writes the catalog price onto the line and says where it came from', () => {
-    const seedName = purchaseLines(resolveScenarioInputs().cropPlan)[0]!.name;
+    const seedName = purchaseLines(resolveScenarioInputs().growPlan)[0]!.name;
     const beef = seedName;
     const catalog = { s1: [line({ item: seedName, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
@@ -399,36 +399,36 @@ describe('farm catalog — the price of an input line (Roadmap N1, decision 7)',
       catalog,
       '2026-09-13',
     );
-    const lineOut = purchaseLines(R.cropPlan).find((i) => i.name === beef)!;
+    const lineOut = purchaseLines(R.growPlan).find((i) => i.name === beef)!;
     expect(lineOut.unitCost).toBe(4.85);
     expect(lineOut.status).toBe('SOURCED');
     expect(lineOut.source).toContain('Supplier catalog');
-    expect(R.inputPrices[`${R.cropPlan.code}::${beef}`].basis).toBe('catalog');
+    expect(R.inputPrices[`${R.growPlan.code}::${beef}`].basis).toBe('catalog');
   });
 
   it('a price typed on the scenario outranks the catalog, and stops claiming its source', () => {
     const R0 = resolveScenarioInputs();
-    const beef = purchaseLines(R0.cropPlan)[0]!.name;
+    const beef = purchaseLines(R0.growPlan)[0]!.name;
     const catalog = { s1: [line({ item: beef, unitPrice: 4.85 })] };
     const R = resolveScenarioInputs(
       {
         sustainability: { inputSupplier: { [beef]: 's1' } },
-        inputs: { [`${R0.cropPlan.code}::${beef}`]: { seedUnitCost: 6 } },
+        inputs: { [`${R0.growPlan.code}::${beef}`]: { seedUnitCost: 6 } },
       },
       undefined, undefined, undefined, undefined, undefined, undefined,
       catalog,
       '2026-09-13',
     );
-    const lineOut = purchaseLines(R.cropPlan).find((i) => i.name === beef)!;
+    const lineOut = purchaseLines(R.growPlan).find((i) => i.name === beef)!;
     expect(lineOut.unitCost).toBe(6);
     expect(lineOut.status).toBe('STATED');
-    expect(R.inputPrices[`${R.cropPlan.code}::${beef}`].basis).toBe('cropPlan');
+    expect(R.inputPrices[`${R.growPlan.code}::${beef}`].basis).toBe('growPlan');
   });
 
-  it('with no catalog at all, every line reads its crop plan figure and says no supplier is linked', () => {
+  it('with no catalog at all, every line reads its grow plan figure and says no supplier is linked', () => {
     const R = resolveScenarioInputs();
     for (const [, p] of Object.entries(R.inputPrices)) {
-      expect(p.basis).toBe('cropPlan');
+      expect(p.basis).toBe('growPlan');
       expect(p.gap).toBe('No supplier linked to this line.');
     }
   });

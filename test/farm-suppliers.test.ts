@@ -4,11 +4,11 @@ import { supplierOperations, supplierDataset } from '@/data/suppliers';
 import {
   queryOperations,
   crossRefStats,
-  matchCropPlanToSuppliers,
+  matchGrowPlanToSuppliers,
 } from '@/engine/suppliers';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
-const cropPlan = growPlanSeed.find((p) => p.code === 'BROC-01')!;
+const growPlan = growPlanSeed.find((p) => p.code === 'BROC-01')!;
 
 describe('farm suppliers — compiled dataset', () => {
   it('loads and is internally consistent', () => {
@@ -47,10 +47,10 @@ describe('farm suppliers — filters', () => {
   });
 });
 
-describe('farm suppliers — crop plan match', () => {
+describe('farm suppliers — grow plan match', () => {
   it('returns a match set for every line of a grow plan; a line with no keywords on file matches none', () => {
-    const m = matchCropPlanToSuppliers(supplierOperations, 'all', cropPlan);
-    expect(m.map((line) => line.input)).toEqual(cropPlan.lines.map((l) => lineLabel(l)));
+    const m = matchGrowPlanToSuppliers(supplierOperations, 'all', growPlan);
+    expect(m.map((line) => line.input)).toEqual(growPlan.lines.map((l) => lineLabel(l)));
     expect(m.every((line) => Array.isArray(line.matches))).toBe(true);
     // No keywords are on file for the grow plan lines yet (`todo.md`), so nothing matches.
     expect(m.every((line) => line.keywords.length === 0 && line.matches.length === 0)).toBe(true);

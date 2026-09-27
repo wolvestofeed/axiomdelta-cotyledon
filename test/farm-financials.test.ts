@@ -24,7 +24,7 @@ describe('farm financials — per-phase economics', () => {
   it('the sowing is what one grow unit takes in trays, whatever the channel\'s unit factor', () => {
     const e = phaseEconomics();
     const R = resolveScenarioInputs();
-    const cap = deriveCapacity(R.cropPlan, R.capacityInputs);
+    const cap = deriveCapacity(R.growPlan, R.capacityInputs);
     for (const p of e) {
       expect(p.sowingSize).toBe(cap.grow!.sowingTrays);
       expect(p.maxUnitsPerDay).toBe(cap.grow!.sowingTrays * cap.grow!.unitCount);
@@ -32,15 +32,15 @@ describe('farm financials — per-phase economics', () => {
   });
   it('the cost of a unit is food + labor + packaging: no distribution and no fixed cost (operating-model §3.5)', () => {
     const e = phaseEconomics()[0];
-    // Costed as every page costs it: the resolved reference crop plan at its OWN
+    // Costed as every page costs it: the resolved reference grow plan at its OWN
     // assumptions — its labor standard and packaging (Roadmap N3). A bare
     // `costPerUnit()` reads the typed fallback and is not what any page shows.
     const R = resolveScenarioInputs();
-    const base = costPerUnit(R.cropPlan, R.assumptions, R.capacityInputs);
+    const base = costPerUnit(R.growPlan, R.assumptions, R.capacityInputs);
     expect(Object.keys(base).sort()).toEqual(['directLabor', 'food', 'packaging', 'total']);
     expect(base.total).toBeCloseTo(base.food + base.directLabor + base.packaging, 6);
-    // Direct labor is the crop plan's time study at one full derived sowing; the flat units-per-labor-hour rate is deleted.
-    const sowing = deriveCapacity(R.cropPlan, R.capacityInputs).sowingSize;
+    // Direct labor is the grow plan's time study at one full derived sowing; the flat units-per-labor-hour rate is deleted.
+    const sowing = deriveCapacity(R.growPlan, R.capacityInputs).sowingSize;
     expect(base.directLabor).toBeCloseTo(laborForDay(1, sowing, R.assumptions).laborCostPerUnit, 10);
     expect('designTargetUnitsPerLaborHour' in planAssumptions.labor).toBe(false);
     expect(e.costPerUnit).toBeCloseTo(e.inputCostPerUnit + base.directLabor + base.packaging, 6);
@@ -92,7 +92,7 @@ describe('overhead absorption on normal capacity', () => {
     const rate = absorbOverhead(annualFixed, cap, cap.unitsPerYear).ratePerUnit;
     expect(rate).toBeCloseTo(annualFixed / cap.unitsPerYear, 6);
     const R = resolveScenarioInputs();
-    expect(Object.keys(costPerUnitOf(R.cropPlan, R.assumptions, R.capacityInputs))).not.toContain('fixedOverhead');
+    expect(Object.keys(costPerUnitOf(R.growPlan, R.assumptions, R.capacityInputs))).not.toContain('fixedOverhead');
   });
 
   it('nets planned maintenance out of normal capacity', () => {

@@ -5,10 +5,10 @@
  * on file — per each, or per pack ÷ the units in the pack — else its manual
  * cost, else none.
  *
- * A package is PICKED (assigned to a crop plan) or UNPICKED (in the library only).
- * A crop plan's packaging per unit is the sum of the packages it picks × how many
+ * A package is PICKED (assigned to a grow plan) or UNPICKED (in the library only).
+ * A grow plan's packaging per unit is the sum of the packages it picks × how many
  * per unit, at the library's cost — a package with no cost entered counts as
- * zero, and a crop plan that picks nothing carries zero. Packaging equipment is
+ * zero, and a grow plan that picks nothing carries zero. Packaging equipment is
  * capital on the equipment library and never enters here.
  */
 
@@ -17,7 +17,7 @@ import {
   type PackageDef,
   type PackageTemperature,
   type PackagingLibrary,
-  type CropPlanPackagePick,
+  type GrowPlanPackagePick,
   type SupplierItemPrice,
 } from '@/data/packaging';
 
@@ -46,24 +46,24 @@ export function packageUnitCost(pkg: PackageDef, items: readonly SupplierItemPri
   return { cost: null, basis: 'none' };
 }
 
-export interface CropPlanPackagingLine {
-  pick: CropPlanPackagePick;
+export interface GrowPlanPackagingLine {
+  pick: GrowPlanPackagePick;
   pkg: PackageDef | null;
   unit: PackageUnitCost;
   /** Unit cost × per unit; zero when the package has no cost entered. */
   extended: number;
 }
 
-export interface CropPlanPackagingCost {
+export interface GrowPlanPackagingCost {
   /** The sum of the picked packages at the library's cost; zero with none picked or none costed. */
   perUnit: number;
-  lines: CropPlanPackagingLine[];
+  lines: GrowPlanPackagingLine[];
 }
 
-export function cropPlanPackagingCost(cropPlanCode: string, lib: PackagingLibrary): CropPlanPackagingCost {
+export function growPlanPackagingCost(growPlanCode: string, lib: PackagingLibrary): GrowPlanPackagingCost {
   const lines = lib.picks
-    .filter((p) => p.cropPlanCode === cropPlanCode)
-    .map((pick): CropPlanPackagingLine => {
+    .filter((p) => p.growPlanCode === growPlanCode)
+    .map((pick): GrowPlanPackagingLine => {
       const pkg = lib.packages.find((x) => x.id === pick.packageId) ?? null;
       const unit: PackageUnitCost = pkg ? packageUnitCost(pkg, lib.supplierItems) : { cost: null, basis: 'none' };
       return { pick, pkg, unit, extended: (unit.cost ?? 0) * pick.qtyPerUnit };

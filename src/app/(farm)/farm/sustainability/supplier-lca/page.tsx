@@ -6,7 +6,7 @@ import { SupplierLcaForm, DeleteSupplierLcaButton } from '@/components/SupplierL
 import { listSupplierLcaRows } from '@/server/supplier-lca';
 import { listSources } from '@/server/sources';
 import { getFarmAccess } from '@/server/access';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { BOUNDARY_LABEL, type LcaBoundary } from '@/data/lca-options';
 import { toLcaOption, type SupplierLcaRowLike } from '@/engine/supplier-links';
 import type { StatusTag } from '@/data/plan-data';
@@ -19,8 +19,8 @@ export default async function SupplierLcaPage() {
 }
 
 async function SupplierLcaPageInner() {
-  const [access, rows, sources, library] = await Promise.all([getFarmAccess(), listSupplierLcaRows(), listSources(), listCropPlans()]);
-  // Every input across the in-service crop plans (Roadmap N9).
+  const [access, rows, sources, library] = await Promise.all([getFarmAccess(), listSupplierLcaRows(), listSources(), listGrowPlans()]);
+  // Every input across the in-service grow plans (Roadmap N9).
   const inputs = [...new Set(library.filter((r) => r.status === 'in_service').flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort();
   const withDoc = rows.filter((r) => r.sourceId).length;
 
@@ -48,7 +48,7 @@ async function SupplierLcaPageInner() {
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={num(rows.length)} label="Supplier figures on file" />
         <Kpi value={num(withDoc)} label="With a document attached" sub="Registered in Sources" />
-        <Kpi value={num(new Set(rows.map((r) => r.input)).size)} label="Inputs covered" sub={`of ${inputs.length} crop plan lines`} />
+        <Kpi value={num(new Set(rows.map((r) => r.input)).size)} label="Inputs covered" sub={`of ${inputs.length} grow plan lines`} />
         <Kpi value={num(new Set(rows.map((r) => r.supplierId)).size)} label="Suppliers" />
       </div>
 

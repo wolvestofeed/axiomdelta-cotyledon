@@ -8,7 +8,7 @@ import { Card, Kpi, StatusBadge, money, num } from '@/components/ui';
 import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
-import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import {
   ORDER_STATUS_LABELS,
   ORDER_SOURCE_LABELS,
@@ -49,7 +49,7 @@ const fromCents = (c: number) => c / 100;
 const toCents = (d: number) => Math.round(d * 100);
 
 interface OrderForm {
-  orderDate: string; subscriberId: string; subscriberPickupPointId: string; subscriberServiceId: string | null; cropPlanCode: string; units: number;
+  orderDate: string; subscriberId: string; subscriberPickupPointId: string; subscriberServiceId: string | null; growPlanCode: string; units: number;
   status: 'forecast' | 'confirmed'; price: number | ''; notes: string; subscriptionCycleId: string | null; source: 'typed' | 'cycle';
 }
 
@@ -97,13 +97,13 @@ export function OrdersClient({
   const [daySubscriber, setDaySubscriber] = useState<string>('all');
 
   const channels = resolved.phases.map((p) => ({ phase: p.phase, market: p.market, priceCents: Math.round(p.pricePerUnit * 100) }));
-  const cropPlanNames = useMemo(() => Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])), [resolved.cropPlans]);
+  const growPlanNames = useMemo(() => Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])), [resolved.growPlans]);
   const channelPriceCents = useMemo(() => Object.fromEntries(channels.map((c) => [c.phase, c.priceCents])), [channels]);
   const distributionById = useMemo(() => new Map(distributions.map((d) => [d.id, d])), [distributions]);
 
   const book = useMemo(
-    () => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from, to, channelPriceCents, cropPlanNames, closures }),
-    [world.pickupPoints, resolved.subscribers, cycles, orders, from, to, channelPriceCents, cropPlanNames, closures],
+    () => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures }),
+    [world.pickupPoints, resolved.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures],
   );
   const shown = useMemo(() => (channelFilter === 'all' ? book : book.filter((o) => o.channel === channelFilter)), [book, channelFilter]);
   const pickupPointRows = useMemo(() => pickupPointActualVsForecast(shown, new Map(distributions.map((d) => [d.id, d.units]))), [shown, distributions]);
@@ -149,36 +149,36 @@ export function OrdersClient({
   const subscribersWithPickupPoints = resolved.subscribers.filter((c) => c.status !== 'inactive' && recordsActuals(c.status) && c.pickupPoints.length > 0);
   const emptyOrder = (): OrderForm => {
     const c = subscribersWithPickupPoints[0];
-    return { orderDate: today, subscriberId: c?.id ?? '', subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null, cropPlanCode: resolved.cropPlan.code, units: 0, status: 'forecast', price: '', notes: '', subscriptionCycleId: null, source: 'typed' };
+    return { orderDate: today, subscriberId: c?.id ?? '', subscriberPickupPointId: c?.pickupPoints[0]?.id ?? '', subscriberServiceId: c?.pickupPoints[0]?.services[0]?.id ?? null, growPlanCode: resolved.growPlan.code, units: 0, status: 'forecast', price: '', notes: '', subscriptionCycleId: null, source: 'typed' };
   };
   const confirmDerived = (o: BookOrder) =>
-    setOrderForm({ mode: 'create', form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, cropPlanCode: o.cropPlanCode, units: Math.round(o.units), status: 'confirmed', price: '', notes: '', subscriptionCycleId: o.subscriptionCycleId, source: 'cycle' } });
+    setOrderForm({ mode: 'create', form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: Math.round(o.units), status: 'confirmed', price: '', notes: '', subscriptionCycleId: o.subscriptionCycleId, source: 'cycle' } });
   const openEditOrder = (o: BookOrder) => {
     const row = orders.find((x) => x.id === o.id);
-    setOrderForm({ mode: 'edit', id: o.id ?? undefined, form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, cropPlanCode: o.cropPlanCode, units: o.units, status: o.status === 'confirmed' ? 'confirmed' : 'forecast', price: row?.pricePerUnitCents == null ? '' : fromCents(row.pricePerUnitCents), notes: o.notes ?? '', subscriptionCycleId: o.subscriptionCycleId, source: o.source === 'cycle' ? 'cycle' : 'typed' } });
+    setOrderForm({ mode: 'edit', id: o.id ?? undefined, form: { orderDate: o.orderDate, subscriberId: o.subscriberId, subscriberPickupPointId: o.subscriberPickupPointId, subscriberServiceId: o.subscriberServiceId, growPlanCode: o.growPlanCode, units: o.units, status: o.status === 'confirmed' ? 'confirmed' : 'forecast', price: row?.pricePerUnitCents == null ? '' : fromCents(row.pricePerUnitCents), notes: o.notes ?? '', subscriptionCycleId: o.subscriptionCycleId, source: o.source === 'cycle' ? 'cycle' : 'typed' } });
   };
   function submitOrder() {
     if (!orderForm) return;
     const f = orderForm.form;
     const price = f.price === '' ? null : toCents(f.price);
     if (orderForm.mode === 'edit') {
-      run(() => updateOrder({ id: orderForm.id, orderDate: f.orderDate, cropPlanCode: f.cropPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, notes: f.notes || null }), 'Saved the order.');
+      run(() => updateOrder({ id: orderForm.id, orderDate: f.orderDate, growPlanCode: f.growPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, notes: f.notes || null }), 'Saved the order.');
     } else {
-      run(() => createOrder({ orderDate: f.orderDate, subscriberId: f.subscriberId, subscriberPickupPointId: f.subscriberPickupPointId, subscriberServiceId: f.subscriberServiceId, cropPlanCode: f.cropPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, subscriptionCycleId: f.subscriptionCycleId, source: f.source, notes: f.notes || null }), `${ORDER_STATUS_LABELS[f.status]} order on file.`);
+      run(() => createOrder({ orderDate: f.orderDate, subscriberId: f.subscriberId, subscriberPickupPointId: f.subscriberPickupPointId, subscriberServiceId: f.subscriberServiceId, growPlanCode: f.growPlanCode, units: f.units, status: f.status, pricePerUnitCents: price, subscriptionCycleId: f.subscriptionCycleId, source: f.source, notes: f.notes || null }), `${ORDER_STATUS_LABELS[f.status]} order on file.`);
     }
   }
   const setStatus = (o: BookOrder, status: 'forecast' | 'confirmed') => {
     const row = orders.find((x) => x.id === o.id);
     if (!row) return;
-    run(() => updateOrder({ id: row.id, orderDate: row.orderDate, cropPlanCode: row.cropPlanCode, units: row.units, status, pricePerUnitCents: row.pricePerUnitCents, notes: row.notes }), `Order ${status}.`);
+    run(() => updateOrder({ id: row.id, orderDate: row.orderDate, growPlanCode: row.growPlanCode, units: row.units, status, pricePerUnitCents: row.pricePerUnitCents, notes: row.notes }), `Order ${status}.`);
   };
   const openDistribute = (o: BookOrder) => {
     if (!o.id) return;
-    setShipping({ id: o.id, orderDate: o.orderDate, subscriberName: o.subscriberName, pickupPointName: o.pickupPointName, cropPlanCode: o.cropPlanCode, cropPlanName: o.cropPlanName, units: o.units, pricePerUnitCents: o.pricePerUnitCents });
+    setShipping({ id: o.id, orderDate: o.orderDate, subscriberName: o.subscriberName, pickupPointName: o.pickupPointName, growPlanCode: o.growPlanCode, growPlanName: o.growPlanName, units: o.units, pricePerUnitCents: o.pricePerUnitCents });
   };
 
   const statusCell = (o: BookOrder) => {
-    if (o.basis === 'derived') return <><span>{ORDER_STATUS_LABELS.forecast}</span> <StatusBadge status="DERIVED" title="The subscriber's flat plan crop plan × the service's units per service. Not stored." /></>;
+    if (o.basis === 'derived') return <><span>{ORDER_STATUS_LABELS.forecast}</span> <StatusBadge status="DERIVED" title="The subscriber's flat plan grow plan × the service's units per service. Not stored." /></>;
     const d = o.distributionId ? distributionById.get(o.distributionId) : undefined;
     return (
       <>
@@ -229,7 +229,7 @@ export function OrdersClient({
 
       <Card title="Saved subscription cycles" className="mt-4">
         <p className="farm-kpi-sub">
-          A saved cycle is a cropPlan sequence on the shared list. It serves nobody until it is assigned: assigning copies it
+          A saved cycle is a growPlan sequence on the shared list. It serves nobody until it is assigned: assigning copies it
           onto a subscriber as that subscriber&rsquo;s flat plan. A channel never decides what a subscriber is served. Flat plans,
           and a sequence programmed for one subscriber, are on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>.
         </p>
@@ -253,7 +253,7 @@ export function OrdersClient({
                   </span>
                 )}
               </div>
-              <SequenceTable plan={cy} cropPlanNames={cropPlanNames} />
+              <SequenceTable plan={cy} growPlanNames={growPlanNames} />
               {assigning?.cycleId === cy.id && (
                 <div className="mt-2! flex flex-wrap gap-3 items-end">
                   <div className="farm-kpi-sub">Subscribers<br />
@@ -283,7 +283,7 @@ export function OrdersClient({
             key={cycleForm.id ?? 'new'}
             title={cycleForm.mode === 'edit' ? 'Edit subscription cycle' : 'Add subscription cycle'}
             initial={cycleForm.initial}
-            cropPlans={resolved.cropPlans}
+            growPlans={resolved.growPlans}
             pending={pending}
             onSave={submitCycle}
             onCancel={() => setCycleForm(null)}
@@ -323,13 +323,13 @@ export function OrdersClient({
             <div key={d} className="farm-scroll-x mt-[0.9rem]!">
               <div className="farm-kpi-sub"><span className="farm-c-ink font-semibold">{dateLabel(d)}</span> · {num(Math.round(units))} units · {rows.length} order{rows.length === 1 ? '' : 's'}</div>
               <table className="farm-table mt-[0.3rem]!">
-                <thead><tr><th>Subscriber</th><th>Pickup point · service</th><th>Crop plan</th><th className="num">Units</th><th className="num">Price</th><th>Status</th><th /></tr></thead>
+                <thead><tr><th>Subscriber</th><th>Pickup point · service</th><th>Grow plan</th><th className="num">Units</th><th className="num">Price</th><th>Status</th><th /></tr></thead>
                 <tbody>
                   {rows.map((o) => (
                     <tr key={o.key}>
                       <td>{o.subscriberName}<div className="farm-c-faint farm-fs-2xs">{channelLabel(o.channel)}</div></td>
                       <td>{o.pickupPointName}<div className="farm-c-faint farm-fs-2xs">{o.serviceName ?? 'no service named'}{o.distributionPickupPointId ? ` · distribution pickup point ${o.distributionPickupPointId}` : ''}</div></td>
-                      <td>{o.cropPlanCode}<div className="farm-c-faint farm-fs-2xs">{o.cropPlanName}</div></td>
+                      <td>{o.growPlanCode}<div className="farm-c-faint farm-fs-2xs">{o.growPlanName}</div></td>
                       <td className="num">{num(Math.round(o.units))}</td>
                       <td className="num">{money(fromCents(o.pricePerUnitCents))}<div className="farm-c-faint farm-fs-2xs">{o.priceBasis === 'order' ? 'on the order' : o.priceBasis === 'contract' ? 'contracted' : 'channel default'}</div></td>
                       <td>{statusCell(o)}</td>
@@ -372,9 +372,9 @@ export function OrdersClient({
                 {(resolved.subscribers.find((c) => c.id === orderForm.form.subscriberId)?.pickupPoints.find((x) => x.id === orderForm.form.subscriberPickupPointId)?.services ?? []).map((sv) => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
               </select>
             </label>
-            <label className="farm-kpi-sub">Crop plan<br />
-              <select className="farm-select" value={orderForm.form.cropPlanCode} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, cropPlanCode: e.target.value } })}>
-                {resolved.cropPlans.map((r) => <option key={r.code} value={r.code}>{r.code} — {r.name} · {CROP_PLAN_STATUS_LABELS[r.status]}</option>)}
+            <label className="farm-kpi-sub">Grow plan<br />
+              <select className="farm-select" value={orderForm.form.growPlanCode} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, growPlanCode: e.target.value } })}>
+                {resolved.growPlans.map((r) => <option key={r.code} value={r.code}>{r.code} — {r.name} · {GROW_PLAN_STATUS_LABELS[r.status]}</option>)}
               </select>
             </label>
             <label className="farm-kpi-sub">Units<br /><input className="farm-input w-26!" type="number" min={0} value={orderForm.form.units} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, units: Number(e.target.value) } })} /></label>
@@ -385,10 +385,10 @@ export function OrdersClient({
             </label>
             <label className="farm-kpi-sub">Price / unit $ (blank = contract or channel)<br /><input className="farm-input w-26!" type="number" min={0} step={0.01} value={orderForm.form.price} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, price: e.target.value === '' ? '' : Number(e.target.value) } })} /></label>
             <label className="farm-kpi-sub flex-1! min-w-56!">Notes<br /><input className="farm-input w-full!" value={orderForm.form.notes} onChange={(e) => setOrderForm({ ...orderForm, form: { ...orderForm.form, notes: e.target.value } })} /></label>
-            <button type="button" className="farm-btn primary" onClick={submitOrder} disabled={pending || !orderForm.form.subscriberPickupPointId || !orderForm.form.cropPlanCode}>Save</button>
+            <button type="button" className="farm-btn primary" onClick={submitOrder} disabled={pending || !orderForm.form.subscriberPickupPointId || !orderForm.form.growPlanCode}>Save</button>
             <button type="button" className="farm-btn" onClick={() => setOrderForm(null)} disabled={pending}>Cancel</button>
           </div>
-          {orderForm.form.source === 'cycle' && <p className="farm-kpi-sub mt-2">Confirming writes a row that replaces the forecast order for this pickup point, service, date and crop plan. The volume on Subscribers is unchanged.</p>}
+          {orderForm.form.source === 'cycle' && <p className="farm-kpi-sub mt-2">Confirming writes a row that replaces the forecast order for this pickup point, service, date and grow plan. The volume on Subscribers is unchanged.</p>}
         </Card>
       )}
 
@@ -430,15 +430,15 @@ export function OrdersClient({
             </div>
             <div className="farm-scroll-x">
               <table className="farm-table">
-                <thead><tr><th>Crop plan</th><th className="num">Units</th><th className="num">Orders</th></tr></thead>
-                <tbody>{day.byCropPlan.map((r) => <tr key={r.cropPlanCode}><td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-2xs">{r.cropPlanName}</div></td><td className="num">{num(Math.round(r.units))}</td><td className="num">{r.orders}</td></tr>)}</tbody>
+                <thead><tr><th>Grow plan</th><th className="num">Units</th><th className="num">Orders</th></tr></thead>
+                <tbody>{day.byGrowPlan.map((r) => <tr key={r.growPlanCode}><td>{r.growPlanCode}<div className="farm-c-faint farm-fs-2xs">{r.growPlanName}</div></td><td className="num">{num(Math.round(r.units))}</td><td className="num">{r.orders}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
         )}
         {day.orders.length === 0 && <p className="farm-kpi-sub mt-2">No orders on this date{dayDate < from || dayDate > to ? ' — it is outside the range above' : ''}.</p>}
         <p className="farm-kpi-sub mt-2">
-          The units by cropPlan on a date are what <Link className="farm-link" href="/farm/production-planning">Production Planning</Link> explodes into production requirements. Services, volume and flat plans are edited on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>; distribution records are on <Link className="farm-link" href="/farm/actuals">Actuals</Link>.
+          The units by growPlan on a date are what <Link className="farm-link" href="/farm/production-planning">Production Planning</Link> explodes into production requirements. Services, volume and flat plans are edited on <Link className="farm-link" href="/farm/subscribers">Subscribers</Link>; distribution records are on <Link className="farm-link" href="/farm/actuals">Actuals</Link>.
         </p>
       </Card>
 

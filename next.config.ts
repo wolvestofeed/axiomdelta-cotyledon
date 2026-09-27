@@ -27,6 +27,13 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pg'],
+  // The grow plans page's former address lands on the front page.
+  async redirects() {
+    return [
+      { source: '/farm/crop-plans', destination: '/farm', permanent: true },
+      { source: '/farm/crop-plans/:path*', destination: '/farm', permanent: true },
+    ];
+  },
   async headers() {
     return [
       { source: '/(.*)', headers: SECURITY_HEADERS },

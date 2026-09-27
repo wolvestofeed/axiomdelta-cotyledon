@@ -11,7 +11,7 @@ import { growPlanSeed } from '@/data/grow-plans-seed';
 import { tagged } from '@/data/tagged';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { deriveCapacity } from '@/engine';
-import { routeOrder, routeResources, type CropPlanRoute, type RouteResource, type RouteStep } from '@/engine/routing';
+import { routeOrder, routeResources, type GrowPlanRoute, type RouteResource, type RouteStep } from '@/engine/routing';
 import { resolveScenarioInputs, type SchedulePolicyOverlay } from '@/engine/scenario';
 import { schedule, scheduleInputsForDay, type ScheduleInput, type ScheduledBlock } from '@/engine/scheduler';
 import { staffDemand } from '@/engine/staff-demand';
@@ -22,9 +22,9 @@ const step = (o: Partial<RouteStep> & Pick<RouteStep, 'id' | 'stream' | 'kind'>)
   laborMinutesFixed: 0, laborMinutesPerUnit: 0, attended: true, controlPoint: null, after: [], edited: false, ...o,
 });
 
-function route(code: string, steps: RouteStep[]): CropPlanRoute {
+function route(code: string, steps: RouteStep[]): GrowPlanRoute {
   const numbered = steps.map((s, i) => ({ ...s, seq: i + 1 }));
-  return { cropPlanCode: code, studyId: `s-${code}`, basis: 'estimated', sowingSize: 100, steps: numbered, order: routeOrder(numbered), findings: [] };
+  return { growPlanCode: code, studyId: `s-${code}`, basis: 'estimated', sowingSize: 100, steps: numbered, order: routeOrder(numbered), findings: [] };
 }
 
 // A hand-built route at a 100-unit study: two sows on two grow units, a turnaround after both, and the harvest chain.
@@ -46,14 +46,14 @@ const SHORT = route('T-2', LONG.steps.filter((s) => !['prep:A', 'sow:A'].include
 const res = (key: string): RouteResource => ({ key, item: key, units: 1, concurrentSowings: tagged<number | null>(1, 'STATED'), changeoverMinutes: tagged<number | null>(0, 'STATED'), attendedRun: tagged<boolean | null>(null, 'STATED'), mayRunUnattended: tagged<boolean | null>(false, 'STATED') });
 const RESOURCES = ['K', 'S', 'T'].map(res);
 const policy = (o: SchedulePolicyOverlay = {}) => resolveScenarioInputs({ schedulePolicy: o }).schedulePolicy;
-const sowing = (id: string, r: CropPlanRoute = LONG, units = 100) => ({ id, cropPlanCode: r.cropPlanCode, units, route: r });
+const sowing = (id: string, r: GrowPlanRoute = LONG, units = 100) => ({ id, growPlanCode: r.growPlanCode, units, route: r });
 const crew = (id: string, startMin: number, endMin: number, headcount: number) => newCrew(id, { startMin, endMin, headcount }, { startMin, endMin, headcount });
 
 const day = (over: Partial<ScheduleInput> = {}) =>
   schedule({
     date: '2027-02-01',
     sowings: [sowing('b1'), sowing('b2')],
-    dispatches: [{ id: 'd1', cropPlanCode: 'T-1', units: 150, route: LONG }],
+    dispatches: [{ id: 'd1', growPlanCode: 'T-1', units: 150, route: LONG }],
     resources: RESOURCES,
     crews: [],
     capacityInputs,
@@ -187,18 +187,18 @@ describe('farm scheduler — the plan library', () => {
   const R = resolveScenarioInputs({}, lib);
   const studyFor = (code: string): TimeStudyDoc => {
     const r = lib.find((x) => x.code === code)!;
-    return { id: `s-${code}`, cropPlanCode: code, approvedAt: null, approvedBy: null, source: 'seed', ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize) };
+    return { id: `s-${code}`, growPlanCode: code, approvedAt: null, approvedBy: null, source: 'seed', ...estimatedTimeStudy(r, deriveCapacity(r, R.capacityInputs).sowingSize) };
   };
 
   it('labor reconciles to staff demand for the same day, from the same time studies', () => {
     const code = 'BROC-01';
     const studies = [studyFor(code)];
     const size = deriveCapacity(lib.find((x) => x.code === code)!, R.capacityInputs).sowingSize;
-    const runs = [{ cropPlanCode: code, cropPlanName: code, sowingsScheduled: 2, produced: 2 * size }];
-    const shipments = [{ cropPlanCode: code, filledBase: 20 }];
-    const inputs = scheduleInputsForDay({ productionRuns: runs, shipments, cropPlans: lib, studies, equipment: equipmentSeed, routing: {} });
+    const runs = [{ growPlanCode: code, growPlanName: code, sowingsScheduled: 2, produced: 2 * size }];
+    const shipments = [{ growPlanCode: code, filledBase: 20 }];
+    const inputs = scheduleInputsForDay({ productionRuns: runs, shipments, growPlans: lib, studies, equipment: equipmentSeed, routing: {} });
     const r = schedule({ date: '2027-02-01', sowings: inputs.sowings, dispatches: inputs.dispatches, resources: routeResources(equipmentSeed), crews: [], capacityInputs: R.capacityInputs, policy: R.schedulePolicy });
-    const demand = staffDemand({ from: '2027-02-01', to: '2027-02-01', studies, days: [{ productionDate: '2027-02-01', runs }], harvest: [{ date: '2027-02-01', shipments: [{ cropPlanCode: code, cropPlanName: code, units: 20 }] }] });
+    const demand = staffDemand({ from: '2027-02-01', to: '2027-02-01', studies, days: [{ productionDate: '2027-02-01', runs }], harvest: [{ date: '2027-02-01', shipments: [{ growPlanCode: code, growPlanName: code, units: 20 }] }] });
     expect(r.metrics.sowingsPlaced).toBe(2);
     expect(r.metrics.laborHours).toBeCloseTo(demand.days[0]!.staffHours, 9);
     expect(r.metrics.sowingLaborHours).toBeCloseTo(demand.days[0]!.sowingStaffHours, 9);

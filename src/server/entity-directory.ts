@@ -3,7 +3,7 @@ import type { GrowPlanDef } from '@/data/grow-plan';
 import 'server-only';
 import { supplierOperations } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listEquipment } from '@/server/equipment';
 import type { EquipmentLine } from '@/data/capex';
 import { EQUIPMENT_STATUS_LABELS } from '@/engine/equipment';
@@ -73,14 +73,14 @@ function prospectToEntity(s: (typeof prospectRecords)[number]): LeanEntity {
   };
 }
 
-function cropPlanToEntity(r: GrowPlanDef): LeanEntity {
+function growPlanToEntity(r: GrowPlanDef): LeanEntity {
   return {
-    kind: 'cropPlan',
+    kind: 'growPlan',
     id: r.code,
     name: r.name,
     subtitle: `${r.code} · ${formatNameOf(r)}`,
     pills: [{ label: `${r.lines.length} lines`, tone: 'plain' }],
-    href: '/farm/crop-plans',
+    href: '/farm/grow-plans',
     lat: null,
     lng: null,
     geoSource: null,
@@ -136,7 +136,7 @@ function lotToEntity(b: SowingRecordDoc): LeanEntity {
     kind: 'lot',
     id: b.sowingId,
     name: b.sowingId,
-    subtitle: `${b.cropPlanCode} · produced ${b.productionDate}`,
+    subtitle: `${b.growPlanCode} · produced ${b.productionDate}`,
     pills: [{ label: `${Math.round(b.goodUnits)} units`, tone: 'plain' }],
     href: '/farm/inventory',
     lat: null,
@@ -201,11 +201,11 @@ async function searchKind(kind: EntityKind, q: string): Promise<LeanEntity[]> {
         .slice(0, LIMIT)
         .map(sourceToEntity);
     }
-    case 'cropPlan':
-      return (await listCropPlans())
+    case 'growPlan':
+      return (await listGrowPlans())
         .filter((r) => matches([r.name, r.code, formatNameOf(r)].join(' '), needle))
         .slice(0, LIMIT)
-        .map(cropPlanToEntity);
+        .map(growPlanToEntity);
     case 'equipment':
       return (await listEquipment())
         .filter((e) => matches([e.item, e.key, e.category, e.note ?? ''].join(' '), needle))
@@ -223,7 +223,7 @@ async function searchKind(kind: EntityKind, q: string): Promise<LeanEntity[]> {
         .map(courseToEntity);
     case 'lot':
       return (await loadActuals()).sowings
-        .filter((b) => matches([b.sowingId, b.cropPlanCode, b.productionDate, ...b.lots.map((l) => l.outputLotCode)].join(' '), needle))
+        .filter((b) => matches([b.sowingId, b.growPlanCode, b.productionDate, ...b.lots.map((l) => l.outputLotCode)].join(' '), needle))
         .slice(0, LIMIT)
         .map(lotToEntity);
   }
@@ -243,8 +243,8 @@ async function hydrateKind(kind: EntityKind, ids: string[]): Promise<LeanEntity[
       const rows = await listSources();
       return rows.filter((s) => want.has(s.id)).map(sourceToEntity);
     }
-    case 'cropPlan':
-      return (await listCropPlans()).filter((r) => want.has(r.code)).map(cropPlanToEntity);
+    case 'growPlan':
+      return (await listGrowPlans()).filter((r) => want.has(r.code)).map(growPlanToEntity);
     case 'equipment':
       return (await listEquipment()).filter((e) => want.has(e.key)).map(equipmentToEntity);
     case 'pickupPoint':

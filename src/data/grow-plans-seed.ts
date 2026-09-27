@@ -5,7 +5,7 @@
  * jar. Mixed trays are composed to nutrition targets and are added when the targets exist (Phase 2
  * part 7).
  *
- * The library (`farm.crop_plans`) is the source from first read; this list is inserted when the
+ * The library (`farm.grow_plans`) is the source from first read; this list is inserted when the
  * library is empty and is the fallback wherever no library has been loaded.
  */
 

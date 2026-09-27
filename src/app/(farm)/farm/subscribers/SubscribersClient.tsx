@@ -113,7 +113,7 @@ export function SubscribersClient({
   const forecast = resolved.forecast;
   const byChannel = resolved.phases.map((p) => ({ phase: p.phase, market: p.market, price: p.pricePerUnit, row: demand.byChannel[p.phase] }));
   const pickupPointById = useMemo(() => new Map(demand.pickupPoints.map((s) => [s.id, s])), [demand.pickupPoints]);
-  const cropPlanNames = useMemo(() => Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])), [resolved.cropPlans]);
+  const growPlanNames = useMemo(() => Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])), [resolved.growPlans]);
   const saved = useMemo(() => savedCycles(cycles), [cycles]);
   const cycleName = useMemo(() => new Map(cycles.map((c) => [c.id, c.name])), [cycles]);
   const recordMode = mode === 'record' && canEdit;
@@ -301,7 +301,7 @@ export function SubscribersClient({
                 </span>
               )}
             </div>
-            <SequenceTable plan={p} cropPlanNames={cropPlanNames} />
+            <SequenceTable plan={p} growPlanNames={growPlanNames} />
           </div>
         ))}
         {assignForm?.subscriberId === c.id && (
@@ -330,7 +330,7 @@ export function SubscribersClient({
             key={planForm.id ?? 'new'}
             title={`${planForm.id ? 'Edit' : 'Program'} ${c.name}'s flat plan${recordMode ? '' : ' — this forecast'}`}
             initial={planForm.initial}
-            cropPlans={resolved.cropPlans}
+            growPlans={resolved.growPlans}
             channel={c.channel}
             services={services.length > 1 ? services : []}
             pending={pending}

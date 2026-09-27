@@ -149,7 +149,7 @@ describe('the resolver derives the channel volumes from subscribers', () => {
 describe('participation — a sales figure from confirmed and distributed orders', async () => {
   const { pickupPointParticipation } = await import('@/engine/participation');
   const order = (date: string, service: string | null, units: number, status: 'forecast' | 'confirmed' | 'distributed') => ({
-    id: `${date}-${service}-${status}`, orderDate: date, subscriberId: 'c', subscriberPickupPointId: 'pickupPoint', subscriberServiceId: service, channel: 1, cropPlanCode: 'R', units, status,
+    id: `${date}-${service}-${status}`, orderDate: date, subscriberId: 'c', subscriberPickupPointId: 'pickupPoint', subscriberServiceId: service, channel: 1, growPlanCode: 'R', units, status,
     pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed' as const, notes: null,
   });
 
@@ -168,7 +168,7 @@ describe('participation — a sales figure from confirmed and distributed orders
   });
 
   it('two orders on the same service occasion add to one service; no enrollment or no orders reads null', () => {
-    const orders = [order('2027-01-04', 'unit', 100, 'distributed'), { ...order('2027-01-04', 'unit', 40, 'distributed'), id: 'x', cropPlanCode: 'R2' }, order('2027-01-04', 'breakfast', 60, 'confirmed')];
+    const orders = [order('2027-01-04', 'unit', 100, 'distributed'), { ...order('2027-01-04', 'unit', 40, 'distributed'), id: 'x', growPlanCode: 'R2' }, order('2027-01-04', 'breakfast', 60, 'confirmed')];
     expect(pickupPointParticipation('pickupPoint', 400, orders)).toMatchObject({ services: 2, unitsPerService: 100, participation: 0.25 });
     expect(pickupPointParticipation('pickupPoint', null, orders).participation).toBeNull();
     expect(pickupPointParticipation('pickupPoint', 400, []).participation).toBeNull();

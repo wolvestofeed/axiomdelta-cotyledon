@@ -13,7 +13,7 @@ import { createPackage, deletePackage, updatePackage } from '@/server/packaging-
 type PackagePatch = Partial<Omit<PackageDef, 'id' | 'source'>>;
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-/** Columns in an open group: package, channels, hot/cold, material, size, end of use, rank, manual cost, supplier item, units / pack, cost in force, crop plans. */
+/** Columns in an open group: package, channels, hot/cold, material, size, end of use, rank, manual cost, supplier item, units / pack, cost in force, grow plans. */
 const COLS = 12;
 
 export function PackagingClient({ canEdit }: { canEdit: boolean }) {
@@ -42,7 +42,7 @@ export function PackagingClient({ canEdit }: { canEdit: boolean }) {
   }, [lib.packages, resolved.phases]);
 
   const bases = lib.packages.map((p) => packageUnitCost(p, lib.supplierItems).basis);
-  const cropPlansWithPicks = new Set(lib.picks.map((p) => p.cropPlanCode)).size;
+  const growPlansWithPicks = new Set(lib.picks.map((p) => p.growPlanCode)).size;
 
   const run = (fn: () => Promise<ActionResult>, after?: () => void) =>
     start(async () => {
@@ -69,7 +69,7 @@ export function PackagingClient({ canEdit }: { canEdit: boolean }) {
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={num(lib.packages.length)} label="Packages in the library" />
         <Kpi value={num(bases.filter((b) => b !== 'none').length)} label="With a cost on file" sub={`${num(bases.filter((b) => b === 'supplier').length)} at a supplier price`} />
-        <Kpi value={num(cropPlansWithPicks)} label="Crop plans with packages picked" sub={`of ${num(resolved.cropPlans.length)} crop plans`} />
+        <Kpi value={num(growPlansWithPicks)} label="Grow plans with packages picked" sub={`of ${num(resolved.growPlans.length)} grow plans`} />
       </div>
 
       <Card title="Packaging library" className="mt-4">
@@ -91,7 +91,7 @@ export function PackagingClient({ canEdit }: { canEdit: boolean }) {
                   <th>Supplier item</th>
                   <th className="num">Units / pack</th>
                   <th className="num">Cost in force</th>
-                  <th className="num">Crop plans</th>
+                  <th className="num">Grow plans</th>
                 </tr>
               ) : (
                 <tr><th colSpan={COLS}>Channel</th></tr>
@@ -201,7 +201,7 @@ export function PackagingClient({ canEdit }: { canEdit: boolean }) {
           </div>
         )}
         <p className="farm-kpi-sub mt-2">
-          Cost in force is the linked supplier catalog item&rsquo;s price when one is on file — per each, or per pack ÷ units per pack — else the manual cost. Groups are channels; a package on more than one channel is listed under each. Within a group, packages sort hot, cold, then unset; by material; by size; and by end-of-use rank, unranked last. CropPlans pick their packages on <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>, and each crop plan&rsquo;s packaging per unit is the sum of its picks at the cost here — zero for a package with no cost entered. Packing machines are on <Link className="farm-link" href="/farm/grow-units">Equipment</Link>. Supplier prices come from catalogs imported on <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
+          Cost in force is the linked supplier catalog item&rsquo;s price when one is on file — per each, or per pack ÷ units per pack — else the manual cost. Groups are channels; a package on more than one channel is listed under each. Within a group, packages sort hot, cold, then unset; by material; by size; and by end-of-use rank, unranked last. GrowPlans pick their packages on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>, and each grow plan&rsquo;s packaging per unit is the sum of its picks at the cost here — zero for a package with no cost entered. Packing machines are on <Link className="farm-link" href="/farm/grow-units">Equipment</Link>. Supplier prices come from catalogs imported on <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
           {!canEdit && ' Editing is limited to super admins.'}
         </p>
       </Card>

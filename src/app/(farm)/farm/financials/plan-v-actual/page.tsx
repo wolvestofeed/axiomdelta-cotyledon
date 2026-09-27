@@ -124,7 +124,7 @@ function mergeRows(lists: PvaBreakdownRow[][]): Map<string, PvaBreakdownRow> {
   return out;
 }
 
-function Breakdown({ title, months, by, nameOf }: { title: string; months: PvaMonth[]; by: 'cropPlan' | 'channel' | 'subscriber'; nameOf: (key: string) => string }) {
+function Breakdown({ title, months, by, nameOf }: { title: string; months: PvaMonth[]; by: 'growPlan' | 'channel' | 'subscriber'; nameOf: (key: string) => string }) {
   const plan = mergeRows(months.map((m) => m.plan.breakdown[by]));
   const actual = mergeRows(months.map((m) => m.actual.breakdown[by]));
   const keys = [...new Set([...plan.keys(), ...actual.keys()])].sort((a, b) => (actual.get(b)?.units ?? 0) + (plan.get(b)?.units ?? 0) - (actual.get(a)?.units ?? 0) - (plan.get(a)?.units ?? 0));
@@ -143,7 +143,7 @@ function Breakdown({ title, months, by, nameOf }: { title: string; months: PvaMo
         <div className="farm-scroll-x">
           <table className="farm-table compact">
             <thead>
-              <tr><th rowSpan={2}>{by === 'cropPlan' ? 'Crop plan' : by === 'channel' ? 'Channel' : 'Subscriber'}</th><th colSpan={3} className="num">Units</th><th colSpan={3} className="num">Revenue</th><th colSpan={3} className="num">Input cost</th><th colSpan={3} className="num">Orders</th></tr>
+              <tr><th rowSpan={2}>{by === 'growPlan' ? 'Grow plan' : by === 'channel' ? 'Channel' : 'Subscriber'}</th><th colSpan={3} className="num">Units</th><th colSpan={3} className="num">Revenue</th><th colSpan={3} className="num">Input cost</th><th colSpan={3} className="num">Orders</th></tr>
               <tr>{[0, 1, 2, 3].map((i) => <Fragment key={i}><th className="num">Plan</th><th className="num">Actual</th><th className="num">Diff</th></Fragment>)}</tr>
             </thead>
             <tbody>
@@ -189,8 +189,8 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
   const rolling = sumMeasures(report.months.map((m) => m.rolling.measures));
   const lastMonth = report.months[report.months.length - 1];
   const groups = rowsFor(plan, actual, rolling, lastMonth.closingCashCents);
-  const unmapped = [...new Set(report.months.flatMap((m) => [...m.plan.cropPlansWithUnmappedLines, ...m.actual.cropPlansWithUnmappedLines]))].sort();
-  const noSowing = [...new Set(report.months.flatMap((m) => [...m.plan.cropPlansDistributedWithNoSowing, ...m.actual.cropPlansDistributedWithNoSowing]))];
+  const unmapped = [...new Set(report.months.flatMap((m) => [...m.plan.growPlansWithUnmappedLines, ...m.actual.growPlansWithUnmappedLines]))].sort();
+  const noSowing = [...new Set(report.months.flatMap((m) => [...m.plan.growPlansDistributedWithNoSowing, ...m.actual.growPlansDistributedWithNoSowing]))];
   const y = period.year;
 
   return (
@@ -198,7 +198,7 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
       <PageHeader
         title="Plan v Actual"
         purpose="Compare each month’s records with the plan of record in force at month end."
-        functions={['Totals', 'By crop plan', 'By channel', 'By subscriber', 'Rolling forecast']}
+        functions={['Totals', 'By grow plan', 'By channel', 'By subscriber', 'Rolling forecast']}
         connects={[
           { href: '/farm/actuals', dir: 'from' },
           { href: '/farm/financials/pnl', dir: 'from' },
@@ -250,7 +250,7 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
 
       {unmapped.length > 0 && (
         <div className="mb-4 border! border-[color:var(--farm-line)]! bg-[color:var(--farm-surface-2)]! rounded-[0.6rem]! py-[0.6rem]! px-[1.1rem]! farm-fs-sm farm-c-soft" role="status">
-          CropPlans served in the period with inputs that have no mapping to a food study product: {unmapped.join(', ')}. Those inputs carry no food emissions and no mass, so Scope 3 and waste read low on both sides until they are mapped on <Link className="farm-link" href="/farm/sustainability/inputs">Inputs</Link>.
+          GrowPlans served in the period with inputs that have no mapping to a food study product: {unmapped.join(', ')}. Those inputs carry no food emissions and no mass, so Scope 3 and waste read low on both sides until they are mapped on <Link className="farm-link" href="/farm/sustainability/inputs">Inputs</Link>.
         </div>
       )}
 
@@ -292,13 +292,13 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
         </p>
       </Card>
 
-      <Breakdown title="By crop plan" months={report.months} by="cropPlan" nameOf={(k) => k} />
+      <Breakdown title="By grow plan" months={report.months} by="growPlan" nameOf={(k) => k} />
       <Breakdown title="By channel" months={report.months} by="channel" nameOf={(k) => report.channelNames[k] ?? `Channel ${k}`} />
       <Breakdown title="By subscriber" months={report.months} by="subscriber" nameOf={(k) => report.subscriberNames[k] ?? k} />
       <p className="farm-kpi-sub mt-2">
-        Input cost by row is each cropPlan&rsquo;s input cost per unit made in the month × its units distributed, so the rows follow the units.
+        Input cost by row is each growPlan&rsquo;s input cost per unit made in the month × its units distributed, so the rows follow the units.
         {noSowing.length > 0 && ` Distributed with no sowing of their own in the month, so no input cost on their rows: ${noSowing.join(', ')}.`}
-        {' '}Sowings by cropPlan are on <Link className="farm-link" href="/farm/production-planning/calendar">Calendar</Link>.
+        {' '}Sowings by growPlan are on <Link className="farm-link" href="/farm/production-planning/calendar">Calendar</Link>.
       </p>
     </>
   );

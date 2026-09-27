@@ -7,9 +7,9 @@ import { postSelectedLedger } from '@/server/ledgers';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { getFarmAccess } from '@/server/access';
 import { getScenarioView } from '@/server/scenarios';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listTimeStudies } from '@/server/time-studies';
-import { activeCropPlanAverages } from '@/engine/active-averages';
+import { activeGrowPlanAverages } from '@/engine/active-averages';
 import { orderWeek } from '@/engine/order-week';
 import { orderBook } from '@/engine/orders';
 import { WEEKDAY_LABELS } from '@/data/subscription-cycles';
@@ -27,7 +27,7 @@ import { CLOCK_STATE_LABELS, clockStateOf, hoursRun, payPeriodFor, type PayCalen
 import { pipelineStats } from '@/engine/prospects';
 import { supplierDataset } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
-import { cropPlanFoodFootprint } from '@/engine/carbon';
+import { growPlanFoodFootprint } from '@/engine/carbon';
 import { dashboardToday } from '@/engine/dashboard-today';
 import { distributedConsumption, finishedGoodsOnHand } from '@/engine/production-plan';
 import { resolveSubscriberPickupPoints } from '@/engine/demand';
@@ -72,16 +72,16 @@ async function FarmDashboardInner() {
 async function loadOperatingPicture() {
   // The dashboard reflects what this person is looking at: the open forecast, or the plan of
   // record (plan-data defaults when none has been set), in the world selected in the scenario bar.
-  const [view, library, subscribers, calendar, supplierTerms, pos, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, kind, cycles, orders, production, supplierOptions] = await Promise.all([getScenarioView(), listCropPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listPurchaseOrders(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies(), getLedgerKind(), listSubscriptionCycles(), listOrders(), loadProductionRecords(), listSupplierLcaOptions()]);
+  const [view, library, subscribers, calendar, supplierTerms, pos, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, kind, cycles, orders, production, supplierOptions] = await Promise.all([getScenarioView(), listGrowPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listPurchaseOrders(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies(), getLedgerKind(), listSubscriptionCycles(), listOrders(), loadProductionRecords(), listSupplierLcaOptions()]);
   const R = resolveScenarioInputs(view.config, library, subscribers, calendar.closures, supplierTerms, equipment, packaging, catalog, undefined, loans, fixedCostLines, leasehold, timeStudies.studies);
   const closures = calendar.closures;
   const isPlan = kind === 'plan';
   const today = new Date().toISOString().slice(0, 10);
   const pf = Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
-  const active = R.cropPlans.filter((r) => r.status === 'in_service');
+  const active = R.growPlans.filter((r) => r.status === 'in_service');
   const mean = (xs: number[]) => (xs.length > 0 ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-  // Plant figures across the active crop plans: each on its own sowing (Roadmap N9).
+  // Plant figures across the active grow plans: each on its own sowing (Roadmap N9).
   const caps = active.map((r) => deriveCapacity(r, R.capacityInputs));
   const plant = { sowingSize: mean(caps.map((c) => c.sowingSize)), cyclesPerDay: mean(caps.map((c) => c.cyclesPerDay)), maxUnitsPerDay: mean(caps.map((c) => c.maxUnitsPerDay)) };
 
@@ -95,20 +95,20 @@ async function loadOperatingPicture() {
     from: today,
     to: isoAddDaysLocal(today, 14),
     channelPriceCents: Object.fromEntries(R.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-    cropPlanNames: Object.fromEntries(R.cropPlans.map((r) => [r.code, r.name])),
+    growPlanNames: Object.fromEntries(R.growPlans.map((r) => [r.code, r.name])),
     closures,
   });
   const shelfLife = R.assumptions.inventory.blackoutShelfLife.value;
   const openingLots = isPlan
     ? []
-    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.cropPlans, pf), shelfLifeDays: shelfLife, asOf: today, cropPlans: R.cropPlans }).lots.filter((l) => l.remaining > 0);
-  const day = dashboardToday({ today, book, cropPlans: R.cropPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, cropPlanAssumptions: R.cropPlanAssumptions, unitFactorByChannel: pf, openingLots, closures, channels: R.phases.map((p) => p.phase) });
+    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.growPlans, pf), shelfLifeDays: shelfLife, asOf: today, growPlans: R.growPlans }).lots.filter((l) => l.remaining > 0);
+  const day = dashboardToday({ today, book, growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: pf, openingLots, closures, channels: R.phases.map((p) => p.phase) });
 
-  // Food: active-crop-plan averages per unit, and the period's footprint on the selected ledger.
-  const foots = active.map((r) => cropPlanFoodFootprint(r));
+  // Food: active-grow-plan averages per unit, and the period's footprint on the selected ledger.
+  const foots = active.map((r) => growPlanFoodFootprint(r));
   const basis = await postSustainabilityBasis(kind, view.config);
-  const mix = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: pf, selection: R.sustainability.inputBasis, options: [...curatedOptions, ...supplierOptions] });
-  const foodCo2 = { perUnit: mean(foots.map((f) => f.totalKgCo2ePerUnit)), periodKg: mix.referenceKg, periodLabel: isPlan ? `forecast year from ${basis.from}` : `reporting year ${basis.from.slice(0, 4)}`, unmappedCropPlans: mix.cropPlansWithUnmappedLines.length, activeCount: active.length };
+  const mix = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: pf, selection: R.sustainability.inputBasis, options: [...curatedOptions, ...supplierOptions] });
+  const foodCo2 = { perUnit: mean(foots.map((f) => f.totalKgCo2ePerUnit)), periodKg: mix.referenceKg, periodLabel: isPlan ? `forecast year from ${basis.from}` : `reporting year ${basis.from.slice(0, 4)}`, unmappedGrowPlans: mix.growPlansWithUnmappedLines.length, activeCount: active.length };
   return { R, pos, plant, day, foodCo2, closures, isPlan, cycles, orders };
 }
 
@@ -135,9 +135,9 @@ function sustainabilityCard({ foodCo2 }: Picture): SectionCardProps {
   return {
     section: 'Sustainability',
     stats: [
-      { label: 'Food CO2e / unit, active-crop-plan average', value: `${foodCo2.perUnit.toFixed(2)} kg` },
+      { label: 'Food CO2e / unit, active-grow-plan average', value: `${foodCo2.perUnit.toFixed(2)} kg` },
       { label: 'Food footprint', value: `${(foodCo2.periodKg / 1000).toFixed(1)} t` },
-      { label: 'Plans with unmapped lines', value: `${num(foodCo2.unmappedCropPlans)} served` },
+      { label: 'Plans with unmapped lines', value: `${num(foodCo2.unmappedGrowPlans)} served` },
       { label: 'Factors on file', value: num(factorRegistry.length) },
     ],
     note: `Scope 3 purchased inputs on the reference basis (study means), ${foodCo2.periodLabel}, plan by plan. A line with no mapping to a study product carries no footprint.`,
@@ -164,30 +164,30 @@ async function AdminDashboard() {
     from: today,
     to: weekTo,
     channelPriceCents: Object.fromEntries(R.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-    cropPlanNames: Object.fromEntries(R.cropPlans.map((r) => [r.code, r.name])),
+    growPlanNames: Object.fromEntries(R.growPlans.map((r) => [r.code, r.name])),
     closures: picture.closures,
   });
   const week = orderWeek({
     book,
     from: today,
     channels: R.phases.map((p) => p.phase),
-    cropPlans: R.cropPlans,
+    growPlans: R.growPlans,
     cap: R.capacityInputs,
     assumptions: R.assumptions,
     studies: studies.studies,
     unitFactorByChannel: Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>,
-    cropPlanAssumptions: R.cropPlanAssumptions,
+    growPlanAssumptions: R.growPlanAssumptions,
   });
   const channelName = (c: number) => R.phases.find((p) => p.phase === c)?.market ?? `Channel ${c}`;
 
-  // The top row: averages over every active crop plan, each on its own sowing and
+  // The top row: averages over every active grow plan, each on its own sowing and
   // its own labor standard — the seeded estimates until actuals replace them.
-  const avg = activeCropPlanAverages(R.cropPlans, R.capacityInputs, R.assumptions, studies.studies, R.cropPlanAssumptions);
+  const avg = activeGrowPlanAverages(R.growPlans, R.capacityInputs, R.assumptions, studies.studies, R.growPlanAssumptions);
   const basisNote = avg.count === 0
     ? 'No grow plan is In Service.'
     : `Averaged over ${num(avg.count)} active grow plan${avg.count === 1 ? '' : 's'}, each on its own sowing${avg.onEstimate > 0 ? `; ${num(avg.onEstimate)} on an estimated time study` : ''}${avg.withoutStudy > 0 ? `; ${num(avg.withoutStudy)} with no study` : ''}. Seeded estimates stand until observed studies are approved.`;
-  const growPlans = R.cropPlans.filter((r) => r.status === 'in_service');
-  const meanCycle = growPlans.length ? growPlans.reduce((t, r) => t + cycleDays(planStageDays(r)), 0) / growPlans.length : 0;
+  const inService = R.growPlans.filter((r) => r.status === 'in_service');
+  const meanCycle = inService.length ? inService.reduce((t, r) => t + cycleDays(planStageDays(r)), 0) / inService.length : 0;
 
   // ── Alerts (Roadmap K2): supplier bills that do not match their purchase
   //    order and receipts are flagged here and held from payment.
@@ -333,7 +333,7 @@ async function AdminDashboard() {
           </table>
         </div>
         <p className="farm-fs-xs farm-c-faint mt-[0.9rem]! mr-0! mb-0! ml-0! leading-[1.4]">
-          The order book from today: forecast orders from the subscribers&rsquo; pickup points with confirmed and distributed rows in their place. Each unit is costed at its plan&rsquo;s input cost on the channel&rsquo;s unit and its plan&rsquo;s labor standard at the plan&rsquo;s own sowing &mdash; the seeded estimates until observed studies are approved; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a crop plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
+          The order book from today: forecast orders from the subscribers&rsquo; pickup points with confirmed and distributed rows in their place. Each unit is costed at its plan&rsquo;s input cost on the channel&rsquo;s unit and its plan&rsquo;s labor standard at the plan&rsquo;s own sowing &mdash; the seeded estimates until observed studies are approved; labor at the placeholder loaded rate.{week.uncostedUnits > 0 ? ` ${num(week.uncostedUnits)} units name a grow plan not in the library and carry no cost.` : ''} {dayNote(picture.day)}
         </p>
         <div className="flex flex-wrap gap-y-[0.1rem] gap-x-3 mt-[0.8rem]! pt-[0.7rem] border-t border-t-[color:var(--farm-line)]">
           {modulesFor(true).filter((m) => m.section === 'Production').map((m) => (
@@ -376,7 +376,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
   const picture = await loadOperatingPicture();
   const own = staffId ? await ownClock(staffId, picture.R.payCalendar) : null;
   const { pos, plant, day } = picture;
-  const avgFood = activeCropPlanAverages(picture.R.cropPlans, picture.R.capacityInputs, picture.R.assumptions, [], picture.R.cropPlanAssumptions);
+  const avgFood = activeGrowPlanAverages(picture.R.growPlans, picture.R.capacityInputs, picture.R.assumptions, [], picture.R.growPlanAssumptions);
   const sup = supplierDataset.counts;
   const pipe = pipelineStats(prospectRecords);
 
@@ -440,10 +440,10 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       />
 
       <div className="farm-hero">
-        <HeroStat value={num(plant.sowingSize)} label="Sowing — active-crop-plan average" sub={`Trays one grow unit takes; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
+        <HeroStat value={num(plant.sowingSize)} label="Sowing — active-grow-plan average" sub={`Trays one grow unit takes; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
         <HeroStat value={coverText(day)} label="Days of cover" sub={`Finished stock over a distribution day's orders; ${picture.R.assumptions.inventory.blackoutShelfLife.value}-day shelf life`} />
-        <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-crop-plan average, at standard" />
+        <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-grow-plan average, at standard" />
       </div>
 
       <SectionGrid sections={sections} isAdmin={false} />

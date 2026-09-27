@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
 import { listNutrients } from '@/server/nutrients';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { plansNaming } from '@/engine/nutrients';
 import { NutrientsClient } from '@/app/(farm)/farm/nutrients/NutrientsClient';
 import { withWorkspace } from '@/server/workspace';
@@ -14,7 +14,7 @@ export default async function NutrientsPage() {
 }
 
 async function NutrientsPageInner() {
-  const [access, nutrients, library] = await Promise.all([getFarmAccess(), listNutrients(), listCropPlans()]);
+  const [access, nutrients, library] = await Promise.all([getFarmAccess(), listNutrients(), listGrowPlans()]);
   const plans = library;
   const namedBy = Object.fromEntries(nutrients.map((n) => [n.key, plansNaming(n.key, plans)]));
   return (
@@ -24,7 +24,7 @@ async function NutrientsPageInner() {
         purpose="Keep the nutrient solutions and supplements a grow plan's nutrient line names: strength, price and what each is meant to elicit."
         functions={['The library', 'Add supplement']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'to' },
+          { href: '/farm/grow-plans', dir: 'to' },
           { href: '/farm/sources', dir: 'from' },
         ]}
         howItWorks={

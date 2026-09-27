@@ -2,19 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { factorFingerprint, restatementCheck, fullInventory } from '@/engine/inventory';
 import { resolveScenarioInputs, AUDIT_DEFAULTS } from '@/engine/scenario';
 import { factorRegistry } from '@/data/emission-factors';
-import { cropPlanFoodFootprint } from '@/engine/carbon';
+import { growPlanFoodFootprint } from '@/engine/carbon';
 import { emptySustainabilityBasis, type SustainabilityBasis } from '@/engine/sustainability-basis';
 import { pickupPoints } from '@/data/seed-invented';
 
-/** A year's volume on one crop plan at its own channel: 10,000 units to one seed pickup point, 10,000 units produced. */
+/** A year's volume on one grow plan at its own channel: 10,000 units to one seed pickup point, 10,000 units produced. */
 function basisFor(code: string, channel: number): SustainabilityBasis {
   return {
     ...emptySustainabilityBasis('actual', '2026-01-01', '2026-12-31'),
-    units: [{ cropPlanCode: code, channel, units: 10_000 }],
+    units: [{ growPlanCode: code, channel, units: 10_000 }],
     totalUnits: 10_000,
     distributionDays: 180,
     productionDays: 90,
-    producedByCropPlan: { [code]: 10_000 },
+    producedByGrowPlan: { [code]: 10_000 },
     byPickupPoint: [{ pickupPointId: pickupPoints[0].id, pickupPointName: pickupPoints[0].name, units: 10_000, distributionDays: 180 }],
   };
 }
@@ -57,10 +57,10 @@ describe('farm inventory — restatement check', () => {
 describe('farm inventory — full inventory from the resolved model', () => {
   it('on defaults: food reference is the footprint × units distributed, energy and refrigerants empty, freight outbound only', () => {
     const R = resolveScenarioInputs({});
-    const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
-    const channel = cropPlan.channels[0];
-    const inv = fullInventory(R, '2026-09-12', { basis: basisFor(cropPlan.code, channel), energy: R.sustainability.energy, refrigerantService: {} });
-    const perUnit = cropPlanFoodFootprint(cropPlan as never).totalKgCo2ePerUnit;
+    const growPlan = R.growPlans.find((r) => r.code === R.growPlan.code)!;
+    const channel = growPlan.channels[0];
+    const inv = fullInventory(R, '2026-09-12', { basis: basisFor(growPlan.code, channel), energy: R.sustainability.energy, refrigerantService: {} });
+    const perUnit = growPlanFoodFootprint(growPlan as never).totalKgCo2ePerUnit;
     expect(inv.annualUnits).toBe(10_000);
     expect(inv.foodReferenceKg).toBeCloseTo(perUnit * 10_000, 3);
     expect(inv.foodSelectedKg).toBeCloseTo(perUnit * 10_000, 3);
@@ -91,9 +91,9 @@ describe('farm inventory — full inventory from the resolved model', () => {
         equipment: { [walkIn]: { refrigerant: 'R-404A', chargeLbPerUnit: 60 } },
       },
     });
-    const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
+    const growPlan = R.growPlans.find((r) => r.code === R.growPlan.code)!;
     const inv = fullInventory(R, '2026-09-12', {
-      basis: basisFor(cropPlan.code, cropPlan.channels[0]),
+      basis: basisFor(growPlan.code, growPlan.channels[0]),
       energy: R.sustainability.energy,
       refrigerantService: { [walkIn]: [{ date: '2026-04-01', lbAdded: 4 }] },
     });

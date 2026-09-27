@@ -8,26 +8,26 @@ import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating'
 import { inputRatings, ratingFor } from '@/data/mark';
 import { foodFactorSource } from '@/data/emission-factors';
 import { BOUNDARY_LABEL, lcaOptions as curatedOptions, type LcaOption } from '@/data/lca-options';
-import { cropPlanFoodFootprintDual } from '@/engine/carbon';
+import { growPlanFoodFootprintDual } from '@/engine/carbon';
 import { useSustainabilityWorld } from '@/state/sustainability';
 import { SustainabilityWorldNote } from '@/components/ledger/SustainabilityWorldNote';
 import { useScenario } from '@/state/scenario-store';
 import { SupplierPicker } from '@/components/SupplierPicker';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
 import { PageControls } from '@/components/PageControls';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 
 export default function InputsClient({ supplierOptions }: { supplierOptions: LcaOption[] }) {
   const { resolved: scenario, setInputBasis, setSustainability, isSuperAdmin: superAdmin } = useScenario();
-  const { cropPlan: selectedCropPlan } = useSelectedCropPlan();
-  const resolved = useMemo(() => ({ ...scenario, cropPlan: selectedCropPlan }), [scenario, selectedCropPlan]);
+  const { growPlan: selectedGrowPlan } = useSelectedGrowPlan();
+  const resolved = useMemo(() => ({ ...scenario, growPlan: selectedGrowPlan }), [scenario, selectedGrowPlan]);
   const selection = resolved.sustainability.inputBasis;
   const links = resolved.sustainability.inputSupplier;
   const linked = useLinkedSuppliers(links);
   const options = useMemo(() => [...curatedOptions, ...supplierOptions], [supplierOptions]);
 
-  const dual = useMemo(() => cropPlanFoodFootprintDual(resolved.cropPlan, selection, undefined, undefined, options), [resolved.cropPlan, selection, options]);
-  // The period's food across every crop plan distributed, on the selected ledger (Roadmap N6 slice 4).
+  const dual = useMemo(() => growPlanFoodFootprintDual(resolved.growPlan, selection, undefined, undefined, options), [resolved.growPlan, selection, options]);
+  // The period's food across every grow plan distributed, on the selected ledger (Roadmap N6 slice 4).
   const world = useSustainabilityWorld(options);
   // The LCA basis and supplier links are forecast edits: on Plan only.
   const isSuperAdmin = superAdmin && world.isPlan;
@@ -48,7 +48,7 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
         purpose="Compare each unit's food footprint on the reference and selected bases."
         functions={['Reference basis', 'Selected basis', 'Gap', 'Per unit']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'from' },
+          { href: '/farm/grow-plans', dir: 'from' },
           { href: '/farm/sustainability/supplier-lca', dir: 'from' },
           { href: '/farm/sustainability/inventory', dir: 'to' },
         ]}
@@ -62,7 +62,7 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
         }
         status="live"
       />
-      <PageControls><CropPlanSelector /></PageControls>
+      <PageControls><GrowPlanSelector /></PageControls>
 
       <SustainabilityWorldNote world={world} />
 

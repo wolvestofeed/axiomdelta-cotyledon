@@ -1,13 +1,13 @@
 /**
  * MicroFarm — subscription cycles, flat plans and orders: the document shapes, and the seed.
  *
- * A subscription cycle is a saved crop plan sequence on the shared list. A flat plan is
+ * A subscription cycle is a saved grow plan sequence on the shared list. A flat plan is
  * the same shape carrying a subscriber: every subscriber has its own, copied from
  * a saved cycle in one click or programmed for it alone (Roadmap N4a,
  * operating-model-roadmap decision 19). A channel never decides what a
- * subscriber is served. An order is a date, subscriber, pickup point, service, crop plan,
+ * subscriber is served. An order is a date, subscriber, pickup point, service, grow plan,
  * units and a status. A forecast order generated from a flat plan is DERIVED —
- * the plan's crop plan on the date × the service's units per service — and is
+ * the plan's grow plan on the date × the service's units per service — and is
  * never stored; the engine computes it on read (`_engine/orders.ts`). A stored
  * order is a typed forecast, a confirmed count, or a distributed order naming
  * its distribution record.
@@ -39,8 +39,8 @@ export const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5];
 export interface SubscriptionCycleDayDef {
   /** 1 .. lengthDays */
   day: number;
-  /** Library crop plan code; null = no service that day. */
-  cropPlanCode: string | null;
+  /** Library grow plan code; null = no service that day. */
+  growPlanCode: string | null;
 }
 
 export interface SubscriptionCycleDef {
@@ -74,7 +74,7 @@ export interface OrderDef {
   /** The service the order is for; null on a row typed before services existed. */
   subscriberServiceId: string | null;
   channel: number;
-  cropPlanCode: string;
+  growPlanCode: string;
   units: number;
   status: OrderStatus;
   /** Null = the subscriber's contracted price, else the channel default. */
@@ -111,7 +111,7 @@ const cycleShape = (id: string, name: string, startDate: string, codes: readonly
   status: 'active',
   notes,
   source: 'seed',
-  days: codes.map((code, i) => ({ day: i + 1, cropPlanCode: code })),
+  days: codes.map((code, i) => ({ day: i + 1, growPlanCode: code })),
 });
 
 /**

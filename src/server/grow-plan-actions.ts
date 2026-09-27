@@ -3,10 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { farmCropPlans, farmCropPlanLines, farmSowingRecords } from '@/db';
+import { farmGrowPlans, farmGrowPlanLines, farmSowingRecords } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
-import { cropPlanToRows, CROP_PLAN_STATUSES } from '@/engine/crop-plan-library';
+import { growPlanToRows, GROW_PLAN_STATUSES } from '@/engine/grow-plan-library';
 import { growPlanProblems, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import { tagged } from '@/data/tagged';
 import { withWorkspace } from '@/server/workspace';
@@ -90,11 +90,11 @@ async function nutrientProblems(plan: GrowPlanDef): Promise<string[]> {
 const issues = (e: z.ZodError) => e.issues.map((i) => `${i.path.join('.') || 'plan'}: ${i.message}`).join('; ');
 
 /** Add a grow plan to the library. */
-export async function createCropPlan(...args: Parameters<typeof createCropPlanInner>): ReturnType<typeof createCropPlanInner> {
-  return withWorkspace(() => createCropPlanInner(...args));
+export async function createGrowPlan(...args: Parameters<typeof createGrowPlanInner>): ReturnType<typeof createGrowPlanInner> {
+  return withWorkspace(() => createGrowPlanInner(...args));
 }
 
-async function createCropPlanInner(input: unknown): Promise<Result<{ id: string; code: string }>> {
+async function createGrowPlanInner(input: unknown): Promise<Result<{ id: string; code: string }>> {
   const parsed = GrowPlanInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   let access;
@@ -106,17 +106,17 @@ async function createCropPlanInner(input: unknown): Promise<Result<{ id: string;
   const plan = toGrowPlan(parsed.data);
   const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
-  const existing = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, plan.code)).limit(1);
+  const existing = await db.select({ id: farmGrowPlans.id }).from(farmGrowPlans).where(eq(farmGrowPlans.code, plan.code)).limit(1);
   if (existing[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
 
-  const { header, lines } = cropPlanToRows(plan);
+  const { header, lines } = growPlanToRows(plan);
   const inserted = await db
-    .insert(farmCropPlans)
+    .insert(farmGrowPlans)
     .values({ ...header, effectiveFrom: new Date().toISOString().slice(0, 10), createdBy: access.userId })
-    .returning({ id: farmCropPlans.id });
+    .returning({ id: farmGrowPlans.id });
   const id = inserted[0]?.id;
   if (!id) return { ok: false, error: 'Failed to save the grow plan.' };
-  await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: id, ...l })));
+  await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: id, ...l })));
   revalidatePath('/farm', 'layout');
   return { ok: true, id, code: plan.code };
 }
@@ -124,11 +124,11 @@ async function createCropPlanInner(input: unknown): Promise<Result<{ id: string;
 const UpdateInput = GrowPlanInput.extend({ id: z.string().uuid() });
 
 /** Replace a library plan's header and lines; bumps the version. */
-export async function updateCropPlan(...args: Parameters<typeof updateCropPlanInner>): ReturnType<typeof updateCropPlanInner> {
-  return withWorkspace(() => updateCropPlanInner(...args));
+export async function updateGrowPlan(...args: Parameters<typeof updateGrowPlanInner>): ReturnType<typeof updateGrowPlanInner> {
+  return withWorkspace(() => updateGrowPlanInner(...args));
 }
 
-async function updateCropPlanInner(input: unknown): Promise<Result<{ id: string }>> {
+async function updateGrowPlanInner(input: unknown): Promise<Result<{ id: string }>> {
   const parsed = UpdateInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
@@ -139,30 +139,30 @@ async function updateCropPlanInner(input: unknown): Promise<Result<{ id: string 
   const plan = toGrowPlan(parsed.data);
   const problems = [...growPlanProblems(plan), ...(await nutrientProblems(plan))];
   if (problems.length) return { ok: false, error: problems.join(' ') };
-  const current = await db.select({ id: farmCropPlans.id, version: farmCropPlans.version, code: farmCropPlans.code }).from(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id)).limit(1);
+  const current = await db.select({ id: farmGrowPlans.id, version: farmGrowPlans.version, code: farmGrowPlans.code }).from(farmGrowPlans).where(eq(farmGrowPlans.id, parsed.data.id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Grow plan not found.' };
   if (current[0].code !== plan.code) {
-    const clash = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, plan.code)).limit(1);
+    const clash = await db.select({ id: farmGrowPlans.id }).from(farmGrowPlans).where(eq(farmGrowPlans.code, plan.code)).limit(1);
     if (clash[0]) return { ok: false, error: `Grow plan code ${plan.code} is already in the library.` };
   }
-  const { header, lines } = cropPlanToRows(plan);
+  const { header, lines } = growPlanToRows(plan);
   await db
-    .update(farmCropPlans)
+    .update(farmGrowPlans)
     .set({ ...header, source: undefined, version: current[0].version + 1, effectiveFrom: new Date().toISOString().slice(0, 10), updatedAt: new Date() })
-    .where(eq(farmCropPlans.id, parsed.data.id));
-  await db.delete(farmCropPlanLines).where(eq(farmCropPlanLines.cropPlanId, parsed.data.id));
-  await db.insert(farmCropPlanLines).values(lines.map((l) => ({ cropPlanId: parsed.data.id, ...l })));
+    .where(eq(farmGrowPlans.id, parsed.data.id));
+  await db.delete(farmGrowPlanLines).where(eq(farmGrowPlanLines.growPlanId, parsed.data.id));
+  await db.insert(farmGrowPlanLines).values(lines.map((l) => ({ growPlanId: parsed.data.id, ...l })));
   revalidatePath('/farm', 'layout');
   return { ok: true, id: parsed.data.id };
 }
 
 const StatusInput = z.object({ id: z.string().uuid(), status: z.enum(['in_service', 'planned', 'developing']) });
 
-export async function setCropPlanStatus(...args: Parameters<typeof setCropPlanStatusInner>): ReturnType<typeof setCropPlanStatusInner> {
-  return withWorkspace(() => setCropPlanStatusInner(...args));
+export async function setGrowPlanStatus(...args: Parameters<typeof setGrowPlanStatusInner>): ReturnType<typeof setGrowPlanStatusInner> {
+  return withWorkspace(() => setGrowPlanStatusInner(...args));
 }
 
-async function setCropPlanStatusInner(input: unknown): Promise<Result> {
+async function setGrowPlanStatusInner(input: unknown): Promise<Result> {
   const parsed = StatusInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
@@ -170,8 +170,8 @@ async function setCropPlanStatusInner(input: unknown): Promise<Result> {
   } catch (e) {
     return refuse(e);
   }
-  if (!CROP_PLAN_STATUSES.includes(parsed.data.status)) return { ok: false, error: 'Unknown status.' };
-  await db.update(farmCropPlans).set({ status: parsed.data.status, updatedAt: new Date() }).where(eq(farmCropPlans.id, parsed.data.id));
+  if (!GROW_PLAN_STATUSES.includes(parsed.data.status)) return { ok: false, error: 'Unknown status.' };
+  await db.update(farmGrowPlans).set({ status: parsed.data.status, updatedAt: new Date() }).where(eq(farmGrowPlans.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }
@@ -179,11 +179,11 @@ async function setCropPlanStatusInner(input: unknown): Promise<Result> {
 const DeleteInput = z.object({ id: z.string().uuid() });
 
 /** Remove a plan. Refused while a sowing record names its code, or if it is the last one. */
-export async function deleteCropPlan(...args: Parameters<typeof deleteCropPlanInner>): ReturnType<typeof deleteCropPlanInner> {
-  return withWorkspace(() => deleteCropPlanInner(...args));
+export async function deleteGrowPlan(...args: Parameters<typeof deleteGrowPlanInner>): ReturnType<typeof deleteGrowPlanInner> {
+  return withWorkspace(() => deleteGrowPlanInner(...args));
 }
 
-async function deleteCropPlanInner(input: unknown): Promise<Result> {
+async function deleteGrowPlanInner(input: unknown): Promise<Result> {
   const parsed = DeleteInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: issues(parsed.error) };
   try {
@@ -191,13 +191,13 @@ async function deleteCropPlanInner(input: unknown): Promise<Result> {
   } catch (e) {
     return refuse(e);
   }
-  const row = await db.select({ code: farmCropPlans.code }).from(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id)).limit(1);
+  const row = await db.select({ code: farmGrowPlans.code }).from(farmGrowPlans).where(eq(farmGrowPlans.id, parsed.data.id)).limit(1);
   if (!row[0]) return { ok: false, error: 'Grow plan not found.' };
-  const used = await db.select({ id: farmSowingRecords.id }).from(farmSowingRecords).where(eq(farmSowingRecords.cropPlanCode, row[0].code)).limit(1);
+  const used = await db.select({ id: farmSowingRecords.id }).from(farmSowingRecords).where(eq(farmSowingRecords.growPlanCode, row[0].code)).limit(1);
   if (used[0]) return { ok: false, error: `Sowing records name ${row[0].code}; a plan with production history is not deleted.` };
-  const count = await db.select({ id: farmCropPlans.id }).from(farmCropPlans);
+  const count = await db.select({ id: farmGrowPlans.id }).from(farmGrowPlans);
   if (count.length <= 1) return { ok: false, error: 'The library keeps at least one grow plan.' };
-  await db.delete(farmCropPlans).where(eq(farmCropPlans.id, parsed.data.id));
+  await db.delete(farmGrowPlans).where(eq(farmGrowPlans.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }

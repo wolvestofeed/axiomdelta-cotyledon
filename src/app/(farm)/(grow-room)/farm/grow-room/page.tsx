@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
  * orders — and the raw lots on hand by earliest use-by. The Grow Room records, so
  * it is always the Actual world (Roadmap N6 slice 3): the order book runs on the
  * subscriber records' pickup points, services and flat plans with no forecast edit.
- * Crop plan and plant figures come from the open forecast; the page states no action.
+ * Grow plan and plant figures come from the open forecast; the page states no action.
  */
 export default async function FloorPage() {
   return withWorkspace(() => FloorPageInner());
@@ -47,12 +47,12 @@ async function FloorPageInner() {
       isAdmin={access.isSuperAdmin}
       closures={calendar.closures}
       inputs={{
-        cropPlans: inputs.cropPlans,
+        growPlans: inputs.growPlans,
         subscribers: inputs.subscribers,
         pickupPoints: resolveSubscriberPickupPoints(inputs.subscribers, {}, { closures: inputs.closures }),
         capacityInputs: inputs.capacityInputs,
         assumptions: inputs.assumptions,
-        cropPlanAssumptions: inputs.cropPlanAssumptions,
+        growPlanAssumptions: inputs.growPlanAssumptions,
         phases: inputs.phases,
         phaseProfiles: inputs.phaseProfiles,
       }}

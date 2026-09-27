@@ -38,7 +38,7 @@ describe('purchase lines', () => {
     const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
     const name = VARIETY_BY_KEY['broccoli']!.name;
     const r = resolveScenarioInputs({ inputs: { [`BROC-01::${name}`]: { seedUnitCost: 30 } } }, [broc]);
-    const seed = purchaseLines(r.cropPlans[0]!).find((l) => l.kind === 'seed')!;
+    const seed = purchaseLines(r.growPlans[0]!).find((l) => l.kind === 'seed')!;
     expect(seed.unitCost).toBe(30);
     expect(seed.name).toBe(name);
   });

@@ -12,14 +12,14 @@ import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
 import { lightLine, planStageDays, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
-import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { clock } from '@/data/crews';
 import type { StatusTag } from '@/data/tagged';
 import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
 import { PageControls } from '@/components/PageControls';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 
 /** The defaults an edit is measured against: the resolver with no overlay. */
 // The plan's defaults on the grow seed library, never the Phase 1-era fallback.
@@ -33,7 +33,7 @@ const hoursOf = (min: number) => Math.round((min / 60) * 100) / 100;
  */
 export default function CapacityPage() {
   const { resolved, config, setCapacity } = useScenario();
-  const { cropPlan: selected } = useSelectedCropPlan();
+  const { growPlan: selected } = useSelectedGrowPlan();
   const { forecastEditing } = useOperationsWorld({});
   const locked = !forecastEditing;
   const C = resolved.capacityInputs;
@@ -51,11 +51,11 @@ export default function CapacityPage() {
 
   const byPlan = useMemo(
     () =>
-      resolved.cropPlans.map((r) => {
+      resolved.growPlans.map((r) => {
         const c = deriveGrowCapacity(r, units);
         return { code: r.code, name: r.name, status: r.status, format: TRAY_FORMAT_BY_KEY[r.format].name, sku: unitSku(r.code, r.format), sowing: c.sowingTrays, unitCount: c.unitCount, totalTrays: c.totalTrays, cycle: c.cycleDays, toHarvest: c.daysToHarvest, perDay: c.traysPerDay, binding: c.binding?.unit.item ?? null };
       }),
-    [resolved.cropPlans, units],
+    [resolved.growPlans, units],
   );
 
   const chain: Array<{ step: string; value: string; status: StatusTag; note?: string; total?: boolean }> =
@@ -97,7 +97,7 @@ export default function CapacityPage() {
         }
         status="live"
       />
-      <PageControls><CropPlanSelector /></PageControls>
+      <PageControls><GrowPlanSelector /></PageControls>
 
       {!plan && (
         <Card title="Not a grow plan">
@@ -168,7 +168,7 @@ export default function CapacityPage() {
                   {byPlan.map((r) => (
                     <tr key={r.code} className={r.code === selected.code ? 'total' : ''}>
                       <td>{r.code}<div className="farm-c-faint farm-fs-xs">{r.name}</div></td>
-                      <td>{CROP_PLAN_STATUS_LABELS[r.status]}</td>
+                      <td>{GROW_PLAN_STATUS_LABELS[r.status]}</td>
                       <td>{r.format}</td>
                       <td className="farm-mono">{r.sku}</td>
                       <td className="num">{num(r.sowing)}</td>

@@ -22,7 +22,7 @@
 
 import type { Tagged } from '@/data/tagged';
 import { tagged } from '@/data/tagged';
-import type { CropPlanStatus } from '@/data/plan-data';
+import type { GrowPlanStatus } from '@/data/plan-data';
 import type { MediumKey, NutrientKey, LightRegimeKey, NutrientSolutionDef } from '@/data/inputs-catalog';
 import type { MeasuredConsumption } from '@/data/time-studies';
 import type { StatusTag } from '@/data/tagged';
@@ -73,7 +73,7 @@ export type GrowPlanLine = SeedLine | MediumLine | NutrientLine | LightLine;
 export interface GrowPlanDef {
   code: string;
   name: string;
-  status: CropPlanStatus;
+  status: GrowPlanStatus;
   /** Channels the plan is offered on. */
   channels: number[];
   format: TrayFormatKey;

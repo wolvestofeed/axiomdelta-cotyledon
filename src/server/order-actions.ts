@@ -11,7 +11,7 @@ import {
   farmSubscriberPickupPoints,
   farmSubscriberServices,
   farmDistributions,
-  farmCropPlans,
+  farmGrowPlans,
 } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/server/access';
@@ -56,7 +56,7 @@ const CycleInput = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).min(1, 'A cycle serves on at least one weekday'),
   status: z.enum(['active', 'inactive']).default('active'),
   notes: z.string().max(2000).nullable().default(null),
-  days: z.array(z.object({ day: z.number().int().min(1), cropPlanCode: z.string().max(40).nullable() })),
+  days: z.array(z.object({ day: z.number().int().min(1), growPlanCode: z.string().max(40).nullable() })),
 });
 
 /** A plan for a service must name one of the subscriber's services. */
@@ -80,12 +80,12 @@ async function checkCycleDays(d: z.infer<typeof CycleInput>): Promise<string | n
     if (seen.has(day.day)) return `Day ${day.day} appears twice.`;
     seen.add(day.day);
   }
-  const codes = [...new Set(d.days.map((x) => x.cropPlanCode).filter((c): c is string => c !== null))];
+  const codes = [...new Set(d.days.map((x) => x.growPlanCode).filter((c): c is string => c !== null))];
   if (codes.length === 0) return null;
-  const found = await db.select({ code: farmCropPlans.code }).from(farmCropPlans);
+  const found = await db.select({ code: farmGrowPlans.code }).from(farmGrowPlans);
   const have = new Set(found.map((r) => r.code));
   const missing = codes.filter((c) => !have.has(c));
-  return missing.length ? `Not in the crop plan library: ${missing.join(', ')}.` : null;
+  return missing.length ? `Not in the grow plan library: ${missing.join(', ')}.` : null;
 }
 
 export async function createSubscriptionCycle(...args: Parameters<typeof createSubscriptionCycleInner>): ReturnType<typeof createSubscriptionCycleInner> {
@@ -110,7 +110,7 @@ async function createSubscriptionCycleInner(input: unknown): Promise<Result<{ id
     .returning({ id: farmSubscriptionCycles.id });
   const id = inserted[0]?.id;
   if (!id) return { ok: false, error: 'Failed to save the subscription cycle.' };
-  if (days.length) await db.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, cropPlanCode: d.cropPlanCode })));
+  if (days.length) await db.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
   revalidatePath('/farm', 'layout');
   return { ok: true, id };
 }
@@ -118,7 +118,7 @@ async function createSubscriptionCycleInner(input: unknown): Promise<Result<{ id
 /**
  * Edit a saved subscription cycle or a flat plan. For a saved cycle, `applyToPlanIds`
  * names the flat plans copied from it that take the new sequence — length,
- * weekdays and crop plan per day — the apply-to picker's selection or all of
+ * weekdays and grow plan per day — the apply-to picker's selection or all of
  * them. A plan not named keeps its sequence. Each plan keeps its own subscriber,
  * service, start and end.
  */
@@ -146,7 +146,7 @@ async function updateSubscriptionCycleInner(input: unknown): Promise<Result<{ ap
   const applied = await db.transaction(async (tx) => {
     await tx.update(farmSubscriptionCycles).set({ ...header, weekdays, source: 'user_built', updatedAt: new Date() }).where(eq(farmSubscriptionCycles.id, id));
     await tx.delete(farmSubscriptionCycleDays).where(eq(farmSubscriptionCycleDays.cycleId, id));
-    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, cropPlanCode: d.cropPlanCode })));
+    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
     if (applyToPlanIds.length === 0) return 0;
     const plans = await tx
       .select({ id: farmSubscriptionCycles.id })
@@ -156,7 +156,7 @@ async function updateSubscriptionCycleInner(input: unknown): Promise<Result<{ ap
     if (planIds.length === 0) return 0;
     await tx.update(farmSubscriptionCycles).set({ lengthDays: header.lengthDays, weekdays, updatedAt: new Date() }).where(inArray(farmSubscriptionCycles.id, planIds));
     await tx.delete(farmSubscriptionCycleDays).where(inArray(farmSubscriptionCycleDays.cycleId, planIds));
-    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(planIds.flatMap((cycleId) => days.map((d) => ({ cycleId, day: d.day, cropPlanCode: d.cropPlanCode }))));
+    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(planIds.flatMap((cycleId) => days.map((d) => ({ cycleId, day: d.day, growPlanCode: d.growPlanCode }))));
     return planIds.length;
   });
   revalidatePath('/farm', 'layout');
@@ -218,7 +218,7 @@ async function assignSubscriptionCycleInner(input: unknown): Promise<Result<{ id
         .returning({ id: farmSubscriptionCycles.id });
       const id = row[0]?.id;
       if (!id) continue;
-      if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((x) => ({ cycleId: id, day: x.day, cropPlanCode: x.cropPlanCode })));
+      if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((x) => ({ cycleId: id, day: x.day, growPlanCode: x.growPlanCode })));
       out.push(id);
     }
     return out;
@@ -251,7 +251,7 @@ const OrderInput = z.object({
   subscriberId: z.string().uuid(),
   subscriberPickupPointId: z.string().uuid(),
   subscriberServiceId: z.string().uuid().nullable().default(null),
-  cropPlanCode: z.string().min(1, 'Name the crop plan').max(40),
+  growPlanCode: z.string().min(1, 'Name the grow plan').max(40),
   units: z.number().min(0),
   status: z.enum(['forecast', 'confirmed']).default('forecast'),
   pricePerUnitCents: z.number().int().min(0).nullable().default(null),
@@ -271,8 +271,8 @@ async function pickupPointOf(subscriberId: string, subscriberPickupPointId: stri
   return rows[0] ?? null;
 }
 
-async function cropPlanExists(code: string): Promise<boolean> {
-  const r = await db.select({ id: farmCropPlans.id }).from(farmCropPlans).where(eq(farmCropPlans.code, code)).limit(1);
+async function growPlanExists(code: string): Promise<boolean> {
+  const r = await db.select({ id: farmGrowPlans.id }).from(farmGrowPlans).where(eq(farmGrowPlans.code, code)).limit(1);
   return Boolean(r[0]);
 }
 
@@ -298,7 +298,7 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
     const sv = await db.select({ id: farmSubscriberServices.id }).from(farmSubscriberServices).where(and(eq(farmSubscriberServices.id, d.subscriberServiceId), eq(farmSubscriberServices.subscriberPickupPointId, d.subscriberPickupPointId))).limit(1);
     if (!sv[0]) return { ok: false, error: 'The service is not one of this pickup point’s services.' };
   }
-  if (!(await cropPlanExists(d.cropPlanCode))) return { ok: false, error: `${d.cropPlanCode} is not in the crop plan library.` };
+  if (!(await growPlanExists(d.growPlanCode))) return { ok: false, error: `${d.growPlanCode} is not in the grow plan library.` };
   const clash = await db
     .select({ id: farmOrders.id })
     .from(farmOrders)
@@ -306,12 +306,12 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
       and(
         eq(farmOrders.orderDate, d.orderDate),
         eq(farmOrders.subscriberPickupPointId, d.subscriberPickupPointId),
-        eq(farmOrders.cropPlanCode, d.cropPlanCode),
+        eq(farmOrders.growPlanCode, d.growPlanCode),
         d.subscriberServiceId ? eq(farmOrders.subscriberServiceId, d.subscriberServiceId) : isNull(farmOrders.subscriberServiceId),
       ),
     )
     .limit(1);
-  if (clash[0]) return { ok: false, error: 'An order for that pickup point, service, date and crop plan is already on file; edit it instead.' };
+  if (clash[0]) return { ok: false, error: 'An order for that pickup point, service, date and grow plan is already on file; edit it instead.' };
   const inserted = await db
     .insert(farmOrders)
     .values({ ...d, channel: pickupPoint.channel, createdBy: access.userId })
@@ -324,7 +324,7 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
 const UpdateOrderInput = z.object({
   id: z.string().uuid(),
   orderDate: isoDate,
-  cropPlanCode: z.string().min(1).max(40),
+  growPlanCode: z.string().min(1).max(40),
   units: z.number().min(0),
   status: z.enum(['forecast', 'confirmed']),
   pricePerUnitCents: z.number().int().min(0).nullable().default(null),
@@ -348,7 +348,7 @@ async function updateOrderInner(input: unknown): Promise<Result> {
   const current = await db.select({ status: farmOrders.status, subscriberPickupPointId: farmOrders.subscriberPickupPointId, subscriberServiceId: farmOrders.subscriberServiceId }).from(farmOrders).where(eq(farmOrders.id, id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Order not found.' };
   if (current[0].status === 'distributed') return { ok: false, error: 'A distributed order is not edited; its distribution record is the fact.' };
-  if (!(await cropPlanExists(rest.cropPlanCode))) return { ok: false, error: `${rest.cropPlanCode} is not in the crop plan library.` };
+  if (!(await growPlanExists(rest.growPlanCode))) return { ok: false, error: `${rest.growPlanCode} is not in the grow plan library.` };
   const clash = await db
     .select({ id: farmOrders.id })
     .from(farmOrders)
@@ -356,12 +356,12 @@ async function updateOrderInner(input: unknown): Promise<Result> {
       and(
         eq(farmOrders.orderDate, rest.orderDate),
         eq(farmOrders.subscriberPickupPointId, current[0].subscriberPickupPointId),
-        eq(farmOrders.cropPlanCode, rest.cropPlanCode),
+        eq(farmOrders.growPlanCode, rest.growPlanCode),
         current[0].subscriberServiceId ? eq(farmOrders.subscriberServiceId, current[0].subscriberServiceId) : isNull(farmOrders.subscriberServiceId),
       ),
     )
     .limit(1);
-  if (clash[0] && clash[0].id !== id) return { ok: false, error: 'Another order for that pickup point, service, date and crop plan is already on file.' };
+  if (clash[0] && clash[0].id !== id) return { ok: false, error: 'Another order for that pickup point, service, date and grow plan is already on file.' };
   await db.update(farmOrders).set({ ...rest, updatedAt: new Date() }).where(eq(farmOrders.id, id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
@@ -440,14 +440,14 @@ async function distributeOrderInner(input: unknown): Promise<Result<{ distributi
       handoffTempF: d.handoffTempF,
       receivedBy: d.receivedBy,
       subscriberId: o.subscriberId,
-      notes: d.notes ?? `Order ${o.id} · ${o.cropPlanCode}`,
+      notes: d.notes ?? `Order ${o.id} · ${o.growPlanCode}`,
       createdBy: access.userId,
     })
     .returning({ id: farmDistributions.id });
     const id = distribution[0]?.id;
     if (!id) return null;
     await tx.update(farmOrders).set({ status: 'distributed', distributionId: id, updatedAt: new Date() }).where(eq(farmOrders.id, o.id));
-    await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_distribution', recordKind: 'distribution', recordId: id, period: periodOf(d.distributedOn), detail: { orderId: o.id, cropPlanCode: o.cropPlanCode, distributedOn: d.distributedOn, pickupPointName: pickupPoint?.name ?? null, units: d.units, pricePerUnitCents: d.pricePerUnitCents, lotCodes: d.lotCodes } });
+    await appendPosting(tx, { actorUserId: access.userId, actorEmail: access.email, action: 'record_distribution', recordKind: 'distribution', recordId: id, period: periodOf(d.distributedOn), detail: { orderId: o.id, growPlanCode: o.growPlanCode, distributedOn: d.distributedOn, pickupPointName: pickupPoint?.name ?? null, units: d.units, pricePerUnitCents: d.pricePerUnitCents, lotCodes: d.lotCodes } });
     return id;
   });
   if (!distributionId) return { ok: false, error: 'Failed to record the distribution.' };

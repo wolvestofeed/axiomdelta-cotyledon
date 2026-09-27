@@ -6,8 +6,8 @@ import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, Kpi, CheckPill, StatusBadge, money, num, pct } from '@/components/ui';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
-import { CropPlanEditor } from '@/components/CropPlanEditor';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
+import { GrowPlanEditor } from '@/components/GrowPlanEditor';
 import { PurchaseOrderGenerator } from '@/components/PurchaseOrderGenerator';
 import { StaffingPanel } from '@/components/StaffingPanel';
 import { useScenario } from '@/state/scenario-store';
@@ -15,14 +15,14 @@ import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
 import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
-import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { STAGE_BY_KEY } from '@/data/stage-schedule';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
 import {
   requirementsFor,
   finishedGoodsOnHand,
   planHorizon,
-  singleCropPlanRun,
+  singleGrowPlanRun,
   toRequirementLines,
   distributedConsumption,
   type FinishedLot,
@@ -38,7 +38,7 @@ import { CHANNEL_COMMISSION_PHASE3 } from '@/engine/phase';
 
 type Level = 'run' | 'day' | 'horizon';
 const LEVELS: { id: Level; label: string }[] = [
-  { id: 'run', label: '1 · Single crop plan run' },
+  { id: 'run', label: '1 · Single grow plan run' },
   { id: 'day', label: '2 · Distribution day' },
   { id: 'horizon', label: '3 · Horizon' },
 ];
@@ -51,7 +51,7 @@ const nextServiceDay = (d: string) => {
 };
 const grams = (lb: number) => lb * GRAMS_PER_LB;
 
-interface SowingRow { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number; closedBy: string | null }
+interface SowingRow { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; closedBy: string | null }
 
 export function ProductionPlanningClient({
   canEdit,
@@ -108,49 +108,49 @@ export function ProductionPlanningClient({
   const channels = useMemo(() => resolved.phases.map((p) => ({ phase: p.phase, market: p.market, pricePerUnit: p.pricePerUnit, priceCents: Math.round(p.pricePerUnit * 100), unitsPerDay: p.unitsPerDay })), [resolved.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(resolved.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [resolved.phaseProfiles]);
   const premiumByChannel = useMemo(() => Object.fromEntries(resolved.phaseProfiles.map((p) => [p.phase, p.premiumFactor.value])) as Record<number, number>, [resolved.phaseProfiles]);
-  const cropPlanNames = useMemo(() => Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])), [resolved.cropPlans]);
+  const growPlanNames = useMemo(() => Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])), [resolved.growPlans]);
   const channelPriceCents = useMemo(() => Object.fromEntries(channels.map((c) => [c.phase, c.priceCents])) as Record<number, number>, [channels]);
   const channelLabel = (ch: number) => channels.find((c) => c.phase === ch)?.market ?? `Channel ${ch}`;
   const bookFor = useCallback(
-    (from: string, to: string) => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from, to, channelPriceCents, cropPlanNames, closures }),
-    [world.pickupPoints, resolved.subscribers, cycles, orders, channelPriceCents, cropPlanNames, closures],
+    (from: string, to: string) => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures }),
+    [world.pickupPoints, resolved.subscribers, cycles, orders, channelPriceCents, growPlanNames, closures],
   );
-  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
+  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
   const planOf = useCallback((code: string) => {
-    const r = resolved.cropPlans.find((x) => x.code === code);
+    const r = resolved.growPlans.find((x) => x.code === code);
     return r ?? null;
-  }, [resolved.cropPlans]);
+  }, [resolved.growPlans]);
   // Recorded sowings still inside their cycle are on the shelves when a window opens.
   const openingSowings = useMemo(
     () =>
       sowings
         .filter((b) => b.goodUnits > 0)
-        .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+        .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
         .filter((b) => {
-          const plan = planOf(b.cropPlanCode);
+          const plan = planOf(b.growPlanCode);
           return plan !== null && stageOn(plan, b.sowDate, today).stage !== 'off';
         }),
     [sowings, planOf, today],
   );
   const stageToday = (s: CalendarSowing) => {
-    const plan = planOf(s.cropPlanCode);
+    const plan = planOf(s.growPlanCode);
     const st = plan ? stageOn(plan, s.sowDate, today) : null;
     return st && st.stage !== 'off' ? `${STAGE_BY_KEY[st.stage].name}, day ${st.dayOfCycle}` : '—';
   };
 
-  // ── Level 1: single crop plan run ────────────────────────────────────────────
-  const { cropPlan: runCropPlan } = useSelectedCropPlan();
-  const [runChannel, setRunChannel] = useState<number>(() => runCropPlan.channels[0] ?? 1);
-  const [runUnits, setRunUnits] = useState<number>(() => Math.round(channels.find((c) => c.phase === (runCropPlan.channels[0] ?? 1))?.unitsPerDay ?? 0));
+  // ── Level 1: single grow plan run ────────────────────────────────────────────
+  const { growPlan: runGrowPlan } = useSelectedGrowPlan();
+  const [runChannel, setRunChannel] = useState<number>(() => runGrowPlan.channels[0] ?? 1);
+  const [runUnits, setRunUnits] = useState<number>(() => Math.round(channels.find((c) => c.phase === (runGrowPlan.channels[0] ?? 1))?.unitsPerDay ?? 0));
   const [runPrice, setRunPrice] = useState<number | ''>('');
   const [runOpening, setRunOpening] = useState(0);
   const [editor, setEditor] = useState(false);
   const runChannelPrice = channels.find((c) => c.phase === runChannel)?.pricePerUnit ?? 0;
-  const runOwnUnit = runCropPlan.channels.includes(runChannel);
+  const runOwnUnit = runGrowPlan.channels.includes(runChannel);
   const run = useMemo(
     () =>
-      singleCropPlanRun({
-        cropPlan: runCropPlan,
+      singleGrowPlanRun({
+        growPlan: runGrowPlan,
         units: runUnits,
         unitFactor: runOwnUnit ? 1 : pfByChannel[runChannel] ?? 1,
         premiumFactor: runOwnUnit ? 1 : premiumByChannel[runChannel] ?? 1,
@@ -158,21 +158,21 @@ export function ProductionPlanningClient({
         commissionShare: runChannel === 3 ? CHANNEL_COMMISSION_PHASE3 : 0,
         openingInventory: runOpening,
         capacityInputs: resolved.capacityInputs,
-        // The run is costed at its own crop plan's labor standard and packaging (Roadmap N3).
-        assumptions: resolved.cropPlanAssumptions[runCropPlan.code] ?? A,
+        // The run is costed at its own grow plan's labor standard and packaging (Roadmap N3).
+        assumptions: resolved.growPlanAssumptions[runGrowPlan.code] ?? A,
       }),
-    [runCropPlan, runUnits, runChannel, runPrice, runOpening, runChannelPrice, runOwnUnit, pfByChannel, premiumByChannel, resolved.capacityInputs, resolved.cropPlanAssumptions, A],
+    [runGrowPlan, runUnits, runChannel, runPrice, runOpening, runChannelPrice, runOwnUnit, pfByChannel, premiumByChannel, resolved.capacityInputs, resolved.growPlanAssumptions, A],
   );
   const runRequirement = useMemo(() => toRequirementLines(run.purchase.lines), [run.purchase.lines]);
   // A grow plan's run: the sowing in trays of one grow unit, the cycle, and the cost per tray by line kind.
-  const runGrow = useMemo(() => (run.cap.grow ? { grow: run.cap.grow, costing: costPlan(runCropPlan) } : null), [runCropPlan, run.cap.grow]);
-  const runLabor = resolved.laborStandards[runCropPlan.code];
-  const runAssumptions = resolved.cropPlanAssumptions[runCropPlan.code] ?? A;
+  const runGrow = useMemo(() => (run.cap.grow ? { grow: run.cap.grow, costing: costPlan(runGrowPlan) } : null), [runGrowPlan, run.cap.grow]);
+  const runLabor = resolved.laborStandards[runGrowPlan.code];
+  const runAssumptions = resolved.growPlanAssumptions[runGrowPlan.code] ?? A;
 
   // ── Level 2: distribution day ─────────────────────────────────────────────────
   const [dayDate, setDayDate] = useState(() => nextServiceDay(today));
   const dayBook = useMemo(() => bookFor(dayDate, dayDate), [bookFor, dayDate]);
-  const requirements = useMemo(() => requirementsFor(dayBook, resolved.cropPlans, pfByChannel), [dayBook, resolved.cropPlans, pfByChannel]);
+  const requirements = useMemo(() => requirementsFor(dayBook, resolved.growPlans, pfByChannel), [dayBook, resolved.growPlans, pfByChannel]);
   const [onHandOverride, setOnHandOverride] = useState<Record<string, number>>({});
   // Raw stock on the first sow day and what is on order: the net requirement is what is bought.
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
@@ -182,14 +182,14 @@ export function ProductionPlanningClient({
   // The day on the grow model: each order back-planned to its plan's sow date, the sowings placed on
   // the grow units for their cycle — the horizon over this one distribution date.
   const dayLots = useMemo(() => {
-    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.cropPlanCode] === undefined);
+    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.growPlanCode] === undefined);
     // A typed on-hand figure stands in for the records of its plan as one lot inside shelf life.
     for (const [code, qty] of Object.entries(onHandOverride)) {
       const produced = isoAddDays(dayDate, -1);
-      lots.push({ sowingId: `typed-${code}`, cropPlanCode: code, produced, expires: isoAddDays(produced, shelfLife), qtyProduced: qty, remaining: qty });
+      lots.push({ sowingId: `typed-${code}`, growPlanCode: code, produced, expires: isoAddDays(produced, shelfLife), qtyProduced: qty, remaining: qty });
     }
     return lots;
-  }, [sowings, consumption, shelfLife, dayDate, onHandOverride, resolved.cropPlans]);
+  }, [sowings, consumption, shelfLife, dayDate, onHandOverride, resolved.growPlans]);
   const dayHorizon = useMemo(
     () =>
       planHorizon({
@@ -199,10 +199,10 @@ export function ProductionPlanningClient({
             from: dayDate,
             to: dayDate,
             book: dayBook,
-            cropPlans: resolved.cropPlans,
+            growPlans: resolved.growPlans,
             capacityInputs: resolved.capacityInputs,
             assumptions: A,
-            cropPlanAssumptions: resolved.cropPlanAssumptions,
+            growPlanAssumptions: resolved.growPlanAssumptions,
             unitFactorByChannel: pfByChannel,
             openingLots: dayLots,
             openingSowings,
@@ -210,10 +210,10 @@ export function ProductionPlanningClient({
             productionWeekdays: SERVICE_WEEKDAYS,
             channels: channels.map((c) => c.phase),
           }),
-    [closures, resolved.crews, dayDate, dayBook, resolved.cropPlans, resolved.capacityInputs, A, resolved.cropPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels, studies],
+    [closures, resolved.crews, dayDate, dayBook, resolved.growPlans, resolved.capacityInputs, A, resolved.growPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels, studies],
   );
   const dayRuns = useMemo(() => dayHorizon.productionDays.flatMap((p) => p.runs.map((r) => ({ ...r, sowDate: p.productionDate }))), [dayHorizon]);
-  const daySowings = useMemo(() => (dayHorizon.growCalendar?.sowings ?? []).filter((s) => s.distributionDate === dayDate).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.cropPlanCode.localeCompare(b.cropPlanCode)), [dayHorizon, dayDate]);
+  const daySowings = useMemo(() => (dayHorizon.growCalendar?.sowings ?? []).filter((s) => s.distributionDate === dayDate).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.growPlanCode.localeCompare(b.growPlanCode)), [dayHorizon, dayDate]);
   const sowDates = useMemo(() => dayHorizon.productionDays.map((p) => p.productionDate), [dayHorizon]);
   const firstSowDate = sowDates[0] ?? dayDate;
   const dayNoRoom = daySowings.filter((s) => !s.placed).reduce((s, x) => s + x.trays, 0);
@@ -239,7 +239,7 @@ export function ProductionPlanningClient({
   const [hFrom, setHFrom] = useState(today);
   const [hTo, setHTo] = useState(isoAddDays(today, 27));
   const hBook = useMemo(() => bookFor(hFrom, hTo), [bookFor, hFrom, hTo]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: hFrom, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, hFrom, resolved.cropPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: hFrom, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, hFrom, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -249,10 +249,10 @@ export function ProductionPlanningClient({
         from: hFrom,
         to: hTo,
         book: hBook,
-        cropPlans: resolved.cropPlans,
+        growPlans: resolved.growPlans,
         capacityInputs: resolved.capacityInputs,
         assumptions: A,
-        cropPlanAssumptions: resolved.cropPlanAssumptions,
+        growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
         openingSowings,
@@ -260,7 +260,7 @@ export function ProductionPlanningClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: channels.map((c) => c.phase),
       }),
-    [closures, hFrom, hTo, hBook, resolved.cropPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.cropPlanAssumptions, studies],
+    [closures, hFrom, hTo, hBook, resolved.growPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.growPlanAssumptions, studies],
   );
   const hStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: hFrom }), [receipts, rawSowings, hFrom]);
   const hNet = useMemo(
@@ -289,27 +289,27 @@ export function ProductionPlanningClient({
 
       {level === 'run' && (
         <>
-          <Card title="The run — a crop plan, a quantity, a channel">
-            <PageControls><CropPlanSelector /></PageControls>
+          <Card title="The run — a grow plan, a quantity, a channel">
+            <PageControls><GrowPlanSelector /></PageControls>
             <div className="flex flex-wrap gap-3 items-end">
-              <span className="farm-kpi-sub">{CROP_PLAN_STATUS_LABELS[runCropPlan.status]}{runCropPlan.channels.length ? ` · authored for ${runCropPlan.channels.map((c) => channelLabel(c)).join(', ')}` : ' · listed on no channel'}</span>
-              {canEdit && <button type="button" className="farm-btn" onClick={() => setEditor((e) => !e)}>{editor ? 'Close editor' : 'Add New Crop plan'}</button>}
+              <span className="farm-kpi-sub">{GROW_PLAN_STATUS_LABELS[runGrowPlan.status]}{runGrowPlan.channels.length ? ` · authored for ${runGrowPlan.channels.map((c) => channelLabel(c)).join(', ')}` : ' · listed on no channel'}</span>
+              {canEdit && <button type="button" className="farm-btn" onClick={() => setEditor((e) => !e)}>{editor ? 'Close editor' : 'Add New Grow plan'}</button>}
               <label className="farm-kpi-sub">{runGrow ? `Units (trays of the ${runGrow.costing.format.name})` : 'Units'}<br /><input className="farm-input w-28!" type="number" min={0} step={1} value={runUnits} onChange={(e) => setRunUnits(Math.max(0, Number(e.target.value) || 0))} /></label>
               <label className="farm-kpi-sub">Channel<br />
                 <select className="farm-select" value={runChannel} onChange={(e) => { const ch = Number(e.target.value); setRunChannel(ch); setRunPrice(''); }}>
-                  {channels.map((c) => <option key={c.phase} value={c.phase}>{channelLabel(c.phase)}{runCropPlan.channels.includes(c.phase) ? '' : ' · not listed'}</option>)}
+                  {channels.map((c) => <option key={c.phase} value={c.phase}>{channelLabel(c.phase)}{runGrowPlan.channels.includes(c.phase) ? '' : ' · not listed'}</option>)}
                 </select>
               </label>
               <label className="farm-kpi-sub">Price / unit $ (blank = channel {money(runChannelPrice)})<br /><input className="farm-input w-28!" type="number" min={0} step={0.01} value={runPrice} onChange={(e) => setRunPrice(e.target.value === '' ? '' : Number(e.target.value))} /></label>
               <label className="farm-kpi-sub">Opening finished inventory (trays)<br /><input className="farm-input w-28!" type="number" min={0} step={1} value={runOpening} onChange={(e) => setRunOpening(Math.max(0, Number(e.target.value) || 0))} /></label>
             </div>
             <p className="farm-kpi-sub mt-2">
-              A crop plan saved from the editor is a library crop plan from that moment and runs here at once.{' '}
+              A grow plan saved from the editor is a library grow plan from that moment and runs here at once.{' '}
               {runOwnUnit
-                ? `${runCropPlan.code} is authored for ${channelLabel(runChannel)} and runs at its own unit.`
-                : `${runCropPlan.code} is not authored for ${channelLabel(runChannel)}, so the channel's ${pfByChannel[runChannel] ?? 1}× unit factor and ${premiumByChannel[runChannel] ?? 1}× input premium (Unit Economics) apply.`}
+                ? `${runGrowPlan.code} is authored for ${channelLabel(runChannel)} and runs at its own unit.`
+                : `${runGrowPlan.code} is not authored for ${channelLabel(runChannel)}, so the channel's ${pfByChannel[runChannel] ?? 1}× unit factor and ${premiumByChannel[runChannel] ?? 1}× input premium (Unit Economics) apply.`}
             </p>
-            {editor && <div className="mt-3"><CropPlanEditor mode="create" library={library} channels={channels.map((c) => ({ phase: c.phase, market: c.market }))} onDone={() => setEditor(false)} /></div>}
+            {editor && <div className="mt-3"><GrowPlanEditor mode="create" library={library} channels={channels.map((c) => ({ phase: c.phase, market: c.market }))} onDone={() => setEditor(false)} /></div>}
           </Card>
 
           {runGrow && (
@@ -370,14 +370,14 @@ export function ProductionPlanningClient({
               </table>
               {runGrow && (
                 <p className="farm-kpi-sub mt-2">
-                  Labor here is the run&rsquo;s own hours on {runCropPlan.code}&rsquo;s labor standard ({LABOR_BASIS_LABELS[runLabor?.basis ?? 'none'].toLowerCase()}): {num(run.sowings)} × {num(runAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} minutes a sowing on the sow day, plus {num(run.produced)} × {(runAssumptions.laborSplit.dailyMinutesPerUnit?.value ?? 0).toFixed(1)} minutes a tray over the days on the shelf, plus {num(run.produced)} × {runAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(1)} minutes a tray on the harvest day — priced at the loaded wage. The cost of a tray on Unit Economics and on Grow plans uses the same standard at one full sowing. Fixed overhead is on <Link className="farm-link" href="/farm/financials/unit-economics">Unit Economics</Link>.
+                  Labor here is the run&rsquo;s own hours on {runGrowPlan.code}&rsquo;s labor standard ({LABOR_BASIS_LABELS[runLabor?.basis ?? 'none'].toLowerCase()}): {num(run.sowings)} × {num(runAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} minutes a sowing on the sow day, plus {num(run.produced)} × {(runAssumptions.laborSplit.dailyMinutesPerUnit?.value ?? 0).toFixed(1)} minutes a tray over the days on the shelf, plus {num(run.produced)} × {runAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(1)} minutes a tray on the harvest day — priced at the loaded wage. The cost of a tray on Unit Economics and on Grow plans uses the same standard at one full sowing. Fixed overhead is on <Link className="farm-link" href="/farm/financials/unit-economics">Unit Economics</Link>.
                 </p>
               )}
             </Card>
             )}
           </div>
 
-          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={runRequirement} unitsProduced={run.produced} title={`Purchase orders — ${runCropPlan.code}, ${num(run.produced)} trays`} />
+          <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={runRequirement} unitsProduced={run.produced} title={`Purchase orders — ${runGrowPlan.code}, ${num(run.produced)} trays`} />
         </>
       )}
 
@@ -412,18 +412,18 @@ export function ProductionPlanningClient({
                   </thead>
                   <tbody>
                     {dayRuns.map((r) => {
-                      const req = requirements.find((q) => q.cropPlanCode === r.cropPlanCode);
-                      const overridden = onHandOverride[r.cropPlanCode] !== undefined;
-                      const lotsOf = dayLots.filter((l) => l.cropPlanCode === r.cropPlanCode && !l.sowingId.startsWith('typed-')).length;
+                      const req = requirements.find((q) => q.growPlanCode === r.growPlanCode);
+                      const overridden = onHandOverride[r.growPlanCode] !== undefined;
+                      const lotsOf = dayLots.filter((l) => l.growPlanCode === r.growPlanCode && !l.sowingId.startsWith('typed-')).length;
                       return (
-                        <tr key={`${r.sowDate}|${r.cropPlanCode}`}>
-                          <td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td>
+                        <tr key={`${r.sowDate}|${r.growPlanCode}`}>
+                          <td>{r.growPlanCode}<div className="farm-c-faint farm-fs-xs">{r.growPlanName}</div></td>
                           <td className="whitespace-nowrap!">{dateLabel(r.sowDate)}</td>
                           <td className="num">{num(Math.round(req?.units ?? 0))}<div className="farm-c-faint farm-fs-2xs">{(req?.byChannel ?? []).map((c) => `${channelLabel(c.channel)} ${num(Math.round(c.units))}${c.unitFactor !== 1 ? ` × ${c.unitFactor}` : ''}`).join(' · ')}</div></td>
                           <td className="num">{num(Math.round(r.required))}</td>
                           <td className="num">
-                            <input className="farm-num-input" type="number" min={0} step={1} value={Math.round(r.onHand)} onChange={(e) => setOnHandOverride((m) => ({ ...m, [r.cropPlanCode]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${r.cropPlanCode} on hand`} />
-                            <div className="farm-fs-2xs"><StatusBadge status={overridden ? 'STATED' : 'DERIVED'} title={overridden ? 'Typed for this view; not saved.' : `From ${lotsOf} closed sowing record(s) inside shelf life on the distribution date, less distributed orders.`} />{overridden && <button type="button" className="farm-btn py-0! px-[0.3rem]! ml-[0.3rem]! farm-fs-2xs" onClick={() => setOnHandOverride((m) => { const n = { ...m }; delete n[r.cropPlanCode]; return n; })}>records</button>}</div>
+                            <input className="farm-num-input" type="number" min={0} step={1} value={Math.round(r.onHand)} onChange={(e) => setOnHandOverride((m) => ({ ...m, [r.growPlanCode]: Math.max(0, Number(e.target.value) || 0) }))} aria-label={`${r.growPlanCode} on hand`} />
+                            <div className="farm-fs-2xs"><StatusBadge status={overridden ? 'STATED' : 'DERIVED'} title={overridden ? 'Typed for this view; not saved.' : `From ${lotsOf} closed sowing record(s) inside shelf life on the distribution date, less distributed orders.`} />{overridden && <button type="button" className="farm-btn py-0! px-[0.3rem]! ml-[0.3rem]! farm-fs-2xs" onClick={() => setOnHandOverride((m) => { const n = { ...m }; delete n[r.growPlanCode]; return n; })}>records</button>}</div>
                           </td>
                           <td className="num">{num(Math.round(r.net))}</td>
                           <td className="num">{num(r.sowingSize)}{r.sowingSize === 0 && <div className="farm-c-over farm-fs-2xs">no unit takes it</div>}</td>
@@ -452,7 +452,7 @@ export function ProductionPlanningClient({
                   <tbody>
                     {daySowings.map((s) => (
                       <tr key={s.id} className={s.placed ? '' : 'farm-c-accent'}>
-                        <td>{s.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{s.cropPlanName}</div></td>
+                        <td>{s.growPlanCode}<div className="farm-c-faint farm-fs-xs">{s.growPlanName}</div></td>
                         <td className="whitespace-nowrap!">{dateLabel(s.sowDate)}</td>
                         <td className="whitespace-nowrap!">{s.harvestFrom} to {s.harvestTo}</td>
                         <td className="num">{num(s.trays)}</td>
@@ -505,7 +505,7 @@ export function ProductionPlanningClient({
           {recordedForDay.length > 0 && (
             <Card title={`Sowing records closed for ${dayTitleDates}`} className="mt-4">
               <table className="farm-table"><tbody>
-                {recordedForDay.map((b) => <tr key={b.sowingId}><td>{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.cropPlanCode} · {b.productionDate} · {b.closedBy ?? 'unsigned'}</div></td><td className="num">{num(Math.round(b.goodUnits))} trays</td></tr>)}
+                {recordedForDay.map((b) => <tr key={b.sowingId}><td>{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.growPlanCode} · {b.productionDate} · {b.closedBy ?? 'unsigned'}</div></td><td className="num">{num(Math.round(b.goodUnits))} trays</td></tr>)}
               </tbody></table>
               <p className="farm-kpi-sub mt-2">Listed with the period on <Link className="farm-link" href="/farm/actuals">Actuals</Link>, where the ledger posts from them.</p>
             </Card>
@@ -578,7 +578,7 @@ export function ProductionPlanningClient({
                         <tr key={p.productionDate}>
                           <td>{dateLabel(p.productionDate)}</td>
                           <td className="farm-fs-xs">{p.distributionDates.map((d) => dateLabel(d)).join(', ')}</td>
-                          <td className="farm-fs-xs">{p.runs.filter((r) => r.sowingsNeeded > 0).map((r) => `${r.cropPlanCode} × ${r.sowingsScheduled}${r.sowingsScheduled < r.sowingsNeeded ? ` of ${r.sowingsNeeded}` : ''}`).join(' · ') || 'stock covers it'}</td>
+                          <td className="farm-fs-xs">{p.runs.filter((r) => r.sowingsNeeded > 0).map((r) => `${r.growPlanCode} × ${r.sowingsScheduled}${r.sowingsScheduled < r.sowingsNeeded ? ` of ${r.sowingsNeeded}` : ''}`).join(' · ') || 'stock covers it'}</td>
                           <td className="num">{num(Math.round(traysSown(p)))}</td>
                           <td><CheckPill ok={p.fits} okLabel="on the shelves" overLabel="no room" /></td>
                         </tr>
@@ -647,13 +647,13 @@ export function ProductionPlanningClient({
           <NetCard title={`Purchase requirement — the net over the horizon, ${horizon.productionDays.length} sow day${horizon.productionDays.length === 1 ? '' : 's'}`} net={hNet} stock={hStock} gross={horizon.productionDays.reduce((s, p) => s + p.purchase.total, 0)} shrink={shrink} runs={horizon.productionDays.reduce((s, p) => s + p.runs.filter((r) => r.produced > 0).length, 0)} onOrderDrafts={onOrder.draftsByInput} />
           <PurchaseOrderGenerator canEdit={canEdit && world.recording} requirement={netToRequirementLines(hNet)} unitsProduced={horizon.totals.producedBase} defaultDate={hNet.toBuy.map((l) => l.needBy).filter((d): d is string => Boolean(d)).sort()[0] ?? hFrom} title="Purchase orders by supplier — the horizon" needBy={needByOf(hNet)} today={today} summary={`${money(hNet.netTotal)} net to buy for ${num(Math.round(horizon.totals.producedBase))} trays`} />
 
-          {horizon.byCropPlan.length > 0 && (
+          {horizon.byGrowPlan.length > 0 && (
             <Card title={'By plan over the horizon'} className="mt-4">
               <div className="farm-scroll-x">
                 <table className="farm-table">
                   <thead><tr><th>{'Plan'}</th><th className="num">{'Trays ordered'}</th><th className="num">{'Trays sown'}</th><th className="num">Sowings</th></tr></thead>
                   <tbody>
-                    {horizon.byCropPlan.map((r) => <tr key={r.cropPlanCode}><td>{r.cropPlanCode}<div className="farm-c-faint farm-fs-xs">{r.cropPlanName}</div></td><td className="num">{num(Math.round(r.orderedBase))}</td><td className="num">{num(Math.round(r.producedBase))}</td><td className="num">{num(r.sowings)}</td></tr>)}
+                    {horizon.byGrowPlan.map((r) => <tr key={r.growPlanCode}><td>{r.growPlanCode}<div className="farm-c-faint farm-fs-xs">{r.growPlanName}</div></td><td className="num">{num(Math.round(r.orderedBase))}</td><td className="num">{num(Math.round(r.producedBase))}</td><td className="num">{num(r.sowings)}</td></tr>)}
                   </tbody>
                 </table>
               </div>

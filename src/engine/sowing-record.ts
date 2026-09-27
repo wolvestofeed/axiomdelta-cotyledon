@@ -119,7 +119,7 @@ export function growSowingPrefill(
   });
   return {
     sowingId,
-    cropPlanCode: plan.code,
+    growPlanCode: plan.code,
     productionDate: sowDate,
     standardVersion,
     plannedUnits: trays,

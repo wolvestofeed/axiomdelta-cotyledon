@@ -22,8 +22,8 @@ export default function LogisticsPage() {
   const { resolved } = useScenario();
   const world = useSustainabilityWorld();
   const { basis } = world;
-  // Shipped mass per unit across the crop plans distributed in the period (Roadmap N6 slice 4).
-  const shipped = useMemo(() => mixShippedMassPerUnitKg(basis, resolved.cropPlans, world.pfByChannel), [basis, resolved.cropPlans, world.pfByChannel]);
+  // Shipped mass per unit across the grow plans distributed in the period (Roadmap N6 slice 4).
+  const shipped = useMemo(() => mixShippedMassPerUnitKg(basis, resolved.growPlans, world.pfByChannel), [basis, resolved.growPlans, world.pfByChannel]);
   const links = resolved.sustainability.inputSupplier;
   const suppliers = useLinkedSuppliers(links);
   const inbound = useMemo(() => ({ day: inboundLogistics(receivedMassKg(basis), links, suppliers, FARM_HOME) }), [basis, links, suppliers]);
@@ -60,7 +60,7 @@ export default function LogisticsPage() {
         purpose="Measure freight ton-miles in from suppliers and out to distribution pickup points."
         functions={['Inbound', 'Outbound', 'Ton-miles', 'Shipped mass']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'from' },
+          { href: '/farm/grow-plans', dir: 'from' },
           { href: '/farm/pickup-points', dir: 'from' },
           { href: '/farm/sustainability/inventory', dir: 'to' },
         ]}
@@ -69,7 +69,7 @@ export default function LogisticsPage() {
             <li>Inbound ton-miles run from each linked supplier to the farm for the period&rsquo;s receipts.</li>
             <li>Outbound ton-miles run from the farm to each distribution pickup point for the period&rsquo;s distributions.</li>
             <li>Both directions use the SmartWay average truck factor.</li>
-            <li>Both are measured to a linked record: a supplier linked on a crop plan line, a prospect linked to a distribution pickup point.</li>
+            <li>Both are measured to a linked record: a supplier linked on a grow plan line, a prospect linked to a distribution pickup point.</li>
           </ul>
         }
         status="partial"
@@ -120,7 +120,7 @@ export default function LogisticsPage() {
       </Card>
 
       <div className="grid gap-3 mt-4 farm-autofit-11">
-        <Kpi value={`${(shipped * 1000).toFixed(0)} g`} label="Shipped mass / unit" sub="Blackout hot mass + cold-packed components, across the crop plans distributed" />
+        <Kpi value={`${(shipped * 1000).toFixed(0)} g`} label="Shipped mass / unit" sub="Blackout hot mass + cold-packed components, across the grow plans distributed" />
         <Kpi value={out.totalTonMilesPerDay.toFixed(1)} label="Ton-miles, outbound" sub={`${out.placedPickupPoints} placed pickup points, ${world.periodLabel}`} />
         <Kpi value={`${out.totalKgCo2ePerDay.toFixed(1)} kg`} label="CO2e, outbound" sub="Laden leg at the SmartWay average" />
         <Kpi value={`${(out.kgCo2ePerUnitDistributed * 1000).toFixed(1)} g`} label="CO2e / unit distributed" sub="Placed pickup points only" />

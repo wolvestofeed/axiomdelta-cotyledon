@@ -3,17 +3,17 @@ import ExcelJS from 'exceljs';
 import { TIME_STUDY_BASIS_LABELS, QUALITY_RESULT_LABELS } from '@/data/time-studies';
 import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
 import { timeStudyScaffold } from '@/engine/time-study-estimate';
-import { inStandard, laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
-import { listCropPlans } from '@/server/crop-plans';
+import { inStandard, laborStandard, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listEquipment } from '@/server/equipment';
 import { listTimeStudies } from '@/server/time-studies';
 
 /**
  * MicroFarm — the Time Study Sheet (Roadmap O2 follow-on): the printable
- * instrument for timing a sowing of any crop plan in the library, downloaded from
- * Labor. One block per crop plan, its task scaffold off its own served components
+ * instrument for timing a sowing of any grow plan in the library, downloaded from
+ * Labor. One block per grow plan, its task scaffold off its own served components
  * (`timeStudyScaffold`) — the same scaffold the estimated study was built on —
- * with the observer's cells marked. The crop plan open on Labor is listed first.
+ * with the observer's cells marked. The grow plan open on Labor is listed first.
  * A timed sowing is entered on Labor (dated, observer, quality result) and
  * joins the log; the sheet is not imported. Follows the evidence-pack pattern
  * (exceljs). No wage or pay appears.
@@ -28,10 +28,10 @@ function widths(ws: ExcelJS.Worksheet, w: number[]): void {
   });
 }
 
-export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: string | null): Promise<{ buffer: Buffer; fileName: string }> {
-  const [cropPlans, library, equipment] = await Promise.all([listCropPlans(), listTimeStudies(), listEquipment()]);
+export async function buildTimeStudySheet(asOf: string, firstGrowPlanCode: string | null): Promise<{ buffer: Buffer; fileName: string }> {
+  const [growPlans, library, equipment] = await Promise.all([listGrowPlans(), listTimeStudies(), listEquipment()]);
   const growUnits = growUnitsFrom(equipment);
-  const ordered = [...cropPlans].sort((a, b) => (a.code === firstCropPlanCode ? -1 : b.code === firstCropPlanCode ? 1 : 0));
+  const ordered = [...growPlans].sort((a, b) => (a.code === firstGrowPlanCode ? -1 : b.code === firstGrowPlanCode ? 1 : 0));
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'MicroFarm';
@@ -39,7 +39,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
 
   const readme = wb.addWorksheet('Read Me');
   const lines: [string, string][] = [
-    ['MicroFarm — Time Study Sheet', `Prepared ${asOf}. ${cropPlans.length} grow plans in the library.`],
+    ['MicroFarm — Time Study Sheet', `Prepared ${asOf}. ${growPlans.length} grow plans in the library.`],
     ['', ''],
     ['What this is', 'The instrument for timing a grow plan. One block per plan, its tasks on three streams from Vallecito\'s 2023 tray study. The sowing stream is the sow day: supplies in, seed received and sorted, the prep station, trays prepped, trays sown. The daily stream is every day a tray is on its grow unit: the watering its stage takes, nutrient preparation under the lights, inspection and sanitization. The harvest stream is the distribution day: the harvest station prepped, the trays packed and labelled at the harvest check, the station cleaned. End-of-day closedown is not on a study.'],
     ['Streams', 'Sowing lines are timed against the trays sown. Daily lines are timed on one day against the trays on the shelves that day. Harvest lines are timed on a distribution day against the trays shipped that day. Write the trays beside each stream\'s lines.'],
@@ -62,16 +62,16 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   sheet.addRow(header).font = { bold: true };
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
   const OBSERVER_COLS = [3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 18];
-  for (const cropPlan of ordered) {
-    const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
-    const scaffold = timeStudyScaffold(cropPlan);
-    const sowing = deriveGrowCapacity(cropPlan, growUnits).sowingTrays;
+  for (const growPlan of ordered) {
+    const standard = laborStandard(studiesForGrowPlan(library.studies, growPlan.code));
+    const scaffold = timeStudyScaffold(growPlan);
+    const sowing = deriveGrowCapacity(growPlan, growUnits).sowingTrays;
     const refLines = standard && standard.lines.length === scaffold.length ? standard.lines : null;
     scaffold.forEach((t, i) => {
       const ref = refLines?.[i];
       const row = sheet.addRow([
-        cropPlan.code,
-        cropPlan.name,
+        growPlan.code,
+        growPlan.name,
         null,
         null,
         sowing,
@@ -95,7 +95,7 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
       for (const c of [1, 2, 6, 7, 8, 9, 10, 19, 20]) row.getCell(c).font = FONT_CARRIED;
       row.getCell(16).font = FONT_CARRIED;
     });
-    const total = sheet.addRow([null, null, null, null, null, null, `${cropPlan.code} — TOTAL`, null, null, null, null, null, null, null, null, '← labor min', null, null, null, null]);
+    const total = sheet.addRow([null, null, null, null, null, null, `${growPlan.code} — TOTAL`, null, null, null, null, null, null, null, null, '← labor min', null, null, null, null]);
     total.font = { bold: true };
     sheet.addRow([]);
   }
@@ -104,16 +104,16 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
   const standards = wb.addWorksheet('Standards on file');
   standards.addRow(['Grow plan code', 'Grow plan', 'Standard basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Seq', 'Task', 'Stream', 'Station', 'Staff', 'Elapsed min', 'Labor min', 'Scales with', 'Approved on', 'Notes']).font = { bold: true };
   standards.views = [{ state: 'frozen', ySplit: 1 }];
-  for (const cropPlan of ordered) {
-    const standard = laborStandard(studiesForCropPlan(library.studies, cropPlan.code));
+  for (const growPlan of ordered) {
+    const standard = laborStandard(studiesForGrowPlan(library.studies, growPlan.code));
     if (!standard) {
-      standards.addRow([cropPlan.code, cropPlan.name, 'None on file']);
+      standards.addRow([growPlan.code, growPlan.name, 'None on file']);
       continue;
     }
     standard.lines.forEach((l, i) => {
       standards.addRow([
-        cropPlan.code,
-        cropPlan.name,
+        growPlan.code,
+        growPlan.name,
         TIME_STUDY_BASIS_LABELS[standard.basis],
         standard.studiedOn,
         standard.sowingSize,
@@ -136,13 +136,13 @@ export async function buildTimeStudySheet(asOf: string, firstCropPlanCode: strin
 
   const log = wb.addWorksheet('Studies on file');
   log.addRow(['Grow plan code', 'Basis', 'Studied on', 'Sowing (trays)', 'Observer', 'Quality', 'Labor min', 'Sowing stream min', 'Harvest stream min', 'Fixed min / sowing', 'Variable min / tray', 'Min / tray', 'Approved on', 'Approved by', 'Standard']).font = { bold: true };
-  for (const cropPlan of ordered) {
-    const mine = studiesForCropPlan(library.studies, cropPlan.code);
+  for (const growPlan of ordered) {
+    const mine = studiesForGrowPlan(library.studies, growPlan.code);
     const standard = laborStandard(mine);
     for (const s of mine) {
       const sum = summarizeStudy(s);
       log.addRow([
-        cropPlan.code,
+        growPlan.code,
         TIME_STUDY_BASIS_LABELS[s.basis],
         s.studiedOn,
         s.sowingSize,

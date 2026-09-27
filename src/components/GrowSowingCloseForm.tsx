@@ -116,7 +116,7 @@ export function GrowSowingCloseForm({
     start(async () => {
       const res = await recordSowing({
         sowingId,
-        cropPlanCode: prefill.cropPlanCode,
+        growPlanCode: prefill.growPlanCode,
         productionDate: sowDate,
         standardVersion: prefill.standardVersion,
         plannedUnits: prefill.traysSown,

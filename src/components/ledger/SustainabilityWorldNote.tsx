@@ -6,7 +6,7 @@ import type { useSustainabilityWorld } from '@/state/sustainability';
 
 /**
  * Which world a Sustainability page runs in and over what period (Roadmap N6 slice 4),
- * with the gaps the figures carry named: units with no crop plan, and crop plans whose
+ * with the gaps the figures carry named: units with no grow plan, and grow plans whose
  * inputs have no food factor mapping.
  */
 export function SustainabilityWorldNote({ world, children }: { world: ReturnType<typeof useSustainabilityWorld>; children?: React.ReactNode }) {
@@ -27,10 +27,10 @@ export function SustainabilityWorldNote({ world, children }: { world: ReturnType
       )}
       {world.pending && <> Recomputing…</>}
       {world.error && <span className="farm-c-over"> {world.error}</span>}
-      {food.unitsNotCosted > 0 && <div className="mt-1">{num(food.unitsNotCosted)} unit{food.unitsNotCosted === 1 ? '' : 's'} distributed with no cropPlan named: counted in units, not in food or mass.</div>}
-      {food.cropPlansWithUnmappedLines.length > 0 && (
+      {food.unitsNotCosted > 0 && <div className="mt-1">{num(food.unitsNotCosted)} unit{food.unitsNotCosted === 1 ? '' : 's'} distributed with no growPlan named: counted in units, not in food or mass.</div>}
+      {food.growPlansWithUnmappedLines.length > 0 && (
         <div className="mt-1">
-          Inputs with no mapping to a study product carry no food footprint: {food.cropPlansWithUnmappedLines.map((r) => `${r.code} (${r.unmapped.length} line${r.unmapped.length === 1 ? '' : 's'}, ${num(r.units)} units)`).join(' · ')}.
+          Inputs with no mapping to a study product carry no food footprint: {food.growPlansWithUnmappedLines.map((r) => `${r.code} (${r.unmapped.length} line${r.unmapped.length === 1 ? '' : 's'}, ${num(r.units)} units)`).join(' · ')}.
         </div>
       )}
       {children}

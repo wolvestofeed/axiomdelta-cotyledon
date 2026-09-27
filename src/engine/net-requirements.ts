@@ -218,7 +218,7 @@ export function openOrders(input: { purchaseOrders: readonly PoLike[]; receipts:
 
 export interface GrossDay {
   productionDate: string;
-  /** The day's merged purchase lines at the crop plan standard (gross, before stock). */
+  /** The day's merged purchase lines at the grow plan standard (gross, before stock). */
   lines: readonly PurchaseOrderLine[];
 }
 

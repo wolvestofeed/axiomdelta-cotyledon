@@ -22,8 +22,8 @@ import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } fr
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
 import { rawStockOnHand, rawLotsByUseBy } from '@/engine/net-requirements';
 import { resolveSubscriberPickupPoints, forecastByDistributionPickupPoint } from '@/engine/demand';
-import { laborStandard, nextStudyDue, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
-import { activeCropPlanAverages } from '@/engine/active-averages';
+import { laborStandard, nextStudyDue, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
+import { activeGrowPlanAverages } from '@/engine/active-averages';
 import { staffDemand , traysOnShelf, cycleDaysByCode } from '@/engine/staff-demand';
 import { agingReport, AGING_BUCKETS, AGING_LABELS, billBalances, dueOn, invoiceBalances, receiptValueCents, type OpenItem } from '@/engine/working-capital';
 import { periodStart, BILL_CATEGORY_LABELS } from '@/engine/actuals';
@@ -121,23 +121,23 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
     from: horizonFrom,
     to: horizonTo,
     channelPriceCents: Object.fromEntries(R.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-    cropPlanNames: Object.fromEntries(R.cropPlans.map((r) => [r.code, r.name])),
+    growPlanNames: Object.fromEntries(R.growPlans.map((r) => [r.code, r.name])),
     closures,
   });
   const worldBundle = selected.bundle;
   const consumed = isPlan
-    ? worldBundle.distributions.filter((d) => d.cropPlanCode).map((d) => ({ cropPlanCode: d.cropPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(R.cropPlans.find((r) => r.code === d.cropPlanCode), d.phase, pf) }))
-    : distributedConsumption(orders, records.distributions, R.cropPlans, pf);
-  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, cropPlans: R.cropPlans });
+    ? worldBundle.distributions.filter((d) => d.growPlanCode).map((d) => ({ growPlanCode: d.growPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(R.growPlans.find((r) => r.code === d.growPlanCode), d.phase, pf) }))
+    : distributedConsumption(orders, records.distributions, R.growPlans, pf);
+  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, growPlans: R.growPlans });
   const horizon = planHorizon({
     closures,
     from: horizonFrom,
     to: horizonTo,
     book,
-    cropPlans: R.cropPlans,
+    growPlans: R.growPlans,
     capacityInputs: R.capacityInputs,
     assumptions: R.assumptions,
-    cropPlanAssumptions: R.cropPlanAssumptions,
+    growPlanAssumptions: R.growPlanAssumptions,
     unitFactorByChannel: pf,
     openingLots: finished.lots.filter((l) => l.remaining > 0),
     shelfLifeDays: shelfLife,
@@ -174,7 +174,7 @@ type Builder = (ctx: Ctx) => Built | Promise<Built>;
 /** The closed grow sowings, each against the control points on its plan's stages. */
 function stageRecordChecks(records: ActualsBundle, R: PostedLedger['inputs']) {
   return records.sowings.filter(isGrowSowing).flatMap((b) => {
-    const plan = R.cropPlans.find((r) => r.code === b.cropPlanCode);
+    const plan = R.growPlans.find((r) => r.code === b.growPlanCode);
     if (!plan) return [];
     const checks = sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan);
     return [{ sowingId: b.sowingId, date: b.productionDate, planName: plan.name, checks, failed: checks.points.filter((p) => p.status === 'failed'), gaps: checks.points.filter((p) => p.status === 'gap') }];
@@ -184,7 +184,7 @@ function stageRecordChecks(records: ActualsBundle, R: PostedLedger['inputs']) {
 const alertsRegister: Builder = (ctx) => {
   const { records, selected, today, access, horizon, studies } = ctx;
   const R = selected.inputs;
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => R.growPlans.find((r) => r.code === code)?.name ?? code;
   const items: { finding: string; item: string; detail: string; module: string }[] = [];
 
   // Stage control points, always the records: a forecast records nothing.
@@ -193,10 +193,10 @@ const alertsRegister: Builder = (ctx) => {
     if (r.gaps.length > 0) items.push({ finding: 'Stage record with a gap', item: r.sowingId, detail: `${r.planName}, sown ${r.date}: ${r.gaps.map((g) => g.point.name).join(', ')} not recorded`, module: 'Produce Safety' });
   }
   const pfc = ctx.pf;
-  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.cropPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today, cropPlans: R.cropPlans });
+  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.growPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today, growPlans: R.growPlans });
   for (const l of recordedFinished.lots.filter((x) => x.remaining > 1e-9)) {
     const days = daysBetween(today, l.expires);
-    if (days <= 7) items.push({ finding: 'Finished lot within seven days of shelf life', item: l.sowingId, detail: `${cropPlanName(l.cropPlanCode)}: ${num(Math.round(l.remaining))} units on hand, shelf life ends ${l.expires} (${days} day${days === 1 ? '' : 's'})`, module: 'Inventory' });
+    if (days <= 7) items.push({ finding: 'Finished lot within seven days of shelf life', item: l.sowingId, detail: `${growPlanName(l.growPlanCode)}: ${num(Math.round(l.remaining))} units on hand, shelf life ends ${l.expires} (${days} day${days === 1 ? '' : 's'})`, module: 'Inventory' });
   }
   const raw = rawLotsByUseBy(rawStockOnHand({ receipts: records.receipts, sowings: records.sowings, asOf: today }));
   for (const l of raw.filter((x) => x.daysToUseBy !== null && x.daysToUseBy < 0 && x.remaining > 1e-9)) items.push({ finding: 'Raw lot past the date on the case', item: `${l.input} · ${l.lotCode}`, detail: `use by ${l.useBy}, ${num(l.remaining, 1)} ${l.unit} remaining`, module: 'Inventory' });
@@ -206,10 +206,10 @@ const alertsRegister: Builder = (ctx) => {
   for (const d of horizon.byDate.filter((x) => x.expiredBase > 1e-9)) items.push({ finding: 'Stock expiring in the next two weeks', item: d.date, detail: `${num(Math.round(d.expiredBase))} base units past shelf life unconsumed`, module: 'Calendar' });
 
   // Labor standards.
-  for (const r of R.cropPlans) {
-    const own = studiesForCropPlan(studies.studies, r.code);
+  for (const r of R.growPlans) {
+    const own = studiesForGrowPlan(studies.studies, r.code);
     if (own.length === 0) {
-      items.push({ finding: 'Crop plan with no time study', item: r.name, detail: 'Its sowings carry no labor standard and no staff demand', module: 'Time Studies' });
+      items.push({ finding: 'Grow plan with no time study', item: r.name, detail: 'Its sowings carry no labor standard and no staff demand', module: 'Time Studies' });
       continue;
     }
     const due = nextStudyDue(own, studies.intervals[r.code], today);
@@ -264,7 +264,7 @@ const productionHistory: Builder = (ctx) => {
   const { selected } = ctx;
   const R = selected.inputs;
   const sowings = selected.bundle.sowings;
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => R.growPlans.find((r) => r.code === code)?.name ?? code;
   interface MonthAcc { records: number; loads: number; planned: number; good: number; balanced: number; scrapG: number }
   const months = new Map<string, MonthAcc>();
   const detail: ReportRow[] = [];
@@ -288,14 +288,14 @@ const productionHistory: Builder = (ctx) => {
     acc.balanced += balanced ? 1 : 0;
     acc.scrapG += scrapG;
     months.set(m, acc);
-    detail.push(row([b.productionDate, b.sowingId, cropPlanName(b.cropPlanCode), b.sowingsRun, num(b.plannedUnits), num(b.goodUnits), b.plannedUnits > 0 ? pct(b.goodUnits / b.plannedUnits, 1) : '—', num(scrapG, 0), balanced ? 'Balanced' : 'Not balanced'], balanced ? undefined : 'over'));
+    detail.push(row([b.productionDate, b.sowingId, growPlanName(b.growPlanCode), b.sowingsRun, num(b.plannedUnits), num(b.goodUnits), b.plannedUnits > 0 ? pct(b.goodUnits / b.plannedUnits, 1) : '—', num(scrapG, 0), balanced ? 'Balanced' : 'Not balanced'], balanced ? undefined : 'over'));
   }
   const rows = [...months.entries()].map(([m, a]) => row([m, a.records, a.loads, num(a.planned), num(a.good), a.planned > 0 ? pct(a.good / a.planned, 1) : '—', num(a.scrapG, 0), `${a.balanced} / ${a.records}`]));
   const t = [...months.values()].reduce((s, a) => ({ records: s.records + a.records, loads: s.loads + a.loads, planned: s.planned + a.planned, good: s.good + a.good, balanced: s.balanced + a.balanced, scrapG: s.scrapG + a.scrapG }), { records: 0, loads: 0, planned: 0, good: 0, balanced: 0, scrapG: 0 });
   rows.push(row(['All months', t.records, t.loads, num(t.planned), num(t.good), t.planned > 0 ? pct(t.good / t.planned, 1) : '—', num(t.scrapG, 0), `${t.balanced} / ${t.records}`], 'total'));
   return {
     summary: table([{ label: 'Month' }, { label: 'Sows', num: true }, { label: 'Sowings', num: true }, { label: 'Trays planned', num: true }, { label: 'Trays packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap g', num: true }, { label: 'Mass-balanced', num: true }], rows),
-    detail: table([{ label: 'Date' }, { label: 'Sowing' }, { label: 'Crop plan' }, { label: 'Sowings', num: true }, { label: 'Planned', num: true }, { label: 'Packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap g', num: true }, { label: 'Mass balance' }], detail),
+    detail: table([{ label: 'Date' }, { label: 'Sowing' }, { label: 'Grow plan' }, { label: 'Sowings', num: true }, { label: 'Planned', num: true }, { label: 'Packed', num: true }, { label: 'Yield', num: true }, { label: 'Scrap g', num: true }, { label: 'Mass balance' }], detail),
     basis: `Sowing records on ${ctx.worldLabel}. A record is one plan's sowings on one sow day, and the sow is the lot.`,
     empty: sowings.length === 0 ? (selected.kind === 'plan' ? 'The forecast places no sowing.' : 'No sowing record has been closed.') : undefined,
   };
@@ -334,8 +334,8 @@ const laborStandards: Builder = (ctx) => {
   let estimated = 0;
   let none = 0;
   let pastDue = 0;
-  const detail: ReportRow[] = R.cropPlans.map((r) => {
-    const own = studiesForCropPlan(studies.studies, r.code);
+  const detail: ReportRow[] = R.growPlans.map((r) => {
+    const own = studiesForGrowPlan(studies.studies, r.code);
     const std = laborStandard(own);
     const due = nextStudyDue(own, studies.intervals[r.code], today);
     const late = due.daysUntilDue !== null && due.daysUntilDue < 0;
@@ -358,38 +358,38 @@ const laborStandards: Builder = (ctx) => {
     ], late || !std ? 'over' : undefined);
   });
   return {
-    summary: table([{ label: 'Measure' }, { label: 'Crop plans', num: true }], [
-      row(['Crop plans in the library', R.cropPlans.length]),
+    summary: table([{ label: 'Measure' }, { label: 'Grow plans', num: true }], [
+      row(['Grow plans in the library', R.growPlans.length]),
       row(['On approved observed studies', observed]),
       row(['On the estimated study that stands in', estimated]),
       row(['With no study', none], none > 0 ? 'over' : undefined),
       row(['Past the re-study date', pastDue], pastDue > 0 ? 'over' : undefined),
     ]),
-    detail: table([{ label: 'Crop plan' }, { label: 'Status' }, { label: 'Standard' }, { label: 'Labor min / unit', num: true }, { label: 'Fixed min / sowing', num: true }, { label: 'Variable min / unit', num: true }, { label: 'Most people on a task', num: true }, { label: 'Last studied' }, { label: 'Next due' }, { label: 'Days to due', num: true }], detail),
-    basis: `Each crop plan's labor standard from the time-study library as of ${today}: the average of its approved observed studies, or the estimated study until one is approved.`,
+    detail: table([{ label: 'Grow plan' }, { label: 'Status' }, { label: 'Standard' }, { label: 'Labor min / unit', num: true }, { label: 'Fixed min / sowing', num: true }, { label: 'Variable min / unit', num: true }, { label: 'Most people on a task', num: true }, { label: 'Last studied' }, { label: 'Next due' }, { label: 'Days to due', num: true }], detail),
+    basis: `Each grow plan's labor standard from the time-study library as of ${today}: the average of its approved observed studies, or the estimated study until one is approved.`,
   };
 };
 
 const unitCost: Builder = (ctx) => {
   const { selected, studies } = ctx;
   const R = selected.inputs;
-  const avg = activeCropPlanAverages(R.cropPlans, R.capacityInputs, R.assumptions, studies.studies, R.cropPlanAssumptions);
+  const avg = activeGrowPlanAverages(R.growPlans, R.capacityInputs, R.assumptions, studies.studies, R.growPlanAssumptions);
   return {
-    summary: table([{ label: 'Mean over active crop plans' }, { label: 'Per unit', num: true }], [
+    summary: table([{ label: 'Mean over active grow plans' }, { label: 'Per unit', num: true }], [
       row(['Inputs at purchase prices, before shrink', money(avg.asPurchasedPerUnit)]),
       row(['Input cost, with the shrink allowance', money(avg.inputCostPerUnit)]),
       row(['Labor cost, at the placeholder loaded rate', money(avg.laborCostPerUnit)]),
       row(['Cost to serve: food, labor, packaging, distribution', money(avg.costToServePerUnit)], 'total'),
       row(['Labor minutes per unit', num(avg.laborMinutesPerUnit, 2)]),
       row(['Sowing clock minutes, receiving to cold hold', num(avg.sowingMinutes, 0)]),
-      row(['Active crop plans averaged', avg.count]),
+      row(['Active grow plans averaged', avg.count]),
       row(['Of which on an estimated study', avg.onEstimate]),
       row(['Of which with no study', avg.withoutStudy], avg.withoutStudy > 0 ? 'over' : undefined),
     ]),
-    detail: table([{ label: 'Crop plan' }, { label: 'Sowing', num: true }, { label: 'Purchased / unit', num: true }, { label: 'Food / unit', num: true }, { label: 'Labor min / unit', num: true }, { label: 'Labor / unit', num: true }, { label: 'Cost to serve', num: true }, { label: 'Sowing minutes', num: true }],
-      avg.cropPlans.map((r) => row([r.name, num(r.sowing), money(r.asPurchasedPerUnit), money(r.inputCostPerUnit), num(r.laborMinutesPerUnit, 2), money(r.laborCostPerUnit), money(r.costToServePerUnit), num(r.sowingMinutes, 0)]))),
-    basis: 'Each active crop plan at its own derived sowing, its own labor standard and its packaging picks, at the prices in force. Storage is excluded from the cost to serve.',
-    empty: avg.count === 0 ? 'No crop plan is In Service.' : undefined,
+    detail: table([{ label: 'Grow plan' }, { label: 'Sowing', num: true }, { label: 'Purchased / unit', num: true }, { label: 'Food / unit', num: true }, { label: 'Labor min / unit', num: true }, { label: 'Labor / unit', num: true }, { label: 'Cost to serve', num: true }, { label: 'Sowing minutes', num: true }],
+      avg.growPlans.map((r) => row([r.name, num(r.sowing), money(r.asPurchasedPerUnit), money(r.inputCostPerUnit), num(r.laborMinutesPerUnit, 2), money(r.laborCostPerUnit), money(r.costToServePerUnit), num(r.sowingMinutes, 0)]))),
+    basis: 'Each active grow plan at its own derived sowing, its own labor standard and its packaging picks, at the prices in force. Storage is excluded from the cost to serve.',
+    empty: avg.count === 0 ? 'No grow plan is In Service.' : undefined,
   };
 };
 
@@ -539,7 +539,7 @@ const planVActual: Builder = async (ctx) => {
 const inventoryPosition: Builder = (ctx) => {
   const { selected, finished, today } = ctx;
   const R = selected.inputs;
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => R.growPlans.find((r) => r.code === code)?.name ?? code;
   const open = finished.lots.filter((l) => l.remaining > 1e-9).map((l) => ({ ...l, days: daysBetween(today, l.expires) })).sort((a, b) => a.expires.localeCompare(b.expires));
   const units = open.reduce((s, l) => s + l.remaining, 0);
   const expiring = open.filter((l) => l.days <= 7);
@@ -558,8 +558,8 @@ const inventoryPosition: Builder = (ctx) => {
     row(['Raw lots past the date on the case', rawPast.length], rawPast.length > 0 ? 'over' : undefined),
     row(['Raw materials on hand, at invoice', cents(rawValue)]),
   ]);
-  const detail = table([{ label: 'Lot' }, { label: 'Crop plan' }, { label: 'Produced' }, { label: 'Shelf life ends' }, { label: 'Days left', num: true }, { label: 'Units', num: true }, { label: 'Status' }], [
-    ...open.map((l) => row([l.sowingId, cropPlanName(l.cropPlanCode), l.produced, l.expires, l.days, num(Math.round(l.remaining)), l.days <= 7 ? 'Expiring' : 'In hold'], l.days <= 7 ? 'over' : undefined)),
+  const detail = table([{ label: 'Lot' }, { label: 'Grow plan' }, { label: 'Produced' }, { label: 'Shelf life ends' }, { label: 'Days left', num: true }, { label: 'Units', num: true }, { label: 'Status' }], [
+    ...open.map((l) => row([l.sowingId, growPlanName(l.growPlanCode), l.produced, l.expires, l.days, num(Math.round(l.remaining)), l.days <= 7 ? 'Expiring' : 'In hold'], l.days <= 7 ? 'over' : undefined)),
     ...raw.map((l) => row([`${l.input} · ${l.lotCode}`, 'Raw material', l.receivedOn, l.useBy ?? '—', l.daysToUseBy ?? '—', `${num(l.remaining, 1)} ${l.unit}`, l.daysToUseBy !== null && l.daysToUseBy < 0 ? 'Past use-by' : 'On hand'], l.daysToUseBy !== null && l.daysToUseBy < 0 ? 'over' : undefined)),
   ]);
   return {
@@ -697,14 +697,14 @@ const emissionsStatement: Builder = async (ctx) => {
 const wasteEndOfLife: Builder = async (ctx) => {
   const w = await sustainabilityWorld(ctx);
   const R = w.R;
-  const produced = mixShrinkKg(w.basis, R.cropPlans, R.assumptions.yield.shrinkAllowance.value);
-  const expired = expiredMassKg(w.basis, R.cropPlans);
+  const produced = mixShrinkKg(w.basis, R.growPlans, R.assumptions.yield.shrinkAllowance.value);
+  const expired = expiredMassKg(w.basis, R.growPlans);
   const tons = produced.kg / KG_PER_SHORT_TON;
   const share = R.sustainability.waste.compostShare;
   const net = warmNet(tons, share);
   const landfill = warmNet(tons, 0);
   const compost = warmNet(tons, 1);
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => R.growPlans.find((r) => r.code === code)?.name ?? code;
   const summary = table([{ label: 'Measure' }, { label: 'Value', num: true }], [
     row(['Units produced in the period', num(produced.units)]),
     row(['As-purchased food mass per unit', produced.units > 0 ? `${((produced.seedKg / produced.units) * 1000).toFixed(0)} g` : '—']),
@@ -717,9 +717,9 @@ const wasteEndOfLife: Builder = async (ctx) => {
     row(['All to compost, t CO2e', (compost.netKg / 1000).toFixed(2)]),
     row(['Difference between the two pathways, t CO2e', ((landfill.netKg - compost.netKg) / 1000).toFixed(2)]),
   ]);
-  const detail = table([{ label: 'Crop plan' }, { label: 'Units produced', num: true }, { label: 'Units past shelf life, unshipped', num: true }], [
-    ...Object.entries(w.basis.producedByCropPlan).map(([code, n]) => row([cropPlanName(code), num(Math.round(n)), num(Math.round(w.basis.expiredByCropPlan[code] ?? 0))], (w.basis.expiredByCropPlan[code] ?? 0) > 1e-9 ? 'over' : undefined)),
-    ...Object.entries(w.basis.expiredByCropPlan).filter(([code]) => !(code in w.basis.producedByCropPlan)).map(([code, n]) => row([cropPlanName(code), '—', num(Math.round(n))], 'over')),
+  const detail = table([{ label: 'Grow plan' }, { label: 'Units produced', num: true }, { label: 'Units past shelf life, unshipped', num: true }], [
+    ...Object.entries(w.basis.producedByGrowPlan).map(([code, n]) => row([growPlanName(code), num(Math.round(n)), num(Math.round(w.basis.expiredByGrowPlan[code] ?? 0))], (w.basis.expiredByGrowPlan[code] ?? 0) > 1e-9 ? 'over' : undefined)),
+    ...Object.entries(w.basis.expiredByGrowPlan).filter(([code]) => !(code in w.basis.producedByGrowPlan)).map(([code, n]) => row([growPlanName(code), '—', num(Math.round(n))], 'over')),
   ]);
   return {
     summary,
@@ -762,26 +762,26 @@ const refrigerantLeakage: Builder = async (ctx) => {
 const staffDemandReport: Builder = (ctx) => {
   const { horizon, horizonFrom, horizonTo, studies, selected } = ctx;
   const R = selected.inputs;
-  const harvest = horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, cropPlanName: r.cropPlanName, units: r.filledBase })) }));
-  const shelf = traysOnShelf(horizon.productionDays, cycleDaysByCode(R.cropPlans), horizonFrom, horizonTo);
+  const harvest = horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, growPlanName: r.growPlanName, units: r.filledBase })) }));
+  const shelf = traysOnShelf(horizon.productionDays, cycleDaysByCode(R.growPlans), horizonFrom, horizonTo);
   const demand = staffDemand({ from: horizonFrom, to: horizonTo, days: horizon.productionDays, harvest, shelf, studies: studies.studies });
   const busiest = demand.days.reduce<(typeof demand.days)[number] | null>((m, d) => (!m || d.staffHours > m.staffHours ? d : m), null);
-  const cropPlanName = (code: string) => R.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => R.growPlans.find((r) => r.code === code)?.name ?? code;
   const summary = table([{ label: 'Measure' }, { label: 'Value', num: true }], [
     row(['Production days with sowings', demand.productionDays]),
     row(['Distribution days', demand.distributionDays]),
     row(['Staff-hours required', num(demand.staffHours, 1)]),
     row(['Busiest day', busiest && busiest.staffHours > 0 ? `${busiest.date} · ${num(busiest.staffHours, 1)} h` : '—']),
     row(['Most people on one task, any day', demand.days.reduce((m, d) => Math.max(m, d.mostPeopleOnATask), 0)]),
-    row(['Crop plans with no time study', demand.uncoveredCropPlans.length], demand.uncoveredCropPlans.length > 0 ? 'over' : undefined),
-    row(['Crop plans staffed from an estimate', demand.estimatedCropPlans.length]),
+    row(['Grow plans with no time study', demand.uncoveredGrowPlans.length], demand.uncoveredGrowPlans.length > 0 ? 'over' : undefined),
+    row(['Grow plans staffed from an estimate', demand.estimatedGrowPlans.length]),
   ]);
   const detail = table([{ label: 'Date' }, { label: 'Sowings', num: true }, { label: 'Units made', num: true }, { label: 'Units shipped', num: true }, { label: 'Staff-hours', num: true }, { label: 'Sowing stream h', num: true }, { label: 'Harvest stream h', num: true }, { label: 'Most people on a task', num: true }, { label: 'No study' }],
-    demand.days.map((d) => row([d.date, d.sowings, num(Math.round(d.units)), num(Math.round(d.unitsShipped)), num(d.staffHours, 1), num(d.sowingStaffHours, 1), num(d.harvestStaffHours, 1), d.mostPeopleOnATask, d.uncovered.map((u) => cropPlanName(u.cropPlanCode)).join(', ')], d.uncovered.length > 0 ? 'over' : undefined)));
+    demand.days.map((d) => row([d.date, d.sowings, num(Math.round(d.units)), num(Math.round(d.unitsShipped)), num(d.staffHours, 1), num(d.sowingStaffHours, 1), num(d.harvestStaffHours, 1), d.mostPeopleOnATask, d.uncovered.map((u) => growPlanName(u.growPlanCode)).join(', ')], d.uncovered.length > 0 ? 'over' : undefined)));
   return {
     summary,
     detail,
-    basis: `${horizonFrom} to ${horizonTo} on ${ctx.worldLabel}: each crop plan's scheduled sowings and shipments staffed from its labor standard. Headcount and hours by task; no positions and no pay.`,
+    basis: `${horizonFrom} to ${horizonTo} on ${ctx.worldLabel}: each grow plan's scheduled sowings and shipments staffed from its labor standard. Headcount and hours by task; no positions and no pay.`,
     empty: demand.days.length === 0 ? 'No sowing or shipment in the next two weeks on this world.' : undefined,
   };
 };
@@ -856,7 +856,7 @@ const orderBookAccuracy: Builder = (ctx) => {
     from,
     to,
     channelPriceCents: Object.fromEntries(R.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-    cropPlanNames: Object.fromEntries(R.cropPlans.map((r) => [r.code, r.name])),
+    growPlanNames: Object.fromEntries(R.growPlans.map((r) => [r.code, r.name])),
     closures,
   });
   const rows = pickupPointActualVsForecast(book, new Map(records.distributions.map((d) => [d.id, d.units])));

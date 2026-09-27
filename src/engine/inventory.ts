@@ -178,10 +178,10 @@ export function fullInventory(
   lines.push({ scope: 2, category: 'electricity-location', label: 'Electricity, location-based', kg: energy.location.scope2Kg, basis: 'AR5', activity: energy.location.scope2Kg > 0 ? 'annual kWh' : 'none on file', weakest: status(energy.postings.filter((p) => p.scope2Method === 'location')) });
   lines.push({ scope: 2, category: 'electricity-market', label: 'Electricity, market-based', kg: energy.market.scope2Kg, basis: 'AR5', activity: energy.location.scope2Kg > 0 ? `${Math.round(world.energy.renewableShare * 100)}% renewable supply` : 'none on file', weakest: status(energy.postings.filter((p) => p.scope2Method === 'market')) });
 
-  // Scope 3: purchased food, both bases, crop plan by crop plan over the units distributed.
+  // Scope 3: purchased food, both bases, grow plan by grow plan over the units distributed.
   const foodRef: EmissionPosting[] = [];
   const foodSel: EmissionPosting[] = [];
-  const mix = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: pfByChannel, selection: S.inputBasis, options });
+  const mix = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: pfByChannel, selection: S.inputBasis, options });
   const linesOnSelected = mix.linesOnSelectedBasis;
   const perInput = new Map(mix.byInput.map((i) => [i.name, { ref: i.referenceKg, sel: i.selectedKg, refP: i.reference, selP: i.selected, selStatus: i.selectedStatus, massKg: i.massKg }]));
   for (const [name, v] of perInput) {
@@ -192,11 +192,11 @@ export function fullInventory(
   postings.push(...foodRef, ...foodSel);
   const foodReferenceKg = foodRef.reduce((s, p) => s + p.co2eKg, 0);
   const foodSelectedKg = foodSel.reduce((s, p) => s + p.co2eKg, 0);
-  lines.push({ scope: 3, category: 'food-reference', label: 'Purchased food, reference basis', kg: foodReferenceKg, basis: 'study means', activity: 'crop plans × units distributed', weakest: status(foodRef) });
-  lines.push({ scope: 3, category: 'food-selected', label: 'Purchased food, selected basis', kg: foodSelectedKg, basis: linesOnSelected ? `${linesOnSelected} line(s) on a cited or supplier figure` : 'no selections; equals the reference', activity: 'crop plans × units distributed', weakest: status(foodSel) });
+  lines.push({ scope: 3, category: 'food-reference', label: 'Purchased food, reference basis', kg: foodReferenceKg, basis: 'study means', activity: 'grow plans × units distributed', weakest: status(foodRef) });
+  lines.push({ scope: 3, category: 'food-selected', label: 'Purchased food, selected basis', kg: foodSelectedKg, basis: linesOnSelected ? `${linesOnSelected} line(s) on a cited or supplier figure` : 'no selections; equals the reference', activity: 'grow plans × units distributed', weakest: status(foodSel) });
 
   // Scope 3: waste, the period's shrink on production split by the compost share.
-  const shrinkKg = mixShrinkKg(basis, R.cropPlans, R.assumptions.yield.shrinkAllowance.value).kg;
+  const shrinkKg = mixShrinkKg(basis, R.growPlans, R.assumptions.yield.shrinkAllowance.value).kg;
   const shrink = { annualShortTons: shrinkKg / KG_PER_SHORT_TON };
   const wastePostings: EmissionPosting[] = [];
   const landfillTons = shrink.annualShortTons * (1 - S.waste.compostShare);
@@ -215,7 +215,7 @@ export function fullInventory(
       return { id: b.pickupPointId ?? b.pickupPointName ?? 'pickupPoint', name: b.pickupPointName ?? seed?.name ?? 'Pickup point', county: seed?.county ?? '', dailyForecastUnits: b.units, coords: seed ? pickupPointCoordinates(seed.county) : null };
     }),
     FARM_HOME,
-    mixShippedMassPerUnitKg(basis, R.cropPlans, pfByChannel),
+    mixShippedMassPerUnitKg(basis, R.growPlans, pfByChannel),
   );
   const freightPostings: EmissionPosting[] = [];
   const freightProv = freightFactorSmartWay.provenance;

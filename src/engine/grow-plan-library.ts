@@ -1,25 +1,25 @@
 /**
  * MicroFarm — the grow plan library, engine-side.
  *
- * Ledger-free, database-free. Conversions between a library row pair (`farm.crop_plans` +
- * `farm.crop_plan_lines`) and the grow plan the engine reads, and the next code under a variety.
+ * Ledger-free, database-free. Conversions between a library row pair (`farm.grow_plans` +
+ * `farm.grow_plan_lines`) and the grow plan the engine reads, and the next code under a variety.
  * The read layer
- * (`_lib/crop-plans.ts`) and the actions call these so the shape is defined once.
+ * (`_lib/grow-plans.ts`) and the actions call these so the shape is defined once.
  */
 
 import type { NutrientSolutionDef } from '@/data/inputs-catalog';
 import { nutrientsForPlan } from '@/engine/nutrients';
-import type { CropPlanStatus } from '@/data/plan-data';
+import type { GrowPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
 import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import type { StageDays } from '@/data/stage-schedule';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
-export const CROP_PLAN_STATUSES: CropPlanStatus[] = ['in_service', 'planned', 'developing'];
+export const GROW_PLAN_STATUSES: GrowPlanStatus[] = ['in_service', 'planned', 'developing'];
 
 /** A library plan: the grow plan and the row identity. */
-export interface LibraryCropPlan extends GrowPlanDef {
+export interface LibraryGrowPlan extends GrowPlanDef {
   id: string;
   source: 'seed' | 'user_built';
   version: number;
@@ -27,7 +27,7 @@ export interface LibraryCropPlan extends GrowPlanDef {
   updatedAt: string;
 }
 
-export interface CropPlanHeaderRow {
+export interface GrowPlanHeaderRow {
   id: string;
   code: string;
   name: string;
@@ -44,7 +44,7 @@ export interface CropPlanHeaderRow {
   updatedAt: Date | string;
 }
 
-export interface CropPlanLineRow {
+export interface GrowPlanLineRow {
   position: number;
   name: string;
   line: unknown;
@@ -63,8 +63,8 @@ export function lineFromStored(raw: unknown): GrowPlanLine | null {
 }
 
 /** The stored grow plan. */
-export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): GrowPlanDef {
-  const status = CROP_PLAN_STATUSES.includes(header.status as CropPlanStatus) ? (header.status as CropPlanStatus) : 'developing';
+export function rowsToGrowPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): GrowPlanDef {
+  const status = GROW_PLAN_STATUSES.includes(header.status as GrowPlanStatus) ? (header.status as GrowPlanStatus) : 'developing';
   const format = (header.format in TRAY_FORMAT_BY_KEY ? header.format : 'flat-1020') as TrayFormatKey;
   const sd = header.stageDays;
   const stageDays = sd && typeof sd === 'object' && 'value' in (sd as object) ? (sd as Tagged<StageDays>) : null;
@@ -87,7 +87,7 @@ export function rowsToGrowPlan(header: CropPlanHeaderRow, lines: readonly CropPl
   };
 }
 
-export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): LibraryCropPlan {
+export function rowsToLibraryPlan(header: GrowPlanHeaderRow, lines: readonly GrowPlanLineRow[], nutrients?: Readonly<Record<string, NutrientSolutionDef>>): LibraryGrowPlan {
   const plan = rowsToGrowPlan(header, lines, nutrients);
   return {
     ...plan,
@@ -100,9 +100,9 @@ export function rowsToCropPlan(header: CropPlanHeaderRow, lines: readonly CropPl
 }
 
 /** The header + lines a grow plan writes. Lines keep their order as positions. */
-export function cropPlanToRows(plan: GrowPlanDef): {
-  header: Omit<CropPlanHeaderRow, 'id' | 'version' | 'effectiveFrom' | 'updatedAt'>;
-  lines: CropPlanLineRow[];
+export function growPlanToRows(plan: GrowPlanDef): {
+  header: Omit<GrowPlanHeaderRow, 'id' | 'version' | 'effectiveFrom' | 'updatedAt'>;
+  lines: GrowPlanLineRow[];
 } {
   return {
     header: {
@@ -125,13 +125,10 @@ export function cropPlanToRows(plan: GrowPlanDef): {
 export const SEED_GROW_PLANS: readonly GrowPlanDef[] = growPlanSeed;
 
 /** The next code under a variety code (or `MIX`), one past the highest serial already in the library. */
-export function nextCropPlanCode(existing: readonly string[], prefix: string): string {
-  return nextGrowPlanCode(existing, prefix);
-}
 
 export const isGrowPlanCode = (code: string): boolean => GROW_PLAN_CODE_RX.test(code);
 
 /** The plan that stands for the facility where one is needed: the first In Service, else the first. */
-export function referenceCropPlan<T extends GrowPlanDef>(library: readonly T[]): T | undefined {
+export function referenceGrowPlan<T extends GrowPlanDef>(library: readonly T[]): T | undefined {
   return library.find((r) => r.status === 'in_service') ?? library[0];
 }

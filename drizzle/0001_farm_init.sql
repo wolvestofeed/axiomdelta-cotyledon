@@ -149,7 +149,7 @@ CREATE INDEX IF NOT EXISTS farm_source_figures_source_idx
 -- 0045_farm_supplier_lca_options.sql
 -- MicroFarm — supplier-specific LCA options (Sustainability S4).
 --
--- A figure a specific supplier supplies for a specific crop_plan input, with
+-- A figure a specific supplier supplies for a specific grow_plan input, with
 -- the supplier's own document registered in farm.sources. It appears as a
 -- "supplier" option in the per-input LCA basis selector beside the study
 -- mean and any curated cited LCA. Boundary is stated so the engine can align
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS farm.supplier_lca_options (
   id              uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
   supplier_id     text              NOT NULL,
   supplier_name   text              NOT NULL,
-  -- crop_plan input name, e.g. 'Ground beef, 85/15'.
+  -- grow_plan input name, e.g. 'Ground beef, 85/15'.
   input      text              NOT NULL,
   label           text              NOT NULL,
   kg_co2e_per_kg  double precision  NOT NULL,
@@ -335,7 +335,7 @@ CREATE INDEX IF NOT EXISTS farm_purchase_orders_ordered_for_idx
 CREATE TABLE IF NOT EXISTS farm.purchase_order_lines (
   id                uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
   po_id             uuid              NOT NULL REFERENCES farm.purchase_orders (id) ON DELETE CASCADE,
-  -- The crop_plan line this covers, so a PO traces back to what drove it.
+  -- The grow_plan line this covers, so a PO traces back to what drove it.
   input        text              NOT NULL,
   -- The supplier's own catalog line, when the input matched one.
   supplier_item_id  uuid              REFERENCES farm.supplier_items (id) ON DELETE SET NULL,
@@ -390,9 +390,9 @@ CREATE TABLE IF NOT EXISTS farm.sowing_records (
   id                 uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
   -- Operator-visible sowing id, e.g. B-260914-01. Unique.
   sowing_id           text              NOT NULL UNIQUE,
-  crop_plan_code        text              NOT NULL,
+  grow_plan_code        text              NOT NULL,
   production_date    date              NOT NULL,
-  -- The crop_plan standard in force on the production date, so cost is reproducible.
+  -- The grow_plan standard in force on the production date, so cost is reproducible.
   standard_version   text              NOT NULL,
   planned_units   double precision  NOT NULL,
   -- Base-unit equivalents that passed and were packed. Drives everything downstream.
@@ -479,36 +479,36 @@ CREATE TABLE IF NOT EXISTS farm.period_bills (
 );
 CREATE INDEX IF NOT EXISTS farm_period_bills_period_idx ON farm.period_bills (period);
 
--- ── farm_crop_plans.sql ──
--- 0049_farm_crop_plans.sql
--- MicroFarm — the crop_plan library (Roadmap Phase H1).
+-- ── farm_grow_plans.sql ──
+-- 0049_farm_grow_plans.sql
+-- MicroFarm — the grow_plan library (Roadmap Phase H1).
 --
--- Until now one crop_plan lived as a code constant and stood in for the whole item
--- master. The library makes crop_plans first-class: every crop_plan that can be
+-- Until now one grow_plan lived as a code constant and stood in for the whole item
+-- master. The library makes grow_plans first-class: every grow_plan that can be
 -- costed, credited, sowing-sized or planned is a row here, with a status and the
 -- channels it serves. The code constant becomes the SEED (AMK-E-001, In Service)
 -- inserted on first read when the table is empty; it is no longer the source.
 --
---   * crop_plans       — the crop_plan header: code, name, category, status
+--   * grow_plans       — the grow_plan header: code, name, category, status
 --                     ('in_service' | 'planned' | 'developing'), the channels it
 --                     serves (expansion phases 1–3; each channel carries its own
 --                     menu), method, allergen statements, and the unit `spec`
 --                     block (trayFormat, nutritionTarget, serving grow_unit) as JSONB.
 --                     `version` and `effective_from` let a sowing record's
 --                     `standard_version` name the standard in force on its date.
---   * crop_plan_lines  — one row per input line. `line` is the engine's
+--   * grow_plan_lines  — one row per input line. `line` is the engine's
 --                     `inputLine` document (as-purchased quantity and unit,
 --                     yield with its own provenance, price with its own
 --                     provenance, pack size, hot/cold, nutrition spec, served
 --                     component) stored whole so the engine reads it unchanged.
 --
 -- A scenario still edits a line's price, quantity, yield and pack size as a
--- forecast overlay (keyed by crop_plan code + input); the library row is the
+-- forecast overlay (keyed by grow_plan code + input); the library row is the
 -- standard those edits are measured against.
 
 CREATE SCHEMA IF NOT EXISTS farm;
 
-CREATE TABLE IF NOT EXISTS farm.crop_plans (
+CREATE TABLE IF NOT EXISTS farm.grow_plans (
   id                   uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
   code                 text         NOT NULL UNIQUE,
   name                 text         NOT NULL,
@@ -531,22 +531,22 @@ CREATE TABLE IF NOT EXISTS farm.crop_plans (
   created_by           text,
   created_at           timestamptz  NOT NULL DEFAULT now(),
   updated_at           timestamptz  NOT NULL DEFAULT now(),
-  CONSTRAINT farm_crop_plans_status CHECK (status IN ('in_service', 'planned', 'developing'))
+  CONSTRAINT farm_grow_plans_status CHECK (status IN ('in_service', 'planned', 'developing'))
 );
-CREATE INDEX IF NOT EXISTS farm_crop_plans_status_idx ON farm.crop_plans (status);
+CREATE INDEX IF NOT EXISTS farm_grow_plans_status_idx ON farm.grow_plans (status);
 
-CREATE TABLE IF NOT EXISTS farm.crop_plan_lines (
+CREATE TABLE IF NOT EXISTS farm.grow_plan_lines (
   id          uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
-  crop_plan_id   uuid         NOT NULL REFERENCES farm.crop_plans (id) ON DELETE CASCADE,
+  grow_plan_id   uuid         NOT NULL REFERENCES farm.grow_plans (id) ON DELETE CASCADE,
   position    integer      NOT NULL DEFAULT 0,
   name        text         NOT NULL,
   -- inputLine document.
   line        jsonb        NOT NULL,
   created_at  timestamptz  NOT NULL DEFAULT now(),
   updated_at  timestamptz  NOT NULL DEFAULT now(),
-  CONSTRAINT farm_crop_plan_lines_unique_name UNIQUE (crop_plan_id, name)
+  CONSTRAINT farm_grow_plan_lines_unique_name UNIQUE (grow_plan_id, name)
 );
-CREATE INDEX IF NOT EXISTS farm_crop_plan_lines_crop_plan_idx ON farm.crop_plan_lines (crop_plan_id, position);
+CREATE INDEX IF NOT EXISTS farm_grow_plan_lines_grow_plan_idx ON farm.grow_plan_lines (grow_plan_id, position);
 
 -- ── farm_subscribers.sql ──
 -- 0050_farm_subscribers.sql
@@ -634,22 +634,22 @@ CREATE INDEX IF NOT EXISTS farm_subscriber_pickup_points_pickup_point_idx ON far
 -- 0051_farm_orders.sql
 -- MicroFarm — orders and subscriptionCycles (Roadmap Phase H3).
 --
--- An order is a date, a subscriber, a pickup_point, a channel, a crop_plan, a unit count and
+-- An order is a date, a subscriber, a pickup_point, a channel, a grow_plan, a unit count and
 -- a status. It is what production plans against and what a distribution is
 -- recorded against.
 --
 --   * subscription_cycles      — per channel: a repeating sequence of service days that
---                        names which crop_plan every pickup_point on the channel is served
+--                        names which grow_plan every pickup_point on the channel is served
 --                        on which date. `start_date` anchors day 1 to the
 --                        calendar; `weekdays` are the service days (0 = Sunday …
 --                        6 = Saturday) the cycle advances on. A per-pickup_point service
 --                        calendar (closures, holidays) is not modelled yet.
---   * subscription_cycle_days  — one row per cycle day, naming the crop_plan served.
+--   * subscription_cycle_days  — one row per cycle day, naming the grow_plan served.
 --   * orders           — the rows the platform stores. Status is
 --                        'forecast' | 'confirmed' | 'distributed'.
 --
 -- A FORECAST ORDER GENERATED BY A SUBSCRIPTION_CYCLE IS NOT STORED. It is a derived
--- figure — the cycle's crop_plan on the date × the pickup_point's participation forecast —
+-- figure — the cycle's grow_plan on the date × the pickup_point's participation forecast —
 -- and the engine computes it whenever the order book is read, so a change to a
 -- pickup_point's forecast or to the cycle moves every forecast order with it and
 -- nothing stale sits in a table. A row is written when a count is typed
@@ -657,7 +657,7 @@ CREATE INDEX IF NOT EXISTS farm_subscriber_pickup_points_pickup_point_idx ON far
 -- confirms the count (`status = 'confirmed'`), and when the units are
 -- distributed (`status = 'distributed'`, `distribution_id` names the distribution record
 -- in farm.distributions, which is what posts revenue). A stored row replaces the
--- derived order with the same date, pickup_point and crop_plan.
+-- derived order with the same date, pickup_point and grow_plan.
 --
 -- Price on an order is optional: NULL means the subscriber's contracted price,
 -- else the channel default, resolved when read. units is a count; every
@@ -693,8 +693,8 @@ CREATE TABLE IF NOT EXISTS farm.subscription_cycle_days (
   cycle_id     uuid         NOT NULL REFERENCES farm.subscription_cycles (id) ON DELETE CASCADE,
   -- 1 .. length_days
   day          integer      NOT NULL,
-  -- The library crop_plan served that day; NULL = no service (a day off the menu).
-  crop_plan_code  text,
+  -- The library grow_plan served that day; NULL = no service (a day off the menu).
+  grow_plan_code  text,
   created_at   timestamptz  NOT NULL DEFAULT now(),
   CONSTRAINT farm_subscription_cycle_days_day CHECK (day >= 1),
   CONSTRAINT farm_subscription_cycle_days_unique UNIQUE (cycle_id, day)
@@ -707,7 +707,7 @@ CREATE TABLE IF NOT EXISTS farm.orders (
   subscriber_id          uuid         NOT NULL REFERENCES farm.subscribers (id) ON DELETE CASCADE,
   subscriber_pickup_point_id     uuid         NOT NULL REFERENCES farm.subscriber_pickup_points (id) ON DELETE CASCADE,
   channel              integer      NOT NULL,
-  crop_plan_code          text         NOT NULL,
+  grow_plan_code          text         NOT NULL,
   units                double precision NOT NULL,
   -- 'forecast' | 'confirmed' | 'distributed'
   status               text         NOT NULL DEFAULT 'forecast',
@@ -727,8 +727,8 @@ CREATE TABLE IF NOT EXISTS farm.orders (
   CONSTRAINT farm_orders_units_nonneg CHECK (units >= 0),
   CONSTRAINT farm_orders_status CHECK (status IN ('forecast', 'confirmed', 'distributed')),
   CONSTRAINT farm_orders_source CHECK (source IN ('typed', 'cycle', 'sales', 'portal')),
-  -- One stored order per date, pickup_point and crop_plan: it is the row that replaces the derived one.
-  CONSTRAINT farm_orders_unique_line UNIQUE (order_date, subscriber_pickup_point_id, crop_plan_code)
+  -- One stored order per date, pickup_point and grow_plan: it is the row that replaces the derived one.
+  CONSTRAINT farm_orders_unique_line UNIQUE (order_date, subscriber_pickup_point_id, grow_plan_code)
 );
 CREATE INDEX IF NOT EXISTS farm_orders_date_idx ON farm.orders (order_date);
 CREATE INDEX IF NOT EXISTS farm_orders_subscriber_idx ON farm.orders (subscriber_id, order_date);
@@ -855,10 +855,10 @@ ALTER TABLE farm.calendar_closures ADD CONSTRAINT calendar_closures_kind_check C
 -- 0056_farm_standard_versions.sql
 -- MicroFarm — approved standard-cost versions (Roadmap J5).
 --
--- A standard is the crop_plan (its lines, yields and SEED prices as resolved on the
+-- A standard is the grow_plan (its lines, yields and SEED prices as resolved on the
 -- plan of record) together with the cost assumptions in force, frozen as a
 -- snapshot when a super admin approves it with an effective date. Editing the
--- crop_plan library changes the library; the standard a sowing is costed at
+-- grow_plan library changes the library; the standard a sowing is costed at
 -- changes only when a new version is approved. The ledger costs every sowing
 -- at the version in force on its production date, so a reviewer can
 -- reproduce the cost; a sowing dated before any approved version is costed at
@@ -866,16 +866,16 @@ ALTER TABLE farm.calendar_closures ADD CONSTRAINT calendar_closures_kind_check C
 
 CREATE TABLE IF NOT EXISTS farm.standard_versions (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  crop_plan_code    text NOT NULL,
+  grow_plan_code    text NOT NULL,
   version        integer NOT NULL,
   effective_from date NOT NULL,
   approved_by    text NOT NULL,
   approved_at    timestamptz NOT NULL DEFAULT now(),
   notes          text,
   snapshot       jsonb NOT NULL,
-  UNIQUE (crop_plan_code, version)
+  UNIQUE (grow_plan_code, version)
 );
-CREATE INDEX IF NOT EXISTS farm_standard_versions_code_date_idx ON farm.standard_versions (crop_plan_code, effective_from);
+CREATE INDEX IF NOT EXISTS farm_standard_versions_code_date_idx ON farm.standard_versions (grow_plan_code, effective_from);
 
 -- ── farm_working_capital.sql ──
 -- 0057_farm_working_capital.sql
@@ -1136,8 +1136,8 @@ CREATE INDEX IF NOT EXISTS farm_equipment_status_idx ON farm.equipment (status, 
 --                        end of use and its rank, a manual unit cost, and an
 --                        optional supplier catalog item whose price is the
 --                        supplier-based cost (per each, or per pack ÷ units per pack).
---   * crop_plan_packages  — the packages a crop_plan picks and how many per unit. A
---                        crop_plan with none picked carries the per-unit placeholder
+--   * grow_plan_packages  — the packages a grow_plan picks and how many per unit. A
+--                        grow_plan with none picked carries the per-unit placeholder
 --.
 --
 -- Money in dollars as double precision, matching supplier_items.unit_price, since
@@ -1176,17 +1176,17 @@ CREATE TABLE IF NOT EXISTS farm.packages (
 );
 CREATE INDEX IF NOT EXISTS farm_packages_supplier_item_idx ON farm.packages (supplier_item_id);
 
-CREATE TABLE IF NOT EXISTS farm.crop_plan_packages (
+CREATE TABLE IF NOT EXISTS farm.grow_plan_packages (
   id            uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
-  crop_plan_id     uuid              NOT NULL REFERENCES farm.crop_plans (id) ON DELETE CASCADE,
+  grow_plan_id     uuid              NOT NULL REFERENCES farm.grow_plans (id) ON DELETE CASCADE,
   package_id    uuid              NOT NULL REFERENCES farm.packages (id) ON DELETE RESTRICT,
   qty_per_unit  double precision  NOT NULL DEFAULT 1,
   created_by    text,
   created_at    timestamptz       NOT NULL DEFAULT now(),
-  CONSTRAINT farm_crop_plan_packages_qty CHECK (qty_per_unit > 0)
+  CONSTRAINT farm_grow_plan_packages_qty CHECK (qty_per_unit > 0)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS farm_crop_plan_packages_unique ON farm.crop_plan_packages (crop_plan_id, package_id);
-CREATE INDEX IF NOT EXISTS farm_crop_plan_packages_package_idx ON farm.crop_plan_packages (package_id);
+CREATE UNIQUE INDEX IF NOT EXISTS farm_grow_plan_packages_unique ON farm.grow_plan_packages (grow_plan_id, package_id);
+CREATE INDEX IF NOT EXISTS farm_grow_plan_packages_package_idx ON farm.grow_plan_packages (package_id);
 
 -- ── farm_hr_no_pay.sql ──
 -- 0060_farm_hr_no_pay.sql
@@ -1232,18 +1232,18 @@ CREATE INDEX IF NOT EXISTS farm_payroll_periods_pay_date_idx ON farm.payroll_per
 
 -- ── farm_time_studies.sql ──
 -- 0061_farm_time_studies.sql
--- MicroFarm — time studies per crop_plan (Roadmap Phase O, step O2).
+-- MicroFarm — time studies per grow_plan (Roadmap Phase O, step O2).
 --
--- Decisions: Labor is a log of time studies for each crop_plan
+-- Decisions: Labor is a log of time studies for each grow_plan
 -- in the library, on a re-study cadence, with trends and a quality result. A
 -- study times one sowing's tasks — who, how long, how many people, fixed per
--- sowing or variable per unit. An admin adopts the study that is the crop_plan's
+-- sowing or variable per unit. An admin adopts the study that is the grow_plan's
 -- labor standard; adoption is an entry on the posting trail. No wage or pay.
 --
 --   * time_studies          — one row per study; adopted_at marks an adoption
---                             (the latest adoption is the crop_plan's standard).
+--                             (the latest adoption is the grow_plan's standard).
 --   * time_study_lines      — the task lines of a study.
---   * time_study_intervals  — the re-study interval per crop_plan, in days.
+--   * time_study_intervals  — the re-study interval per grow_plan, in days.
 --
 -- The plan's time study for AMK-E-001 is seeded as its first study, with no
 -- study date or quality result: it was estimated, not observed.
@@ -1252,7 +1252,7 @@ CREATE SCHEMA IF NOT EXISTS farm;
 
 CREATE TABLE IF NOT EXISTS farm.time_studies (
   id              uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
-  crop_plan_id       uuid         NOT NULL REFERENCES farm.crop_plans (id) ON DELETE CASCADE,
+  grow_plan_id       uuid         NOT NULL REFERENCES farm.grow_plans (id) ON DELETE CASCADE,
   -- Null only on a study recorded without a date (the seeded estimate).
   studied_on      date,
   sowing_size      integer      NOT NULL,
@@ -1269,7 +1269,7 @@ CREATE TABLE IF NOT EXISTS farm.time_studies (
   CONSTRAINT farm_time_studies_quality CHECK (quality_result IS NULL OR quality_result IN ('pass', 'hold', 'fail')),
   CONSTRAINT farm_time_studies_source CHECK (source IN ('seed', 'user_built'))
 );
-CREATE INDEX IF NOT EXISTS farm_time_studies_crop_plan_idx ON farm.time_studies (crop_plan_id, studied_on);
+CREATE INDEX IF NOT EXISTS farm_time_studies_grow_plan_idx ON farm.time_studies (grow_plan_id, studied_on);
 
 CREATE TABLE IF NOT EXISTS farm.time_study_lines (
   id               uuid              PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1289,7 +1289,7 @@ CREATE TABLE IF NOT EXISTS farm.time_study_lines (
 CREATE INDEX IF NOT EXISTS farm_time_study_lines_study_idx ON farm.time_study_lines (study_id, position);
 
 CREATE TABLE IF NOT EXISTS farm.time_study_intervals (
-  crop_plan_id      uuid         PRIMARY KEY REFERENCES farm.crop_plans (id) ON DELETE CASCADE,
+  grow_plan_id      uuid         PRIMARY KEY REFERENCES farm.grow_plans (id) ON DELETE CASCADE,
   interval_days  integer      NOT NULL,
   updated_by     text,
   updated_at     timestamptz  NOT NULL DEFAULT now(),
@@ -1325,10 +1325,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS farm_staff_email_uniq ON farm.staff (email) WH
 -- 0064_farm_time_study_basis.sql
 -- MicroFarm — a time study's basis: estimated or observed (Roadmap O2 follow-on).
 --
--- Decision: every crop_plan in the library is seeded with an
--- ESTIMATED time study — a mock estimate per crop_plan step, built from the plan's
+-- Decision: every grow_plan in the library is seeded with an
+-- ESTIMATED time study — a mock estimate per grow_plan step, built from the plan's
 -- 14-task estimate and the stage processing standards — and "Estimated"
--- shows on the rows until the crop_plan's first observed study is recorded. An
+-- shows on the rows until the grow_plan's first observed study is recorded. An
 -- observed study carries a study date, an observer and a quality result; an
 -- estimated one need not. Additive: existing rows are observed unless they are
 -- the undated seed, which was the plan's estimate.
@@ -1349,11 +1349,11 @@ UPDATE farm.time_studies SET basis = 'estimated' WHERE source = 'seed' AND studi
 -- down: the sowing cost over the sowing's units is the unit cost, and the cost
 -- to serve adds conversion labor, packaging and distribution.
 --
---   * crop_plans.sowing_units  — the units a crop_plan's quantities are written
+--   * grow_plans.sowing_units  — the units a grow_plan's quantities are written
 --                               for (every row so far: 100). The production
 --                               sowing is derived, never typed.
---   * crop_plans.costing_basis   — dropped: the per-100-unit basis is gone.
---   * crop_plan_lines.line       — the jsonb quantity keys renamed from the per-100
+--   * grow_plans.costing_basis   — dropped: the per-100-unit basis is gone.
+--   * grow_plan_lines.line       — the jsonb quantity keys renamed from the per-100
 --                               names to the per-sowing names.
 --   * equipment.sowing_capacity_lb / sowing_capacity_basis — pounds one unit
 --                               takes in one run, the sowing a grow_unit bounds;
@@ -1362,12 +1362,12 @@ UPDATE farm.time_studies SET basis = 'estimated' WHERE source = 'seed' AND studi
 -- A sowing is one full Phase 1 line — one shelf, one blackout rack — and planned
 -- build-outs never count toward it.
 
-ALTER TABLE farm.crop_plans ADD COLUMN IF NOT EXISTS sowing_units integer NOT NULL DEFAULT 100;
-ALTER TABLE farm.crop_plans DROP COLUMN IF EXISTS costing_basis;
-ALTER TABLE farm.crop_plans DROP CONSTRAINT IF EXISTS farm_crop_plans_sowing_units;
-ALTER TABLE farm.crop_plans ADD CONSTRAINT farm_crop_plans_sowing_units CHECK (sowing_units > 0);
+ALTER TABLE farm.grow_plans ADD COLUMN IF NOT EXISTS sowing_units integer NOT NULL DEFAULT 100;
+ALTER TABLE farm.grow_plans DROP COLUMN IF EXISTS costing_basis;
+ALTER TABLE farm.grow_plans DROP CONSTRAINT IF EXISTS farm_grow_plans_sowing_units;
+ALTER TABLE farm.grow_plans ADD CONSTRAINT farm_grow_plans_sowing_units CHECK (sowing_units > 0);
 
-UPDATE farm.crop_plan_lines
+UPDATE farm.grow_plan_lines
 SET line = (line - 'seedQtyPer100' - 'harvestedYieldPer100')
   || jsonb_build_object('seedQtyPersowing', line->'seedQtyPer100', 'harvestedYieldPersowing', line->'harvestedYieldPer100')
 WHERE line ? 'seedQtyPer100';
@@ -1395,7 +1395,7 @@ UPDATE farm.equipment SET sowing_capacity_lb = 120 WHERE sowing_capacity_lb IS N
 --   * The day is two streams. The SOWING stream ends at component blackout and
 --     stage; the HARVEST stream runs first thing each distribution day from staged
 --     components and is counted per unit shipped that day.
---   * One study per crop_plan, each line tagged `sowing` or `harvest`
+--   * One study per grow_plan, each line tagged `sowing` or `harvest`
 --     (time_study_lines.stream). sowing lines keep the study's sowing size as their
 --     basis; harvest lines are per unit shipped, a fixed harvest line once
 --     per distribution day.
@@ -1773,15 +1773,15 @@ CREATE INDEX IF NOT EXISTS farm_training_assignments_staff_idx ON farm.training_
 --     at subscriber setup. A pickup_point with no term entered serves every service
 --     weekday the farm is open, and the page says the calendar is not on file.
 --   * Every subscriber has its own FLAT_PLAN. A channel groups revenue and limits
---     the crop_plans offered; it never decides what a subscriber is served. A unit
+--     the grow_plans offered; it never decides what a subscriber is served. A unit
 --     plan is either a saved subscriptionCycle copied onto the subscriber in one click
---     or a crop_plan sequence programmed for that subscriber alone.
+--     or a grow_plan sequence programmed for that subscriber alone.
 --   * SUBSCRIPTION_CYCLES are the shared list of saved sequences. They are not assigned
 --     to channels. Editing one applies to the subscribers picked (selected or
 --     all whose plan came from it); nobody else's plan moves.
 --
 -- A flatPlan and a subscriptionCycle are the same shape (a start date, a length, the
--- service weekdays it advances on, a crop_plan per day), so they share
+-- service weekdays it advances on, a grow_plan per day), so they share
 -- `farm.subscription_cycles`: a row with `subscriber_id` NULL is a saved subscriptionCycle on
 -- the shared list; a row with `subscriber_id` set is that subscriber's flatPlan.
 -- `from_cycle_id` names the saved cycle a plan was copied from, which is what
@@ -1913,11 +1913,11 @@ BEGIN
   SELECT id INTO ghost FROM farm.subscription_cycles WHERE source = 'seed' AND subscriber_id IS NULL AND channel = 3 ORDER BY start_date DESC LIMIT 1;
   IF adult IS NOT NULL AND ghost IS NOT NULL
      AND NOT EXISTS (
-       (SELECT day, crop_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = adult
-        EXCEPT SELECT day, crop_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = ghost)
+       (SELECT day, grow_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = adult
+        EXCEPT SELECT day, grow_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = ghost)
        UNION ALL
-       (SELECT day, crop_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = ghost
-        EXCEPT SELECT day, crop_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = adult)
+       (SELECT day, grow_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = ghost
+        EXCEPT SELECT day, grow_plan_code FROM farm.subscription_cycle_days WHERE cycle_id = adult)
      ) THEN
     UPDATE farm.orders SET subscription_cycle_id = adult WHERE subscription_cycle_id = ghost;
     -- Keep the channel on the surviving row until step 2 has copied plans from it.
@@ -1947,8 +1947,8 @@ SELECT s.subscriber_id, s.cycle_id, NULL, 'FlatPlan', s.start_date, s.length_day
        'Copied from the subscriptionCycle the subscriber''s channel served when flatPlans were introduced (Roadmap N4a).', 'user_built'
 FROM pg_temp._n4a_source s;
 
-INSERT INTO farm.subscription_cycle_days (cycle_id, day, crop_plan_code)
-SELECT p.id, d.day, d.crop_plan_code
+INSERT INTO farm.subscription_cycle_days (cycle_id, day, grow_plan_code)
+SELECT p.id, d.day, d.grow_plan_code
 FROM farm.subscription_cycles p
 JOIN pg_temp._n4a_source s ON s.subscriber_id = p.subscriber_id AND p.from_cycle_id = s.cycle_id
 JOIN farm.subscription_cycle_days d ON d.cycle_id = s.cycle_id

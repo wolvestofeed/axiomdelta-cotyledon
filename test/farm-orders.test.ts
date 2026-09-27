@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
-const seedCropPlans = [...growPlanSeed];
+const seedGrowPlans = [...growPlanSeed];
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, mondayOf, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import { flatPlanInForce, applyCycleToPlans, copyCycleToPlan, plansFromCycle } from '@/engine/flat-plans';
@@ -11,13 +11,13 @@ import {
   weekdayOf,
   datesBetween,
   cycleDayOn,
-  cycleCropPlanOn,
+  cycleGrowPlanOn,
   orderBook,
   orderKey,
   distributionDay,
   summarizeBook,
   bookRevenueCents,
-  unitsByCropPlan,
+  unitsByGrowPlan,
   pickupPointActualVsForecast,
   type BookOrder,
 } from '@/engine/orders';
@@ -30,7 +30,7 @@ const NEXT_MON = '2026-09-21';
 const PRICES = { 1: 1000, 2: 1500, 3: 1600 };
 
 function seedCycle(): SubscriptionCycleDef[] {
-  return seedSubscriptionCycles(seedCropPlans, MON);
+  return seedSubscriptionCycles(seedGrowPlans, MON);
 }
 
 /** The engine default subscribers with no term on file, so they serve every weekday in September 2026. */
@@ -61,14 +61,14 @@ describe('dates', () => {
 describe('subscription cycle position', () => {
   const cycle: SubscriptionCycleDef = {
     id: 'c', channel: null, ...plain, name: 'five', startDate: MON, lengthDays: 5, weekdays: [1, 2, 3, 4, 5], status: 'active', notes: null, source: 'user_built',
-    days: [1, 2, 3, 4, 5].map((day) => ({ day, cropPlanCode: `R${day}` })),
+    days: [1, 2, 3, 4, 5].map((day) => ({ day, growPlanCode: `R${day}` })),
   };
 
   it('day 1 on the start date, advancing one day per service weekday and wrapping', () => {
     expect(cycleDayOn(cycle, MON)).toBe(1);
     expect(cycleDayOn(cycle, FRI)).toBe(5);
     expect(cycleDayOn(cycle, NEXT_MON)).toBe(1);
-    expect(cycleCropPlanOn(cycle, '2026-09-16')).toBe('R3');
+    expect(cycleGrowPlanOn(cycle, '2026-09-16')).toBe('R3');
   });
 
   it('null on a weekday off the menu, before the start, or when inactive', () => {
@@ -78,10 +78,10 @@ describe('subscription cycle position', () => {
   });
 
   it('a shorter cycle wraps inside the week and a missing day serves nothing', () => {
-    const three = { ...cycle, lengthDays: 3, days: [{ day: 1, cropPlanCode: 'A' }, { day: 2, cropPlanCode: null }] };
+    const three = { ...cycle, lengthDays: 3, days: [{ day: 1, growPlanCode: 'A' }, { day: 2, growPlanCode: null }] };
     expect(cycleDayOn(three, '2026-09-17')).toBe(1);
-    expect(cycleCropPlanOn(three, '2026-09-15')).toBeNull();
-    expect(cycleCropPlanOn(three, '2026-09-16')).toBeNull();
+    expect(cycleGrowPlanOn(three, '2026-09-15')).toBeNull();
+    expect(cycleGrowPlanOn(three, '2026-09-16')).toBeNull();
   });
 
   it('counts weekdays by arithmetic across many weeks, matching a day-by-day count', () => {
@@ -99,7 +99,7 @@ describe('subscription cycle position', () => {
 describe('flat plans (Roadmap N4a)', () => {
   const base: SubscriptionCycleDef = {
     id: 'p', channel: null, subscriberId: 'c1', subscriberServiceId: null, fromCycleId: null, endDate: null, name: 'plan', startDate: MON, lengthDays: 1, weekdays: [1, 2, 3, 4, 5], status: 'active', notes: null, source: 'user_built',
-    days: [{ day: 1, cropPlanCode: 'A' }],
+    days: [{ day: 1, growPlanCode: 'A' }],
   };
 
   it('the latest-started plan in force wins; an ended or inactive plan does not serve', () => {
@@ -117,15 +117,15 @@ describe('flat plans (Roadmap N4a)', () => {
   });
 
   it('assigning copies a saved cycle; applying an edit moves only the picked plans', () => {
-    const saved: SubscriptionCycleDef = { ...base, id: 'saved', subscriberId: null, lengthDays: 2, days: [{ day: 1, cropPlanCode: 'A' }, { day: 2, cropPlanCode: 'B' }] };
+    const saved: SubscriptionCycleDef = { ...base, id: 'saved', subscriberId: null, lengthDays: 2, days: [{ day: 1, growPlanCode: 'A' }, { day: 2, growPlanCode: 'B' }] };
     const one = copyCycleToPlan(saved, 'c1', 'one', { startDate: '2026-10-05' });
     const two = copyCycleToPlan(saved, 'c2', 'two');
     expect(one).toMatchObject({ subscriberId: 'c1', fromCycleId: 'saved', startDate: '2026-10-05', lengthDays: 2 });
     expect(plansFromCycle([saved, one, two, base], 'saved').map((p) => p.id)).toEqual(['one', 'two']);
-    const edited = { ...saved, lengthDays: 1, days: [{ day: 1, cropPlanCode: 'C' }] };
+    const edited = { ...saved, lengthDays: 1, days: [{ day: 1, growPlanCode: 'C' }] };
     const [a, b] = applyCycleToPlans(edited, [one, two], new Set(['two']));
-    expect(a.days.map((d) => d.cropPlanCode)).toEqual(['A', 'B']);
-    expect(b.days.map((d) => d.cropPlanCode)).toEqual(['C']);
+    expect(a.days.map((d) => d.growPlanCode)).toEqual(['A', 'B']);
+    expect(b.days.map((d) => d.growPlanCode)).toEqual(['C']);
     expect(b.startDate).toBe(two.startDate);
     expect(b.subscriberId).toBe('c2');
   });
@@ -136,7 +136,7 @@ describe('the seed', () => {
     const cycles = seedCycle();
     expect(cycles.every((c) => c.channel === null && c.subscriberId === null && c.source === 'seed')).toBe(true);
     expect(cycles[0].startDate).toBe(MON);
-    expect(cycles[0].days.every((d) => d.cropPlanCode === 'BROC-01')).toBe(true);
+    expect(cycles[0].days.every((d) => d.growPlanCode === 'BROC-01')).toBe(true);
     const subscribers = seedSubscribers();
     const plans = seedFlatPlans(subscribers, cycles);
     // Every seed grow plan is authored for Subscriptions, so only the channel 1 cycle stands in.
@@ -150,7 +150,7 @@ describe('the seed', () => {
 describe('the order book', () => {
   const subscribers = everyWeekday(seedSubscribers());
   const pickupPoints = resolveSubscriberPickupPoints(subscribers);
-  const base = { pickupPoints, subscribers, cycles: withPlans(subscribers), orders: [] as OrderDef[], from: MON, to: SAT, channelPriceCents: PRICES, cropPlanNames: { 'BROC-01': 'Broccoli' } };
+  const base = { pickupPoints, subscribers, cycles: withPlans(subscribers), orders: [] as OrderDef[], from: MON, to: SAT, channelPriceCents: PRICES, growPlanNames: { 'BROC-01': 'Broccoli' } };
   const svc = (pickupPointIndex: number) => subscribers[0].pickupPoints[pickupPointIndex].services[0].id;
 
   it('derives one forecast order per service per service date, from the subscriber flat plan', () => {
@@ -163,7 +163,7 @@ describe('the order book', () => {
     }
     expect(distributionDay(book, SAT).orders).toHaveLength(0);
     expect(book.every((o) => o.channel === 1)).toBe(true);
-    expect(book[0].cropPlanName).toBe('Broccoli');
+    expect(book[0].growPlanName).toBe('Broccoli');
     expect(book[0].priceBasis).toBe('channel');
     expect(book[0].pricePerUnitCents).toBe(1000);
   });
@@ -185,15 +185,15 @@ describe('the order book', () => {
     const book = orderBook({ ...base, subscribers: two, pickupPoints: resolveSubscriberPickupPoints(two) });
     const mon = book.filter((o) => o.subscriberPickupPointId === pickupPoint.id && o.orderDate === MON);
     expect(mon.map((o) => o.serviceName).sort()).toEqual(['Breakfast', 'Unit']);
-    const own: SubscriptionCycleDef = { id: 'fp', channel: null, subscriberId: subscribers[0].id, subscriberServiceId: null, fromCycleId: null, endDate: null, name: 'forecast plan', startDate: MON, lengthDays: 1, weekdays: [1, 2, 3, 4, 5], status: 'active', notes: null, source: 'user_built', days: [{ day: 1, cropPlanCode: 'PEA-01' }] };
+    const own: SubscriptionCycleDef = { id: 'fp', channel: null, subscriberId: subscribers[0].id, subscriberServiceId: null, fromCycleId: null, endDate: null, name: 'forecast plan', startDate: MON, lengthDays: 1, weekdays: [1, 2, 3, 4, 5], status: 'active', notes: null, source: 'user_built', days: [{ day: 1, growPlanCode: 'PEA-01' }] };
     const f = orderBook({ ...base, pickupPoints: resolveSubscriberPickupPoints(subscribers, { flatPlans: { [subscribers[0].id]: [own] } }) });
-    expect(f.filter((o) => o.subscriberId === subscribers[0].id).every((o) => o.cropPlanCode === 'PEA-01' && o.subscriptionCycleId === 'fp')).toBe(true);
+    expect(f.filter((o) => o.subscriberId === subscribers[0].id).every((o) => o.growPlanCode === 'PEA-01' && o.subscriptionCycleId === 'fp')).toBe(true);
   });
 
-  it('a stored order replaces the derived one with the same date, pickup point and crop plan; another crop plan adds', () => {
+  it('a stored order replaces the derived one with the same date, pickup point and grow plan; another grow plan adds', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const confirmed: OrderDef = { id: 'o1', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, cropPlanCode: 'BROC-01', units: 450, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: 'CYCLE-SEED-1', source: 'cycle', notes: null };
-    const extra: OrderDef = { ...confirmed, id: 'o2', cropPlanCode: 'PEA-01', units: 40, status: 'forecast', source: 'typed', subscriptionCycleId: null };
+    const confirmed: OrderDef = { id: 'o1', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, growPlanCode: 'BROC-01', units: 450, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: 'CYCLE-SEED-1', source: 'cycle', notes: null };
+    const extra: OrderDef = { ...confirmed, id: 'o2', growPlanCode: 'PEA-01', units: 40, status: 'forecast', source: 'typed', subscriptionCycleId: null };
     const book = orderBook({ ...base, orders: [confirmed, extra] });
     expect(book).toHaveLength(16);
     const day = distributionDay(book, MON, subscribers[0].id);
@@ -202,7 +202,7 @@ describe('the order book', () => {
     expect(row?.basis).toBe('record');
     expect(row?.status).toBe('confirmed');
     expect(row?.id).toBe('o1');
-    expect(day.byCropPlan.map((r) => r.cropPlanCode)).toEqual(['BROC-01', 'PEA-01']);
+    expect(day.byGrowPlan.map((r) => r.growPlanCode)).toEqual(['BROC-01', 'PEA-01']);
     expect(day.byPickupPoint).toHaveLength(3);
   });
 
@@ -211,7 +211,7 @@ describe('the order book', () => {
     custs[0].pricePerUnitCents = 950;
     const s = resolveSubscriberPickupPoints(custs);
     const pickupPoint = custs[0].pickupPoints[1];
-    const typed: OrderDef = { id: 'o', orderDate: MON, subscriberId: custs[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, cropPlanCode: 'BROC-01', units: 10, status: 'forecast', pricePerUnitCents: 1200, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
+    const typed: OrderDef = { id: 'o', orderDate: MON, subscriberId: custs[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, growPlanCode: 'BROC-01', units: 10, status: 'forecast', pricePerUnitCents: 1200, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
     const book = orderBook({ ...base, pickupPoints: s, subscribers: custs, orders: [typed] });
     const derived = book.find((o) => o.basis === 'derived');
     expect(derived?.priceBasis).toBe('contract');
@@ -223,7 +223,7 @@ describe('the order book', () => {
 
   it('a stored order outside the range is not in the book; one for a removed pickup point still shows', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const outside: OrderDef = { id: 'x', orderDate: '2026-10-05', subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, cropPlanCode: 'BROC-01', units: 1, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
+    const outside: OrderDef = { id: 'x', orderDate: '2026-10-05', subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: null, channel: 1, growPlanCode: 'BROC-01', units: 1, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'typed', notes: null };
     const orphan: OrderDef = { ...outside, id: 'y', orderDate: MON, subscriberPickupPointId: 'gone', subscriberId: 'gone' };
     const book = orderBook({ ...base, orders: [outside, orphan] });
     expect(book.find((o) => o.id === 'x')).toBeUndefined();
@@ -232,9 +232,9 @@ describe('the order book', () => {
     expect(y?.priceBasis).toBe('channel');
   });
 
-  it('summary, revenue and units by crop plan are computed from the book', () => {
+  it('summary, revenue and units by grow plan are computed from the book', () => {
     const pickupPoint = subscribers[0].pickupPoints[0];
-    const distributed: OrderDef = { id: 'd', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, cropPlanCode: 'BROC-01', units: 492, status: 'distributed', pricePerUnitCents: null, distributionId: 'del', subscriptionCycleId: null, source: 'cycle', notes: null };
+    const distributed: OrderDef = { id: 'd', orderDate: MON, subscriberId: subscribers[0].id, subscriberPickupPointId: pickupPoint.id, subscriberServiceId: svc(0), channel: 1, growPlanCode: 'BROC-01', units: 492, status: 'distributed', pricePerUnitCents: null, distributionId: 'del', subscriptionCycleId: null, source: 'cycle', notes: null };
     const book = orderBook({ ...base, orders: [distributed] });
     const s = summarizeBook(book);
     expect(s[1].distributedUnits).toBe(492);
@@ -243,7 +243,7 @@ describe('the order book', () => {
     expect(s[1].serviceDates).toBe(5);
     expect(s[2].orders).toBe(0);
     expect(bookRevenueCents(book)).toBe(5000 * 1000);
-    expect(unitsByCropPlan(book)).toEqual([{ cropPlanCode: 'BROC-01', cropPlanName: 'Broccoli', units: 5000, orders: 15 }]);
+    expect(unitsByGrowPlan(book)).toEqual([{ growPlanCode: 'BROC-01', growPlanName: 'Broccoli', units: 5000, orders: 15 }]);
   });
 
   it('a subscriber with no flat plan generates no forecast orders; saved cycles alone serve nobody', () => {
@@ -262,7 +262,7 @@ describe('per-pickup-point actual against forecast (Roadmap I4)', () => {
   const row = (over: Partial<BookOrder> & Pick<BookOrder, 'subscriberPickupPointId' | 'orderDate' | 'units' | 'status' | 'basis'>): BookOrder => ({
     key: `${over.orderDate}|${over.subscriberPickupPointId}|R1`, id: over.basis === 'record' ? `id-${over.key ?? Math.random()}` : null,
     subscriberId: 'c1', subscriberName: 'Elm ISD', pickupPointName: `Pickup point ${over.subscriberPickupPointId}`, subscriberServiceId: null, serviceName: null, distributionPickupPointId: null, channel: 1,
-    cropPlanCode: 'R1', cropPlanName: 'Broccoli', source: 'cycle', pricePerUnitCents: 1000, priceBasis: 'channel', distributionId: null, subscriptionCycleId: null, notes: null,
+    growPlanCode: 'R1', growPlanName: 'Broccoli', source: 'cycle', pricePerUnitCents: 1000, priceBasis: 'channel', distributionId: null, subscriptionCycleId: null, notes: null,
     ...over,
   });
   const book: BookOrder[] = [
@@ -271,7 +271,7 @@ describe('per-pickup-point actual against forecast (Roadmap I4)', () => {
     row({ subscriberPickupPointId: 'A', orderDate: NEXT_MON, units: 120, status: 'confirmed', basis: 'record' }),
     row({ subscriberPickupPointId: 'B', orderDate: MON, units: 60, status: 'distributed', basis: 'record', distributionId: 'd1' }),
     row({ subscriberPickupPointId: 'B', orderDate: FRI, units: 60, status: 'distributed', basis: 'record', distributionId: 'd-missing' }),
-    row({ subscriberPickupPointId: 'B', orderDate: FRI, units: 40, status: 'confirmed', basis: 'record', cropPlanCode: 'R2', key: `${FRI}|B|R2` }),
+    row({ subscriberPickupPointId: 'B', orderDate: FRI, units: 40, status: 'confirmed', basis: 'record', growPlanCode: 'R2', key: `${FRI}|B|R2` }),
   ];
   const rows = pickupPointActualVsForecast(book, new Map([['d1', 55]]));
 

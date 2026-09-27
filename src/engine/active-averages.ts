@@ -1,22 +1,22 @@
 /**
- * MicroFarm — the dashboard's top row: averages over every ACTIVE crop plan
+ * MicroFarm — the dashboard's top row: averages over every ACTIVE grow plan
  *. Pure.
  *
- * Each In Service crop plan is costed on its own sowing — one unit of each Phase 1 grow unit —
+ * Each In Service grow plan is costed on its own sowing — one unit of each Phase 1 grow unit —
  * with its own labor standard (the approved time studies averaged, or the seeded estimate
- * that stands in until one is approved), then the crop plans are averaged, each
- * crop plan counting once. The figures are the seeded estimates until observed
+ * that stands in until one is approved), then the grow plans are averaged, each
+ * grow plan counting once. The figures are the seeded estimates until observed
  * studies, closed sowing records and stated capacities replace them, and the
- * row says so. No figure here belongs to one crop plan.
+ * row says so. No figure here belongs to one grow plan.
  */
 
 import type { GrowPlanDef } from '@/data/grow-plan';
 import type { assumptions as planAssumptions } from '@/data/plan-data';
 import type { TimeStudyDoc } from '@/data/time-studies';
-import { costCropPlan, costToServe, deriveCapacity, type CapacityInputs } from '@/engine';
-import { laborMinutesForSowing, laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import { costPlanPerUnit, costToServe, deriveCapacity, type CapacityInputs } from '@/engine';
+import { laborMinutesForSowing, laborStandard, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
 
-export interface CropPlanAverageRow {
+export interface GrowPlanAverageRow {
   code: string;
   name: string;
   /** The derived sowing, units. */
@@ -37,7 +37,7 @@ export interface CropPlanAverageRow {
 }
 
 export interface ActiveAverages {
-  cropPlans: CropPlanAverageRow[];
+  growPlans: GrowPlanAverageRow[];
   count: number;
   asPurchasedPerUnit: number;
   inputCostPerUnit: number;
@@ -45,9 +45,9 @@ export interface ActiveAverages {
   sowingMinutes: number;
   laborMinutesPerUnit: number;
   laborCostPerUnit: number;
-  /** Crop plans whose labor standard is the seeded estimate. */
+  /** Grow plans whose labor standard is the seeded estimate. */
   onEstimate: number;
-  /** Crop plans with no time study at all: their labor is a gap, carried as zero and counted here. */
+  /** Grow plans with no time study at all: their labor is a gap, carried as zero and counted here. */
   withoutStudy: number;
 }
 
@@ -62,23 +62,23 @@ export function sowingElapsedMinutes(study: Pick<TimeStudyDoc, 'sowingSize' | 'l
     .reduce((s, l) => s + (l.scalesWith === 'fixed' ? l.elapsedMinutes : study.sowingSize > 0 ? (l.elapsedMinutes * sowing) / study.sowingSize : 0), 0);
 }
 
-export function activeCropPlanAverages(
-  cropPlans: readonly GrowPlanDef[],
+export function activeGrowPlanAverages(
+  growPlans: readonly GrowPlanDef[],
   cap: CapacityInputs,
   a: typeof planAssumptions,
   studies: readonly TimeStudyDoc[],
-  /** Each crop plan's own assumptions from the resolver (Roadmap N3): its labor standard AND its packaging picks. */
-  cropPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>,
+  /** Each grow plan's own assumptions from the resolver (Roadmap N3): its labor standard AND its packaging picks. */
+  growPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>,
 ): ActiveAverages {
-  const active = cropPlans.filter((r) => r.status === 'in_service');
-  const rows: CropPlanAverageRow[] = active.map((r) => {
+  const active = growPlans.filter((r) => r.status === 'in_service');
+  const rows: GrowPlanAverageRow[] = active.map((r) => {
     const sowing = deriveCapacity(r, cap).sowingSize;
-    const food = costCropPlan(r, a.yield.shrinkAllowance.value);
-    const standard = laborStandard(studiesForCropPlan(studies, r.code));
-    const own = cropPlanAssumptions?.[r.code];
-    // The crop plan's own minutes: from the resolver's assumptions when supplied,
-    // else its study. No study is a GAP — zero minutes, counted as a crop plan
-    // without a study — never another crop plan's typed figure (Roadmap N3).
+    const food = costPlanPerUnit(r, a.yield.shrinkAllowance.value);
+    const standard = laborStandard(studiesForGrowPlan(studies, r.code));
+    const own = growPlanAssumptions?.[r.code];
+    // The grow plan's own minutes: from the resolver's assumptions when supplied,
+    // else its study. No study is a GAP — zero minutes, counted as a grow plan
+    // without a study — never another grow plan's typed figure (Roadmap N3).
     const summary = standard ? summarizeStudy(standard) : null;
     // One formula with the cost card (`costPerUnit`): the fixed minutes spread over the sowing, none
     // with no sowing, and the per-unit and daily minutes whatever the sowing.
@@ -100,9 +100,9 @@ export function activeCropPlanAverages(
     };
   });
   const n = rows.length;
-  const mean = (pick: (r: CropPlanAverageRow) => number) => (n > 0 ? rows.reduce((s, r) => s + pick(r), 0) / n : 0);
+  const mean = (pick: (r: GrowPlanAverageRow) => number) => (n > 0 ? rows.reduce((s, r) => s + pick(r), 0) / n : 0);
   return {
-    cropPlans: rows,
+    growPlans: rows,
     count: n,
     asPurchasedPerUnit: mean((r) => r.asPurchasedPerUnit),
     inputCostPerUnit: mean((r) => r.inputCostPerUnit),

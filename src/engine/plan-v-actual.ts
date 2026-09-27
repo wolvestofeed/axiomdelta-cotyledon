@@ -21,7 +21,7 @@ export interface PvaOrder {
   orderDate: string;
   subscriberId: string;
   channel: number;
-  cropPlanCode: string;
+  growPlanCode: string;
   units: number;
 }
 
@@ -43,7 +43,7 @@ export interface PvaSideInput {
   energy: EnergyActivity;
   waterGal: number;
   shrinkAllowance: number;
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
   /** The subscribers this side serves in the month, with the rating MicroFarm assigned. */
   subscribers: readonly { id: string; name: string; rating: MarkRating }[];
   /** The suppliers on this side's receipts in the month, with their ratings. */
@@ -85,8 +85,8 @@ function byStars(list: readonly { rating: MarkRating }[]): Record<1 | 2 | 3, num
 
 export function pvaMeasures(side: PvaSideInput): PvaMeasures {
   const namedSupplierInputs = new Set(side.receipts.flatMap((r) => (r.supplierId ? r.lines.filter((l) => l.condition !== 'rejected').map((l) => l.input) : [])));
-  const shrink = mixShrinkKg(side.basis, side.cropPlans, side.shrinkAllowance).kg;
-  const expired = expiredMassKg(side.basis, side.cropPlans).kg;
+  const shrink = mixShrinkKg(side.basis, side.growPlans, side.shrinkAllowance).kg;
+  const expired = expiredMassKg(side.basis, side.growPlans).kg;
   const loc = side.inventory.reference.location;
   return {
     units: side.distributions.reduce((t, d) => t + d.units, 0),
@@ -153,7 +153,7 @@ export function servedCostPerUnitCents(m: PvaMeasures): number | null {
   return made + (m.units > 0 ? m.distributionCostCents / m.units : 0);
 }
 
-// ── Breakdowns: units, revenue, input cost and orders by crop plan, channel and subscriber ──
+// ── Breakdowns: units, revenue, input cost and orders by grow plan, channel and subscriber ──
 
 export interface PvaBreakdownRow {
   key: string;
@@ -164,22 +164,22 @@ export interface PvaBreakdownRow {
 }
 
 /**
- * Input cost follows the units: each crop plan's input cost per unit made in the month
- * (materials issued ÷ units produced) × its units distributed. A crop plan distributed in a
+ * Input cost follows the units: each grow plan's input cost per unit made in the month
+ * (materials issued ÷ units produced) × its units distributed. A grow plan distributed in a
  * month with no sowing of its own carries no input cost there, and is named.
  */
-export function pvaBreakdown(side: PvaSideInput, by: 'cropPlan' | 'channel' | 'subscriber'): { rows: PvaBreakdownRow[]; cropPlansDistributedWithNoSowing: string[] } {
+export function pvaBreakdown(side: PvaSideInput, by: 'growPlan' | 'channel' | 'subscriber'): { rows: PvaBreakdownRow[]; growPlansDistributedWithNoSowing: string[] } {
   const perUnit = new Map<string, { cents: number; units: number }>();
   side.sowings.forEach((b, i) => {
     const led = side.sowingLedgers[i];
     if (!led) return;
-    const cur = perUnit.get(b.cropPlanCode) ?? { cents: 0, units: 0 };
+    const cur = perUnit.get(b.growPlanCode) ?? { cents: 0, units: 0 };
     cur.cents += led.amounts.materialIssuedToWip * 100;
     cur.units += led.amounts.servingsProduced;
-    perUnit.set(b.cropPlanCode, cur);
+    perUnit.set(b.growPlanCode, cur);
   });
-  const keyOf = (x: { cropPlanCode?: string | null; phase?: number; channel?: number; subscriberId?: string | null }) =>
-    by === 'cropPlan' ? x.cropPlanCode ?? 'No crop plan named' : by === 'channel' ? String(x.phase ?? x.channel) : x.subscriberId ?? 'No subscriber named';
+  const keyOf = (x: { growPlanCode?: string | null; phase?: number; channel?: number; subscriberId?: string | null }) =>
+    by === 'growPlan' ? x.growPlanCode ?? 'No grow plan named' : by === 'channel' ? String(x.phase ?? x.channel) : x.subscriberId ?? 'No subscriber named';
   const rows = new Map<string, PvaBreakdownRow>();
   const row = (k: string) => rows.get(k) ?? rows.set(k, { key: k, units: 0, revenueCents: 0, inputCostCents: 0, orders: 0 }).get(k)!;
   const noSowing = new Set<string>();
@@ -187,10 +187,10 @@ export function pvaBreakdown(side: PvaSideInput, by: 'cropPlan' | 'channel' | 's
     const r = row(keyOf(d));
     r.units += d.units;
     r.revenueCents += distributionRevenueCents(d);
-    const pm = d.cropPlanCode ? perUnit.get(d.cropPlanCode) : undefined;
+    const pm = d.growPlanCode ? perUnit.get(d.growPlanCode) : undefined;
     if (pm && pm.units > 0) r.inputCostCents += Math.round((pm.cents / pm.units) * d.units);
-    else if (d.cropPlanCode) noSowing.add(d.cropPlanCode);
+    else if (d.growPlanCode) noSowing.add(d.growPlanCode);
   }
   for (const o of side.orders) row(keyOf(o)).orders += 1;
-  return { rows: [...rows.values()].sort((a, b) => b.units - a.units || a.key.localeCompare(b.key)), cropPlansDistributedWithNoSowing: [...noSowing] };
+  return { rows: [...rows.values()].sort((a, b) => b.units - a.units || a.key.localeCompare(b.key)), growPlansDistributedWithNoSowing: [...noSowing] };
 }

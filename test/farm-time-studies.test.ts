@@ -1,5 +1,5 @@
 /**
- * MicroFarm — time studies per crop plan (Roadmap O2).
+ * MicroFarm — time studies per grow plan (Roadmap O2).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -8,14 +8,14 @@ import {
   approvedStudies,
   laborMinutesForSowing,
   nextStudyDue,
-  studiesForCropPlan,
+  studiesForGrowPlan,
   studyTrend,
   summarizeStudy,
   timeStudyFromRows,
 } from '@/engine/time-studies';
 
 const study = (over: Partial<TimeStudyDoc> = {}): TimeStudyDoc => ({
-  id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
+  id: 'x', growPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
   lines: [
     { task: 'Load', station: 'Blackout rack', staff: 2, elapsedMinutes: 30, laborMinutes: 60, scalesWith: 'fixed', stream: 'sowing' },
     { task: 'Assemble', station: 'Line', staff: 4, elapsedMinutes: 50, laborMinutes: 200, scalesWith: 'variable', stream: 'harvest' },
@@ -45,25 +45,25 @@ describe('farm time studies — the log', () => {
     study({ id: 'b', studiedOn: '2027-03-02' }),
     study({ id: 'c', studiedOn: null }),
     study({ id: 'd', studiedOn: '2027-02-05', approvedAt: '2027-02-06T10:00:00.000Z' }),
-    study({ id: 'e', cropPlanCode: 'PEA-01', studiedOn: '2027-04-01' }),
+    study({ id: 'e', growPlanCode: 'PEA-01', studiedOn: '2027-04-01' }),
   ];
 
-  it('lists a crop plan’s studies newest first, undated last', () => {
-    expect(studiesForCropPlan(log, 'BROC-01').map((s) => s.id)).toEqual(['b', 'd', 'a', 'c']);
+  it('lists a grow plan’s studies newest first, undated last', () => {
+    expect(studiesForGrowPlan(log, 'BROC-01').map((s) => s.id)).toEqual(['b', 'd', 'a', 'c']);
   });
 
   it('only approved observed studies are in the standard, oldest approval first', () => {
-    expect(approvedStudies(studiesForCropPlan(log, 'BROC-01')).map((s) => s.id)).toEqual(['a', 'd']);
+    expect(approvedStudies(studiesForGrowPlan(log, 'BROC-01')).map((s) => s.id)).toEqual(['a', 'd']);
     expect(approvedStudies([study()])).toEqual([]);
     expect(approvedStudies([study({ basis: 'estimated', approvedAt: '2027-01-11T10:00:00.000Z' })])).toEqual([]);
   });
 
   it('trends plot dated studies only, oldest first', () => {
-    expect(studyTrend(studiesForCropPlan(log, 'BROC-01'), (s) => s.sowingSize).map((p) => p.id)).toEqual(['a', 'd', 'b']);
+    expect(studyTrend(studiesForGrowPlan(log, 'BROC-01'), (s) => s.sowingSize).map((p) => p.id)).toEqual(['a', 'd', 'b']);
   });
 
   it('the next study is due the interval after the last dated study; none without an interval', () => {
-    const mine = studiesForCropPlan(log, 'BROC-01');
+    const mine = studiesForGrowPlan(log, 'BROC-01');
     expect(nextStudyDue(mine, 90, '2027-04-01')).toEqual({ lastStudiedOn: '2027-03-02', intervalDays: 90, dueOn: '2027-05-31', daysUntilDue: 60 });
     expect(nextStudyDue(mine, 14, '2027-04-01').daysUntilDue).toBe(-16);
     expect(nextStudyDue(mine, null, '2027-04-01').dueOn).toBeNull();

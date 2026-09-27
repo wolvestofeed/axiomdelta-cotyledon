@@ -280,11 +280,11 @@ describe('K3 — the forecast year’s outstanding shares', () => {
 describe('Phase K — actuals', () => {
   // A sowing of the seed grow plans' reference plan, the plan the ledger resolves by default.
   const R0 = resolveScenarioInputs();
-  const cropPlan = R0.cropPlan;
-  const sowingSize = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
-  const lines = purchaseLines(cropPlan).map((l) => ({ input: l.name, qty: l.qtyPerTray * sowingSize, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.unitCost * 100) }));
+  const growPlan = R0.growPlan;
+  const sowingSize = deriveCapacity(growPlan, R0.capacityInputs).sowingSize;
+  const lines = purchaseLines(growPlan).map((l) => ({ input: l.name, qty: l.qtyPerTray * sowingSize, unit: l.unit, lotCode: 'X', unitPriceCents: Math.round(l.unitCost * 100) }));
   const r1: ReceiptDoc = { ...receipt('r1', lines, null), receivedOn: '2027-02-02' };
-  const pre = standardSowingRecordPrefill('2027-02-03', 1, sowingSize, cropPlan);
+  const pre = standardSowingRecordPrefill('2027-02-03', 1, sowingSize, growPlan);
   const base: ActualsBundle = {
     openingBalances: [{ id: 'o1', asOf: '2027-01-01', ownerEquityCents: 200_000_00, fixedAssetsCents: 500_000_00, longTermDebtCents: 500_000_00, notes: null }],
     sowings: [{ id: 'b1', closedAt: null, ...pre, closedBy: 'R' }],

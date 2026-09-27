@@ -4,7 +4,7 @@
  *
  * A day is the operating day on its date (decision 19): that date's harvest,
  * that date's sowings and closedown. Everything placed comes off a scenario
- * input — the routes (each crop plan's time study and stage map, `routing.ts`),
+ * input — the routes (each grow plan's time study and stage map, `routing.ts`),
  * the Phase 1 units as resources, the crews, the Capacity inputs and the
  * schedule policy. Nothing here is a constant.
  *
@@ -18,7 +18,7 @@
  *   placed forward from opening in route order, each after its predecessors. The trays then
  *   go on their grow unit for the plan's cycle, which is the grow calendar's, not the day's.
  *
- *   HARVEST stream, per crop plan shipped that day, from staged components (no
+ *   HARVEST stream, per grow plan shipped that day, from staged components (no
  *   edge to the sowing stream). Placed backward from the distribution time by
  *   default (decision 7) or forward from opening. A fixed harvest line — the
  *   vehicle load — is placed once for the day. An order that cannot be placed
@@ -43,27 +43,27 @@ import { clock, type CrewShift } from '@/data/crews';
 import type { SchedulePolicy } from '@/data/schedule-policy';
 import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
 import type { CapacityInputs } from '@/engine';
-import { deriveRoute, routeOverlayFor, stepDuration, stepLaborMinutes, type CropPlanRoute, type RouteFinding, type RouteResource, type RouteStep, type RouteStepOverlay } from '@/engine/routing';
-import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
+import { deriveRoute, routeOverlayFor, stepDuration, stepLaborMinutes, type GrowPlanRoute, type RouteFinding, type RouteResource, type RouteStep, type RouteStepOverlay } from '@/engine/routing';
+import { laborStandard, studiesForGrowPlan } from '@/engine/time-studies';
 
 const EPS = 1e-9;
 
 // ── Input and output ─────────────────────────────────────────────────────────
 
-/** One whole sowing of a crop plan. */
+/** One whole sowing of a grow plan. */
 export interface ScheduleSowing {
   id: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   units: number;
-  route: CropPlanRoute;
+  route: GrowPlanRoute;
 }
 
-/** One crop plan's shipment on the day, in base units. */
+/** One grow plan's shipment on the day, in base units. */
 export interface ScheduleHarvest {
   id: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   units: number;
-  route: CropPlanRoute;
+  route: GrowPlanRoute;
 }
 
 export interface ScheduleInput {
@@ -82,7 +82,7 @@ export interface ScheduledBlock {
   id: string;
   /** The sowing or harvest order; null on a day-level block (the shared vehicle load, closedown). */
   orderId: string | null;
-  cropPlanCode: string | null;
+  growPlanCode: string | null;
   stream: TimeStudyStream | 'day';
   stepId: string | null;
   kind: BlockKind;
@@ -292,27 +292,27 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     blocks.push(block);
     return block;
   };
-  const placeStep = (s: RouteStep, orderId: string | null, cropPlanCode: string | null, units: number, start: number): number => {
+  const placeStep = (s: RouteStep, orderId: string | null, growPlanCode: string | null, units: number, start: number): number => {
     const req = stepReq(s, units);
     reserve(req, start);
-    addBlock({ orderId, cropPlanCode, stream: s.stream, stepId: s.id, kind: 'step', task: s.task, resourceKey: s.resourceKey, startMin: start, endMin: start + req.duration, staff: s.staff, laborMinutes: stepLaborMinutes(s, units), attended: s.attended, controlPoint: s.controlPoint });
+    addBlock({ orderId, growPlanCode, stream: s.stream, stepId: s.id, kind: 'step', task: s.task, resourceKey: s.resourceKey, startMin: start, endMin: start + req.duration, staff: s.staff, laborMinutes: stepLaborMinutes(s, units), attended: s.attended, controlPoint: s.controlPoint });
     return start + req.duration;
   };
 
-  // Route findings once per crop plan.
+  // Route findings once per grow plan.
   const reported = new Set<string>();
-  const reportRoute = (orderId: string, route: CropPlanRoute) => {
-    if (reported.has(route.cropPlanCode)) return;
-    reported.add(route.cropPlanCode);
+  const reportRoute = (orderId: string, route: GrowPlanRoute) => {
+    if (reported.has(route.growPlanCode)) return;
+    reported.add(route.growPlanCode);
     for (const f of route.findings) {
       violations.push({ kind: 'route', orderId, finding: f, detail: f.detail });
     }
   };
 
   // Priority order (§4.1): a policy input, not a constant.
-  const processing = (route: CropPlanRoute, stream: TimeStudyStream, units: number) =>
+  const processing = (route: GrowPlanRoute, stream: TimeStudyStream, units: number) =>
     route.steps.filter((s) => s.stream === stream).reduce((t, s) => t + stepDuration(s, units), 0);
-  const longestPath = (route: CropPlanRoute, stream: TimeStudyStream, units: number) => {
+  const longestPath = (route: GrowPlanRoute, stream: TimeStudyStream, units: number) => {
     if (!route.order) return processing(route, stream, units);
     const finish = new Map<string, number>();
     for (const id of route.order) {
@@ -322,7 +322,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     }
     return Math.max(0, ...finish.values());
   };
-  const ranked = <T extends { units: number; route: CropPlanRoute }>(items: readonly T[], stream: TimeStudyStream): T[] => {
+  const ranked = <T extends { units: number; route: GrowPlanRoute }>(items: readonly T[], stream: TimeStudyStream): T[] => {
     const keyed = items.map((x, i) => ({ x, i, p: processing(x.route, stream, x.units), l: longestPath(x.route, stream, x.units) }));
     const rule = policy.priorityRule.value;
     if (rule === 'shortest-processing') keyed.sort((a, b) => a.p - b.p || a.i - b.i);
@@ -370,7 +370,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     const own = d.route.steps.filter((s) => s.stream === 'harvest' && !isSharedHarvest(s));
     const order = d.route.order?.map((id) => own.find((s) => s.id === id)).filter((s): s is RouteStep => Boolean(s)) ?? null;
     if (!order) {
-      unplace(d.id, 'harvest', `${d.cropPlanCode}'s route has a precedence cycle; its harvest is not placed.`);
+      unplace(d.id, 'harvest', `${d.growPlanCode}'s route has a precedence cycle; its harvest is not placed.`);
       continue;
     }
     const snap = snapshot();
@@ -386,7 +386,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
           placed = false;
           break;
         }
-        ends.set(s.id, placeStep(s, d.id, d.cropPlanCode, d.units, t));
+        ends.set(s.id, placeStep(s, d.id, d.growPlanCode, d.units, t));
         starts.set(s.id, t);
       }
       if (!placed) {
@@ -403,11 +403,11 @@ export function schedule(input: ScheduleInput): ScheduleResult {
           ok = false;
           break;
         }
-        ends.set(s.id, placeStep(s, d.id, d.cropPlanCode, d.units, t));
+        ends.set(s.id, placeStep(s, d.id, d.growPlanCode, d.units, t));
       }
       if (!ok) {
         restore(snap);
-        unplace(d.id, 'harvest', `${d.cropPlanCode}: ${d.units} units to ship do not fit inside the operating day with the crews proposed.`);
+        unplace(d.id, 'harvest', `${d.growPlanCode}: ${d.units} units to ship do not fit inside the operating day with the crews proposed.`);
         continue;
       }
     }
@@ -429,7 +429,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     const sharedDone = d.route.steps.filter(isSharedHarvest).map((s) => sharedEnd.get(sharedKey(s))).filter((x): x is number => x !== undefined);
     const done = Math.max(own, ...sharedDone);
     if (done > due + EPS) {
-      violations.push({ kind: 'due-date-missed', orderId: d.id, dueMin: due, byMin: done - due, detail: `${d.cropPlanCode}: harvest completes at ${clock(done)}; the distribution time is ${clock(due)}, ${mins(done - due)} late.` });
+      violations.push({ kind: 'due-date-missed', orderId: d.id, dueMin: due, byMin: done - due, detail: `${d.growPlanCode}: harvest completes at ${clock(done)}; the distribution time is ${clock(due)}, ${mins(done - due)} late.` });
     }
   }
 
@@ -441,7 +441,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     reportRoute(sowing.id, route);
     const steps = route.steps.filter((s) => s.stream === 'sowing');
     if (steps.length === 0 || !route.order) {
-      unplace(sowing.id, 'sowing', route.order ? `${sowing.cropPlanCode} has no sowing-stream steps on file.` : `${sowing.cropPlanCode}'s route has a precedence cycle; the sowing is not placed.`);
+      unplace(sowing.id, 'sowing', route.order ? `${sowing.growPlanCode} has no sowing-stream steps on file.` : `${sowing.growPlanCode}'s route has a precedence cycle; the sowing is not placed.`);
       continue;
     }
     const byId = new Map(steps.map((s) => [s.id, s]));
@@ -462,7 +462,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
         ok = false;
         break;
       }
-      ends.set(s.id, placeStep(s, sowing.id, sowing.cropPlanCode, units, t));
+      ends.set(s.id, placeStep(s, sowing.id, sowing.growPlanCode, units, t));
     }
     for (const s of ok ? deferred : []) {
       const t = earliest(stepReq(s, units), Math.max(open, ...s.after.map((a) => ends.get(a) ?? open)));
@@ -470,11 +470,11 @@ export function schedule(input: ScheduleInput): ScheduleResult {
         ok = false;
         break;
       }
-      ends.set(s.id, placeStep(s, sowing.id, sowing.cropPlanCode, units, t));
+      ends.set(s.id, placeStep(s, sowing.id, sowing.growPlanCode, units, t));
     }
     if (!ok) {
       restore(sowingSnap);
-      unplace(sowing.id, 'sowing', `${sowing.cropPlanCode}: a sowing of ${units} units does not fit inside the operating day with the crews proposed.`);
+      unplace(sowing.id, 'sowing', `${sowing.growPlanCode}: a sowing of ${units} units does not fit inside the operating day with the crews proposed.`);
       continue;
     }
     placedSowings.push(sowing);
@@ -487,7 +487,7 @@ export function schedule(input: ScheduleInput): ScheduleResult {
     const start = close - closedownMinutes;
     const minutes = closedownStaff * closedownMinutes;
     if (closedownStaff > 0) labor.push({ start, end: close, staff: closedownStaff });
-    addBlock({ orderId: null, cropPlanCode: null, stream: 'day', stepId: null, kind: 'closedown', task: 'End-of-day closedown', resourceKey: null, startMin: start, endMin: close, staff: closedownStaff, laborMinutes: minutes, attended: true, controlPoint: null });
+    addBlock({ orderId: null, growPlanCode: null, stream: 'day', stepId: null, kind: 'closedown', task: 'End-of-day closedown', resourceKey: null, startMin: start, endMin: close, staff: closedownStaff, laborMinutes: minutes, attended: true, controlPoint: null });
   }
 
   // ── Violations on the placed day ────────────────────────────────────────────
@@ -594,45 +594,45 @@ export function schedule(input: ScheduleInput): ScheduleResult {
 
 /**
  * The sowings and harvest orders for a date: that production day's whole
- * sowings per crop plan and that distribution day's shipments, each on its crop plan's
+ * sowings per grow plan and that distribution day's shipments, each on its grow plan's
  * route (its labor standard, stage map, the Phase 1 list and the scenario's
- * step edits). A crop plan the library does not hold is listed, not placed.
+ * step edits). A grow plan the library does not hold is listed, not placed.
  */
 export function scheduleInputsForDay(input: {
-  productionRuns?: readonly { cropPlanCode: string; sowingsScheduled: number; produced: number }[];
-  shipments?: readonly { cropPlanCode: string; filledBase: number }[];
-  cropPlans: readonly GrowPlanDef[];
+  productionRuns?: readonly { growPlanCode: string; sowingsScheduled: number; produced: number }[];
+  shipments?: readonly { growPlanCode: string; filledBase: number }[];
+  growPlans: readonly GrowPlanDef[];
   studies: readonly TimeStudyDoc[];
   equipment: readonly EquipmentLine[];
   routing: Readonly<Record<string, RouteStepOverlay>>;
-}): { sowings: ScheduleSowing[]; dispatches: ScheduleHarvest[]; routes: CropPlanRoute[]; unknownCropPlans: string[] } {
-  const routes = new Map<string, CropPlanRoute>();
+}): { sowings: ScheduleSowing[]; dispatches: ScheduleHarvest[]; routes: GrowPlanRoute[]; unknownGrowPlans: string[] } {
+  const routes = new Map<string, GrowPlanRoute>();
   const unknown = new Set<string>();
-  const routeFor = (code: string): CropPlanRoute | null => {
+  const routeFor = (code: string): GrowPlanRoute | null => {
     if (routes.has(code)) return routes.get(code)!;
-    const cropPlan = input.cropPlans.find((r) => r.code === code);
-    if (!cropPlan) {
+    const growPlan = input.growPlans.find((r) => r.code === code);
+    if (!growPlan) {
       unknown.add(code);
       return null;
     }
-    const route = deriveRoute({ cropPlan, standard: laborStandard(studiesForCropPlan(input.studies, code)), equipment: input.equipment, overlay: routeOverlayFor(input.routing, code) });
+    const route = deriveRoute({ growPlan, standard: laborStandard(studiesForGrowPlan(input.studies, code)), equipment: input.equipment, overlay: routeOverlayFor(input.routing, code) });
     routes.set(code, route);
     return route;
   };
   const sowings: ScheduleSowing[] = [];
   for (const run of input.productionRuns ?? []) {
     if (run.sowingsScheduled <= 0) continue;
-    const route = routeFor(run.cropPlanCode);
+    const route = routeFor(run.growPlanCode);
     if (!route) continue;
     for (let i = 0; i < run.sowingsScheduled; i++) {
-      sowings.push({ id: `${run.cropPlanCode}#${i + 1}`, cropPlanCode: run.cropPlanCode, units: run.produced / run.sowingsScheduled, route });
+      sowings.push({ id: `${run.growPlanCode}#${i + 1}`, growPlanCode: run.growPlanCode, units: run.produced / run.sowingsScheduled, route });
     }
   }
   const dispatches: ScheduleHarvest[] = [];
   for (const s of input.shipments ?? []) {
     if (s.filledBase <= 0) continue;
-    const route = routeFor(s.cropPlanCode);
-    if (route) dispatches.push({ id: `${s.cropPlanCode}:harvest`, cropPlanCode: s.cropPlanCode, units: s.filledBase, route });
+    const route = routeFor(s.growPlanCode);
+    if (route) dispatches.push({ id: `${s.growPlanCode}:harvest`, growPlanCode: s.growPlanCode, units: s.filledBase, route });
   }
-  return { sowings, dispatches, routes: [...routes.values()], unknownCropPlans: [...unknown].sort() };
+  return { sowings, dispatches, routes: [...routes.values()], unknownGrowPlans: [...unknown].sort() };
 }

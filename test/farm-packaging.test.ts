@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { packagingSeed, seedPackagingLibrary, type PackageDef, type PackagingLibrary } from '@/data/packaging';
-import { packageFromRow, packageUnitCost, packagingOrder, cropPlanPackagingCost } from '@/engine/packaging';
+import { packageFromRow, packageUnitCost, packagingOrder, growPlanPackagingCost } from '@/engine/packaging';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
 const pkg = (over: Partial<PackageDef> = {}): PackageDef => ({
@@ -30,34 +30,34 @@ describe('farm packaging — a package’s unit cost', () => {
   });
 });
 
-describe('farm packaging — a crop plan’s packaging per unit', () => {
+describe('farm packaging — a grow plan’s packaging per unit', () => {
   const lib: PackagingLibrary = {
     packages: [pkg({ id: 'bowl', manualUnitCost: 0.3 }), pkg({ id: 'lid', manualUnitCost: 0.08 }), pkg({ id: 'label' })],
     picks: [
-      { id: 'a', cropPlanCode: 'AMK-E-001', packageId: 'bowl', qtyPerUnit: 1 },
-      { id: 'b', cropPlanCode: 'AMK-E-001', packageId: 'lid', qtyPerUnit: 2 },
-      { id: 'c', cropPlanCode: 'AMK-E-001', packageId: 'label', qtyPerUnit: 1 },
+      { id: 'a', growPlanCode: 'AMK-E-001', packageId: 'bowl', qtyPerUnit: 1 },
+      { id: 'b', growPlanCode: 'AMK-E-001', packageId: 'lid', qtyPerUnit: 2 },
+      { id: 'c', growPlanCode: 'AMK-E-001', packageId: 'label', qtyPerUnit: 1 },
     ],
     supplierItems: [],
   };
 
-  it('a crop plan that picks nothing carries zero packaging', () => {
-    const r = cropPlanPackagingCost('AMK-E-002', lib);
+  it('a grow plan that picks nothing carries zero packaging', () => {
+    const r = growPlanPackagingCost('AMK-E-002', lib);
     expect(r.perUnit).toBe(0);
     expect(r.lines).toEqual([]);
   });
 
   it('sums the picks at the library cost; a package with no cost entered counts as zero and stays listed', () => {
     // Robert, 2026-09-16: two states — picked or unpicked — and no placeholder.
-    const r = cropPlanPackagingCost('AMK-E-001', lib);
+    const r = growPlanPackagingCost('AMK-E-001', lib);
     expect(r.perUnit).toBeCloseTo(0.3 + 0.08 * 2, 10);
     expect(r.lines.map((l) => l.pick.packageId)).toEqual(['bowl', 'lid', 'label']);
     expect(r.lines.find((l) => l.pick.packageId === 'label')!.extended).toBe(0);
   });
 
-  it('with no cost entered on any pick, the crop plan shows zero — the picks are still listed', () => {
+  it('with no cost entered on any pick, the grow plan shows zero — the picks are still listed', () => {
     const bare = { ...lib, packages: lib.packages.map((p) => ({ ...p, manualUnitCost: null, supplierItemId: null })) };
-    const r = cropPlanPackagingCost('AMK-E-001', bare);
+    const r = growPlanPackagingCost('AMK-E-001', bare);
     expect(r.perUnit).toBe(0);
     expect(r.lines).toHaveLength(3);
   });

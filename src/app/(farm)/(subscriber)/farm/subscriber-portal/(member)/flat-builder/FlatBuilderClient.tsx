@@ -10,14 +10,14 @@ import { benefitsFor, TARGET_BY_KEY } from '@/data/nutrition-targets';
 const ALLERGENS = ['Milk', 'Egg', 'Wheat / gluten', 'Soy', 'Peanut', 'Tree nut', 'Fish', 'Shellfish', 'Sesame'] as const;
 
 interface Line {
-  cropPlanCode: string;
+  growPlanCode: string;
   qty: number;
 }
 
 /** What the Flat Builder reads — the plan of record's definitions, loaded on the server (the portal shell has no scenario store). */
 export interface FlatBuilderData {
   subscribers: { id: string; name: string; channel: number; pricePerUnitCents: number | null; nutritionTargets: string[]; pickupPoints: { id: string; name: string }[] }[];
-  cropPlans: { code: string; name: string; channels: number[]; varieties: string[] }[];
+  growPlans: { code: string; name: string; channels: number[]; varieties: string[] }[];
   targets: { key: string; name: string; kind: 'nutrient' | 'compound'; varieties: string[] }[];
   channels: { phase: number; market: string; pricePerUnit: number }[];
   packages: { id: string; name: string; channels: number[]; material: string | null; endOfUse: string | null; unitCost: number | null }[];
@@ -29,7 +29,7 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
   const subscriber = clients.find((c) => c.id === subscriberId) ?? null;
   const channel = subscriber?.channel ?? 2;
   const channelRow = data.channels.find((p) => p.phase === channel);
-  const cropPlans = useMemo(() => data.cropPlans.filter((r) => r.channels.includes(channel)), [data.cropPlans, channel]);
+  const growPlans = useMemo(() => data.growPlans.filter((r) => r.channels.includes(channel)), [data.growPlans, channel]);
   const packages = useMemo(() => data.packages.filter((p) => p.channels.includes(channel)), [data.packages, channel]);
 
   const [targets, setTargets] = useState<string[]>(subscriber?.nutritionTargets ?? []);
@@ -56,17 +56,17 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
   const coverage = useMemo(() => {
     const onFlat = new Map<string, string[]>();
     for (const l of lines) {
-      const plan = data.cropPlans.find((r) => r.code === l.cropPlanCode);
+      const plan = data.growPlans.find((r) => r.code === l.growPlanCode);
       for (const v of plan?.varieties ?? []) onFlat.set(v, [...new Set([...(onFlat.get(v) ?? []), plan!.code])]);
     }
     return targets.map((key) => {
       const t = data.targets.find((x) => x.key === key);
       if (!t) return null;
       const by = t.varieties.filter((v) => onFlat.has(v)).map((v) => ({ variety: VARIETY_BY_KEY[v]!, planCodes: onFlat.get(v)!, benefits: TARGET_BY_KEY[key] ? benefitsFor(VARIETY_BY_KEY[v]!, TARGET_BY_KEY[key]!) : [] }));
-      const carriedBy = data.cropPlans.filter((r) => !lines.some((l) => l.cropPlanCode === r.code) && r.varieties.some((v) => t.varieties.includes(v)));
+      const carriedBy = data.growPlans.filter((r) => !lines.some((l) => l.growPlanCode === r.code) && r.varieties.some((v) => t.varieties.includes(v)));
       return { target: t, covered: by.length > 0, by, carriedBy };
     }).filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [lines, targets, data.cropPlans, data.targets]);
+  }, [lines, targets, data.growPlans, data.targets]);
   const covered = coverage.filter((c) => c.covered).length;
 
   return (
@@ -87,21 +87,21 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
       </Card>
 
       <Card title="Flats and quantities" className="mt-4">
-        {cropPlans.length === 0 ? (
+        {growPlans.length === 0 ? (
           <p className="farm-kpi-sub">No in-service grow plan is offered on this channel.</p>
         ) : (
           <>
             {lines.map((l, i) => (
               <div key={i} className="flex flex-wrap gap-[0.6rem] items-center mb-2!">
-                <select className="farm-select" value={l.cropPlanCode} onChange={(e) => setLine(i, { cropPlanCode: e.target.value })}>
-                  {cropPlans.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+                <select className="farm-select" value={l.growPlanCode} onChange={(e) => setLine(i, { growPlanCode: e.target.value })}>
+                  {growPlans.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
                 </select>
                 <input type="number" min={0} className="farm-input w-28!" value={Number.isFinite(l.qty) ? l.qty : ''} aria-label="Quantity" onChange={(e) => setLine(i, { qty: Number(e.target.value) })} />
                 <span className="farm-kpi-sub">{money((Number.isFinite(l.qty) ? l.qty : 0) * pricePerUnit)}</span>
                 <button type="button" className="farm-btn" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}>Remove</button>
               </div>
             ))}
-            <button type="button" className="farm-btn" onClick={() => setLines((ls) => [...ls, { cropPlanCode: cropPlans[0].code, qty: 0 }])}>Add a flat</button>
+            <button type="button" className="farm-btn" onClick={() => setLines((ls) => [...ls, { growPlanCode: growPlans[0].code, qty: 0 }])}>Add a flat</button>
           </>
         )}
       </Card>
@@ -157,7 +157,7 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
           ) : (
             <label className="farm-kpi-sub">Package<br />
               <select className="farm-select" value={packageId} onChange={(e) => setPackageId(e.target.value)}>
-                <option value="">The crop plan&rsquo;s own packaging</option>
+                <option value="">The grow plan&rsquo;s own packaging</option>
                 {packages.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>

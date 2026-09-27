@@ -27,7 +27,7 @@ export type CriticalTrackingEvent =
 /**
  * FDA Food Traceability List categories relevant to this menu. A line is in
  * scope when its food falls on the list; cheeses (other than hard cheeses) and
- * fresh leafy greens are the ones this crop plan touches.
+ * fresh leafy greens are the ones this grow plan touches.
  */
 export const FOOD_TRACEABILITY_LIST_CATEGORIES = [
   'Cheeses, other than hard cheeses',
@@ -76,12 +76,12 @@ export interface TransformationEvent {
 
 /**
  * GS1-128-compatible traceability lot code.
- * Format: `<plant>-<crop plan>-<YYMMDD>-<component>-<seq>`. Deterministic, so the
+ * Format: `<plant>-<grow plan>-<YYMMDD>-<component>-<seq>`. Deterministic, so the
  * ledger, the cooling log and the traceability record all name the same lot.
  */
 export function traceabilityLotCode(
   plantCode: string,
-  cropPlanCode: string,
+  growPlanCode: string,
   productionDate: string,
   component: string,
   sequence: number,
@@ -91,7 +91,7 @@ export function traceabilityLotCode(
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '')
     .slice(0, 6);
-  return `${plantCode}-${cropPlanCode}-${ymd}-${slug}-${String(sequence).padStart(2, '0')}`;
+  return `${plantCode}-${growPlanCode}-${ymd}-${slug}-${String(sequence).padStart(2, '0')}`;
 }
 
 export interface TransformationInput {

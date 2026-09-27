@@ -8,8 +8,8 @@ import { isBlackoutRack } from '@/engine/equipment';
 // The suite runs the longest option: a forecast expanded to three years.
 const inputs = resolveScenarioInputs({ forecast: { horizonYears: 3 } });
 const subscribers = seedSubscribers();
-const seedCropPlans = inputs.cropPlans;
-const saved = seedSubscriptionCycles(seedCropPlans, '2026-09-14');
+const seedGrowPlans = inputs.growPlans;
+const saved = seedSubscriptionCycles(seedGrowPlans, '2026-09-14');
 const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
 
 const started = performance.now();
@@ -83,7 +83,7 @@ describe('the forecast timeline (Roadmap N4b)', () => {
 
   it('names missing terms and settles them on the document date', () => {
     const kinds = t.gaps.map((g) => g.kind);
-    // The test subscribers carry no payment terms and no supplier is linked on the code crop plan.
+    // The test subscribers carry no payment terms and no supplier is linked on the code grow plan.
     expect(kinds).toContain('no_subscriber_terms');
     expect(kinds).toContain('no_supplier');
     for (const i of t.documents.invoices) {
@@ -142,8 +142,8 @@ describe('a Plan sowing record is one plan\'s sowings on one sow day, and the so
     for (const day of t.horizon.productionDays) {
       for (const run of day.runs) {
         if (run.produced <= 0) continue;
-        const records = t.documents.sowings.filter((b) => b.productionDate === day.productionDate && b.cropPlanCode === run.cropPlanCode);
-        expect(records, `${day.productionDate} ${run.cropPlanCode}`).toHaveLength(1);
+        const records = t.documents.sowings.filter((b) => b.productionDate === day.productionDate && b.growPlanCode === run.growPlanCode);
+        expect(records, `${day.productionDate} ${run.growPlanCode}`).toHaveLength(1);
         expect(records[0]!.sowingsRun).toBe(run.sowingsScheduled);
         expect(records.reduce((s, r) => s + r.goodUnits, 0)).toBe(run.produced);
         expect(records.reduce((s, r) => s + (r.actualLaborHours ?? 0), 0)).toBeCloseTo(run.laborHours, 9);

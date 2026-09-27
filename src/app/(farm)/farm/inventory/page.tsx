@@ -54,11 +54,11 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
     inputs = selected.inputs;
     actuals = selected.bundle;
     monthBar = <PageControls><LedgerMonthBar selected={selected} period={period} basePath="/farm/inventory" /></PageControls>;
-    // Every Plan distribution names its crop plan.
+    // Every Plan distribution names its grow plan.
     consumedFrom = (pf) =>
       selected.bundle.distributions
-        .filter((d) => d.cropPlanCode)
-        .map((d) => ({ cropPlanCode: d.cropPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(inputs.cropPlans.find((r) => r.code === d.cropPlanCode), d.phase, pf) }));
+        .filter((d) => d.growPlanCode)
+        .map((d) => ({ growPlanCode: d.growPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(inputs.growPlans.find((r) => r.code === d.growPlanCode), d.phase, pf) }));
   } else {
     const [resolved, recorded, orders] = await Promise.all([getResolvedActiveInputs(), loadActuals(), listOrders()]);
     inputs = resolved.inputs;
@@ -71,8 +71,8 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
         .filter((o) => o.status === 'distributed')
         .map((o) => {
           const d = o.distributionId ? distributionById.get(o.distributionId) : undefined;
-          const f = unitFactorFor(inputs.cropPlans.find((r) => r.code === o.cropPlanCode), o.channel, pf);
-          return { cropPlanCode: o.cropPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * f };
+          const f = unitFactorFor(inputs.growPlans.find((r) => r.code === o.growPlanCode), o.channel, pf);
+          return { growPlanCode: o.growPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * f };
         });
     };
   }
@@ -81,8 +81,8 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
 
   // ── Finished goods: sowings less distributions, FIFO, inside shelf life, as of `today`.
   const consumed = consumedFrom(pfByChannel);
-  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, cropPlans: inputs.cropPlans });
-  const cropPlanName = (code: string) => inputs.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, growPlans: inputs.growPlans });
+  const growPlanName = (code: string) => inputs.growPlans.find((r) => r.code === code)?.name ?? code;
   const sowingByCode = new Map(actuals.sowings.map((b) => [b.sowingId, b]));
   const open = fg.lots
     .filter((l) => l.remaining > 1e-9)
@@ -122,7 +122,7 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
   const totalRemaining = open.reduce((s, l) => s + l.remaining, 0);
   const nearExpiry = open.filter((l) => l.daysRemaining <= 7);
   const traced = open.filter((l) => traceOf(l.sowingId).suppliers.length > 0 || (received[l.sowingId] ?? []).length > 0).length;
-  const expiredUnconsumed = Object.entries(fg.expiredByCropPlan).filter(([, v]) => v > 1e-9);
+  const expiredUnconsumed = Object.entries(fg.expiredByGrowPlan).filter(([, v]) => v > 1e-9);
 
   return (
     <>
@@ -183,7 +183,7 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
             <table className="farm-table">
               <thead>
                 <tr>
-                  <th>Sowing</th><th>Crop plan</th><th>Produced</th><th className="num">Remaining</th>
+                  <th>Sowing</th><th>Grow plan</th><th>Produced</th><th className="num">Remaining</th>
                   <th>Hold-life expiry</th><th className="num">Days left</th><th>Status</th>
                   {!isPlan && <><th>Received from</th><th>Shipped to</th></>}
                 </tr>
@@ -197,7 +197,7 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
                         {l.sowingId}
                         {t.outputLots.length > 0 && <div className="farm-c-faint farm-fs-2xs">{t.outputLots.join(' · ')}</div>}
                       </td>
-                      <td className="farm-c-soft">{cropPlanName(l.cropPlanCode)}<div className="farm-c-faint farm-fs-2xs">{l.doc?.closedBy ?? 'unsigned'}</div></td>
+                      <td className="farm-c-soft">{growPlanName(l.growPlanCode)}<div className="farm-c-faint farm-fs-2xs">{l.doc?.closedBy ?? 'unsigned'}</div></td>
                       <td>{l.produced}</td>
                       <td className="num">{num(Math.round(l.remaining))} <span className="farm-c-faint">of {num(Math.round(l.qtyProduced))}</span></td>
                       <td>{l.expires}</td>

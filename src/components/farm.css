@@ -164,7 +164,7 @@
   --farm-r-lg: 13px;
   --farm-sidebar-w: 12.75rem;
 
-  /* The panel crop-plan. Bevel on top, shadow under, ambient beneath. */
+  /* The panel grow-plan. Bevel on top, shadow under, ambient beneath. */
   --farm-panel-shadow:
     inset 0 1px 0 var(--farm-bevel),
     inset 0 -1px 0 var(--farm-underside),
@@ -417,7 +417,7 @@
   align-items: center;
   gap: 0.5rem 1rem;
 }
-/* The second bar's slot for the page's own controls (`PageControls`): the crop-plan
+/* The second bar's slot for the page's own controls (`PageControls`): the grow-plan
    selector, the month or period picker, a download. Empty on a page with none. */
 .farm-page-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0; min-width: 0; flex: 1 1 auto; }
 /* The three groups — scope, view, action — in that order; a group with nothing in it takes no room,

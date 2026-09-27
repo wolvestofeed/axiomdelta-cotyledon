@@ -1,6 +1,6 @@
 import 'server-only';
 import { asc, eq } from 'drizzle-orm';
-import { farmPackages, farmCropPlanPackages, farmCropPlans, farmSupplierItems, farmSupplierItemPrices } from '@/db';
+import { farmPackages, farmGrowPlanPackages, farmGrowPlans, farmSupplierItems, farmSupplierItemPrices } from '@/db';
 import { db } from '@/lib/db';
 import { packagingSeed, type PackagingLibrary } from '@/data/packaging';
 import { packageFromRow } from '@/engine/packaging';
@@ -12,7 +12,7 @@ import { leanSuppliersById } from '@/server/supplier-links';
  *
  * On first read of an empty table the packages the per-unit placeholder names
  * are inserted, `source = 'seed'`, under an advisory lock. Returns the library,
- * every crop plan's picks (by crop plan code) and the supplier catalog prices a
+ * every grow plan's picks (by grow plan code) and the supplier catalog prices a
  * package can link to — each at the price IN FORCE TODAY, resolved here so the
  * engine takes one number rather than a history (Roadmap N1).
  */
@@ -32,10 +32,10 @@ export async function listPackagingLibrary(): Promise<PackagingLibrary> {
   const [rows, picks, items, prices] = await Promise.all([
     db.select().from(farmPackages).orderBy(asc(farmPackages.createdAt), asc(farmPackages.name)),
     db
-      .select({ id: farmCropPlanPackages.id, cropPlanCode: farmCropPlans.code, packageId: farmCropPlanPackages.packageId, qtyPerUnit: farmCropPlanPackages.qtyPerUnit })
-      .from(farmCropPlanPackages)
-      .innerJoin(farmCropPlans, eq(farmCropPlans.id, farmCropPlanPackages.cropPlanId))
-      .orderBy(asc(farmCropPlanPackages.createdAt)),
+      .select({ id: farmGrowPlanPackages.id, growPlanCode: farmGrowPlans.code, packageId: farmGrowPlanPackages.packageId, qtyPerUnit: farmGrowPlanPackages.qtyPerUnit })
+      .from(farmGrowPlanPackages)
+      .innerJoin(farmGrowPlans, eq(farmGrowPlans.id, farmGrowPlanPackages.growPlanId))
+      .orderBy(asc(farmGrowPlanPackages.createdAt)),
     db
       .select({ id: farmSupplierItems.id, supplierId: farmSupplierItems.supplierId, item: farmSupplierItems.item, packSize: farmSupplierItems.packSize })
       .from(farmSupplierItems)

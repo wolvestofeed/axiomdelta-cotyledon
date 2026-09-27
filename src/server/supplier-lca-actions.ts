@@ -9,13 +9,13 @@ import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { leanSuppliersById } from '@/server/supplier-links';
 import { supplierOptionId } from '@/engine/supplier-links';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { withWorkspace } from '@/server/workspace';
 
 /**
  * Supplier-specific LCA options. SUPER ADMIN ONLY.
  *
- * createSupplierLcaOption — records a figure a supplier supplied for one crop plan
+ * createSupplierLcaOption — records a figure a supplier supplied for one grow plan
  *   input, with its boundary and optionally the registered document. Also
  *   registers a source figure keyed by the option id so citations resolve to
  *   the supplier's document.
@@ -55,8 +55,8 @@ async function createSupplierLcaOptionInner(input: unknown): Promise<Result> {
     throw e;
   }
   const d = parsed.data;
-  // Any input on a crop plan in the library (Roadmap N9), not the reference crop plan's lines only.
-  if (!(await listCropPlans()).some((r) => r.lines.some((l) => lineLabel(l) === d.input))) return { ok: false, error: 'Unknown input.' };
+  // Any input on a grow plan in the library (Roadmap N9), not the reference grow plan's lines only.
+  if (!(await listGrowPlans()).some((r) => r.lines.some((l) => lineLabel(l) === d.input))) return { ok: false, error: 'Unknown input.' };
   const sup = leanSuppliersById([d.supplierId])[d.supplierId];
   if (!sup) return { ok: false, error: 'Supplier not found in the directory.' };
 

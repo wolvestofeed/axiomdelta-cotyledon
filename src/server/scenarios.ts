@@ -9,7 +9,7 @@ import {
   type ResolvedInputs,
 } from '@/engine/scenario';
 import { getFarmAccess } from '@/server/access';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listSubscribers } from '@/server/subscribers';
 import { loadCalendar } from '@/server/periods';
 import { loadSupplierTerms } from '@/server/working-capital';
@@ -150,7 +150,7 @@ export async function getScenarioView(): Promise<ScenarioView> {
 
 /** The definitions a forecast resolves against, loaded once (Roadmap N6). */
 export async function loadDefinitions() {
-  const [library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies] = await Promise.all([listCropPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies()]);
+  const [library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies] = await Promise.all([listGrowPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies()]);
   return { library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies };
 }
 

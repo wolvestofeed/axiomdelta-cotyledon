@@ -16,7 +16,7 @@ import {
   ACC_VAR_OH_APPLIED,
   ACC_RAW_MATERIALS,
 } from '@/data/coa-farm';
-import { normalCapacity, absorbOverhead, deriveCapacity, buildPurchaseOrder, costCropPlan } from '@/engine';
+import { normalCapacity, absorbOverhead, deriveCapacity, buildPurchaseOrder, costPlanPerUnit } from '@/engine';
 import { massBalance, classifyScrap, isAbnormalScrap, MASS_BALANCE_TOLERANCE_G, type SowingExecution } from '@/engine/sowing';
 import { standardSowingRecordPrefill, toSowingExecution } from '@/engine/actuals';
 import { assumptions } from '@/data/plan-data';
@@ -29,9 +29,9 @@ import { lineLabel } from '@/data/grow-plan';
 const DATE = '2026-09-14';
 // A sowing of the seed grow plans' reference plan: one grow unit's trays.
 const R0 = resolveScenarioInputs();
-const cropPlan = R0.cropPlan;
-const card = costPlan(cropPlan);
-const trays = deriveCapacity(cropPlan, R0.capacityInputs).sowingSize;
+const growPlan = R0.growPlan;
+const card = costPlan(growPlan);
+const trays = deriveCapacity(growPlan, R0.capacityInputs).sowingSize;
 const shrink = assumptions.yield.shrinkAllowance.value;
 const nc = normalCapacity(phases);
 // The absorption base is MANUFACTURING overhead only — lease, utilities and
@@ -39,15 +39,15 @@ const nc = normalCapacity(phases);
 const annualFixed = manufacturingOverheadBudget().annual;
 
 function sowingAtStandard(): SowingExecution {
-  return toSowingExecution({ ...standardSowingRecordPrefill(DATE, 1, trays, cropPlan), id: '', closedAt: null });
+  return toSowingExecution({ ...standardSowingRecordPrefill(DATE, 1, trays, growPlan), id: '', closedAt: null });
 }
 
 function ledgerFor(sowing: SowingExecution, actualUnits = nc.unitsPerYear) {
   return productionSowingLedger(sowing, {
     overhead: absorbOverhead(annualFixed, nc, actualUnits),
-    purchaseOrderCost: buildPurchaseOrder(trays, cropPlan).total,
+    purchaseOrderCost: buildPurchaseOrder(trays, growPlan).total,
     pricePerUnit: phases[0].pricePerUnit,
-  }, cropPlan);
+  }, growPlan);
 }
 
 const net = (entries: { lines: { accountCode: string; debitCents: number; creditCents: number }[] }[], code: string) =>
@@ -106,7 +106,7 @@ describe('the production sowing journal', () => {
 
   it('a tray costs what the cost card says: materials, light and consumables over the trays sown', () => {
     const perTray = (led.amounts.standardMaterialCost + led.amounts.lightApplied + led.amounts.consumablesApplied) / led.amounts.traysSown;
-    expect(perTray).toBeCloseTo(costCropPlan(cropPlan, shrink).totalInputCostPerUnit, 9);
+    expect(perTray).toBeCloseTo(costPlanPerUnit(growPlan, shrink).totalInputCostPerUnit, 9);
   });
 
   it('splits labor over the stages by stream: sowing to sow, daily to grow, harvest to pack', () => {
@@ -138,7 +138,7 @@ describe('the production sowing journal', () => {
   });
 
   it('keeps pack-rounded over-purchase in inventory rather than in a variance', () => {
-    const po = buildPurchaseOrder(trays, cropPlan).total;
+    const po = buildPurchaseOrder(trays, growPlan).total;
     expect(po).toBeGreaterThan(led.amounts.standardMaterialCost);
     expect(led.variances.purchasePrice).toBeCloseTo(0, 6);
   });
@@ -157,13 +157,13 @@ describe('variances and spoilage when the sowing does not run to standard', () =
 
   it('prices a purchase price variance off the invoice, not the order', () => {
     const b = sowingAtStandard();
-    const po = buildPurchaseOrder(trays, cropPlan).total;
+    const po = buildPurchaseOrder(trays, growPlan).total;
     const led = productionSowingLedger(b, {
       overhead: absorbOverhead(annualFixed, nc, nc.unitsPerYear),
       purchaseOrderCost: po,
       actualInvoiceCost: po * 1.04,
       pricePerUnit: phases[0].pricePerUnit,
-    }, cropPlan);
+    }, growPlan);
     expect(led.balanced).toBe(true);
     expect(led.variances.purchasePrice).toBeCloseTo(po * 0.04, 2);
   });
@@ -219,9 +219,9 @@ describe('variances and spoilage when the sowing does not run to standard', () =
     const led = productionSowingLedger(b, {
       overhead: absorbOverhead(annualFixed, nc, nc.unitsPerYear),
       overheadIncurred: incurred,
-      purchaseOrderCost: buildPurchaseOrder(trays, cropPlan).total,
+      purchaseOrderCost: buildPurchaseOrder(trays, growPlan).total,
       pricePerUnit: phases[0].pricePerUnit,
-    }, cropPlan);
+    }, growPlan);
     expect(led.balanced).toBe(true);
     const inc = led.entries.find((e) => e.id.endsWith('OH-INCURRED'))!;
     expect(inc.lines.some((l) => l.accountCode === ACC_OH_CONTROL && l.debitCents > 0)).toBe(true);
@@ -245,21 +245,21 @@ describe('variances and spoilage when the sowing does not run to standard', () =
     const two = productionSowingLedger(sowingAtStandard(), {
       sowings: 2,
       overhead: absorbOverhead(annualFixed, nc, nc.unitsPerYear),
-      purchaseOrderCost: buildPurchaseOrder(trays, cropPlan).total,
+      purchaseOrderCost: buildPurchaseOrder(trays, growPlan).total,
       pricePerUnit: phases[0].pricePerUnit,
-    }, cropPlan);
+    }, growPlan);
     expect(two.amounts.directLaborStandard).toBeGreaterThanOrEqual(one.amounts.directLaborStandard);
     expect(two.balanced).toBe(true);
   });
 
   it('flags a material net variance for proration rather than dumping it in COGS', () => {
-    const po = buildPurchaseOrder(trays, cropPlan).total;
+    const po = buildPurchaseOrder(trays, growPlan).total;
     const led = productionSowingLedger(sowingAtStandard(), {
       overhead: absorbOverhead(annualFixed, nc, nc.unitsPerYear),
       purchaseOrderCost: po,
       actualInvoiceCost: po * 1.5,
       pricePerUnit: phases[0].pricePerUnit,
-    }, cropPlan);
+    }, growPlan);
     expect(led.variances.disposition).toBe('PRORATE');
   });
 });

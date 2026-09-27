@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
 import { listScenarios } from '@/server/scenarios';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listSubscribers } from '@/server/subscribers';
 import { listEquipment } from '@/server/equipment';
 import { listPackagingLibrary } from '@/server/packaging';
@@ -26,7 +26,7 @@ async function ComparePageInner() {
   // No signed-in user owns no forecast: the page still compares against the plan-data defaults.
   const [scenarios, library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, cycles, studies] = await Promise.all([
     access.userId ? listScenarios({ userId: access.userId, isSuperAdmin: access.isSuperAdmin }) : Promise.resolve([]),
-    listCropPlans(),
+    listGrowPlans(),
     listSubscribers(),
     loadCalendar(),
     loadSupplierTerms(),
@@ -49,7 +49,7 @@ async function ComparePageInner() {
         functions={['The day under two forecasts', 'Findings']}
         connects={[
           { href: '/farm/production-planning/schedule', dir: 'from' },
-          { href: '/farm/crop-plans', dir: 'both' },
+          { href: '/farm/grow-plans', dir: 'both' },
         ]}
         howItWorks={
           <ul>

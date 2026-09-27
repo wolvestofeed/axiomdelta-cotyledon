@@ -40,11 +40,11 @@ export function HomeCostsCard({ className }: { className?: string }) {
   const monthly = lines.reduce((s, l) => s + l.monthlyAmountCents / 100, 0);
   // The grow lights, from each in-service plan's cost card.
   const light = useMemo(() => {
-    const cards = resolved.cropPlans.filter((r) => r.status === 'in_service').map((r) => costPlan(r));
+    const cards = resolved.growPlans.filter((r) => r.status === 'in_service').map((r) => costPlan(r));
     const perTray = cards.map((c) => c.perTray.light);
     const fixtures = [...new Set(cards.map((c) => `${c.fixture.name}, ${c.fixture.watts.value} W`))];
     return { min: perTray.length ? Math.min(...perTray) : 0, max: perTray.length ? Math.max(...perTray) : 0, plans: cards.length, fixtures };
-  }, [resolved.cropPlans]);
+  }, [resolved.growPlans]);
 
   return (
     <Card title="Home running costs" className={className}>

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MicroFarm — the process map (scheduler build plan §5.1): a crop plan's route as
+ * MicroFarm — the process map (scheduler build plan §5.1): a grow plan's route as
  * a DAG. Columns are precedence depth, so steps drawn in one column may run
  * alongside each other; the lines are the finish-to-start edges. Nodes are
  * buttons: picking one opens it for editing in the scenario.

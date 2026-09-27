@@ -4,7 +4,7 @@
  * Production Planning and Procurement plan one: whole sowings against the plant's
  * cycles, netted against finished stock inside shelf life. Days of cover is the
  * finished stock at the end of that day over the base units a distribution day
- * orders in the window. It replaces the typed 650 units a day on one crop plan.
+ * orders in the window. It replaces the typed 650 units a day on one grow plan.
  */
 
 import type { GrowPlanDef } from '@/data/grow-plan';
@@ -37,10 +37,10 @@ export function dashboardToday(input: {
   /** Days ahead the book is read. */
   windowDays?: number;
   book: readonly BookOrder[];
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
-  cropPlanAssumptions?: Readonly<Record<string, Assumptions>>;
+  growPlanAssumptions?: Readonly<Record<string, Assumptions>>;
   unitFactorByChannel: Record<number, number>;
   openingLots: readonly FinishedLot[];
   closures?: readonly DateRange[];
@@ -51,10 +51,10 @@ export function dashboardToday(input: {
     from: input.today,
     to,
     book: input.book,
-    cropPlans: input.cropPlans,
+    growPlans: input.growPlans,
     capacityInputs: input.capacityInputs,
     assumptions: input.assumptions,
-    cropPlanAssumptions: input.cropPlanAssumptions,
+    growPlanAssumptions: input.growPlanAssumptions,
     unitFactorByChannel: input.unitFactorByChannel,
     openingLots: input.openingLots,
     shelfLifeDays: input.assumptions.inventory.blackoutShelfLife.value,

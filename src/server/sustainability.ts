@@ -19,7 +19,7 @@ export async function postSustainabilityBasis(kind: 'plan' | 'actual', config: F
   const inputs = resolveWithDefinitions(config, definitions);
   const common = {
     shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value,
-    cropPlans: inputs.cropPlans,
+    growPlans: inputs.growPlans,
     unitFactorByChannel: Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>,
   };
   if (kind === 'plan') {

@@ -123,7 +123,7 @@ export interface SowingIssue {
 
 export interface SowingExecution {
   sowingId: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   /** ISO 8601: the sow date. The standard cost version keys on it. */
   productionDate: string;
   /** Version of the plan standard in force on the sow date. */

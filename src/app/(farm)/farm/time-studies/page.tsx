@@ -6,7 +6,7 @@ import { withWorkspace } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
-/** Time Studies (Roadmap O2): time studies for every crop plan in the library. No wage or pay. */
+/** Time Studies (Roadmap O2): time studies for every grow plan in the library. No wage or pay. */
 export default async function TimeStudiesPage() {
   return withWorkspace(() => TimeStudiesPageInner());
 }
@@ -32,7 +32,7 @@ async function TimeStudiesPageInner() {
             <li>An admin approves each observed study. The plan&rsquo;s labor standard, and its water and supplements per tray, are the average of its approved studies weighted by the trays each timed; until the first approval the estimated study stands in.</li>
             <li>A study records the water applied each day by method (fluid ounces per tray per watering, the waterings, the trays) and the supplements applied from the Nutrients &amp; Supplements library. The measured figures are on Actuals.</li>
             <li>Approving a study approves a standard version effective that day: sowings from then are costed at the new average; trays already sown keep the standard they were sown at, and the difference is a variance.</li>
-            <li>Each crop plan is re-studied on its own interval. The trends show how a unit&rsquo;s labor moves over time.</li>
+            <li>Each grow plan is re-studied on its own interval. The trends show how a unit&rsquo;s labor moves over time.</li>
             <li>Labor hours and cost are shown per sowing and per day, never an individual&rsquo;s wage or pay.</li>
           </ul>
         }

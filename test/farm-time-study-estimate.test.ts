@@ -13,7 +13,7 @@ import { planStageDays } from '@/data/grow-plan';
 
 describe('farm time-study estimate — the labor standard', () => {
   const doc = (over: Partial<TimeStudyDoc>): TimeStudyDoc => ({
-    id: 'x', cropPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
+    id: 'x', growPlanCode: 'BROC-01', studiedOn: '2027-01-10', sowingSize: 400, cycleDays: 0, observer: 'A. Observer', qualityResult: 'pass', qualityNotes: null, approvedAt: null, approvedBy: null, source: 'user_built', basis: 'observed', consumption: { water: [], supplements: [] },
     lines: [{ task: 'T', station: null, staff: 1, elapsedMinutes: 10, laborMinutes: 10, scalesWith: 'fixed', stream: 'sowing' }],
     ...over,
   });
@@ -69,7 +69,7 @@ describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray s
     const lib = broc;
     const e = estimatedTimeStudy(lib, 20);
     expect(e.lines.map((l) => l.task)).toEqual(growPlanTimeStudy(broc, 20).lines.map((l) => l.task));
-    const std = laborStandard([{ id: 'e', cropPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed', ...e }]);
+    const std = laborStandard([{ id: 'e', growPlanCode: 'BROC-01', approvedAt: null, approvedBy: null, source: 'seed', ...e }]);
     expect(standardIsEstimated(std)).toBe(true);
   });
 });

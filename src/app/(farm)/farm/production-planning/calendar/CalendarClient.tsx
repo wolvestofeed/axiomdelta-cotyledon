@@ -41,7 +41,7 @@ export function CalendarClient({
   cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
-  sowings: { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number }[];
+  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
   distributions: { id: string; distributedOn: string; units: number }[];
   studies: TimeStudyDoc[];
 }) {
@@ -78,13 +78,13 @@ export function CalendarClient({
         from: today,
         to: horizonTo,
         channelPriceCents: Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-        cropPlanNames: Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])),
+        growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.cropPlans, cycles, orders, today, horizonTo, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, horizonTo, closures],
   );
-  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.cropPlans]);
+  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -92,17 +92,17 @@ export function CalendarClient({
         from: today,
         to: horizonTo,
         book,
-        cropPlans: resolved.cropPlans,
+        growPlans: resolved.growPlans,
         capacityInputs: C,
         assumptions: A,
-        cropPlanAssumptions: resolved.cropPlanAssumptions,
+        growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
         shelfLifeDays: A.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, today, horizonTo, book, resolved.cropPlans, resolved.phases, C, A, pfByChannel, openingLots],
+    [closures, today, horizonTo, book, resolved.growPlans, resolved.phases, C, A, pfByChannel, openingLots],
   );
 
   /** Findings per day: the same scheduler the Day Schedule runs, over each day with work. */
@@ -113,9 +113,9 @@ export function CalendarClient({
       const production = horizon.productionDays.find((p) => p.productionDate === row.date);
       const distribution = horizon.distributionDays.find((d) => d.date === row.date);
       const inputs = scheduleInputsForDay({
-        productionRuns: production?.runs.map((r) => ({ cropPlanCode: r.cropPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
-        shipments: distribution?.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, filledBase: r.filledBase })) ?? [],
-        cropPlans: resolved.cropPlans,
+        productionRuns: production?.runs.map((r) => ({ growPlanCode: r.growPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
+        shipments: distribution?.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, filledBase: r.filledBase })) ?? [],
+        growPlans: resolved.growPlans,
         studies,
         equipment: resolved.equipment,
         routing: resolved.routing,
@@ -131,7 +131,7 @@ export function CalendarClient({
       }).violations.length;
     }
     return out;
-  }, [horizon, resolved.cropPlans, resolved.equipment, resolved.routing, resolved.resources, resolved.crews, resolved.schedulePolicy, studies, C]);
+  }, [horizon, resolved.growPlans, resolved.equipment, resolved.routing, resolved.resources, resolved.crews, resolved.schedulePolicy, studies, C]);
 
   const rowByDate = useMemo(() => new Map(horizon.byDate.map((r) => [r.date, r])), [horizon.byDate]);
   const days: MonthDay[] = monthDays.map((date) => {

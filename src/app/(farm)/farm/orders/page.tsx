@@ -31,7 +31,7 @@ async function OrdersPageInner() {
         howItWorks={
           <ul>
             <li>Every subscriber has its own flat plan: a saved subscription cycle copied onto it, or a sequence programmed for it alone.</li>
-            <li>A forecast order is the plan&rsquo;s crop plan on a date times the service&rsquo;s units per service, on each date the service runs.</li>
+            <li>A forecast order is the plan&rsquo;s grow plan on a date times the service&rsquo;s units per service, on each date the service runs.</li>
             <li>Forecast orders are computed from Subscribers each time the page is read, never stored.</li>
             <li>A typed count, a confirmed count or a distributed order is a row on file, and each replaces the forecast order it stands for.</li>
             <li>A prospect&rsquo;s distribution day is every order on that date for that subscriber.</li>

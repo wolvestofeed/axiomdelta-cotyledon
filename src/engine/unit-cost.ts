@@ -1,41 +1,41 @@
 /**
- * MicroFarm — the standard cost of a unit, per crop plan (Roadmap N3). Pure.
+ * MicroFarm — the standard cost of a unit, per grow plan (Roadmap N3). Pure.
  *
  * The cost of a unit is food + labor + packaging (operating-model-roadmap §3.5).
- * Before N3 two of the three were not the crop plan's own:
+ * Before N3 two of the three were not the grow plan's own:
  *
- *   * LABOR — every crop plan was charged one typed split, 180 fixed minutes a
+ *   * LABOR — every grow plan was charged one typed split, 180 fixed minutes a
  *     sowing and 1.5 a unit: the plan's study for AMK-E-001, scaled linearly.
- *     No caller passed a per-crop-plan figure, so a 150-unit adult crop plan and a
- *     950-unit prospect crop plan carried the same minutes (audit A2). The Time
- *     Studies page already showed each crop plan's own study, so the two pages
- *     disagreed about the same crop plan.
- *   * PACKAGING — every crop plan carried one flat per-unit figure, even where its
+ *     No caller passed a per-grow-plan figure, so a 150-unit adult grow plan and a
+ *     950-unit prospect grow plan carried the same minutes (audit A2). The Time
+ *     Studies page already showed each grow plan's own study, so the two pages
+ *     disagreed about the same grow plan.
+ *   * PACKAGING — every grow plan carried one flat per-unit figure, even where its
  *     packages were picked and costed. It is now the sum of the packages the
- *     crop plan picks, at the packaging library's cost (zero where none is entered).
+ *     grow plan picks, at the packaging library's cost (zero where none is entered).
  *
  * Neither function that consumes these changes shape. `costPerUnit`,
  * `laborForDay` and the sowing ledger read `assumptions.laborSplit` and
  * `assumptions.perUnit.packaging`; the resolver now builds an assumptions object
- * PER CROP PLAN carrying that crop plan's own labor standard and packaging, and every
- * caller costing a crop plan reads the crop plan's. One function per quantity, and the
- * inputs are the crop plan's.
+ * PER GROW PLAN carrying that grow plan's own labor standard and packaging, and every
+ * caller costing a grow plan reads the grow plan's. One function per quantity, and the
+ * inputs are the grow plan's.
  *
  * Because an approved standard freezes the assumptions it was costed at, it
- * freezes the crop plan's labor and packaging with them — no second snapshot shape.
+ * freezes the grow plan's labor and packaging with them — no second snapshot shape.
  */
 
 import type { GrowPlanDef } from '@/data/grow-plan';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { PackagingLibrary } from '@/data/packaging';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
-import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
-import { cropPlanPackagingCost } from '@/engine/packaging';
+import { laborStandard, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
+import { growPlanPackagingCost } from '@/engine/packaging';
 
 /**
- * Where a crop plan's labor minutes come from.
+ * Where a grow plan's labor minutes come from.
  *   observed  — observed studies approved by an admin, averaged.
- *   estimated — the crop plan's estimated study, standing in until an observed one
+ *   estimated — the grow plan's estimated study, standing in until an observed one
  *               is approved.
  *   none      — no study at all: labor is a GAP, reported as one, never zero
  *               presented as a cost.
@@ -48,8 +48,8 @@ export const LABOR_BASIS_LABELS: Record<LaborBasis, string> = {
   none: 'No study — labor is a gap',
 };
 
-export interface CropPlanLaborStandard {
-  cropPlanCode: string;
+export interface GrowPlanLaborStandard {
+  growPlanCode: string;
   fixedMinutesPerSowing: number;
   variableMinutesPerUnit: number;
   /** The daily stream (outline §5 rule 3): per tray per day, once a day, over the cycle the study was timed at. */
@@ -64,22 +64,22 @@ export interface CropPlanLaborStandard {
 }
 
 /**
- * A crop plan's labor standard.
+ * A grow plan's labor standard.
  *
  * `studies === null` means no study library was loaded — an engine call from a
- * test or a script — and the crop plan's estimate is built in code, the same
+ * test or a script — and the grow plan's estimate is built in code, the same
  * estimate the database is seeded with. A LOADED library with no study for the
- * crop plan is a gap: the record says there is none, so none is reported.
+ * grow plan is a gap: the record says there is none, so none is reported.
  */
 export function laborStandardFor(
-  cropPlan: GrowPlanDef,
+  growPlan: GrowPlanDef,
   studies: readonly TimeStudyDoc[] | null,
   sowingSize: number,
-): CropPlanLaborStandard {
+): GrowPlanLaborStandard {
   if (studies === null) {
-    const s = summarizeStudy(estimatedTimeStudy(cropPlan, sowingSize));
+    const s = summarizeStudy(estimatedTimeStudy(growPlan, sowingSize));
     return {
-      cropPlanCode: cropPlan.code,
+      growPlanCode: growPlan.code,
       fixedMinutesPerSowing: s.fixedMinutesPerSowing,
       variableMinutesPerUnit: s.variableMinutesPerUnit,
       dailyMinutesPerTrayDay: s.dailyMinutesPerTrayDay,
@@ -90,13 +90,13 @@ export function laborStandardFor(
       studiedSowingSize: sowingSize,
     };
   }
-  const standard = laborStandard(studiesForCropPlan(studies, cropPlan.code));
+  const standard = laborStandard(studiesForGrowPlan(studies, growPlan.code));
   if (!standard) {
-    return { cropPlanCode: cropPlan.code, fixedMinutesPerSowing: 0, variableMinutesPerUnit: 0, dailyMinutesPerTrayDay: 0, dailyFixedMinutesPerDay: 0, cycleDays: 0, basis: 'none', studyId: null, studiedSowingSize: null };
+    return { growPlanCode: growPlan.code, fixedMinutesPerSowing: 0, variableMinutesPerUnit: 0, dailyMinutesPerTrayDay: 0, dailyFixedMinutesPerDay: 0, cycleDays: 0, basis: 'none', studyId: null, studiedSowingSize: null };
   }
   const s = summarizeStudy(standard);
   return {
-    cropPlanCode: cropPlan.code,
+    growPlanCode: growPlan.code,
     fixedMinutesPerSowing: s.fixedMinutesPerSowing,
     variableMinutesPerUnit: s.variableMinutesPerUnit,
     dailyMinutesPerTrayDay: s.dailyMinutesPerTrayDay,
@@ -109,12 +109,12 @@ export function laborStandardFor(
 }
 
 /** The daily stream's minutes on one unit at a sowing size: per tray per day and the daily fixed share, over the cycle. */
-export function dailyMinutesPerUnit(std: Pick<CropPlanLaborStandard, 'dailyMinutesPerTrayDay' | 'dailyFixedMinutesPerDay' | 'cycleDays'>, sowingSize: number): number {
+export function dailyMinutesPerUnit(std: Pick<GrowPlanLaborStandard, 'dailyMinutesPerTrayDay' | 'dailyFixedMinutesPerDay' | 'cycleDays'>, sowingSize: number): number {
   return ((sowingSize > 0 ? std.dailyFixedMinutesPerDay / sowingSize : 0) + std.dailyMinutesPerTrayDay) * std.cycleDays;
 }
 
 /** Labor minutes for one unit at a sowing size, on all three streams; null when labor is a gap. */
-export function laborMinutesPerUnit(std: CropPlanLaborStandard, sowingSize: number): number | null {
+export function laborMinutesPerUnit(std: GrowPlanLaborStandard, sowingSize: number): number | null {
   if (std.basis === 'none') return null;
   return (sowingSize > 0 ? std.fixedMinutesPerSowing / sowingSize : 0) + std.variableMinutesPerUnit + dailyMinutesPerUnit(std, sowingSize);
 }
@@ -129,37 +129,37 @@ interface CostAssumptions {
   perUnit: { packaging: { value: number; status: string; unit?: string; note?: string } };
 }
 
-export interface CropPlanCostInputs {
-  labor: CropPlanLaborStandard;
-  /** The sum of the crop plan's picked packages at the library's cost. */
+export interface GrowPlanCostInputs {
+  labor: GrowPlanLaborStandard;
+  /** The sum of the grow plan's picked packages at the library's cost. */
   packagingPerUnit: number;
 }
 
-/** A crop plan's labor standard and its packaging per unit. */
-export function cropPlanCostInputs(
-  cropPlan: GrowPlanDef,
+/** A grow plan's labor standard and its packaging per unit. */
+export function growPlanCostInputs(
+  growPlan: GrowPlanDef,
   studies: readonly TimeStudyDoc[] | null,
   sowingSize: number,
   packaging: PackagingLibrary,
-): CropPlanCostInputs {
+): GrowPlanCostInputs {
   return {
-    labor: laborStandardFor(cropPlan, studies, sowingSize),
-    packagingPerUnit: cropPlanPackagingCost(cropPlan.code, packaging).perUnit,
+    labor: laborStandardFor(growPlan, studies, sowingSize),
+    packagingPerUnit: growPlanPackagingCost(growPlan.code, packaging).perUnit,
   };
 }
 
 /**
- * The assumptions a crop plan is costed at: the shared ones with the crop plan's own
+ * The assumptions a grow plan is costed at: the shared ones with the grow plan's own
  * labor standard and packaging written in, each retagged with where it came
  * from. The input is not mutated.
  */
-export function assumptionsForCropPlan<A extends CostAssumptions>(shared: A, inputs: CropPlanCostInputs): A {
+export function assumptionsForGrowPlan<A extends CostAssumptions>(shared: A, inputs: GrowPlanCostInputs): A {
   const a = structuredClone(shared) as A;
   const { labor } = inputs;
   const laborNote =
     labor.basis === 'none'
-      ? `No time study for ${labor.cropPlanCode}: labor is a gap, carried as zero minutes and reported as a gap.`
-      : `${LABOR_BASIS_LABELS[labor.basis]} for ${labor.cropPlanCode}${labor.studiedSowingSize ? ` at a ${labor.studiedSowingSize}-unit sowing` : ''}.`;
+      ? `No time study for ${labor.growPlanCode}: labor is a gap, carried as zero minutes and reported as a gap.`
+      : `${LABOR_BASIS_LABELS[labor.basis]} for ${labor.growPlanCode}${labor.studiedSowingSize ? ` at a ${labor.studiedSowingSize}-unit sowing` : ''}.`;
   a.laborSplit.fixedMinutesPerSowing.value = labor.fixedMinutesPerSowing;
   a.laborSplit.fixedMinutesPerSowing.status = 'DERIVED';
   a.laborSplit.fixedMinutesPerSowing.note = laborNote;
@@ -174,6 +174,6 @@ export function assumptionsForCropPlan<A extends CostAssumptions>(shared: A, inp
   };
   a.perUnit.packaging.value = inputs.packagingPerUnit;
   a.perUnit.packaging.status = 'DERIVED';
-  a.perUnit.packaging.note = `The packages picked for ${labor.cropPlanCode}, at the packaging library's cost.`;
+  a.perUnit.packaging.note = `The packages picked for ${labor.growPlanCode}, at the packaging library's cost.`;
   return a;
 }

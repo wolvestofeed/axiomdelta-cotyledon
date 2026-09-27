@@ -7,8 +7,8 @@ import { postPlanLedger, depreciationForMonth } from '@/engine/plan-ledger';
 
 const subscribers = seedSubscribers();
 const inputs = resolveScenarioInputs();
-const seedCropPlans = inputs.cropPlans;
-const saved = seedSubscriptionCycles(seedCropPlans, '2026-09-14');
+const seedGrowPlans = inputs.growPlans;
+const saved = seedSubscriptionCycles(seedGrowPlans, '2026-09-14');
 const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
 const timeline = simulateForecast({ inputs, cycles });
 const started = performance.now();
@@ -93,7 +93,7 @@ describe('the Plan ledger with payment terms on file (replaces the FY2027 annual
     // Every weekday of the year (no term on file), so December is invoiced and falls due after year end.
     const withTerms = seedSubscribers().map((c) => ({ ...c, paymentTerms: 'net_30' as const, pickupPoints: c.pickupPoints.map((x) => ({ ...x, calendar: [] })) }));
     const inputs2 = resolveScenarioInputs({}, undefined, withTerms);
-    const saved2 = seedSubscriptionCycles(seedCropPlans, '2026-09-14');
+    const saved2 = seedSubscriptionCycles(seedGrowPlans, '2026-09-14');
     const t2 = simulateForecast({ inputs: inputs2, cycles: [...saved2, ...seedFlatPlans(withTerms, saved2)] });
     const p2 = postPlanLedger({ timeline: t2, inputs: inputs2 });
     expect(p2.balanced).toBe(true);

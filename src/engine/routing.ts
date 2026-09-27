@@ -32,7 +32,7 @@ import { timeStudyScaffold, type ScaffoldKind } from '@/engine/time-study-estima
 export type RouteStepKind = ScaffoldKind | 'other';
 
 export interface RouteStep {
-  /** Stable within the crop plan: the kind, with the component or the line position where the kind repeats. */
+  /** Stable within the grow plan: the kind, with the component or the line position where the kind repeats. */
   id: string;
   /** The line's position in the study, 1-based. */
   seq: number;
@@ -67,8 +67,8 @@ export interface RouteFinding {
   detail: string;
 }
 
-export interface CropPlanRoute {
-  cropPlanCode: string;
+export interface GrowPlanRoute {
+  growPlanCode: string;
   studyId: string | null;
   basis: TimeStudyDoc['basis'] | null;
   /** The sowing the study was timed at: the basis of every per-unit figure. */
@@ -79,7 +79,7 @@ export interface CropPlanRoute {
   findings: RouteFinding[];
 }
 
-/** A scenario's edit to one step, keyed `<crop plan code>::<step id>` in the `routing` section. */
+/** A scenario's edit to one step, keyed `<grow plan code>::<step id>` in the `routing` section. */
 export interface RouteStepOverlay {
   staff?: number;
   setupMinutes?: number;
@@ -90,11 +90,11 @@ export interface RouteStepOverlay {
   resourceKey?: string | null;
 }
 
-export const routeKey = (cropPlanCode: string, stepId: string) => `${cropPlanCode}::${stepId}`;
+export const routeKey = (growPlanCode: string, stepId: string) => `${growPlanCode}::${stepId}`;
 
-/** The `routing` section's edits for one crop plan, keyed by step id. */
-export function routeOverlayFor(routing: Readonly<Record<string, RouteStepOverlay>>, cropPlanCode: string): Record<string, RouteStepOverlay> {
-  const prefix = `${cropPlanCode}::`;
+/** The `routing` section's edits for one grow plan, keyed by step id. */
+export function routeOverlayFor(routing: Readonly<Record<string, RouteStepOverlay>>, growPlanCode: string): Record<string, RouteStepOverlay> {
+  const prefix = `${growPlanCode}::`;
   return Object.fromEntries(Object.entries(routing).filter(([k]) => k.startsWith(prefix)).map(([k, v]) => [k.slice(prefix.length), v]));
 }
 
@@ -153,22 +153,22 @@ export function routeDepths(steps: readonly Pick<RouteStep, 'id' | 'seq' | 'stre
   return depth;
 }
 
-/** A crop plan's route off its labor standard, its stage map and the Phase 1 equipment list, with the scenario's step edits. */
+/** A grow plan's route off its labor standard, its stage map and the Phase 1 equipment list, with the scenario's step edits. */
 export function deriveRoute(input: {
-  cropPlan: GrowPlanDef;
+  growPlan: GrowPlanDef;
   standard: TimeStudyDoc | null;
   equipment: readonly EquipmentLine[];
-  /** The scenario's edits for this crop plan, keyed by step id (`routeOverlayFor`). */
+  /** The scenario's edits for this grow plan, keyed by step id (`routeOverlayFor`). */
   overlay?: Readonly<Record<string, RouteStepOverlay>>;
-}): CropPlanRoute {
-  const { cropPlan, standard } = input;
+}): GrowPlanRoute {
+  const { growPlan, standard } = input;
   const findings: RouteFinding[] = [];
   if (!standard) {
-    findings.push({ kind: 'no-study', stepId: null, detail: `${cropPlan.code} has no time study on file, so it has no route.` });
-    return { cropPlanCode: cropPlan.code, studyId: null, basis: null, sowingSize: 0, steps: [], order: [], findings };
+    findings.push({ kind: 'no-study', stepId: null, detail: `${growPlan.code} has no time study on file, so it has no route.` });
+    return { growPlanCode: growPlan.code, studyId: null, basis: null, sowingSize: 0, steps: [], order: [], findings };
   }
 
-  const scaffold = timeStudyScaffold(cropPlan);
+  const scaffold = timeStudyScaffold(growPlan);
   // A grow plan's daily lines are the calendar's, not the day's clock; its sow and harvest run at the stations, on no equipment.
   const routeLines = standard.lines.filter((l) => l.stream !== 'daily');
   const sowing = standard.sowingSize;
@@ -229,18 +229,18 @@ export function deriveRoute(input: {
     if (o.resourceKey !== undefined) step.resourceKey = o.resourceKey;
     step.edited = true;
     for (const a of step.after) {
-      if (!ids.has(a)) findings.push({ kind: 'unknown-predecessor', stepId: step.id, detail: `${step.task}: the scenario names "${a}" as a predecessor, and ${cropPlan.code}'s route has no step with that id.` });
+      if (!ids.has(a)) findings.push({ kind: 'unknown-predecessor', stepId: step.id, detail: `${step.task}: the scenario names "${a}" as a predecessor, and ${growPlan.code}'s route has no step with that id.` });
     }
     if (step.resourceKey !== null && !keys.has(step.resourceKey)) findings.push({ kind: 'unknown-resource', stepId: step.id, detail: `${step.task}: the scenario names "${step.resourceKey}", which is not in the equipment library.` });
   }
   for (const id of Object.keys(input.overlay ?? {})) {
-    if (!ids.has(id)) findings.push({ kind: 'unknown-predecessor', stepId: id, detail: `The scenario edits step "${id}", and ${cropPlan.code}'s route has no step with that id.` });
+    if (!ids.has(id)) findings.push({ kind: 'unknown-predecessor', stepId: id, detail: `The scenario edits step "${id}", and ${growPlan.code}'s route has no step with that id.` });
   }
 
   const order = routeOrder(steps);
-  if (!order) findings.push({ kind: 'cycle', stepId: null, detail: `${cropPlan.code}'s precedence edges form a cycle, so no step order satisfies them.` });
+  if (!order) findings.push({ kind: 'cycle', stepId: null, detail: `${growPlan.code}'s precedence edges form a cycle, so no step order satisfies them.` });
 
-  return { cropPlanCode: cropPlan.code, studyId: standard.id, basis: standard.basis, sowingSize: sowing, steps, order, findings };
+  return { growPlanCode: growPlan.code, studyId: standard.id, basis: standard.basis, sowingSize: sowing, steps, order, findings };
 }
 
 // ── The units as scheduling resources ─────────────────────────────────────────

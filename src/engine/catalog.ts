@@ -148,7 +148,7 @@ export function matchCatalogPrice(input: string, lines: CatalogLine[], date: str
 }
 
 /**
- * Match a crop plan line to a supplier's catalog. Exact name first, then a
+ * Match a grow plan line to a supplier's catalog. Exact name first, then a
  * containment match either way, so "Ground beef, 85/15" finds "Ground beef".
  * Returns null rather than guessing when nothing matches.
  */
@@ -400,7 +400,7 @@ export interface RequirementLine {
   unit: string;
   packSize: number;
   casesToOrder: number;
-  /** The crop plan's own reference cost per unit, used when the catalog has none. */
+  /** The grow plan's own reference cost per unit, used when the catalog has none. */
   fallbackUnitCost: number;
 }
 
@@ -414,8 +414,8 @@ export interface DraftPoLine {
   cases: number;
   unitPriceCents: number;
   extendedCents: number;
-  /** Where the price came from — the supplier's catalog or the crop plan's own figure. */
-  pricedFrom: 'catalog' | 'cropPlan';
+  /** Where the price came from — the supplier's catalog or the grow plan's own figure. */
+  pricedFrom: 'catalog' | 'growPlan';
   /** The date the catalog price came into force, when the catalog priced the line. */
   priceEffectiveFrom: string | null;
   /** Stated when a line matched by name but is not approved, or is approved with no price by this date. */
@@ -444,7 +444,7 @@ export interface PoBuildResult {
  * Group the day's requirement into one draft order per linked supplier.
  *
  * A line is priced off the supplier's APPROVED catalog line, at the price in
- * force on the order date, and off the crop plan's own reference cost otherwise;
+ * force on the order date, and off the grow plan's own reference cost otherwise;
  * which one was used is stated on the line rather than left to inference, and a
  * candidate line that was passed over says so. Season and minimum-order checks
  * annotate the line — they never silently change a quantity, because whether to
@@ -482,15 +482,15 @@ export function buildDraftPurchaseOrders(
     // everything else it states.
     const match = approved ?? candidate;
     const unitPrice = price?.unitPrice ?? null;
-    const pricedFrom: DraftPoLine['pricedFrom'] = unitPrice === null ? 'cropPlan' : 'catalog';
+    const pricedFrom: DraftPoLine['pricedFrom'] = unitPrice === null ? 'growPlan' : 'catalog';
     const effectivePrice = unitPrice ?? r.fallbackUnitCost;
     const unitPriceCents = cents(effectivePrice);
     const extendedCents = cents(effectivePrice * r.qty);
 
     const approvalNote = candidate
-      ? `${candidate.item} is a candidate line, not approved; priced off the crop plan's own figure.`
+      ? `${candidate.item} is a candidate line, not approved; priced off the grow plan's own figure.`
       : approved && unitPrice === null
-        ? `${approved.item} is approved but carries no price in force on ${orderedFor}; priced off the crop plan's own figure.`
+        ? `${approved.item} is approved but carries no price in force on ${orderedFor}; priced off the grow plan's own figure.`
         : null;
     const seasonalityNote =
       match && month !== null && !isAvailableInMonth(match.availStartMonth, match.availEndMonth, month)

@@ -6,48 +6,47 @@ import { PageControls } from '@/components/PageControls';
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, money, num } from '@/components/ui';
-import { sowingCosting, costCropPlan, costToServe, deriveCapacity } from '@/engine';
-import { CROP_PLAN_STATUS_LABELS, type CropPlanStatus } from '@/data/plan-data';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
-import { CropPlanEditor } from '@/components/CropPlanEditor';
-import { setCropPlanStatus } from '@/server/crop-plan-actions';
+import { sowingCosting, costPlanPerUnit, costToServe, deriveCapacity } from '@/engine';
+import { GROW_PLAN_STATUS_LABELS, type GrowPlanStatus } from '@/data/plan-data';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
+import { GrowPlanEditor } from '@/components/GrowPlanEditor';
+import { setGrowPlanStatus } from '@/server/grow-plan-actions';
 import { approveStandard } from '@/server/standard-actions';
 import { standardInForce, standardHistory, standardDiffers, standardLabel, type StandardVersionDoc } from '@/engine/standards';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScenario } from '@/state/scenario-store';
 import { assumptionsFor } from '@/engine/scenario';
-import { CropPlanPackagingCard } from '@/app/(farm)/farm/crop-plans/CropPlanPackagingCard';
+import { GrowPlanPackagingCard } from '@/app/(farm)/farm/grow-plans/GrowPlanPackagingCard';
 
 import { LINE_KIND_LABELS, leadVariety, planStageDays, planStages } from '@/data/grow-plan';
 import { CONTROL_POINT_BY_ID } from '@/data/produce-safety';
 import { targetsOfPlan } from '@/engine/nutrition-targets';
 import { unitSku } from '@/data/tray-formats';
 
-export function CropPlansClient({ standards, today }: { standards: StandardVersionDoc[]; today: string }) {
+export function GrowPlansClient({ standards, today }: { standards: StandardVersionDoc[]; today: string }) {
   const { resolved, isSuperAdmin, library } = useScenario();
-  const { cropPlan: selected, setCode } = useSelectedCropPlan();
-  const libraryCropPlan = library.find((r) => r.code === selected.code);
-  const libraryPlan = libraryCropPlan;
+  const { growPlan: selected, setCode } = useSelectedGrowPlan();
+  const libraryGrowPlan = library.find((r) => r.code === selected.code);
+  const libraryPlan = libraryGrowPlan;
   const router = useRouter();
   const [editor, setEditor] = useState<'create' | 'duplicate' | 'edit' | null>(null);
   // The editor opens inside the library card; a toolbar button sits far above it, so bring it into view.
   useEffect(() => {
-    if (editor) document.getElementById('crop-plan-editor')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (editor) document.getElementById('grow-plan-editor')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [editor]);
   const [statusPending, startStatus] = useTransition();
 
   // The library view shows 10 rows a frame, or 25 when expanded; paged, so a
-  // long library does not push the crop plan detail off the screen.
+  // long library does not push the grow plan detail off the screen.
   const [pageSize, setPageSize] = useState<10 | 25>(10);
   const [page, setPage] = useState(0);
-  const pageCount = Math.max(1, Math.ceil(resolved.cropPlans.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(resolved.growPlans.length / pageSize));
   const current = Math.min(page, pageCount - 1);
-  const pageRows = resolved.cropPlans.slice(current * pageSize, current * pageSize + pageSize);
+  const pageRows = resolved.growPlans.slice(current * pageSize, current * pageSize + pageSize);
 
   const growCosting = useMemo(() => costPlan(selected), [selected]);
-  const growPlan = selected;
-  const leadVarietyOf = growPlan ? leadVariety(growPlan) : undefined;
+  const leadVarietyOf = selected ? leadVariety(selected) : undefined;
   const planTargets = useMemo(() => targetsOfPlan(selected), [selected]);
   const cap = useMemo(
     () => deriveCapacity(selected, resolved.capacityInputs),
@@ -55,7 +54,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   );
   // Sowing costing → yield → costing down to the unit (the costing rule, `sowingCosting`).
   const sowing = useMemo(() => sowingCosting(selected, resolved.capacityInputs, resolved.assumptions.yield.shrinkAllowance.value), [selected, resolved.capacityInputs, resolved.assumptions.yield.shrinkAllowance.value]);
-  // The selected crop plan at its OWN labor standard and packaging (Roadmap N3).
+  // The selected grow plan at its OWN labor standard and packaging (Roadmap N3).
   const selectedAssumptions = useMemo(() => assumptionsFor(resolved, selected.code), [resolved, selected.code]);
   const serve = useMemo(() => costToServe(selected, selectedAssumptions, resolved.capacityInputs), [selected, selectedAssumptions, resolved.capacityInputs]);
   // ── The standard in force (Roadmap J5) ───────────────────────────────────
@@ -63,18 +62,18 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
   const inForce = useMemo(() => standardInForce(standards, selected.code, today), [standards, selected.code, today]);
   const history = useMemo(() => standardHistory(standards, selected.code), [standards, selected.code]);
   const differs = useMemo(
-    () => (inForce ? standardDiffers(inForce.snapshot, { cropPlan: selected, assumptions: selectedAssumptions }) : null),
+    () => (inForce ? standardDiffers(inForce.snapshot, { growPlan: selected, assumptions: selectedAssumptions }) : null),
     [inForce, selected, selectedAssumptions],
   );
-  const foodAtStandard = inForce ? costCropPlan(inForce.snapshot.cropPlan, inForce.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null;
-  const foodLive = costCropPlan(selected, shrink).totalInputCostPerUnit;
+  const foodAtStandard = inForce ? costPlanPerUnit(inForce.snapshot.growPlan, inForce.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null;
+  const foodLive = costPlanPerUnit(selected, shrink).totalInputCostPerUnit;
   const [stdDate, setStdDate] = useState(today);
   const [stdNotes, setStdNotes] = useState('');
   const [stdMsg, setStdMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [stdPending, startStd] = useTransition();
   function approve() {
     startStd(async () => {
-      const res = await approveStandard({ cropPlanCode: selected.code, effectiveFrom: stdDate, notes: stdNotes || null });
+      const res = await approveStandard({ growPlanCode: selected.code, effectiveFrom: stdDate, notes: stdNotes || null });
       if (res.ok) {
         setStdMsg({ kind: 'ok', text: `Approved ${res.label}, effective ${stdDate}.` });
         setStdNotes('');
@@ -113,7 +112,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
             </thead>
             <tbody>
               {pageRows.map((r) => {
-                const c = costCropPlan(r, resolved.assumptions.yield.shrinkAllowance.value);
+                const c = costPlanPerUnit(r, resolved.assumptions.yield.shrinkAllowance.value);
                 const k = deriveCapacity(r, resolved.capacityInputs);
                 const g = costPlan(r);
                 const lib = library.find((x) => x.code === r.code) as (typeof library)[number] & { id?: string } | undefined;
@@ -124,10 +123,10 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
                     <td className={`${(isSel ? 'font-semibold!' : 'font-medium!')}`}>{r.name}<div className="farm-c-faint farm-fs-xs">{formatNameOf(r)}</div></td>
                     <td>
                       {isSuperAdmin && lib?.id ? (
-                        <select className="farm-select" value={r.status} disabled={statusPending} onChange={(e) => { const status = e.target.value as CropPlanStatus; startStatus(async () => { await setCropPlanStatus({ id: lib.id, status }); router.refresh(); }); }}>
-                          {(Object.keys(CROP_PLAN_STATUS_LABELS) as CropPlanStatus[]).map((st) => <option key={st} value={st}>{CROP_PLAN_STATUS_LABELS[st]}</option>)}
+                        <select className="farm-select" value={r.status} disabled={statusPending} onChange={(e) => { const status = e.target.value as GrowPlanStatus; startStatus(async () => { await setGrowPlanStatus({ id: lib.id, status }); router.refresh(); }); }}>
+                          {(Object.keys(GROW_PLAN_STATUS_LABELS) as GrowPlanStatus[]).map((st) => <option key={st} value={st}>{GROW_PLAN_STATUS_LABELS[st]}</option>)}
                         </select>
-                      ) : CROP_PLAN_STATUS_LABELS[r.status]}
+                      ) : GROW_PLAN_STATUS_LABELS[r.status]}
                     </td>
                     <td>{r.channels.length === 0 ? '—' : r.channels.map((ph) => resolved.phases.find((p) => p.phase === ph)?.market ?? `Channel ${ph}`).join(', ')}</td>
                     <td className="num">{money(c.totalInputCostPerUnit)}</td>
@@ -143,7 +142,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 mt-[0.6rem]!">
           <span className="farm-kpi-sub">
-            {resolved.cropPlans.length === 0 ? 'No plans.' : `Plans ${current * pageSize + 1}–${Math.min(resolved.cropPlans.length, (current + 1) * pageSize)} of ${resolved.cropPlans.length}`}
+            {resolved.growPlans.length === 0 ? 'No plans.' : `Plans ${current * pageSize + 1}–${Math.min(resolved.growPlans.length, (current + 1) * pageSize)} of ${resolved.growPlans.length}`}
           </span>
           <span className="inline-flex gap-[0.4rem] items-center">
             <button type="button" className="farm-btn py-[0.1rem]! px-2!" onClick={() => setPage(0)} disabled={current === 0}>First</button>
@@ -162,20 +161,20 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         {isSuperAdmin && (
           <div className="flex gap-2 mt-3!">
             <button type="button" className="farm-btn primary" onClick={() => setEditor(editor === 'create' ? null : 'create')}>Add grow plan</button>
-            {libraryCropPlan && 'id' in libraryCropPlan && (
+            {libraryGrowPlan && 'id' in libraryGrowPlan && (
               <button type="button" className="farm-btn" onClick={() => setEditor(editor === 'edit' ? null : 'edit')}>Edit {selected.code} in the library</button>
             )}
           </div>
         )}
-        <div id="crop-plan-editor" className="scroll-mt-4" />
+        <div id="grow-plan-editor" className="scroll-mt-4" />
         {editor === 'create' && (
-          <CropPlanEditor mode="create" library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
+          <GrowPlanEditor mode="create" library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
-        {editor === 'duplicate' && libraryCropPlan && libraryPlan && (
-          <CropPlanEditor key={`dup-${libraryCropPlan.code}`} mode="create" plan={libraryPlan} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
+        {editor === 'duplicate' && libraryGrowPlan && libraryPlan && (
+          <GrowPlanEditor key={`dup-${libraryGrowPlan.code}`} mode="create" plan={libraryPlan} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
-        {editor === 'edit' && libraryCropPlan && libraryPlan && (
-          <CropPlanEditor mode="edit" plan={libraryPlan} cropPlanId={(libraryCropPlan as { id?: string }).id} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
+        {editor === 'edit' && libraryGrowPlan && libraryPlan && (
+          <GrowPlanEditor mode="edit" plan={libraryPlan} growPlanId={(libraryGrowPlan as { id?: string }).id} library={library} channels={resolved.phases.map((ph) => ({ phase: ph.phase, market: ph.market }))} onDone={() => setEditor(null)} />
         )}
         <p className="farm-kpi-sub mt-2">
           Production Planning plans grow plans In Service; Planned and Developing plans can be run singly. A plan lists
@@ -184,8 +183,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
       </Card>
 
       <PageControls>
-        <CropPlanSelector />
-        {isSuperAdmin && libraryCropPlan && (
+        <GrowPlanSelector />
+        {isSuperAdmin && libraryGrowPlan && (
           <button type="button" className="farm-btn ghost" aria-pressed={editor === 'duplicate'} onClick={() => setEditor(editor === 'duplicate' ? null : 'duplicate')}>Duplicate grow plan</button>
         )}
       </PageControls>
@@ -225,7 +224,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-6!">
-        <div className="farm-card-title m-0!">Crop plan detail</div>
+        <div className="farm-card-title m-0!">Grow plan detail</div>
       </div>
       <Card className="mt-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -257,7 +256,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
         </div>
       )}
 
-      {growCosting && cap.grow && growPlan && (
+      {growCosting && cap.grow && selected && (
         <>
           <Card title="Sowing costing → yield → costing down to the unit" className="mt-4">
             <div className="farm-scroll-x">
@@ -282,8 +281,8 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
               <table className="farm-table">
                 <thead><tr><th>Stage</th><th className="num">Days</th><th>Watering</th><th>Control point</th><th>What happens</th></tr></thead>
                 <tbody>
-                  {planStages(growPlan).filter((st) => st.key !== 'packed').map((st) => {
-                    const d = planStageDays(growPlan)[st.key as keyof ReturnType<typeof planStageDays>];
+                  {planStages(selected).filter((st) => st.key !== 'packed').map((st) => {
+                    const d = planStageDays(selected)[st.key as keyof ReturnType<typeof planStageDays>];
                     return (
                       <tr key={st.key} className={d === 0 ? 'farm-c-faint' : ''}>
                         <td>{st.name}</td>
@@ -324,10 +323,10 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           </div>
         </Card>
       )}
-      <CropPlanPackagingCard
-        cropPlanCode={selected.code}
-        cropPlanId={(libraryCropPlan as { id?: string } | undefined)?.id}
-        cropPlanChannels={selected.channels ?? []}
+      <GrowPlanPackagingCard
+        growPlanCode={selected.code}
+        growPlanId={(libraryGrowPlan as { id?: string } | undefined)?.id}
+        growPlanChannels={selected.channels ?? []}
       />
 
       <Card title={`Standard in force — ${selected.code}`} className="mt-4">
@@ -336,7 +335,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           <p className="farm-kpi-sub">
             <strong className="farm-c-ink">{standardLabel(inForce)}</strong>, effective {inForce.effectiveFrom}, approved by {inForce.approvedBy} on {inForce.approvedAt.slice(0, 10)}{inForce.notes ? ` — ${inForce.notes}` : ''}.
             Input cost per unit at the standard {money(foodAtStandard ?? 0, 4)}; at the live library and plan {money(foodLive, 4)}.
-            {differs ? ' The live crop plan or assumptions differ from the standard in force; sowings are costed at the standard until a new version is approved.' : ' The live crop plan and assumptions match the standard in force.'}
+            {differs ? ' The live grow plan or assumptions differ from the standard in force; sowings are costed at the standard until a new version is approved.' : ' The live grow plan and assumptions match the standard in force.'}
           </p>
         ) : (
           <p className="farm-kpi-sub">No approved standard is in force for {selected.code} as of {today}. Sowings are costed at the live library ({selected.code}@library) and the record says so.</p>
@@ -358,7 +357,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
                   <td>{v.effectiveFrom}</td>
                   <td>{v.approvedBy}</td>
                   <td>{v.approvedAt.slice(0, 10)}</td>
-                  <td className="num">{money(costCropPlan(v.snapshot.cropPlan, v.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 4)}</td>
+                  <td className="num">{money(costPlanPerUnit(v.snapshot.growPlan, v.snapshot.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit, 4)}</td>
                   <td className="farm-c-soft">{v.notes ?? ''}</td>
                 </tr>
               ))}
@@ -366,7 +365,7 @@ export function CropPlansClient({ standards, today }: { standards: StandardVersi
           </table>
         )}
         <p className="farm-kpi-sub mt-2">
-          A standard is the cropPlan as resolved on the plan of record plus the cost assumptions, frozen with an effective date. The ledger costs each sowing at the version in force on its production date and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
+          A standard is the growPlan as resolved on the plan of record plus the cost assumptions, frozen with an effective date. The ledger costs each sowing at the version in force on its production date and the sowing record names it. Editing the library or the plan changes what the next approval will freeze; it does not move a standard already in force. An effective date inside a locked period is refused.
         </p>
       </Card>
 

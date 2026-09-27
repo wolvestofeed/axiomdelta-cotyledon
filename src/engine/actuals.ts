@@ -21,7 +21,7 @@ import type { StaffDoc, PunchDoc, ClosedPayrollPeriodDoc } from '@/engine/payrol
 import type { TrayFormatKey } from '@/data/tray-formats';
 import { growSowingPrefill, type StageRecords } from '@/engine/sowing-record';
 
-type CropPlan = GrowPlanDef;
+type GrowPlan = GrowPlanDef;
 
 // ── Documents ───────────────────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ export function laborFromCrew(crew: readonly CrewHoursLine[]): { hours: number |
 export interface SowingRecordDoc {
   id: string;
   sowingId: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   /** ISO date. */
   productionDate: string;
   standardVersion: string;
@@ -144,8 +144,8 @@ export interface DistributionDoc {
   subscriberId?: string | null;
   /** The monthly invoice its completed route was added to. */
   invoiceId?: string | null;
-  /** The crop plan distributed, when known: cost of goods sold relieves that crop plan's standard (Roadmap N5, audit A9). */
-  cropPlanCode?: string | null;
+  /** The grow plan distributed, when known: cost of goods sold relieves that grow plan's standard (Roadmap N5, audit A9). */
+  growPlanCode?: string | null;
   routeCompletedAt?: string | null;
   notes: string | null;
 }
@@ -376,7 +376,7 @@ export function bundleThrough(bundle: ActualsBundle, period: string): ActualsBun
 export function toSowingExecution(doc: SowingRecordDoc): SowingExecution {
   return {
     sowingId: doc.sowingId,
-    cropPlanCode: doc.cropPlanCode,
+    growPlanCode: doc.growPlanCode,
     productionDate: doc.productionDate,
     standardVersion: doc.standardVersion,
     traysSown: doc.traysSown ?? doc.plannedUnits,
@@ -392,7 +392,7 @@ export function toSowingExecution(doc: SowingRecordDoc): SowingExecution {
 /** A finished-goods lot: one variety's output on a closed sowing record. */
 export interface FinishedLotRef {
   lotCode: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   variety: string;
   productionDate: string;
 }
@@ -407,7 +407,7 @@ export function finishedLotsOf(sowings: readonly SowingRecordDoc[]): FinishedLot
   for (const b of sowings) {
     for (const l of b.lots) {
       const lotCode = l.outputLotCode.trim();
-      if (lotCode) out.push({ lotCode, cropPlanCode: b.cropPlanCode, variety: l.variety, productionDate: b.productionDate });
+      if (lotCode) out.push({ lotCode, growPlanCode: b.growPlanCode, variety: l.variety, productionDate: b.productionDate });
     }
   }
   return out.sort((a, b) => b.productionDate.localeCompare(a.productionDate) || a.lotCode.localeCompare(b.lotCode));
@@ -427,20 +427,20 @@ export function standardSowingRecordPrefill(
   productionDate: string,
   sequence: number,
   units: number,
-  cropPlan: CropPlan,
+  growPlan: GrowPlan,
   shrinkAllowance: number = defaultAssumptions.yield.shrinkAllowance.value,
   /** The standard the record names: an approved version's label, else the live library's. */
-  standardVersion: string = libraryLabel(cropPlan.code),
+  standardVersion: string = libraryLabel(growPlan.code),
 ): Omit<SowingRecordDoc, 'id' | 'closedAt'> {
   const sowingId = sowingIdFor(productionDate, sequence);
-  return growSowingPrefill(cropPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
+  return growSowingPrefill(growPlan, productionDate, sequence, units, null, sowingId, standardVersion, shrinkAllowance);
 }
 
 // ── Receipts against the standard ───────────────────────────────────────────
 
 export interface ReceiptLineCost {
   line: ReceiptLine;
-  /** Standard price per unit in cents, from the crop plan line; null when the input is not on the crop plan. */
+  /** Standard price per unit in cents, from the grow plan line; null when the input is not on the grow plan. */
   standardUnitPriceCents: number | null;
   standardCents: number;
   invoiceCents: number;

@@ -1,10 +1,10 @@
 /**
- * MicroFarm — the standard cost of a unit, per crop plan (Roadmap N3).
+ * MicroFarm — the standard cost of a unit, per grow plan (Roadmap N3).
  *
- * The finding this closes (audit A2): every crop plan was charged one typed labor
+ * The finding this closes (audit A2): every grow plan was charged one typed labor
  * split — AMK-E-001's plan study scaled linearly — because nothing passed a
- * per-crop-plan figure, and the Time Studies page already showed each crop plan's own
- * study, so two pages disagreed about the same crop plan. Packaging had the same
+ * per-grow-plan figure, and the Time Studies page already showed each grow plan's own
+ * study, so two pages disagreed about the same grow plan. Packaging had the same
  * shape: picks were costed and ignored.
  */
 
@@ -25,10 +25,10 @@ const seedLibrary = [...growPlanSeed];
 const R = resolveScenarioInputs({}, seedLibrary);
 const rate = R.assumptions.labor.blendedLoadedWage.value;
 // A tray plan and a jar plan: the jar plan skips the blackout and light waterings, so its minutes differ.
-const e002 = R.cropPlans.find((r) => r.code === 'BROC-01')!;
-const e009 = R.cropPlans.find((r) => r.code === 'MUNG-01')!;
+const e002 = R.growPlans.find((r) => r.code === 'BROC-01')!;
+const e009 = R.growPlans.find((r) => r.code === 'MUNG-01')!;
 
-describe('labor is each crop plan\'s own standard', () => {
+describe('labor is each grow plan\'s own standard', () => {
   it('two plans on different stage schedules no longer carry the same minutes', () => {
     const minutes = (code: string, sowing: number) => laborMinutesPerUnit(R.laborStandards[code]!, sowing)!;
     const a = minutes(e002.code, deriveCapacity(e002, R.capacityInputs).sowingSize);
@@ -38,7 +38,7 @@ describe('labor is each crop plan\'s own standard', () => {
     expect(assumptionsFor(R, e002.code).laborSplit.variableMinutesPerUnit.value).not.toBeCloseTo(typed.laborSplit.variableMinutesPerUnit.value, 3);
   });
 
-  it('with no study library loaded, a crop plan carries its code estimate — the one the database is seeded with', () => {
+  it('with no study library loaded, a grow plan carries its code estimate — the one the database is seeded with', () => {
     const sowing = deriveCapacity(e002, R.capacityInputs).sowingSize;
     const est = summarizeStudy(estimatedTimeStudy(e002, sowing));
     const std = R.laborStandards[e002.code]!;
@@ -47,7 +47,7 @@ describe('labor is each crop plan\'s own standard', () => {
     expect(std.variableMinutesPerUnit).toBeCloseTo(est.variableMinutesPerUnit, 10);
   });
 
-  it('a loaded library with no study for the crop plan is a gap, never a borrowed figure', () => {
+  it('a loaded library with no study for the grow plan is a gap, never a borrowed figure', () => {
     const std = laborStandardFor(e002, [], 20);
     expect(std.basis).toBe('none');
     expect(laborMinutesPerUnit(std, 20)).toBeNull();
@@ -60,7 +60,7 @@ describe('labor is each crop plan\'s own standard', () => {
   it('an approved observed study outranks the estimate', () => {
     const observed: TimeStudyDoc = {
       id: 'obs-1',
-      cropPlanCode: e002.code,
+      growPlanCode: e002.code,
       cycleDays: 0,
       studiedOn: '2026-09-10',
       sowingSize: 400,
@@ -86,52 +86,52 @@ describe('labor is each crop plan\'s own standard', () => {
 });
 
 describe('one cost per unit, whichever surface asks (conformance C1, as far as N3 reaches)', () => {
-  it('Unit Economics and the Time Studies arithmetic agree about the reference crop plan', () => {
-    // Unit Economics: costPerUnit on the resolved reference crop plan.
-    const ue = costPerUnit(R.cropPlan, R.assumptions, R.capacityInputs).directLabor;
-    // Time Studies: the crop plan's study at its derived sowing, at the loaded rate.
-    const sowing = deriveCapacity(R.cropPlan, R.capacityInputs).sowingSize;
-    const ts = (laborMinutesForSowing(summarizeStudy(estimatedTimeStudy(R.cropPlan, sowing)), sowing) / sowing / 60) * rate;
+  it('Unit Economics and the Time Studies arithmetic agree about the reference grow plan', () => {
+    // Unit Economics: costPerUnit on the resolved reference grow plan.
+    const ue = costPerUnit(R.growPlan, R.assumptions, R.capacityInputs).directLabor;
+    // Time Studies: the grow plan's study at its derived sowing, at the loaded rate.
+    const sowing = deriveCapacity(R.growPlan, R.capacityInputs).sowingSize;
+    const ts = (laborMinutesForSowing(summarizeStudy(estimatedTimeStudy(R.growPlan, sowing)), sowing) / sowing / 60) * rate;
     expect(ue).toBeCloseTo(ts, 10);
   });
 
-  it('Crop plans costs a non-reference crop plan at its own labor, not the reference crop plan\'s', () => {
+  it('Grow plans costs a non-reference grow plan at its own labor, not the reference grow plan\'s', () => {
     const own = costPerUnit(e009, assumptionsFor(R, e009.code), R.capacityInputs).directLabor;
     const borrowed = costPerUnit(e009, R.assumptions, R.capacityInputs).directLabor;
     expect(own).not.toBeCloseTo(borrowed, 3);
   });
 
-  it('a production plan charges each run its own crop plan\'s labor', () => {
+  it('a production plan charges each run its own grow plan\'s labor', () => {
     const plan = planProductionDay({
       productionDate: '2026-09-14',
       requirements: [
-        { cropPlanCode: e002.code, cropPlanName: e002.name, units: 20, baseUnits: 20, byChannel: [], orders: 1, inLibrary: true },
-        { cropPlanCode: e009.code, cropPlanName: e009.name, units: 60, baseUnits: 60, byChannel: [], orders: 1, inLibrary: true },
+        { growPlanCode: e002.code, growPlanName: e002.name, units: 20, baseUnits: 20, byChannel: [], orders: 1, inLibrary: true },
+        { growPlanCode: e009.code, growPlanName: e009.name, units: 60, baseUnits: 60, byChannel: [], orders: 1, inLibrary: true },
       ],
       onHand: {},
-      cropPlans: R.cropPlans,
+      growPlans: R.growPlans,
       capacityInputs: R.capacityInputs,
       assumptions: R.assumptions,
-      cropPlanAssumptions: R.cropPlanAssumptions,
+      growPlanAssumptions: R.growPlanAssumptions,
     });
     for (const run of plan.runs) {
       if (run.sowingsScheduled === 0) continue;
-      const expected = laborForDay(run.sowingsScheduled, run.produced, assumptionsFor(R, run.cropPlanCode));
+      const expected = laborForDay(run.sowingsScheduled, run.produced, assumptionsFor(R, run.growPlanCode));
       expect(run.laborCost).toBeCloseTo(expected.directLaborCost, 8);
     }
   });
 });
 
-describe('packaging is the crop plan\'s picks at the library cost — no placeholder', () => {
-  it('a crop plan with no picks carries zero packaging', () => {
+describe('packaging is the grow plan\'s picks at the library cost — no placeholder', () => {
+  it('a grow plan with no picks carries zero packaging', () => {
     expect(assumptionsFor(R, e002.code).perUnit.packaging.value).toBe(0);
     expect(costPerUnit(e002, assumptionsFor(R, e002.code), R.capacityInputs).packaging).toBe(0);
   });
 
-  it('a crop plan with picks carries their cost, and no other crop plan is touched', () => {
+  it('a grow plan with picks carries their cost, and no other grow plan is touched', () => {
     const seed = seedPackagingLibrary();
     const pkg = { ...seed.packages[0]!, id: 'pkg-1', manualUnitCost: 0.31 };
-    const lib: PackagingLibrary = { ...seed, packages: [pkg], picks: [{ id: 'pick-1', cropPlanCode: e002.code, packageId: 'pkg-1', qtyPerUnit: 2 }] };
+    const lib: PackagingLibrary = { ...seed, packages: [pkg], picks: [{ id: 'pick-1', growPlanCode: e002.code, packageId: 'pkg-1', qtyPerUnit: 2 }] };
     const withPicks = resolveScenarioInputs({}, seedLibrary, undefined, undefined, undefined, undefined, lib);
     const own = assumptionsFor(withPicks, e002.code).perUnit.packaging;
     expect(own.value).toBeCloseTo(0.62, 10);
@@ -145,10 +145,10 @@ describe('packaging is the crop plan\'s picks at the library cost — no placeho
     const lib: PackagingLibrary = {
       ...seed,
       packages: bare,
-      picks: bare.map((p, i) => ({ id: `pick-${i}`, cropPlanCode: e002.code, packageId: p.id, qtyPerUnit: 1 })),
+      picks: bare.map((p, i) => ({ id: `pick-${i}`, growPlanCode: e002.code, packageId: p.id, qtyPerUnit: 1 })),
     };
     const withPicks = resolveScenarioInputs({}, seedLibrary, undefined, undefined, undefined, undefined, lib);
-    expect(withPicks.cropPlanCosts[e002.code]!.packagingPerUnit).toBe(0);
+    expect(withPicks.growPlanCosts[e002.code]!.packagingPerUnit).toBe(0);
     expect(costPerUnit(e002, assumptionsFor(withPicks, e002.code), withPicks.capacityInputs).packaging).toBe(0);
   });
 

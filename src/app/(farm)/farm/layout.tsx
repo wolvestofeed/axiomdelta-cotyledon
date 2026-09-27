@@ -15,7 +15,7 @@ import { LedgerProvider } from '@/state/ledger';
 import { LEDGER_COOKIE, isLedgerKind } from '@/engine/ledger-view';
 import { getFarmAccess } from '@/server/access';
 import { getScenarioView, listScenarios } from '@/server/scenarios';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listNutrients } from '@/server/nutrients';
 import { listSubscribers } from '@/server/subscribers';
 import { listEquipment } from '@/server/equipment';
@@ -67,7 +67,7 @@ async function FarmLayoutInner({ children }: { children: React.ReactNode }) {
   const [view, saved, library, subscribers, calendar, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, nutrients] = await Promise.all([
     getScenarioView(),
     listScenarios({ userId: access.userId, isSuperAdmin: access.isSuperAdmin }),
-    listCropPlans(),
+    listGrowPlans(),
     listSubscribers(),
     loadCalendar(),
     listEquipment(),

@@ -12,7 +12,7 @@ import { OpeningBalanceForm } from '@/components/OpeningBalanceForm';
 import { capexRollup } from '@/engine/fixed-costs';
 import { AdminOnlyNotice } from '@/components/AdminOnly';
 import { withWorkspace } from '@/server/workspace';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { listTimeStudies } from '@/server/time-studies';
 import { listNutrients } from '@/server/nutrients';
 import { measuredRows } from '@/engine/measured-consumption';
@@ -42,7 +42,7 @@ async function ActualsPageInner({
     loadCalendar(),
     loadPostingLog(),
     searchParams,
-    listCropPlans(),
+    listGrowPlans(),
     listTimeStudies(),
     listNutrients(),
   ]);
@@ -156,7 +156,7 @@ async function ActualsPageInner({
           <p className="farm-kpi-sub mt-2">
             The Plan column is the same month on the Plan ledger — the saved open forecast run day by day and posted
             through the same functions — {planMonth ? '' : `and ${period} is outside its window (${plan.ledger.from} to ${plan.ledger.to}), so it reads —`}. The
-            full comparison by period, cropPlan, channel and subscriber is Roadmap N7.
+            full comparison by period, growPlan, channel and subscriber is Roadmap N7.
           </p>
         </Card>
 

@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, money, num, pct } from '@/components/ui';
 import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
-import { costPerUnit, packedUnitOz, costCropPlan } from '@/engine';
-import { channelCropPlanEconomics, phaseEconomics } from '@/engine/phase';
+import { costPerUnit, packedUnitOz, costPlanPerUnit } from '@/engine';
+import { channelGrowPlanEconomics, phaseEconomics } from '@/engine/phase';
 import { assumptionsFor } from '@/engine/scenario';
 import { useLedgerBook, useStatementPeriod } from '@/state/ledger';
 import { LedgerStatus, PeriodPicker, dollars, signed } from '@/components/ledger/LedgerParts';
@@ -19,29 +19,29 @@ const DEFAULTS = resolveScenarioInputs();
 import { useScenario } from '@/state/scenario-store';
 import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
 import { PageControls } from '@/components/PageControls';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 
 export default function UnitEconomicsPage() {
   const { resolved: scenario, setPhase, setPhaseProfile, resetSection } = useScenario();
-  const { cropPlan: selected } = useSelectedCropPlan();
-  // The page is the cost card of the SELECTED crop plan: every figure below runs
-  // the scenario with that crop plan as the reference.
-  const resolved = useMemo(() => ({ ...scenario, cropPlan: selected }), [scenario, selected]);
+  const { growPlan: selected } = useSelectedGrowPlan();
+  // The page is the cost card of the SELECTED grow plan: every figure below runs
+  // the scenario with that grow plan as the reference.
+  const resolved = useMemo(() => ({ ...scenario, growPlan: selected }), [scenario, selected]);
 
   const econ = useMemo(() => phaseEconomics(resolved), [resolved]);
-  // Each channel on the crop plans it offers, not on the selected one (Roadmap N9).
-  const byChannel = useMemo(() => channelCropPlanEconomics(scenario), [scenario]);
+  // Each channel on the grow plans it offers, not on the selected one (Roadmap N9).
+  const byChannel = useMemo(() => channelGrowPlanEconomics(scenario), [scenario]);
   const ownAssumptions = assumptionsFor(scenario, selected.code);
-  // The base packed unit is DERIVED from the resolved crop plan's harvested yields
-  // (a yield edit on Crop plans moves it); the unit factor is the stored knob.
+  // The base packed unit is DERIVED from the resolved grow plan's harvested yields
+  // (a yield edit on Grow plans moves it); the unit factor is the stored knob.
   const baseUnitOz = useMemo(
-    () => packedUnitOz(resolved.cropPlan).totalOz,
-    [resolved.cropPlan],
+    () => packedUnitOz(resolved.growPlan).totalOz,
+    [resolved.growPlan],
   );
   // The cost of a unit: food + labor + packaging (operating-model-roadmap §3.5).
   // Distribution and commission are selling costs after it; fixed cost is a period
   // metric below and never enters it.
-  const base = useMemo(() => costPerUnit(resolved.cropPlan, ownAssumptions, resolved.capacityInputs), [resolved, ownAssumptions]);
+  const base = useMemo(() => costPerUnit(resolved.growPlan, ownAssumptions, resolved.capacityInputs), [resolved, ownAssumptions]);
   // Fixed cost per unit and absorption come off the selected ledger (Roadmap N6): Plan posts
   // the open forecast day by day, Actual the recorded documents.
   const { book, error: bookError, pending: bookPending } = useLedgerBook();
@@ -69,8 +69,8 @@ export default function UnitEconomicsPage() {
   // The weight basis every per-unit figure is stated against. Without it a
   // unit-size change moves input cost with nothing on the page to read it
   // against.
-  const chain = useMemo(() => costCropPlan(resolved.cropPlan), [resolved.cropPlan]);
-  const grow = useMemo(() => costPlan(resolved.cropPlan), [resolved.cropPlan]);
+  const chain = useMemo(() => costPlanPerUnit(resolved.growPlan), [resolved.growPlan]);
+  const grow = useMemo(() => costPlan(resolved.growPlan), [resolved.growPlan]);
 
   const buildUp = [
     {
@@ -80,17 +80,17 @@ export default function UnitEconomicsPage() {
         ? `One ${grow.format.name}: seed ${money(grow.perTray.seed)}, medium ${money(grow.perTray.medium)}, nutrient ${money(grow.perTray.nutrient)}, light ${money(grow.perTray.light)}, consumables ${money(grow.perTray.consumables)} — ${num(grow.harvestGramsPerTray, 0)} g harvest on the record, ${money(grow.costPerHarvestOz, 4)} an ounce`
         : `${chain.packedOzPerUnit.toFixed(2)} oz packed at ${money(chain.costPerPackedOz, 4)}/oz — from ${chain.seedOzPerUnit.toFixed(2)} oz as purchased`,
     },
-    { label: 'Direct labor', value: base.directLabor, note: `${resolved.cropPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[resolved.laborStandards[resolved.cropPlan.code]?.basis ?? 'none'].toLowerCase()} — at its ${num(econ[0].sowingSize)}-unit derived sowing: ${num(ownAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} fixed minutes over the sowing plus ${ownAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(3)} minutes a unit, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each crop plan carries its own standard; this is ${resolved.cropPlan.code}'s` },
+    { label: 'Direct labor', value: base.directLabor, note: `${resolved.growPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[resolved.laborStandards[resolved.growPlan.code]?.basis ?? 'none'].toLowerCase()} — at its ${num(econ[0].sowingSize)}-unit derived sowing: ${num(ownAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} fixed minutes over the sowing plus ${ownAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(3)} minutes a unit, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each grow plan carries its own standard; this is ${resolved.growPlan.code}'s` },
     {
       label: 'Packaging',
       value: base.packaging,
-      // The packages the reference crop plan picks, at the library's cost.
+      // The packages the reference grow plan picks, at the library's cost.
       note: (() => {
         const names = resolved.packaging.picks
-          .filter((p) => p.cropPlanCode === resolved.cropPlan.code)
+          .filter((p) => p.growPlanCode === resolved.growPlan.code)
           .map((p) => resolved.packaging.packages.find((x) => x.id === p.packageId)?.name)
           .filter((n): n is string => Boolean(n));
-        return names.length === 0 ? `No packages picked for ${resolved.cropPlan.code}` : `${names.join(', ')} — at the packaging library's cost`;
+        return names.length === 0 ? `No packages picked for ${resolved.growPlan.code}` : `${names.join(', ')} — at the packaging library's cost`;
       })(),
     },
   ];
@@ -102,18 +102,18 @@ export default function UnitEconomicsPage() {
         purpose="Test price and unit per channel against a grow plan’s cost per tray."
         functions={['Inputs', 'Per-phase cost profile', 'Cost of a unit', 'Contribution margin', 'Fixed cost and absorption']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'from' },
+          { href: '/farm/grow-plans', dir: 'from' },
           { href: '/farm/financials/pnl', dir: 'to' },
         ]}
         howItWorks={
           <ul>
-            <li>The cost card is the selected crop plan&rsquo;s.</li>
+            <li>The cost card is the selected grow plan&rsquo;s.</li>
             <li>Editing the price or unit size for a channel recomputes the cost per unit, contribution and units per sowing live.</li>
             <li>Changes flow to the Profit &amp; Loss and are saved as a forecast from the forecast bar.</li>
           </ul>
         }
         status="live"
-        right={<span className="inline-flex gap-3 items-center"><PageControls><CropPlanSelector /></PageControls>
+        right={<span className="inline-flex gap-3 items-center"><PageControls><GrowPlanSelector /></PageControls>
           <button
             type="button"
             className="farm-btn"
@@ -209,28 +209,28 @@ export default function UnitEconomicsPage() {
         </div>
       </Card>
 
-      <Card title="By channel — the crop plans each channel offers" className="mt-4">
+      <Card title="By channel — the grow plans each channel offers" className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table">
-            <thead><tr><th>Channel</th><th className="num">Crop plans offered</th><th className="num">Price</th><th className="num">Cost of a unit, mean</th><th className="num">Contribution, mean</th><th>Range</th></tr></thead>
+            <thead><tr><th>Channel</th><th className="num">Grow plans offered</th><th className="num">Price</th><th className="num">Cost of a unit, mean</th><th className="num">Contribution, mean</th><th>Range</th></tr></thead>
             <tbody>
               {byChannel.map((c) => {
-                const costs = c.cropPlans.map((r) => r.costPerUnit);
+                const costs = c.growPlans.map((r) => r.costPerUnit);
                 return (
                   <tr key={c.phase}>
                     <td className="font-medium!">{c.market}</td>
-                    <td className="num">{num(c.cropPlans.length)}</td>
+                    <td className="num">{num(c.growPlans.length)}</td>
                     <td className="num">{money(c.pricePerUnit)}</td>
                     <td className="num">{c.costPerUnit === null ? '—' : money(c.costPerUnit)}</td>
                     <td className={`num ${(c.contribution !== null && c.contribution < 0 ? 'farm-c-accent' : '')}`}>{c.contribution === null ? '—' : money(c.contribution)}</td>
-                    <td className="farm-c-soft farm-fs-xs">{costs.length === 0 ? 'No in-service crop plan is offered on this channel' : `${money(Math.min(...costs))} to ${money(Math.max(...costs))} a unit`}</td>
+                    <td className="farm-c-soft farm-fs-xs">{costs.length === 0 ? 'No in-service grow plan is offered on this channel' : `${money(Math.min(...costs))} to ${money(Math.max(...costs))} a unit`}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="farm-kpi-sub mt-2">Each in-service crop plan offered on a channel, on its own labor standard and packaging, at that channel&rsquo;s price and unit. The cards above are the selected crop plan at every channel.</p>
+        <p className="farm-kpi-sub mt-2">Each in-service grow plan offered on a channel, on its own labor standard and packaging, at that channel&rsquo;s price and unit. The cards above are the selected grow plan at every channel.</p>
       </Card>
 
       <div className="grid gap-4 mt-4 farm-autofit-20">

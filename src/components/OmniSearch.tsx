@@ -12,7 +12,7 @@ import {
 
 /**
  * The umbrella: one search across every directory — suppliers, prospects, sources,
- * crop plans, equipment, pickup points, courses, lots. A hit lands on the record, and offers
+ * grow plans, equipment, pickup points, courses, lots. A hit lands on the record, and offers
  * the surfaces that can link to it, which is what makes the platform read as one
  * system rather than a set of pages that each own a list.
  *
@@ -91,7 +91,7 @@ export function OmniSearch() {
         className="farm-omni-input"
         type="search"
         value={q}
-        placeholder="Search…" title="Search suppliers, prospects, sources, crop plans, equipment"
+        placeholder="Search…" title="Search suppliers, prospects, sources, grow plans, equipment"
         aria-label="Search every directory"
         onChange={(e) => setQ(e.target.value)}
         onFocus={() => {
@@ -153,7 +153,7 @@ export function OmniSearch() {
             ))
           )}
           <div className="farm-omni-foot">
-            Searches the supplier, prospect, source, cropPlan, equipment, pickupPoint, course and lot
+            Searches the supplier, prospect, source, growPlan, equipment, pickupPoint, course and lot
             directories. Records are read-only here; “Link to…” opens the surface that sets the link.
           </div>
         </div>

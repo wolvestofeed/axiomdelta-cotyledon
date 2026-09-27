@@ -6,10 +6,10 @@ import type { StandardSnapshot, StandardVersionDoc } from '@/engine/standards';
 
 /** MicroFarm — approved standard versions, read layer (server-only). */
 export async function loadStandards(): Promise<StandardVersionDoc[]> {
-  const rows = await db.select().from(farmStandardVersions).orderBy(asc(farmStandardVersions.cropPlanCode), asc(farmStandardVersions.version));
+  const rows = await db.select().from(farmStandardVersions).orderBy(asc(farmStandardVersions.growPlanCode), asc(farmStandardVersions.version));
   return rows.map((r) => ({
     id: r.id,
-    cropPlanCode: r.cropPlanCode,
+    growPlanCode: r.growPlanCode,
     version: r.version,
     effectiveFrom: typeof r.effectiveFrom === 'string' ? r.effectiveFrom : String(r.effectiveFrom),
     approvedBy: r.approvedBy,
@@ -21,11 +21,11 @@ export async function loadStandards(): Promise<StandardVersionDoc[]> {
 
 /**
  * A stored snapshot as the engine reads it. A snapshot frozen before the library held plain grow
- * plans carries the grow plan inside the old projected shape, as `cropPlan.plan`; the grow plan is
+ * plans carries the grow plan inside the old projected shape, as `growPlan.plan`; the grow plan is
  * read from there. Its frozen line prices were on the projected lines and are not carried over.
  */
 function snapshotFrom(raw: unknown): StandardSnapshot {
-  const snap = raw as StandardSnapshot & { cropPlan: { lines?: unknown; plan?: StandardSnapshot['cropPlan'] } };
-  if (!Array.isArray(snap.cropPlan.lines) && snap.cropPlan.plan) return { ...snap, cropPlan: snap.cropPlan.plan };
+  const snap = raw as StandardSnapshot & { growPlan: { lines?: unknown; plan?: StandardSnapshot['growPlan'] } };
+  if (!Array.isArray(snap.growPlan.lines) && snap.growPlan.plan) return { ...snap, growPlan: snap.growPlan.plan };
   return snap;
 }

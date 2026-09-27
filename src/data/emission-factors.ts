@@ -344,14 +344,14 @@ export const inputFactors: FoodFactor[] = compiledFood.products.map((p) => ({
  * bought by the piece need a mass per piece; that mass carries its own status tag. Empty until the
  * seed, medium, nutrient and light lines are mapped (Phase 5): every line reads as not yet mapped.
  */
-export interface CropPlanFoodMapping {
+export interface GrowPlanFoodMapping {
   category: string | null;
   massKgPerEach?: number;
   massStatus?: StatusTag;
   note?: string;
 }
 
-export const cropPlanFoodCategoryMap: Record<string, CropPlanFoodMapping> = {};
+export const growPlanFoodCategoryMap: Record<string, GrowPlanFoodMapping> = {};
 
 // ── Scope 1: refrigerant leak-repair rules (EPA AIM Act, 40 CFR 84 Subpart C)
 

@@ -57,7 +57,7 @@ function RouteCard({ today, routes }: { today: string; routes: { subscriberId: s
 }
 const dateLabel = (d: string) => `${WEEKDAY_LABELS[weekdayOf(d)]} ${d}`;
 
-type FloorInputs = Pick<ResolvedInputs, 'cropPlans' | 'subscribers' | 'capacityInputs' | 'assumptions' | 'cropPlanAssumptions' | 'phases' | 'phaseProfiles'> & {
+type FloorInputs = Pick<ResolvedInputs, 'growPlans' | 'subscribers' | 'capacityInputs' | 'assumptions' | 'growPlanAssumptions' | 'phases' | 'phaseProfiles'> & {
   pickupPoints: ResolvedInputs['demand']['pickupPoints'];
 };
 
@@ -96,17 +96,17 @@ export function GrowRoomClient({
   purchaseOrders: ReceivePo[];
 }) {
   const [receivingPoId, setReceivingPoId] = useState<string | null>(null);
-  const [closing, setClosing] = useState<{ seq: number; cropPlanCode: string; units: number; growUnitKey?: string | null } | null>(null);
+  const [closing, setClosing] = useState<{ seq: number; growPlanCode: string; units: number; growUnitKey?: string | null } | null>(null);
   const [shipping, setShipping] = useState<ShipOrder | null>(null);
   const [withinDays, setWithinDays] = useState<number | 'all'>(7);
 
   const A = inputs.assumptions;
   const shrink = A.yield.shrinkAllowance.value;
   const shelfLife = A.inventory.blackoutShelfLife.value;
-  const cropPlanNames = useMemo(() => Object.fromEntries(inputs.cropPlans.map((r) => [r.code, r.name])), [inputs.cropPlans]);
+  const growPlanNames = useMemo(() => Object.fromEntries(inputs.growPlans.map((r) => [r.code, r.name])), [inputs.growPlans]);
   const channelPriceCents = useMemo(() => Object.fromEntries(inputs.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>, [inputs.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [inputs.phaseProfiles]);
-  const bookFor = (from: string, to: string) => orderBook({ pickupPoints: inputs.pickupPoints, subscribers: inputs.subscribers, cycles, orders, from, to, channelPriceCents, cropPlanNames, closures });
+  const bookFor = (from: string, to: string) => orderBook({ pickupPoints: inputs.pickupPoints, subscribers: inputs.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures });
 
   // ── Receive: issued purchase orders with a line still outstanding ──────────
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
@@ -116,7 +116,7 @@ export function GrowRoomClient({
   );
   const receiveInputs = useMemo<ReceiveInput[]>(() => {
     const seen = new Map<string, ReceiveInput>();
-    for (const r of inputs.cropPlans) {
+    for (const r of inputs.growPlans) {
       for (const l of purchaseLines(r)) {
         if (l.kind === 'light') continue;
         const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.unitCost * 100), onFoodTraceabilityList: false };
@@ -124,7 +124,7 @@ export function GrowRoomClient({
       }
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [inputs.cropPlans]);
+  }, [inputs.growPlans]);
 
   const distributionById = useMemo(() => new Map(distributions.map((d) => [d.id, d])), [distributions]);
   const consumption = useMemo<Consumption[]>(
@@ -133,40 +133,40 @@ export function GrowRoomClient({
         .filter((o) => o.status === 'distributed')
         .map((o) => {
           const d = o.distributionId ? distributionById.get(o.distributionId) : undefined;
-          const pf = unitFactorFor(inputs.cropPlans.find((r) => r.code === o.cropPlanCode), o.channel, pfByChannel);
-          return { cropPlanCode: o.cropPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * pf };
+          const pf = unitFactorFor(inputs.growPlans.find((r) => r.code === o.growPlanCode), o.channel, pfByChannel);
+          return { growPlanCode: o.growPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * pf };
         }),
-    [orders, distributionById, pfByChannel, inputs.cropPlans],
+    [orders, distributionById, pfByChannel, inputs.growPlans],
   );
   const closedToday = useMemo(() => sowings.filter((b) => b.productionDate === today), [sowings, today]);
   // ── Sow: the grow calendar's sowings dated today, back-planned from the order book ──
   const growQueue = useMemo<CalendarSowing[]>(() => {
     const to = isoAddDays(today, 28);
-    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, cropPlans: inputs.cropPlans });
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, growPlans: inputs.growPlans });
     const openingSowings = sowings
       .filter((b) => b.goodUnits > 0)
-      .map((b) => ({ cropPlanCode: b.cropPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
-      .filter((b) => { const r = inputs.cropPlans.find((x) => x.code === b.cropPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; });
-    const h = planHorizon({ from: today, to, book: bookFor(today, to), cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: A, cropPlanAssumptions: inputs.cropPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
+      .map((b) => ({ growPlanCode: b.growPlanCode, sowDate: b.productionDate, trays: b.goodUnits }))
+      .filter((b) => { const r = inputs.growPlans.find((x) => x.code === b.growPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; });
+    const h = planHorizon({ from: today, to, book: bookFor(today, to), growPlans: inputs.growPlans, capacityInputs: inputs.capacityInputs, assumptions: A, growPlanAssumptions: inputs.growPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
     return h.growCalendar.sowings.filter((x) => x.sowDate === today && x.distributionDate !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A, closures]);
   const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
   const rawStock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: today }), [receipts, sowings, today]);
-  const closingCropPlan = closing ? inputs.cropPlans.find((r) => r.code === closing.cropPlanCode) : undefined;
+  const closingGrowPlan = closing ? inputs.growPlans.find((r) => r.code === closing.growPlanCode) : undefined;
   const closingPrefill = useMemo(() => {
-    if (!closing || !closingCropPlan) return null;
-    const std = standardInForce(standards, closing.cropPlanCode, today);
+    if (!closing || !closingGrowPlan) return null;
+    const std = standardInForce(standards, closing.growPlanCode, today);
     const prefill = standardSowingRecordPrefill(
       today,
       (sowingCountByDate[today] ?? 0) + 1,
       closing.units,
-      std?.snapshot.cropPlan ?? closingCropPlan,
+      std?.snapshot.growPlan ?? closingGrowPlan,
       std ? std.snapshot.assumptions.yield.shrinkAllowance.value : shrink,
       std ? standardLabel(std) : undefined,
     );
     return closing.growUnitKey !== undefined ? { ...prefill, growUnitKey: closing.growUnitKey } : prefill;
-  }, [closing, closingCropPlan, today, sowingCountByDate, shrink, standards]);
+  }, [closing, closingGrowPlan, today, sowingCountByDate, shrink, standards]);
 
   // ── Ship: today's confirmed orders ────────────────────────────────────────
   const toShip = useMemo(() => bookFor(today, today).filter((o) => o.basis === 'record' && o.status === 'confirmed' && o.id), [inputs, cycles, orders, today]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -219,14 +219,14 @@ export function GrowRoomClient({
         ) : (
           <div className="farm-floor-queue">
             {growQueue.map((x, i) => {
-              const closed = closedToday.some((b) => b.cropPlanCode === x.cropPlanCode && i < closedToday.filter((b) => b.cropPlanCode === x.cropPlanCode).length);
+              const closed = closedToday.some((b) => b.growPlanCode === x.growPlanCode && i < closedToday.filter((b) => b.growPlanCode === x.growPlanCode).length);
               return (
                 <div key={x.id} className={`farm-floor-row${closed ? ' done' : ''}`}>
                   <div>
-                    <div className="farm-floor-row-title">{i + 1} · {x.cropPlanCode} {x.cropPlanName} · {num(x.trays)} trays</div>
+                    <div className="farm-floor-row-title">{i + 1} · {x.growPlanCode} {x.growPlanName} · {num(x.trays)} trays</div>
                     <div className="farm-floor-row-sub">for {dateLabel(x.distributionDate!)} · harvest window {x.harvestFrom} to {x.harvestTo} · {x.placed ? `on the ${x.unitItem?.toLowerCase() ?? 'grow unit'}` : 'no room on any grow unit'} · <CheckPill ok={x.placed} okLabel="placed" overLabel="no room" /></div>
                   </div>
-                  {!closed && <button type="button" className={`farm-btn${closing?.seq === i + 1 ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === i + 1 ? null : { seq: i + 1, cropPlanCode: x.cropPlanCode, units: x.trays, growUnitKey: x.unitKey }))}>Close sowing record</button>}
+                  {!closed && <button type="button" className={`farm-btn${closing?.seq === i + 1 ? ' primary' : ''}`} onClick={() => setClosing((c) => (c?.seq === i + 1 ? null : { seq: i + 1, growPlanCode: x.growPlanCode, units: x.trays, growUnitKey: x.unitKey }))}>Close sowing record</button>}
                   {closed && <span className="farm-kpi-sub">closed</span>}
                 </div>
               );
@@ -235,8 +235,8 @@ export function GrowRoomClient({
         )}
         {closing && closingPrefill && (
           <div className="mt-3">
-            {closingCropPlan && isGrowSowing(closingPrefill) && (
-              <GrowSowingCloseForm prefill={closingPrefill} plan={closingCropPlan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingCropPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
+            {closingGrowPlan && isGrowSowing(closingPrefill) && (
+              <GrowSowingCloseForm prefill={closingPrefill} plan={closingGrowPlan} sowingCountByDate={sowingCountByDate} growUnits={inputs.capacityInputs.growUnits ?? defaultGrowUnits} planName={closingGrowPlan.name} onDone={() => setClosing(null)} onCancel={() => setClosing(null)} />
             )}
           </div>
         )}
@@ -254,9 +254,9 @@ export function GrowRoomClient({
               <div key={o.key} className="farm-floor-row">
                 <div>
                   <div className="farm-floor-row-title">{o.subscriberName} · {o.pickupPointName}</div>
-                  <div className="farm-floor-row-sub">{o.cropPlanCode} {o.cropPlanName} · {num(Math.round(o.units))} units ordered</div>
+                  <div className="farm-floor-row-sub">{o.growPlanCode} {o.growPlanName} · {num(Math.round(o.units))} units ordered</div>
                 </div>
-                <button type="button" className={`farm-btn${shipping?.id === o.id ? ' primary' : ''}`} onClick={() => setShipping((s) => (s?.id === o.id ? null : { id: o.id!, orderDate: o.orderDate, subscriberName: o.subscriberName, pickupPointName: o.pickupPointName, cropPlanCode: o.cropPlanCode, cropPlanName: o.cropPlanName, units: o.units, pricePerUnitCents: o.pricePerUnitCents }))}>Ship</button>
+                <button type="button" className={`farm-btn${shipping?.id === o.id ? ' primary' : ''}`} onClick={() => setShipping((s) => (s?.id === o.id ? null : { id: o.id!, orderDate: o.orderDate, subscriberName: o.subscriberName, pickupPointName: o.pickupPointName, growPlanCode: o.growPlanCode, growPlanName: o.growPlanName, units: o.units, pricePerUnitCents: o.pricePerUnitCents }))}>Ship</button>
               </div>
             ))}
           </div>

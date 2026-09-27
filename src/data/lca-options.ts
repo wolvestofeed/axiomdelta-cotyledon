@@ -29,7 +29,7 @@ export const BOUNDARY_LABEL: Record<LcaBoundary, string> = {
 export interface LcaOption {
   /** Stable id; also the provenance id of the registered figure it cites. */
   id: string;
-  /** Crop plan input name this option applies to. */
+  /** Grow plan input name this option applies to. */
   input: string;
   kind: 'cited_lca' | 'supplier';
   label: string;

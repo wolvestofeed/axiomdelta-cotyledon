@@ -29,13 +29,13 @@ async function ProduceSafetyPageInner() {
   // it, and forward to the pickup points it reached. Edges are the recorded links.
   const [rows, { inputs }, actuals, orders] = await Promise.all([allLinks(), getResolvedActiveInputs(), loadActuals(), listOrders()]);
   const today = new Date().toISOString().slice(0, 10);
-  const cropPlanName = (code: string) => inputs.cropPlans.find((r) => r.code === code)?.name ?? code;
+  const growPlanName = (code: string) => inputs.growPlans.find((r) => r.code === code)?.name ?? code;
 
   // The grow-model sowings: each against the control points on its plan's stages.
   const growSowings = actuals.sowings
     .filter(isGrowSowing)
     .map((b) => {
-      const plan = inputs.cropPlans.find((r) => r.code === b.cropPlanCode);
+      const plan = inputs.growPlans.find((r) => r.code === b.growPlanCode);
       return plan ? { b, checks: sowingRecordChecks(b.stageRecords ?? { seedTreatment: null, spentWaterTest: null, readings: [], harvestCheck: null }, plan) } : null;
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
@@ -43,7 +43,7 @@ async function ProduceSafetyPageInner() {
   const completeSowings = growSowings.filter((g) => g.checks.complete).length;
   const failedPoints = growSowings.reduce((n, g) => n + g.checks.points.filter((p) => p.status === 'failed').length, 0);
   const pf = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
-  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.cropPlans, pf), shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, asOf: today, cropPlans: inputs.cropPlans });
+  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.growPlans, pf), shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, asOf: today, growPlans: inputs.growPlans });
   const lotBySowing = new Map(onHand.lots.map((l) => [l.sowingId, l]));
   const edges: LotEdge[] = rows
     .filter((r) => r.fromKind === 'lot')
@@ -109,7 +109,7 @@ async function ProduceSafetyPageInner() {
           <table className="farm-table compact">
             <thead><tr><th>Plan</th><th>Format</th><th>Control points on its stages</th></tr></thead>
             <tbody>
-              {inputs.cropPlans.map((r) => (
+              {inputs.growPlans.map((r) => (
                 <tr key={r.code}><td>{r.code} · {r.name}</td><td>{r.format}</td><td>{controlPointsForPlan(r).map((c) => c.name).join(', ')}</td></tr>
               ))}
             </tbody>
@@ -130,7 +130,7 @@ async function ProduceSafetyPageInner() {
                 return (
                   <tr key={b.id}>
                     <td className="farm-mono farm-fs-xs">{b.sowingId}<div className="farm-c-faint farm-fs-2xs">{b.productionDate}{b.packedOn ? ` → ${b.packedOn}` : ''}</div></td>
-                    <td>{b.cropPlanCode}</td>
+                    <td>{b.growPlanCode}</td>
                     <td className="num">{num(b.traysSown ?? 0)}</td>
                     <td className="num">{num(b.traysPacked ?? 0)}</td>
                     <td>{cell('seed-sanitation')}</td>
@@ -158,7 +158,7 @@ async function ProduceSafetyPageInner() {
             return (
               <div key={b.sowingId} className="border-t border-t-[color:var(--farm-line)] pt-[0.7rem] mt-[0.7rem]!">
                 <div className="font-semibold">
-                  Lot {b.sowingId} — {cropPlanName(b.cropPlanCode)}
+                  Lot {b.sowingId} — {growPlanName(b.growPlanCode)}
                   <span className="font-normal farm-c-soft">
                     {' '}· sown {b.productionDate} · failed at {failed.map((f) => f.point.name).join(', ')} · {lot ? `${Math.round(lot.qtyProduced)} trays packed, ${Math.round(Math.max(0, lot.remaining))} on hand` : 'quantity not on file'}
                   </span>

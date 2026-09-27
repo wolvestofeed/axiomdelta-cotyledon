@@ -25,7 +25,7 @@ async function VarietiesPageInner() {
         purpose="Read each variety's record: seed, density, stages, light and media, and what the science states."
         functions={['Seed and supplier', 'Density and stages', 'Light and media', 'Nutrient profile', 'Targets']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'to' },
+          { href: '/farm/grow-plans', dir: 'to' },
           { href: '/farm/sources', dir: 'to' },
         ]}
         howItWorks={
@@ -64,7 +64,7 @@ async function VarietiesPageInner() {
             </tbody>
           </table>
         </div>
-        <p className="farm-kpi-sub mt-2">Prices are True Leaf Market&rsquo;s 5-pound tier as Vallecito bought it in January 2024 (DATED); densities are what Vallecito sowed (STATED); harvest weights are PLACEHOLDER until closed sowings observe them. Each variety&rsquo;s plan is on <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>.</p>
+        <p className="farm-kpi-sub mt-2">Prices are True Leaf Market&rsquo;s 5-pound tier as Vallecito bought it in January 2024 (DATED); densities are what Vallecito sowed (STATED); harvest weights are PLACEHOLDER until closed sowings observe them. Each variety&rsquo;s plan is on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>.</p>
       </Card>
 
       {VARIETIES.map((v) => {

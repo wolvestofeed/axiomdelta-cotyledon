@@ -6,7 +6,7 @@ import { withWorkspace } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
-/** The process map (scheduler build plan W3): a crop plan's route, edited step by step in the forecast. */
+/** The process map (scheduler build plan W3): a grow plan's route, edited step by step in the forecast. */
 export default async function ProcessPage() {
   return withWorkspace(() => ProcessPageInner());
 }

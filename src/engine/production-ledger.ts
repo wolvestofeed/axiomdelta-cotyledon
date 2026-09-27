@@ -81,7 +81,7 @@ import { laborForDay, type OverheadAbsorption } from '@/engine';
 import { GRAMS_PER_LB } from '@/data/tray-formats';
 import { lineLabel, type GrowPlanDef } from '@/data/grow-plan';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
-import { laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import { laborStandard, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { splitLoadedLaborCents } from '@/engine/comp';
 import { assumptions as defaultAssumptions } from '@/data/plan-data';
@@ -254,13 +254,13 @@ export interface ProductionLedgerOptions {
 export function productionSowingLedger(
   sowing: SowingExecution,
   opts: ProductionLedgerOptions,
-  cropPlan: GrowPlanDef,
+  growPlan: GrowPlanDef,
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
   const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;
   const notes: string[] = [];
-  const costing = costPlan(cropPlan);
-  if (!costing) notes.push(`${cropPlan.code} is not a grow plan: it has no cost card per tray, so its material, light and consumables post at zero.`);
+  const costing = costPlan(growPlan);
+  if (!costing) notes.push(`${growPlan.code} is not a grow plan: it has no cost card per tray, so its material, light and consumables post at zero.`);
   const perTray = costing?.perTray ?? { seed: 0, medium: 0, nutrient: 0, light: 0, consumables: 0, total: 0 };
 
   const trays = sowing.traysSown;
@@ -279,7 +279,7 @@ export function productionSowingLedger(
   const sowings = opts.sowings ?? 1;
   const labor = laborForDay(sowings, trays, assumptions);
   const directLaborStandard = labor.directLaborCost;
-  const study = summarizeStudy(laborStandard(studiesForCropPlan(opts.studies ?? [], cropPlan.code)) ?? estimatedTimeStudy(cropPlan, Math.max(1, trays)));
+  const study = summarizeStudy(laborStandard(studiesForGrowPlan(opts.studies ?? [], growPlan.code)) ?? estimatedTimeStudy(growPlan, Math.max(1, trays)));
   const streamMinutes = study.sowingLaborMinutes + study.dailyLaborMinutes + study.harvestLaborMinutes;
   const streamShare = streamMinutes > 0
     ? { sow: study.sowingLaborMinutes / streamMinutes, grow: study.dailyLaborMinutes / streamMinutes }
@@ -388,11 +388,11 @@ export function productionSowingLedger(
 
   // Packaging is received into its own inventory before the pack stage draws
   // on it; without this receipt the packaging account would carry a credit
-  // balance — an asset that reads as negative stock. A crop plan whose picked
+  // balance — an asset that reads as negative stock. A grow plan whose picked
   // packaging has no cost entered posts nothing here: zero legs are dropped.
   entries.push(
     entry(`${sowing.sowingId}-PKG-RECV`, date, 'Receive packaging at standard cost', [
-      { account: ACC_PACKAGING, dollars: packagingCost, memo: `The crop plan's picked packaging for ${units.toLocaleString()} units` },
+      { account: ACC_PACKAGING, dollars: packagingCost, memo: `The grow plan's picked packaging for ${units.toLocaleString()} units` },
       { account: '2010', dollars: -packagingCost, memo: 'Accounts payable' },
     ]),
   );

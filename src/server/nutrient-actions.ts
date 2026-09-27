@@ -9,7 +9,7 @@ import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { tagged, type Tagged } from '@/data/tagged';
 import { SCIENCE_SOURCE_BY_ROW } from '@/data/science-library';
 import { costPerMlFrom, deleteRefusal, nutrientKeyFor } from '@/engine/nutrients';
-import { listCropPlans } from '@/server/crop-plans';
+import { listGrowPlans } from '@/server/grow-plans';
 import { withWorkspace } from '@/server/workspace';
 
 /**
@@ -144,7 +144,7 @@ async function deleteNutrientInner(input: unknown): Promise<Result> {
   }
   const row = await db.select({ key: farmNutrients.key }).from(farmNutrients).where(eq(farmNutrients.id, parsed.data.id)).limit(1);
   if (!row[0]) return { ok: false, error: 'That row no longer exists.' };
-  const plans = await listCropPlans();
+  const plans = await listGrowPlans();
   const refusal = deleteRefusal(row[0].key, plans);
   if (refusal) return { ok: false, error: refusal };
   await db.delete(farmNutrients).where(eq(farmNutrients.id, parsed.data.id));

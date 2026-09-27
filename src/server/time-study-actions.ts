@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { farmCropPlans, farmNutrients, farmTimeStudies, farmTimeStudyIntervals } from '@/db';
+import { farmGrowPlans, farmNutrients, farmTimeStudies, farmTimeStudyIntervals } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { appendPosting } from '@/server/posting-log';
@@ -17,7 +17,7 @@ import { approveStandardVersion, standardRefusal } from '@/server/standard-appro
  * task lines, and the water and supplements applied to the sowing studied; the estimates
  * are seeded, never typed), approving it — an entry on the posting trail that puts it in
  * the plan's averaged labor standard and measured consumption and approves a standard
- * version effective that day — and setting a crop plan's re-study interval.
+ * version effective that day — and setting a grow plan's re-study interval.
  */
 
 type Result<T = unknown> = ({ ok: true } & (T extends object ? T : object)) | { ok: false; error: string };
@@ -60,7 +60,7 @@ const Supplement = z.object({
 });
 
 const StudyInput = z.object({
-  cropPlanId: z.string().uuid(),
+  growPlanId: z.string().uuid(),
   studiedOn: isoDate,
   sowingSize: z.number().int().min(1, 'Sowing size must be at least one unit').max(100_000),
   /** Days a tray was on its grow unit: what the daily lines multiply by. */
@@ -85,11 +85,11 @@ async function recordTimeStudyInner(input: unknown): Promise<Result<{ id: string
   } catch (e) {
     return refuse(e);
   }
-  const { cropPlanId, ...study } = parsed.data;
+  const { growPlanId, ...study } = parsed.data;
   const known = new Set((await db.select({ key: farmNutrients.key }).from(farmNutrients)).map((r) => r.key));
   const unknown = [...new Set(study.consumption.supplements.map((e) => e.nutrientKey).filter((k) => !known.has(k)))];
   if (unknown.length) return { ok: false, error: `Not in the Nutrients & Supplements library: ${unknown.join(', ')}.` };
-  const id = await insertTimeStudy(db, cropPlanId, { ...study, qualityNotes: study.qualityNotes || null, basis: 'observed' }, 'user_built', access.email ?? access.userId);
+  const id = await insertTimeStudy(db, growPlanId, { ...study, qualityNotes: study.qualityNotes || null, basis: 'observed' }, 'user_built', access.email ?? access.userId);
   if (!id) return { ok: false, error: 'Failed to record the study.' };
   revalidatePath('/farm', 'layout');
   return { ok: true, id };
@@ -118,9 +118,9 @@ async function approveTimeStudyInner(input: unknown): Promise<Result<{ label: st
   const refusal = await standardRefusal(today);
   if (refusal) return { ok: false, error: refusal };
   const found = await db
-    .select({ id: farmTimeStudies.id, basis: farmTimeStudies.basis, approvedAt: farmTimeStudies.approvedAt, cropPlanId: farmTimeStudies.cropPlanId, studiedOn: farmTimeStudies.studiedOn, sowingSize: farmTimeStudies.sowingSize, code: farmCropPlans.code })
+    .select({ id: farmTimeStudies.id, basis: farmTimeStudies.basis, approvedAt: farmTimeStudies.approvedAt, growPlanId: farmTimeStudies.growPlanId, studiedOn: farmTimeStudies.studiedOn, sowingSize: farmTimeStudies.sowingSize, code: farmGrowPlans.code })
     .from(farmTimeStudies)
-    .innerJoin(farmCropPlans, eq(farmCropPlans.id, farmTimeStudies.cropPlanId))
+    .innerJoin(farmGrowPlans, eq(farmGrowPlans.id, farmTimeStudies.growPlanId))
     .where(eq(farmTimeStudies.id, parsed.data.id))
     .limit(1);
   const study = found[0];
@@ -137,22 +137,22 @@ async function approveTimeStudyInner(input: unknown): Promise<Result<{ label: st
       recordKind: 'time_study',
       recordId: study.id,
       period: today.slice(0, 7),
-      detail: { cropPlanCode: study.code, studiedOn: study.studiedOn, sowingSize: study.sowingSize },
+      detail: { growPlanCode: study.code, studiedOn: study.studiedOn, sowingSize: study.sowingSize },
     });
   });
-  const standard = await approveStandardVersion(access, { cropPlanCode: study.code, effectiveFrom: today, notes: `Time study of ${study.studiedOn ?? 'no date'} approved` });
+  const standard = await approveStandardVersion(access, { growPlanCode: study.code, effectiveFrom: today, notes: `Time study of ${study.studiedOn ?? 'no date'} approved` });
   if (!standard.ok) return standard;
   revalidatePath('/farm', 'layout');
   return { ok: true, label: standard.label };
 }
 
-/** Set a crop plan's re-study interval in days, or clear it with null. */
+/** Set a grow plan's re-study interval in days, or clear it with null. */
 export async function setRestudyInterval(...args: Parameters<typeof setRestudyIntervalInner>): ReturnType<typeof setRestudyIntervalInner> {
   return withWorkspace(() => setRestudyIntervalInner(...args));
 }
 
 async function setRestudyIntervalInner(input: unknown): Promise<Result> {
-  const parsed = z.object({ cropPlanId: z.string().uuid(), intervalDays: z.number().int().min(1, 'The interval is at least one day').max(3650).nullable() }).safeParse(input);
+  const parsed = z.object({ growPlanId: z.string().uuid(), intervalDays: z.number().int().min(1, 'The interval is at least one day').max(3650).nullable() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
   try {
@@ -160,14 +160,14 @@ async function setRestudyIntervalInner(input: unknown): Promise<Result> {
   } catch (e) {
     return refuse(e);
   }
-  const { cropPlanId, intervalDays } = parsed.data;
+  const { growPlanId, intervalDays } = parsed.data;
   if (intervalDays === null) {
-    await db.delete(farmTimeStudyIntervals).where(eq(farmTimeStudyIntervals.cropPlanId, cropPlanId));
+    await db.delete(farmTimeStudyIntervals).where(eq(farmTimeStudyIntervals.growPlanId, growPlanId));
   } else {
     await db
       .insert(farmTimeStudyIntervals)
-      .values({ cropPlanId, intervalDays, updatedBy: access.email ?? access.userId })
-      .onConflictDoUpdate({ target: farmTimeStudyIntervals.cropPlanId, set: { intervalDays, updatedBy: access.email ?? access.userId, updatedAt: new Date() } });
+      .values({ growPlanId, intervalDays, updatedBy: access.email ?? access.userId })
+      .onConflictDoUpdate({ target: farmTimeStudyIntervals.growPlanId, set: { intervalDays, updatedBy: access.email ?? access.userId, updatedAt: new Date() } });
   }
   revalidatePath('/farm', 'layout');
   return { ok: true };

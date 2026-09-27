@@ -3,12 +3,12 @@ import { PageControls } from '@/components/PageControls';
 import Link from 'next/link';
 import { PageHeader, Kpi, Notice, num } from '@/components/ui';
 import { supplierDataset, supplierOperations, type Region } from '@/data/suppliers';
-import { listCropPlans } from '@/server/crop-plans';
-import { queryOperations, crossRefStats, matchCropPlanToSuppliers, type SupplierFilters } from '@/engine/suppliers';
+import { listGrowPlans } from '@/server/grow-plans';
+import { queryOperations, crossRefStats, matchGrowPlanToSuppliers, type SupplierFilters } from '@/engine/suppliers';
 import SupplierDirectory from '@/components/SupplierDirectory';
 import { nextRunNet } from '@/server/next-run';
 import { FARM_HOME } from '@/data/farm-location';
-import type { ClientSupplier, CropPlanMatchView } from '@/engine/geo';
+import type { ClientSupplier, GrowPlanMatchView } from '@/engine/geo';
 import { supplierRatings, ratingFor } from '@/data/mark';
 import { withWorkspace } from '@/server/workspace';
 
@@ -43,14 +43,14 @@ async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
   const stats = crossRefStats(filtered);
   const shown = filtered.slice(0, DISPLAY_CAP);
 
-  // Precompute crop plan→supplier matches for every crop plan in the list, in the
+  // Precompute grow plan→supplier matches for every grow plan in the list, in the
   // current region. The client tab just switches which one is shown.
-  const cropPlans = await listCropPlans();
-  const cropPlanMatches: CropPlanMatchView[] = cropPlans.map((r) => ({
+  const growPlans = await listGrowPlans();
+  const growPlanMatches: GrowPlanMatchView[] = growPlans.map((r) => ({
     code: r.code,
     name: r.name,
     category: formatNameOf(r),
-    lines: matchCropPlanToSuppliers(supplierOperations, region, r).map((m) => ({
+    lines: matchGrowPlanToSuppliers(supplierOperations, region, r).map((m) => ({
       input: m.input,
       count: m.matches.length,
       examples: m.matches.slice(0, 3).map((o) => o.name),
@@ -92,7 +92,7 @@ async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
       <PageHeader
         title="Suppliers"
         purpose="Find approved suppliers and record volume, price and lead time from conversations."
-        functions={['Directory', 'Map', 'Match to crop plan', 'Linked lines']}
+        functions={['Directory', 'Map', 'Match to grow plan', 'Linked lines']}
         connects={[
           { href: '/farm/procurement', dir: 'to' },
           { href: '/farm/sustainability/logistics', dir: 'to' },
@@ -179,7 +179,7 @@ async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
         totalInView={stats.total}
         displayCap={DISPLAY_CAP}
         capped={filtered.length > DISPLAY_CAP}
-        cropPlanMatches={cropPlanMatches}
+        growPlanMatches={growPlanMatches}
         regionLabel={regionLabel[region]}
         nextRun={await nextRunNet(new Date().toISOString().slice(0, 10))}
       />

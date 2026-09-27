@@ -1,7 +1,7 @@
 /**
  * MicroFarm — time studies: shapes and the seed (Roadmap O2).
  *
- * A time study times one crop plan's tasks: the task, the station, how many
+ * A time study times one grow plan's tasks: the task, the station, how many
  * people, the elapsed and labor minutes, whether the minutes are fixed or scale
  * per unit, and which stream the line belongs to. Each carries a quality
  * result. No wage.
@@ -37,9 +37,9 @@ export type TimeStudyStream = (typeof TIME_STUDY_STREAMS)[number];
 export const TIME_STUDY_STREAM_LABELS: Record<TimeStudyStream, string> = { sowing: 'Sowing', daily: 'Daily', harvest: 'Harvest' };
 
 /**
- * A study's basis. ESTIMATED: a mock estimate per crop plan step, seeded so every
- * crop plan has a labor standard before any sowing is timed;
- * it shows as "Estimated" until the crop plan's first observed study is recorded.
+ * A study's basis. ESTIMATED: a mock estimate per grow plan step, seeded so every
+ * grow plan has a labor standard before any sowing is timed;
+ * it shows as "Estimated" until the grow plan's first observed study is recorded.
  * OBSERVED: timed on the floor, with a study date, an observer and a quality result.
  */
 export type TimeStudyBasis = 'estimated' | 'observed';
@@ -58,7 +58,7 @@ export interface TimeStudyLine {
 
 export interface TimeStudyDoc {
   id: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   /** Null only on a study recorded without a date (the seeded estimate). */
   studiedOn: string | null;
   sowingSize: number;
@@ -125,10 +125,10 @@ export interface MeasuredConsumption {
 
 export interface TimeStudyLibrary {
   studies: TimeStudyDoc[];
-  /** Re-study interval in days, by crop plan code. A crop plan with none set is absent. */
+  /** Re-study interval in days, by grow plan code. A grow plan with none set is absent. */
   intervals: Record<string, number>;
-  /** Library row id by crop plan code, for recording against a crop plan. */
-  cropPlanIds: Record<string, string>;
+  /** Library row id by grow plan code, for recording against a grow plan. */
+  growPlanIds: Record<string, string>;
 }
 
 export type TimeStudySeed = Pick<TimeStudyDoc, 'studiedOn' | 'sowingSize' | 'cycleDays' | 'observer' | 'qualityResult' | 'qualityNotes' | 'basis' | 'lines' | 'consumption'>;

@@ -3,20 +3,20 @@
  *
  * Ledger-free, database-free. Roadmap Phase H4.
  *
- *   1. Single crop plan run — one library crop plan, a quantity, a channel and a
+ *   1. Single grow plan run — one library grow plan, a quantity, a channel and a
  *      price, run through sowing sizing, the weight chain, labor, the purchase
  *      requirement and the economics. The "forecast task".
- *   2. Distribution day — every order on a date, exploded across crop plans into base
+ *   2. Distribution day — every order on a date, exploded across grow plans into base
  *      units, netted against finished goods on hand (sowing records inside
  *      shelf life, less what distributed orders drew), sized into whole sowings
- *      per crop plan, each placed on a grow unit with room for its cycle, with one
- *      purchase requirement merged across crop plans.
+ *      per grow plan, each placed on a grow unit with room for its cycle, with one
+ *      purchase requirement merged across grow plans.
  *   3. Horizon — the same over a date range, rolling: each order is sown on its
  *      plan's sow date and is stock from its first harvest day, overshoot is stock while inside hold
  *      life and expired stock is named as waste, and what could not be made is
  *      an unfilled order, not a refused plan.
  *
- * Every figure is computed from the crop plan library, the order book and the
+ * Every figure is computed from the grow plan library, the order book and the
  * capacity inputs; nothing here is stored.
  */
 
@@ -25,9 +25,9 @@ import { isClosed, type DateRange } from '@/engine/periods';
 import type { ResolvedInputs } from '@/engine/scenario';
 import type { BookOrder } from '@/engine/orders';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
-import { deriveCapacity, costCropPlan, laborForDay, purchaseOrderForRun, type PurchaseOrderLine, type CapacityProfile } from '@/engine';
+import { deriveCapacity, costPlanPerUnit, laborForDay, purchaseOrderForRun, type PurchaseOrderLine, type CapacityProfile } from '@/engine';
 import { laborRequirement, checkStaffing, withUnplacedTasks, type LaborRequirement, type StaffingCheck, type UnplacedTask } from '@/engine/staffing';
-import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
+import { laborStandard, studiesForGrowPlan } from '@/engine/time-studies';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import type { CrewShift } from '@/data/crews';
@@ -46,13 +46,13 @@ const OZ_PER_LB = 16;
 export interface ChannelUnits {
   channel: number;
   units: number;
-  /** Base units per unit: 1 for a crop plan on its own channel, else the channel unit factor. */
+  /** Base units per unit: 1 for a grow plan on its own channel, else the channel unit factor. */
   unitFactor: number;
 }
 
-export interface CropPlanRequirement {
-  cropPlanCode: string;
-  cropPlanName: string;
+export interface GrowPlanRequirement {
+  growPlanCode: string;
+  growPlanName: string;
   /** Units ordered. */
   units: number;
   /** Base-unit equivalents the farm has to make. */
@@ -63,30 +63,30 @@ export interface CropPlanRequirement {
 }
 
 /**
- * Base units per unit for an order. A crop plan that lists the channel is
- * served at its own unit (an adult crop plan carries its upgrade in its
+ * Base units per unit for an order. A grow plan that lists the channel is
+ * served at its own unit (an adult grow plan carries its upgrade in its
  * lines), so the factor is 1; the channel unit factor applies only when a
- * crop plan is served on a channel it is not authored for (the code crop plan on
- * Phase 2, say) — the legacy scaling until every channel has its own crop plans.
+ * grow plan is served on a channel it is not authored for (the code grow plan on
+ * Phase 2, say) — the legacy scaling until every channel has its own grow plans.
  */
-export function unitFactorFor(cropPlan: GrowPlanDef | undefined, channel: number, unitFactorByChannel: Record<number, number>): number {
-  if (cropPlan && cropPlan.channels.includes(channel)) return 1;
+export function unitFactorFor(growPlan: GrowPlanDef | undefined, channel: number, unitFactorByChannel: Record<number, number>): number {
+  if (growPlan && growPlan.channels.includes(channel)) return 1;
   return unitFactorByChannel[channel] ?? 1;
 }
 
-/** The crop plans a set of orders needs, in base units, largest first. */
+/** The grow plans a set of orders needs, in base units, largest first. */
 export function requirementsFor(
   orders: readonly BookOrder[],
-  cropPlans: readonly GrowPlanDef[],
+  growPlans: readonly GrowPlanDef[],
   unitFactorByChannel: Record<number, number>,
-): CropPlanRequirement[] {
-  const byCode = new Map<string, CropPlanRequirement>();
+): GrowPlanRequirement[] {
+  const byCode = new Map<string, GrowPlanRequirement>();
   for (const o of orders) {
-    const lib = cropPlans.find((r) => r.code === o.cropPlanCode);
+    const lib = growPlans.find((r) => r.code === o.growPlanCode);
     const pf = unitFactorFor(lib, o.channel, unitFactorByChannel);
-    const row = byCode.get(o.cropPlanCode) ?? {
-      cropPlanCode: o.cropPlanCode,
-      cropPlanName: lib?.name ?? o.cropPlanName,
+    const row = byCode.get(o.growPlanCode) ?? {
+      growPlanCode: o.growPlanCode,
+      growPlanName: lib?.name ?? o.growPlanName,
       units: 0,
       baseUnits: 0,
       byChannel: [],
@@ -99,16 +99,16 @@ export function requirementsFor(
     const ch = row.byChannel.find((c) => c.channel === o.channel);
     if (ch) ch.units += o.units;
     else row.byChannel.push({ channel: o.channel, units: o.units, unitFactor: pf });
-    byCode.set(o.cropPlanCode, row);
+    byCode.set(o.growPlanCode, row);
   }
-  return [...byCode.values()].sort((a, b) => b.baseUnits - a.baseUnits || a.cropPlanCode.localeCompare(b.cropPlanCode));
+  return [...byCode.values()].sort((a, b) => b.baseUnits - a.baseUnits || a.growPlanCode.localeCompare(b.growPlanCode));
 }
 
 // ── Finished goods on hand, from records ────────────────────────────────────
 
 export interface FinishedLot {
   sowingId: string;
-  cropPlanCode: string;
+  growPlanCode: string;
   /** First date the lot is stock: a grow sowing's first harvest day, otherwise its production date. */
   produced: string;
   /** Last date the lot is inside shelf life. */
@@ -118,19 +118,19 @@ export interface FinishedLot {
 }
 
 export interface Consumption {
-  cropPlanCode: string;
+  growPlanCode: string;
   date: string;
   baseUnits: number;
 }
 
 export interface OnHand {
   lots: FinishedLot[];
-  /** Base units on hand and inside shelf life, by crop plan. */
-  byCropPlan: Record<string, number>;
-  /** Base units that expired unconsumed on or before `asOf`, by crop plan. */
-  expiredByCropPlan: Record<string, number>;
-  /** Consumption that found no stock, by crop plan. */
-  unmatchedByCropPlan: Record<string, number>;
+  /** Base units on hand and inside shelf life, by grow plan. */
+  byGrowPlan: Record<string, number>;
+  /** Base units that expired unconsumed on or before `asOf`, by grow plan. */
+  expiredByGrowPlan: Record<string, number>;
+  /** Consumption that found no stock, by grow plan. */
+  unmatchedByGrowPlan: Record<string, number>;
 }
 
 /**
@@ -139,9 +139,9 @@ export interface OnHand {
  * units. One function for every surface that nets stock from the records.
  */
 export function distributedConsumption(
-  orders: readonly { status: string; distributionId: string | null; cropPlanCode: string; channel: number; orderDate: string; units: number }[],
+  orders: readonly { status: string; distributionId: string | null; growPlanCode: string; channel: number; orderDate: string; units: number }[],
   distributions: readonly { id: string; distributedOn: string; units: number }[],
-  cropPlans: readonly GrowPlanDef[],
+  growPlans: readonly GrowPlanDef[],
   unitFactorByChannel: Record<number, number>,
 ): Consumption[] {
   const byId = new Map(distributions.map((d) => [d.id, d]));
@@ -149,17 +149,17 @@ export function distributedConsumption(
     .filter((o) => o.status === 'distributed')
     .map((o) => {
       const d = o.distributionId ? byId.get(o.distributionId) : undefined;
-      const pf = unitFactorFor(cropPlans.find((r) => r.code === o.cropPlanCode), o.channel, unitFactorByChannel);
-      return { cropPlanCode: o.cropPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * pf };
+      const pf = unitFactorFor(growPlans.find((r) => r.code === o.growPlanCode), o.channel, unitFactorByChannel);
+      return { growPlanCode: o.growPlanCode, date: d?.distributedOn ?? o.orderDate, baseUnits: (d?.units ?? o.units) * pf };
     });
 }
 
-/** Draw `qty` from the oldest unexpired lots of a crop plan on a date, FIFO. Returns what could not be drawn. */
-function drawFifo(lots: FinishedLot[], cropPlanCode: string, date: string, qty: number): number {
+/** Draw `qty` from the oldest unexpired lots of a grow plan on a date, FIFO. Returns what could not be drawn. */
+function drawFifo(lots: FinishedLot[], growPlanCode: string, date: string, qty: number): number {
   let left = qty;
   for (const lot of lots) {
     if (left <= 1e-9) break;
-    if (lot.cropPlanCode !== cropPlanCode || lot.remaining <= 0) continue;
+    if (lot.growPlanCode !== growPlanCode || lot.remaining <= 0) continue;
     if (lot.produced > date || lot.expires < date) continue;
     const take = Math.min(lot.remaining, left);
     lot.remaining -= take;
@@ -172,22 +172,22 @@ function drawFifo(lots: FinishedLot[], cropPlanCode: string, date: string, qty: 
  * Finished goods from the sowing records: each closed sowing is a lot of good
  * units that is stock from its stock date (a grow sowing's first harvest day,
  * otherwise its production date), inside shelf life for `shelfLifeDays`
- * from then. Distributed orders draw from the oldest lot of their crop plan first.
+ * from then. Distributed orders draw from the oldest lot of their grow plan first.
  */
 export function finishedGoodsOnHand(input: {
-  sowings: readonly { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number }[];
+  sowings: readonly { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
   consumed: readonly Consumption[];
   shelfLifeDays: number;
   asOf: string;
   /** The library the records' plans are read from, for each lot's stock date. */
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
 }): OnHand {
   const lots: FinishedLot[] = input.sowings
     .map((b) => {
-      const produced = stockDateFor(input.cropPlans.find((r) => r.code === b.cropPlanCode), b.productionDate);
+      const produced = stockDateFor(input.growPlans.find((r) => r.code === b.growPlanCode), b.productionDate);
       return {
         sowingId: b.sowingId,
-        cropPlanCode: b.cropPlanCode,
+        growPlanCode: b.growPlanCode,
         produced,
         expires: isoAddDays(produced, input.shelfLifeDays),
         qtyProduced: b.goodUnits,
@@ -196,27 +196,27 @@ export function finishedGoodsOnHand(input: {
     })
     .filter((l) => l.produced <= input.asOf)
     .sort((a, b) => a.produced.localeCompare(b.produced) || a.sowingId.localeCompare(b.sowingId));
-  const unmatchedByCropPlan: Record<string, number> = {};
+  const unmatchedByGrowPlan: Record<string, number> = {};
   for (const c of [...input.consumed].sort((a, b) => a.date.localeCompare(b.date))) {
     if (c.date > input.asOf) continue;
-    const left = drawFifo(lots, c.cropPlanCode, c.date, c.baseUnits);
-    if (left > 0) unmatchedByCropPlan[c.cropPlanCode] = (unmatchedByCropPlan[c.cropPlanCode] ?? 0) + left;
+    const left = drawFifo(lots, c.growPlanCode, c.date, c.baseUnits);
+    if (left > 0) unmatchedByGrowPlan[c.growPlanCode] = (unmatchedByGrowPlan[c.growPlanCode] ?? 0) + left;
   }
-  const byCropPlan: Record<string, number> = {};
-  const expiredByCropPlan: Record<string, number> = {};
+  const byGrowPlan: Record<string, number> = {};
+  const expiredByGrowPlan: Record<string, number> = {};
   for (const lot of lots) {
     if (lot.remaining <= 0) continue;
-    if (lot.expires < input.asOf) expiredByCropPlan[lot.cropPlanCode] = (expiredByCropPlan[lot.cropPlanCode] ?? 0) + lot.remaining;
-    else byCropPlan[lot.cropPlanCode] = (byCropPlan[lot.cropPlanCode] ?? 0) + lot.remaining;
+    if (lot.expires < input.asOf) expiredByGrowPlan[lot.growPlanCode] = (expiredByGrowPlan[lot.growPlanCode] ?? 0) + lot.remaining;
+    else byGrowPlan[lot.growPlanCode] = (byGrowPlan[lot.growPlanCode] ?? 0) + lot.remaining;
   }
-  return { lots, byCropPlan, expiredByCropPlan, unmatchedByCropPlan };
+  return { lots, byGrowPlan, expiredByGrowPlan, unmatchedByGrowPlan };
 }
 
 // ── A production day: whole sowings per plan, each on a grow unit for its cycle ───
 
-export interface CropPlanRunPlan {
-  cropPlanCode: string;
-  cropPlanName: string;
+export interface GrowPlanRunPlan {
+  growPlanCode: string;
+  growPlanName: string;
   /** Base units the orders need. */
   required: number;
   onHand: number;
@@ -234,14 +234,14 @@ export interface CropPlanRunPlan {
   packedLb: number;
   laborHours: number;
   laborCost: number;
-  /** Crop plan standard for the units produced, incl. the shrink allowance. */
+  /** Grow plan standard for the units produced, incl. the shrink allowance. */
   inputCostStandard: number;
   purchase: { lines: PurchaseOrderLine[]; total: number };
 }
 
 export interface DayPlan {
   productionDate: string;
-  runs: CropPlanRunPlan[];
+  runs: GrowPlanRunPlan[];
   /** Sowings the requirements need. */
   cyclesRequired: number;
   /** Grow units that take a sowing of the day's plans — each starts at most one sowing a day. */
@@ -262,7 +262,7 @@ export interface DayPlan {
   staffing: StaffingCheck;
 }
 
-/** Merge purchase-order lines across crop plans by input; cases re-rounded on the sum. */
+/** Merge purchase-order lines across grow plans by input; cases re-rounded on the sum. */
 export function mergePurchaseLines(all: readonly PurchaseOrderLine[]): { lines: PurchaseOrderLine[]; total: number } {
   const m = new Map<string, PurchaseOrderLine>();
   for (const l of all) {
@@ -302,16 +302,16 @@ export function toRequirementLines(lines: readonly PurchaseOrderLine[]): Require
  */
 export function planProductionDay(input: {
   productionDate: string;
-  requirements: readonly CropPlanRequirement[];
+  requirements: readonly GrowPlanRequirement[];
   onHand: Record<string, number>;
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   /**
    * Each plan's own assumptions — its labor standard and packaging (Roadmap N3). A run is costed
    * at its plan's; omitted, every run falls back to `assumptions`.
    */
-  cropPlanAssumptions?: Readonly<Record<string, Assumptions>>;
+  growPlanAssumptions?: Readonly<Record<string, Assumptions>>;
   /** Proposed crews to check against the day's labor requirement. Omitted = none proposed. */
   crews?: readonly CrewShift[];
   /**
@@ -319,7 +319,7 @@ export function planProductionDay(input: {
    * its shelf ledger so a unit full of last week's trays takes no sowing today. Omitted, every
    * sowing is taken as placed.
    */
-  placeSowing?: (cropPlan: GrowPlanDef, productionDate: string, trays: number) => boolean;
+  placeSowing?: (growPlan: GrowPlanDef, productionDate: string, trays: number) => boolean;
   /**
    * The time studies a plan's sowing-stream labor is read from (its labor standard); a plan with
    * none runs on its estimated study. Omitted, every plan runs on its estimate.
@@ -329,28 +329,28 @@ export function planProductionDay(input: {
   const shrink = input.assumptions.yield.shrinkAllowance.value;
   const planned = input.requirements
     .map((req) => {
-      const cropPlan = input.cropPlans.find((r) => r.code === req.cropPlanCode);
-      return cropPlan ? { req, cropPlan, cap: deriveCapacity(cropPlan, input.capacityInputs, 1) } : null;
+      const growPlan = input.growPlans.find((r) => r.code === req.growPlanCode);
+      return growPlan ? { req, growPlan, cap: deriveCapacity(growPlan, input.capacityInputs, 1) } : null;
     })
-    .filter((p): p is { req: CropPlanRequirement; cropPlan: GrowPlanDef; cap: CapacityProfile } => p !== null);
-  const runs: CropPlanRunPlan[] = [];
+    .filter((p): p is { req: GrowPlanRequirement; growPlan: GrowPlanDef; cap: CapacityProfile } => p !== null);
+  const runs: GrowPlanRunPlan[] = [];
 
-  for (const { req, cropPlan, cap } of planned) {
-    const onHand = input.onHand[req.cropPlanCode] ?? 0;
+  for (const { req, growPlan, cap } of planned) {
+    const onHand = input.onHand[req.growPlanCode] ?? 0;
     const net = Math.max(0, req.baseUnits - onHand);
     const sowingsNeeded = cap.sowingSize > 0 ? Math.max(0, Math.ceil(net / cap.sowingSize - 1e-9)) : 0;
     let sowingsScheduled = 0;
     for (let b = 0; b < sowingsNeeded; b++) {
-      if (input.placeSowing ? input.placeSowing(cropPlan, input.productionDate, cap.sowingSize) : true) sowingsScheduled += 1;
+      if (input.placeSowing ? input.placeSowing(growPlan, input.productionDate, cap.sowingSize) : true) sowingsScheduled += 1;
     }
     const produced = sowingsScheduled * cap.sowingSize;
-    const c = costCropPlan(cropPlan, shrink);
+    const c = costPlanPerUnit(growPlan, shrink);
     const lb = (oz: number) => (oz * produced) / OZ_PER_LB;
-    const labor = laborForDay(sowingsScheduled, produced, input.cropPlanAssumptions?.[cropPlan.code] ?? input.assumptions);
-    const purchase = purchaseOrderForRun(produced, cropPlan, shrink);
+    const labor = laborForDay(sowingsScheduled, produced, input.growPlanAssumptions?.[growPlan.code] ?? input.assumptions);
+    const purchase = purchaseOrderForRun(produced, growPlan, shrink);
     runs.push({
-      cropPlanCode: cropPlan.code,
-      cropPlanName: cropPlan.name,
+      growPlanCode: growPlan.code,
+      growPlanName: growPlan.name,
       required: req.baseUnits,
       onHand,
       net,
@@ -374,7 +374,7 @@ export function planProductionDay(input: {
   // A sow day's labor is each plan's sowing-stream lines, not placed on the clock here (the Day Schedule places them).
   const dayLabor = laborRequirement(input.capacityInputs);
   const sown = runs.filter((r) => r.sowingsScheduled > 0);
-  const labor = sown.length === 0 ? dayLabor : withUnplacedTasks(dayLabor, sown.flatMap((r) => growSowingTasks(input.cropPlans.find((x) => x.code === r.cropPlanCode)!, r, input.studies ?? [])), sown.reduce((s, r) => s + r.sowingsScheduled, 0), sown.reduce((s, r) => s + r.produced, 0));
+  const labor = sown.length === 0 ? dayLabor : withUnplacedTasks(dayLabor, sown.flatMap((r) => growSowingTasks(input.growPlans.find((x) => x.code === r.growPlanCode)!, r, input.studies ?? [])), sown.reduce((s, r) => s + r.sowingsScheduled, 0), sown.reduce((s, r) => s + r.produced, 0));
   return {
     productionDate: input.productionDate,
     runs,
@@ -398,8 +398,8 @@ export function planProductionDay(input: {
  * A grow run's sowing-stream lines from its plan's labor standard, scaled to the run: a fixed line
  * once per sowing, a per-tray line on the study's own sowing size times the trays sown.
  */
-function growSowingTasks(cropPlan: GrowPlanDef, run: Pick<CropPlanRunPlan, 'sowingsScheduled' | 'produced' | 'sowingSize'>, studies: readonly TimeStudyDoc[]): UnplacedTask[] {
-  const study = laborStandard(studiesForCropPlan(studies, cropPlan.code)) ?? estimatedTimeStudy(cropPlan, run.sowingSize);
+function growSowingTasks(growPlan: GrowPlanDef, run: Pick<GrowPlanRunPlan, 'sowingsScheduled' | 'produced' | 'sowingSize'>, studies: readonly TimeStudyDoc[]): UnplacedTask[] {
+  const study = laborStandard(studiesForGrowPlan(studies, growPlan.code)) ?? estimatedTimeStudy(growPlan, run.sowingSize);
   return study.lines
     .filter((l) => l.stream === 'sowing')
     .map((l) => ({
@@ -439,7 +439,7 @@ export interface HorizonDistributionDay {
   filledBase: number;
   unfilledBase: number;
   byChannel: { channel: number; units: number; filledUnits: number }[];
-  byCropPlan: { cropPlanCode: string; cropPlanName: string; orderedBase: number; filledBase: number }[];
+  byGrowPlan: { growPlanCode: string; growPlanName: string; orderedBase: number; filledBase: number }[];
 }
 
 export interface HorizonProductionDay extends DayPlan {
@@ -483,7 +483,7 @@ export interface HorizonPlan {
   /** Every date in the window that made, shipped, expired or held stock — the calendar's rows. */
   byDate: HorizonDay[];
   byChannel: HorizonChannel[];
-  byCropPlan: { cropPlanCode: string; cropPlanName: string; orderedBase: number; producedBase: number; sowings: number }[];
+  byGrowPlan: { growPlanCode: string; growPlanName: string; orderedBase: number; producedBase: number; sowings: number }[];
   /** Finished-goods lots still inside shelf life at the end of the window. */
   closingLots: FinishedLot[];
   /** The sowings on the grow units across the window. */
@@ -510,13 +510,13 @@ export interface HorizonPlan {
  * on the last production weekday before it, netted against what is on hand
  * that morning; whole sowings overshoot into stock, stock expires past hold
  * life, and a distribution date draws its orders from stock oldest first. Filled
- * units per channel follow the crop plan's filled share equally.
+ * units per channel follow the grow plan's filled share equally.
  */
 export function planHorizon(input: {
   from: string;
   to: string;
   book: readonly BookOrder[];
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
   capacityInputs: CapacityInputs;
   assumptions: Assumptions;
   unitFactorByChannel: Record<number, number>;
@@ -524,8 +524,8 @@ export function planHorizon(input: {
   shelfLifeDays: number;
   productionWeekdays?: readonly number[];
   channels?: readonly number[];
-  /** Each crop plan's own assumptions (Roadmap N3); passed through to each day. */
-  cropPlanAssumptions?: Readonly<Record<string, Assumptions>>;
+  /** Each grow plan's own assumptions (Roadmap N3); passed through to each day. */
+  growPlanAssumptions?: Readonly<Record<string, Assumptions>>;
   /** Proposed crews, checked against each production day's labor requirement. */
   crews?: readonly CrewShift[];
   /** Farm closures: no production falls on a closed date (Roadmap N4a fix). */
@@ -533,7 +533,7 @@ export function planHorizon(input: {
   /** The grow units sowings are placed on for their cycle days. Omitted = the capacity inputs', else the seed. */
   growUnits?: readonly GrowUnit[];
   /** Sowings already on the shelves when the window opens (recorded sowings inside their cycle). */
-  openingSowings?: readonly { cropPlanCode: string; sowDate: string; trays: number }[];
+  openingSowings?: readonly { growPlanCode: string; sowDate: string; trays: number }[];
   /** The time studies a grow plan's sowing-stream labor is read from; passed through to each day. */
   studies?: readonly TimeStudyDoc[];
 }): HorizonPlan {
@@ -544,18 +544,18 @@ export function planHorizon(input: {
   const growUnits = input.growUnits ?? input.capacityInputs.growUnits ?? defaultGrowUnits;
   const ledger = new ShelfLedger(growUnits);
   for (const o of input.openingSowings ?? []) {
-    const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
-    if (cropPlan && o.trays > 0) ledger.place(cropPlan, o.sowDate, o.trays, null);
+    const growPlan = input.growPlans.find((r) => r.code === o.growPlanCode);
+    if (growPlan && o.trays > 0) ledger.place(growPlan, o.sowDate, o.trays, null);
   }
   // A placed sowing carries the first distribution date it serves, so a day page can list its own sowings.
-  const placeSowingFor = (servesFrom: string) => (cropPlan: GrowPlanDef, productionDate: string, trays: number): boolean =>
-    ledger.place(cropPlan, productionDate, trays, servesFrom).placed;
+  const placeSowingFor = (servesFrom: string) => (growPlan: GrowPlanDef, productionDate: string, trays: number): boolean =>
+    ledger.place(growPlan, productionDate, trays, servesFrom).placed;
 
   // Each order is made on the production date its plan needs: a grow plan's sow date
   // (distribution date less days to harvest, on a production day), a plan not in the library's the day before.
   const prodDateOf = (o: BookOrder): string => {
-    const cropPlan = input.cropPlans.find((r) => r.code === o.cropPlanCode);
-    return cropPlan ? sowDateFor(cropPlan, o.orderDate, weekdays, input.closures) : productionDateFor(o.orderDate, weekdays, input.closures);
+    const growPlan = input.growPlans.find((r) => r.code === o.growPlanCode);
+    return growPlan ? sowDateFor(growPlan, o.orderDate, weekdays, input.closures) : productionDateFor(o.orderDate, weekdays, input.closures);
   };
   const byProduction = new Map<string, BookOrder[]>();
   for (const o of inRange) {
@@ -592,7 +592,7 @@ export function planHorizon(input: {
     if (ev.kind === 'produce') {
       const orders = byProduction.get(ev.key) ?? [];
       const served = [...new Set(orders.map((o) => o.orderDate))].sort();
-      const requirements = requirementsFor(orders, input.cropPlans, input.unitFactorByChannel);
+      const requirements = requirementsFor(orders, input.growPlans, input.unitFactorByChannel);
       const onHand: Record<string, number> = {};
       // Stock counts only if it is harvested by the production date and still inside shelf life on the
       // first distribution this production serves: a lot that expires over the weekend cannot fill
@@ -600,36 +600,36 @@ export function planHorizon(input: {
       const servesFrom = [...served].sort()[0] ?? ev.date;
       for (const lot of lots) {
         if (lot.remaining <= 0 || lot.produced > ev.date || lot.expires < servesFrom) continue;
-        onHand[lot.cropPlanCode] = (onHand[lot.cropPlanCode] ?? 0) + lot.remaining;
+        onHand[lot.growPlanCode] = (onHand[lot.growPlanCode] ?? 0) + lot.remaining;
       }
-      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, cropPlans: input.cropPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, cropPlanAssumptions: input.cropPlanAssumptions, crews: input.crews, placeSowing: placeSowingFor(servesFrom), studies: input.studies });
+      const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, growPlans: input.growPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, growPlanAssumptions: input.growPlanAssumptions, crews: input.crews, placeSowing: placeSowingFor(servesFrom), studies: input.studies });
       for (const run of plan.runs) {
         if (run.produced <= 0) continue;
         // A grow sowing is stock from its first harvest day, and its shelf life counts from there.
-        const produced = stockDateFor(input.cropPlans.find((r) => r.code === run.cropPlanCode), ev.date);
-        lots.push({ sowingId: `plan-${ev.date}-${run.cropPlanCode}`, cropPlanCode: run.cropPlanCode, produced, expires: isoAddDays(produced, input.shelfLifeDays), qtyProduced: run.produced, remaining: run.produced });
+        const produced = stockDateFor(input.growPlans.find((r) => r.code === run.growPlanCode), ev.date);
+        lots.push({ sowingId: `plan-${ev.date}-${run.growPlanCode}`, growPlanCode: run.growPlanCode, produced, expires: isoAddDays(produced, input.shelfLifeDays), qtyProduced: run.produced, remaining: run.produced });
       }
       productionDays.push({ ...plan, distributionDates: served });
     } else {
       const orders = inRange.filter((o) => o.orderDate === ev.key);
-      const reqs = requirementsFor(orders, input.cropPlans, input.unitFactorByChannel);
-      const byCropPlan: HorizonDistributionDay['byCropPlan'] = [];
+      const reqs = requirementsFor(orders, input.growPlans, input.unitFactorByChannel);
+      const byGrowPlan: HorizonDistributionDay['byGrowPlan'] = [];
       const fillShare: Record<string, number> = {};
       for (const r of reqs) {
-        const left = drawFifo(lots, r.cropPlanCode, ev.date, r.baseUnits);
+        const left = drawFifo(lots, r.growPlanCode, ev.date, r.baseUnits);
         const filled = r.baseUnits - left;
-        fillShare[r.cropPlanCode] = r.baseUnits > 0 ? filled / r.baseUnits : 1;
-        byCropPlan.push({ cropPlanCode: r.cropPlanCode, cropPlanName: r.cropPlanName, orderedBase: r.baseUnits, filledBase: filled });
+        fillShare[r.growPlanCode] = r.baseUnits > 0 ? filled / r.baseUnits : 1;
+        byGrowPlan.push({ growPlanCode: r.growPlanCode, growPlanName: r.growPlanName, orderedBase: r.baseUnits, filledBase: filled });
       }
       const byChannel = new Map<number, { channel: number; units: number; filledUnits: number }>();
       for (const o of orders) {
         const row = byChannel.get(o.channel) ?? { channel: o.channel, units: 0, filledUnits: 0 };
         row.units += o.units;
-        row.filledUnits += o.units * (fillShare[o.cropPlanCode] ?? 0);
+        row.filledUnits += o.units * (fillShare[o.growPlanCode] ?? 0);
         byChannel.set(o.channel, row);
       }
-      const orderedBase = byCropPlan.reduce((s, r) => s + r.orderedBase, 0);
-      const filledBase = byCropPlan.reduce((s, r) => s + r.filledBase, 0);
+      const orderedBase = byGrowPlan.reduce((s, r) => s + r.orderedBase, 0);
+      const filledBase = byGrowPlan.reduce((s, r) => s + r.filledBase, 0);
       distributionDays.push({
         date: ev.key,
         productionDate: orders.map(prodDateOf).sort()[0] ?? productionDateFor(ev.key, weekdays, input.closures),
@@ -638,7 +638,7 @@ export function planHorizon(input: {
         filledBase,
         unfilledBase: orderedBase - filledBase,
         byChannel: [...byChannel.values()].sort((a, b) => a.channel - b.channel),
-        byCropPlan,
+        byGrowPlan,
       });
     }
     closingOn[ev.date] = stockOn(ev.date);
@@ -652,21 +652,21 @@ export function planHorizon(input: {
     const filledUnits = distributionDays.reduce((s, d) => s + (d.byChannel.find((c) => c.channel === ch)?.filledUnits ?? 0), 0);
     return { channel: ch, orderedUnits, filledUnits, share: orderedUnits > 0 ? filledUnits / orderedUnits : 1 };
   });
-  const cropPlanTotals = new Map<string, HorizonPlan['byCropPlan'][number]>();
-  for (const d of distributionDays) for (const r of d.byCropPlan) {
-    const row = cropPlanTotals.get(r.cropPlanCode) ?? { cropPlanCode: r.cropPlanCode, cropPlanName: r.cropPlanName, orderedBase: 0, producedBase: 0, sowings: 0 };
+  const growPlanTotals = new Map<string, HorizonPlan['byGrowPlan'][number]>();
+  for (const d of distributionDays) for (const r of d.byGrowPlan) {
+    const row = growPlanTotals.get(r.growPlanCode) ?? { growPlanCode: r.growPlanCode, growPlanName: r.growPlanName, orderedBase: 0, producedBase: 0, sowings: 0 };
     row.orderedBase += r.orderedBase;
-    cropPlanTotals.set(r.cropPlanCode, row);
+    growPlanTotals.set(r.growPlanCode, row);
   }
   for (const p of productionDays) for (const run of p.runs) {
-    const row = cropPlanTotals.get(run.cropPlanCode) ?? { cropPlanCode: run.cropPlanCode, cropPlanName: run.cropPlanName, orderedBase: 0, producedBase: 0, sowings: 0 };
+    const row = growPlanTotals.get(run.growPlanCode) ?? { growPlanCode: run.growPlanCode, growPlanName: run.growPlanName, orderedBase: 0, producedBase: 0, sowings: 0 };
     row.producedBase += run.produced;
     row.sowings += run.sowingsScheduled;
-    cropPlanTotals.set(run.cropPlanCode, row);
+    growPlanTotals.set(run.growPlanCode, row);
   }
   const cyclesUsed = productionDays.reduce((s, p) => s + p.runs.reduce((a, r) => a + r.sowingsScheduled, 0), 0);
   const cyclesAvailable = productionDays.reduce((s, p) => s + p.cyclesAvailable, 0);
-  const growCalendar = calendarFromSowings({ from: input.from, to: input.to, sowings: ledger.sowings, cropPlans: input.cropPlans, units: growUnits, findings: ledger.sowings.filter((x) => !x.placed).map((x) => ({ kind: 'over-capacity' as const, cropPlanCode: x.cropPlanCode, sowDate: x.sowDate, detail: `${x.cropPlanCode}: a sowing of ${x.trays} trays on ${x.sowDate} has no room on any grow unit for its ${x.cycleDays}-day cycle.` })) });
+  const growCalendar = calendarFromSowings({ from: input.from, to: input.to, sowings: ledger.sowings, growPlans: input.growPlans, units: growUnits, findings: ledger.sowings.filter((x) => !x.placed).map((x) => ({ kind: 'over-capacity' as const, growPlanCode: x.growPlanCode, sowDate: x.sowDate, detail: `${x.growPlanCode}: a sowing of ${x.trays} trays on ${x.sowDate} has no room on any grow unit for its ${x.cycleDays}-day cycle.` })) });
 
   // One row per date that made, shipped, expired or held stock.
   const byDate: HorizonDay[] = [...new Set([...productionDays.map((p) => p.productionDate), ...distributionDays.map((d) => d.date), ...Object.keys(expiredOn), ...Object.keys(closingOn)])]
@@ -700,7 +700,7 @@ export function planHorizon(input: {
     distributionDays,
     byDate,
     byChannel,
-    byCropPlan: [...cropPlanTotals.values()].sort((a, b) => b.orderedBase - a.orderedBase),
+    byGrowPlan: [...growPlanTotals.values()].sort((a, b) => b.orderedBase - a.orderedBase),
     closingLots: lots.filter((l) => l.remaining > 0 && l.produced <= input.to),
     growCalendar,
     totals: {
@@ -720,7 +720,7 @@ export function planHorizon(input: {
   };
 }
 
-// ── Level 1: a single crop plan run ────────────────────────────────────────────
+// ── Level 1: a single grow plan run ────────────────────────────────────────────
 
 export interface SingleRun {
   cap: CapacityProfile;
@@ -741,7 +741,7 @@ export interface SingleRun {
   laborHours: number;
   laborCost: number;
   laborPerUnit: number;
-  /** Crop plan standard for the units produced, incl. shrink. */
+  /** Grow plan standard for the units produced, incl. shrink. */
   inputCostStandard: number;
   purchase: { lines: PurchaseOrderLine[]; total: number };
   /** Purchase against standard: case rounding held in raw materials. */
@@ -761,8 +761,8 @@ export interface SingleRun {
   contributionPerUnit: number;
 }
 
-export function singleCropPlanRun(input: {
-  cropPlan: GrowPlanDef;
+export function singleGrowPlanRun(input: {
+  growPlan: GrowPlanDef;
   units: number;
   unitFactor: number;
   premiumFactor: number;
@@ -775,15 +775,15 @@ export function singleCropPlanRun(input: {
 }): SingleRun {
   const a = input.assumptions;
   const shrink = a.yield.shrinkAllowance.value;
-  const cap = deriveCapacity(input.cropPlan, input.capacityInputs, 1);
+  const cap = deriveCapacity(input.growPlan, input.capacityInputs, 1);
   const baseUnits = input.units * input.unitFactor;
   const net = Math.max(0, baseUnits - input.openingInventory);
   const sowings = cap.sowingSize > 0 ? Math.max(0, Math.ceil(net / cap.sowingSize - 1e-9)) : 0;
   const produced = sowings * cap.sowingSize;
-  const c = costCropPlan(input.cropPlan, shrink);
+  const c = costPlanPerUnit(input.growPlan, shrink);
   const lb = (oz: number) => (oz * produced) / OZ_PER_LB;
   const labor = laborForDay(sowings, produced, a);
-  const purchase = purchaseOrderForRun(produced, input.cropPlan, shrink);
+  const purchase = purchaseOrderForRun(produced, input.growPlan, shrink);
   const inputCostStandard = c.totalInputCostPerUnit * produced;
   const inputCostPerUnit = c.totalInputCostPerUnit * input.unitFactor * input.premiumFactor;
   const packagingPerUnit = a.perUnit.packaging.value;

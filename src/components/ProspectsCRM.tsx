@@ -9,7 +9,7 @@
  * Contacts and status come from the seeded prospect list and stay read-only until
  * the CRM data store lands. Two things a prospect points at ARE editable, because
  * they change what the quote computes: the distribution pickup point it would be served from,
- * and the crop plans quoted to it. Both are scenario edits, saved with a forecast.
+ * and the grow plans quoted to it. Both are scenario edits, saved with a forecast.
  */
 
 import { PageControls } from '@/components/PageControls';
@@ -22,7 +22,7 @@ import { useLinkedEntities, useLinkedEntity } from '@/components/useLinkedEntiti
 import { computeQuote, statusColors, type ClientProspect } from '@/engine/prospects-crm';
 import { haversineMiles } from '@/engine/geo';
 import { entityRef } from '@/engine/entity-links';
-import { costCropPlan } from '@/engine';
+import { costPlanPerUnit } from '@/engine';
 import { useScenario } from '@/state/scenario-store';
 
 interface Home {
@@ -44,25 +44,25 @@ type SubTab = 'needs' | 'comms' | 'links' | 'quote' | 'sow';
 
 /**
  * A prospect's links, read from the scenario. `pickup_point` is the distribution pickup point it
- * would be served from; `cropPlanCodes` are the crop plans quoted, which is what makes
+ * would be served from; `growPlanCodes` are the grow plans quoted, which is what makes
  * the quote's input cost and margin computable rather than assumed.
  */
 function useProspectLinks(prospectId: string) {
   const { resolved, setSales, isSuperAdmin } = useScenario();
   const row = resolved.sales[prospectId] ?? {};
-  const cropPlanCodes = row.cropPlanCodes ?? [];
+  const growPlanCodes = row.growPlanCodes ?? [];
   const refs = useMemo(
     () => [
       ...(row.pickupPointId ? [entityRef('pickupPoint', row.pickupPointId)] : []),
-      ...cropPlanCodes.map((c) => entityRef('cropPlan', c)),
+      ...growPlanCodes.map((c) => entityRef('growPlan', c)),
     ],
-    [row.pickupPointId, cropPlanCodes.join(',')],
+    [row.pickupPointId, growPlanCodes.join(',')],
   );
   const byRef = useLinkedEntities(refs);
 
   return {
     pickupPointId: row.pickupPointId,
-    cropPlanCodes,
+    growPlanCodes,
     byRef,
     canEdit: isSuperAdmin,
     setPickupPoint: (pickupPointId: string | undefined) =>
@@ -70,14 +70,14 @@ function useProspectLinks(prospectId: string) {
         if (pickupPointId === undefined) delete d.pickupPointId;
         else d.pickupPointId = pickupPointId;
       }),
-    addCropPlan: (code: string) =>
+    addGrowPlan: (code: string) =>
       setSales(prospectId, (d) => {
-        const list = (d.cropPlanCodes ??= []);
+        const list = (d.growPlanCodes ??= []);
         if (!list.includes(code)) list.push(code);
       }),
-    removeCropPlan: (code: string) =>
+    removeGrowPlan: (code: string) =>
       setSales(prospectId, (d) => {
-        d.cropPlanCodes = (d.cropPlanCodes ?? []).filter((c) => c !== code);
+        d.growPlanCodes = (d.growPlanCodes ?? []).filter((c) => c !== code);
       }),
   };
 }
@@ -228,7 +228,7 @@ export default function ProspectsCRM({ prospects, totalInView, quoteDefaults, ho
           <div className="flex gap-[0.3rem] border-b border-b-[color:var(--farm-line)] mb-4! flex-wrap">
             <SubTabButton active={sub === 'needs'} onClick={() => setSub('needs')}>Needs</SubTabButton>
             <SubTabButton active={sub === 'comms'} onClick={() => setSub('comms')}>Communications</SubTabButton>
-            <SubTabButton active={sub === 'links'} onClick={() => setSub('links')}>Pickup point &amp; crop plans</SubTabButton>
+            <SubTabButton active={sub === 'links'} onClick={() => setSub('links')}>Pickup point &amp; grow plans</SubTabButton>
             <SubTabButton active={sub === 'quote'} onClick={() => setSub('quote')}>Quote of service</SubTabButton>
             <SubTabButton active={sub === 'sow'} onClick={() => setSub('sow')}>Scope of work</SubTabButton>
           </div>
@@ -311,9 +311,9 @@ function TimelineItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ── Pickup point & crop plans (the prospect's links) ───────────────────────────────────
+// ── Pickup point & grow plans (the prospect's links) ───────────────────────────────────
 function LinksPanel({ prospect }: { prospect: ClientProspect }) {
-  const { pickupPointId, cropPlanCodes, byRef, canEdit, setPickupPoint, addCropPlan, removeCropPlan } = useProspectLinks(prospect.id);
+  const { pickupPointId, growPlanCodes, byRef, canEdit, setPickupPoint, addGrowPlan, removeGrowPlan } = useProspectLinks(prospect.id);
   const { resolved } = useScenario();
   const pickupPoint = pickupPointId ? byRef[entityRef('pickupPoint', pickupPointId)] ?? null : null;
 
@@ -336,15 +336,15 @@ function LinksPanel({ prospect }: { prospect: ClientProspect }) {
         prospect on Pickup Points &amp; Routes is the same record seen from the other side.
       </p>
 
-      <div className="farm-card-title mt-[1.2rem]!">Crop plans quoted</div>
-      {cropPlanCodes.length === 0 ? (
+      <div className="farm-card-title mt-[1.2rem]!">Grow plans quoted</div>
+      {growPlanCodes.length === 0 ? (
         <p className="farm-kpi-sub mt-0!">None linked. The quote then carries no input cost.</p>
       ) : (
         <div className="border border-[color:var(--farm-line)] rounded-[0.5rem] overflow-hidden mb-[0.6rem]!">
-          {cropPlanCodes.map((code, i) => {
-            const r = byRef[entityRef('cropPlan', code)];
-            const lib = resolved.cropPlans.find((x) => x.code === code);
-            const cost = lib ? costCropPlan(lib, resolved.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null;
+          {growPlanCodes.map((code, i) => {
+            const r = byRef[entityRef('growPlan', code)];
+            const lib = resolved.growPlans.find((x) => x.code === code);
+            const cost = lib ? costPlanPerUnit(lib, resolved.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null;
             return (
               <div key={code} className={`flex items-center gap-[0.8rem] py-[0.55rem] px-[0.8rem] ${(i % 2 ? 'bg-[color:var(--farm-surface-2)]' : 'bg-transparent')}`}>
                 <div className="flex-1">
@@ -355,7 +355,7 @@ function LinksPanel({ prospect }: { prospect: ClientProspect }) {
                   {cost !== null ? `${money(cost, 4)} food / unit` : <span className="farm-c-faint">not costed in this model</span>}
                 </div>
                 {canEdit ? (
-                  <button type="button" className="farm-btn farm-fs-2xs" onClick={() => removeCropPlan(code)}>Remove</button>
+                  <button type="button" className="farm-btn farm-fs-2xs" onClick={() => removeGrowPlan(code)}>Remove</button>
                 ) : null}
               </div>
             );
@@ -363,17 +363,17 @@ function LinksPanel({ prospect }: { prospect: ClientProspect }) {
         </div>
       )}
       <EntityPicker
-        kinds={['cropPlan']}
+        kinds={['growPlan']}
         linked={null}
         canEdit={canEdit}
         emptyText=""
-        addLabel="Add a crop plan"
-        ariaLabel={`Add a crop plan quoted to ${prospect.name}`}
-        placeholder="Search crop plan name, code, category…"
-        onLink={(code) => { if (code) addCropPlan(code); }}
+        addLabel="Add a grow plan"
+        ariaLabel={`Add a grow plan quoted to ${prospect.name}`}
+        placeholder="Search grow plan name, code, category…"
+        onLink={(code) => { if (code) addGrowPlan(code); }}
       />
       <p className="farm-kpi-sub mt-2">
-        Input cost per unit comes from the open forecast for each cropPlan quoted, so the Quote of service
+        Input cost per unit comes from the open forecast for each growPlan quoted, so the Quote of service
         tab shows margin over input cost rather than revenue alone. Links are part of the scenario.
       </p>
     </div>
@@ -389,15 +389,15 @@ function QuotePanel({ prospect, defaults }: { prospect: ClientProspect; defaults
 
   const r = computeQuote({ headcount, participation: participation / 100, pricePerUnit, servingDays });
 
-  // Input cost comes from the crop plans linked to this prospect, through the live
+  // Input cost comes from the grow plans linked to this prospect, through the live
   // model. With none linked there is no cost to show, and the quote stays revenue.
-  const { cropPlanCodes, byRef } = useProspectLinks(prospect.id);
+  const { growPlanCodes, byRef } = useProspectLinks(prospect.id);
   const { resolved } = useScenario();
-  const costed = cropPlanCodes
+  const costed = growPlanCodes
     .map((code) => ({
       code,
-      name: byRef[entityRef('cropPlan', code)]?.name ?? code,
-      cost: (() => { const lib = resolved.cropPlans.find((x) => x.code === code); return lib ? costCropPlan(lib, resolved.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null; })(),
+      name: byRef[entityRef('growPlan', code)]?.name ?? code,
+      cost: (() => { const lib = resolved.growPlans.find((x) => x.code === code); return lib ? costPlanPerUnit(lib, resolved.assumptions.yield.shrinkAllowance.value).totalInputCostPerUnit : null; })(),
     }))
     .filter((x) => x.cost !== null) as { code: string; name: string; cost: number }[];
   const avgInputCost = costed.length > 0 ? costed.reduce((t, x) => t + x.cost, 0) / costed.length : null;
@@ -437,7 +437,7 @@ function QuotePanel({ prospect, defaults }: { prospect: ClientProspect; defaults
           {avgInputCost !== null ? (
             <>
               <QuoteRow
-                label={costed.length === 1 ? `Input cost / unit — ${costed[0].name}` : `Input cost / unit — mean of ${costed.length} crop plans`}
+                label={costed.length === 1 ? `Input cost / unit — ${costed[0].name}` : `Input cost / unit — mean of ${costed.length} grow plans`}
                 value={money(avgInputCost, 4)}
               />
               <QuoteRow label="Over input cost / unit" value={money(pricePerUnit - avgInputCost, 2)} />
@@ -448,8 +448,8 @@ function QuotePanel({ prospect, defaults }: { prospect: ClientProspect; defaults
         <p className="farm-kpi-sub mt-2">
           Draft — not saved. Estimates derived from the inputs at left; not a binding offer.
           {avgInputCost === null
-            ? ' Link the crop plans quoted on the Pickup point & crop plans tab to carry input cost into the quote.'
-            : ' Input cost is from the open forecast for the linked crop plans; it covers inputs only, not labor, packaging, distribution, or overhead.'}
+            ? ' Link the grow plans quoted on the Pickup point & grow plans tab to carry input cost into the quote.'
+            : ' Input cost is from the open forecast for the linked grow plans; it covers inputs only, not labor, packaging, distribution, or overhead.'}
         </p>
       </div>
     </div>

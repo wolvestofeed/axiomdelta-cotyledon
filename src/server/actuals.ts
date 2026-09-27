@@ -36,7 +36,7 @@ type DistributionRow = typeof farmDistributions.$inferSelect;
 const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   id: r.id,
   sowingId: r.sowingId,
-  cropPlanCode: r.cropPlanCode,
+  growPlanCode: r.growPlanCode,
   productionDate: iso(r.productionDate)!,
   standardVersion: r.standardVersion,
   plannedUnits: r.plannedUnits,
@@ -59,8 +59,8 @@ const toSowingDoc = (r: SowingRow): SowingRecordDoc => ({
   stageRecords: r.stageRecords ? { ...EMPTY_STAGE_RECORDS, ...(r.stageRecords as Partial<StageRecords>) } : null,
 });
 
-/** A distribution names its crop plan through the order it was recorded against (Roadmap N9). */
-const toDistributionDoc = (r: DistributionRow, cropPlanByDistribution: ReadonlyMap<string, string>): DistributionDoc => ({
+/** A distribution names its grow plan through the order it was recorded against (Roadmap N9). */
+const toDistributionDoc = (r: DistributionRow, growPlanByDistribution: ReadonlyMap<string, string>): DistributionDoc => ({
   id: r.id,
   distributedOn: iso(r.distributedOn)!,
   phase: r.phase,
@@ -76,12 +76,12 @@ const toDistributionDoc = (r: DistributionRow, cropPlanByDistribution: ReadonlyM
   invoiceId: r.invoiceId,
   routeCompletedAt: r.routeCompletedAt ? r.routeCompletedAt.toISOString() : null,
   notes: r.notes,
-  cropPlanCode: cropPlanByDistribution.get(r.id) ?? null,
+  growPlanCode: growPlanByDistribution.get(r.id) ?? null,
 });
 
-async function loadCropPlanByDistribution(): Promise<Map<string, string>> {
-  const rows = await db.select({ distributionId: farmOrders.distributionId, cropPlanCode: farmOrders.cropPlanCode }).from(farmOrders).where(isNotNull(farmOrders.distributionId));
-  return new Map(rows.filter((r) => r.distributionId).map((r) => [r.distributionId!, r.cropPlanCode]));
+async function loadGrowPlanByDistribution(): Promise<Map<string, string>> {
+  const rows = await db.select({ distributionId: farmOrders.distributionId, growPlanCode: farmOrders.growPlanCode }).from(farmOrders).where(isNotNull(farmOrders.distributionId));
+  return new Map(rows.filter((r) => r.distributionId).map((r) => [r.distributionId!, r.growPlanCode]));
 }
 
 /**
@@ -90,20 +90,20 @@ async function loadCropPlanByDistribution(): Promise<Map<string, string>> {
  * dashboard, Roadmap N9).
  */
 export async function loadProductionRecords(): Promise<Pick<ActualsBundle, 'sowings' | 'distributions'>> {
-  const [sowings, distributions, cropPlanByDistribution] = await Promise.all([
+  const [sowings, distributions, growPlanByDistribution] = await Promise.all([
     db.select().from(farmSowingRecords).orderBy(desc(farmSowingRecords.productionDate)),
     db.select().from(farmDistributions).orderBy(desc(farmDistributions.distributedOn)),
-    loadCropPlanByDistribution(),
+    loadGrowPlanByDistribution(),
   ]);
-  return { sowings: sowings.map(toSowingDoc), distributions: distributions.map((r) => toDistributionDoc(r, cropPlanByDistribution)) };
+  return { sowings: sowings.map(toSowingDoc), distributions: distributions.map((r) => toDistributionDoc(r, growPlanByDistribution)) };
 }
 
 export async function loadActuals(): Promise<ActualsBundle> {
-  const [sowings, receipts, distributions, cropPlanByDistribution, bills, standards, wc, clock, payrollPeriods] = await Promise.all([
+  const [sowings, receipts, distributions, growPlanByDistribution, bills, standards, wc, clock, payrollPeriods] = await Promise.all([
     db.select().from(farmSowingRecords).orderBy(desc(farmSowingRecords.productionDate)),
     db.select().from(farmReceipts).orderBy(desc(farmReceipts.receivedOn)),
     db.select().from(farmDistributions).orderBy(desc(farmDistributions.distributedOn)),
-    loadCropPlanByDistribution(),
+    loadGrowPlanByDistribution(),
     db.select().from(farmPeriodBills).orderBy(desc(farmPeriodBills.period)),
     loadStandards(),
     loadWorkingCapital(),
@@ -131,7 +131,7 @@ export async function loadActuals(): Promise<ActualsBundle> {
         notes: r.notes,
       }),
     ),
-    distributions: distributions.map((r) => toDistributionDoc(r, cropPlanByDistribution)),
+    distributions: distributions.map((r) => toDistributionDoc(r, growPlanByDistribution)),
     bills: bills.map(
       (r): PeriodBillDoc => ({
         id: r.id,

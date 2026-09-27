@@ -16,9 +16,9 @@ async function PackagingPageInner() {
       <PageHeader
         title="Packaging"
         purpose="Keep the library of packages units leave the farm in, with costs."
-        functions={['Packaging library', 'Cost on file', 'Crop plans with packages']}
+        functions={['Packaging library', 'Cost on file', 'Grow plans with packages']}
         connects={[
-          { href: '/farm/crop-plans', dir: 'to' },
+          { href: '/farm/grow-plans', dir: 'to' },
           { href: '/farm/grow-units', dir: 'both' },
         ]}
         howItWorks={
@@ -26,7 +26,7 @@ async function PackagingPageInner() {
             <li>Containers, lids, labels and liners are packaging.</li>
             <li>Tray sealers, coders and vacuum packers are capital on Equipment, not packaging here.</li>
             <li>Each package carries a manual cost and a supplier-based cost.</li>
-            <li>Crop plans pick their packages from this library.</li>
+            <li>Grow plans pick their packages from this library.</li>
           </ul>
         }
         status="live"

@@ -2,7 +2,7 @@
  * MicroFarm — source-of-truth reference data.
  *
  * Every figure here traces to the facility operating model. Source-company
- * identifiers are scrubbed: the crop plan code is AMK-E-001, and no company,
+ * identifiers are scrubbed: the grow plan code is AMK-E-001, and no company,
  * incubator, standards-partner, or personal name appears anywhere.
  *
  * Numbers are stored as inputs (and their status tag). Derived values — cost
@@ -39,7 +39,7 @@ export const assumptions = {
     ),
   },
   perUnit: {
-    packaging: t(0, 'DERIVED', '$/unit', 'Per crop plan: the sum of the packages it picks, at the packaging library\'s cost. Zero where nothing is picked or no cost is entered.'),
+    packaging: t(0, 'DERIVED', '$/unit', 'Per grow plan: the sum of the packages it picks, at the packaging library\'s cost. Zero where nothing is picked or no cost is entered.'),
     distribution: t(0.35, 'PLACEHOLDER', '$/unit', 'Own-fleet assumption for phases 1 and 2'),
     // No per-unit overhead constant lives here. Fixed cost is never in the cost of a
     // unit; its per-unit figure is a period metric (`fixedCostPerUnitByMonth`), and the GAAP absorption rate
@@ -77,7 +77,7 @@ export const assumptions = {
       'units',
       'STATED',
       'base',
-      'Allocation base for fixed manufacturing overhead. Units is the single-product base; labor hours becomes the base once the menu carries more than one crop plan.',
+      'Allocation base for fixed manufacturing overhead. Units is the single-product base; labor hours becomes the base once the menu carries more than one grow plan.',
     ),
   },
   /**
@@ -106,9 +106,9 @@ export const assumptions = {
       'The 3% shrink allowance IS the normal spoilage allowance and is inventoriable. Scrap beyond it is abnormal spoilage and is a period charge under ASC 330-10-30-7.',
     ),
   },
-  // Roadmap N3 (2026-09-16): NOT the cost basis of any crop plan. The resolver
-  // writes each crop plan's OWN labor standard over these — from its approved studies,
-  // else its estimated study — and every page reads the crop plan's. These values
+  // Roadmap N3 (2026-09-16): NOT the cost basis of any grow plan. The resolver
+  // writes each grow plan's OWN labor standard over these — from its approved studies,
+  // else its estimated study — and every page reads the grow plan's. These values
   // survive only as the fallback for an engine call made without the resolver
   // (a bare `costPerUnit()` in a test), and retire in N9 with the other
   // plan-data reads (conformance C2).
@@ -166,9 +166,9 @@ export const capacityInputs = {
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Library status. Production Planning plans `in_service`; the others run singly. */
-export type CropPlanStatus = 'in_service' | 'planned' | 'developing';
+export type GrowPlanStatus = 'in_service' | 'planned' | 'developing';
 
-export const CROP_PLAN_STATUS_LABELS: Record<CropPlanStatus, string> = {
+export const GROW_PLAN_STATUS_LABELS: Record<GrowPlanStatus, string> = {
   in_service: 'In Service',
   planned: 'Planned',
   developing: 'Developing',
@@ -228,12 +228,12 @@ export const phases: readonly PhaseRow[] = [
   { phase: 3, market: 'Retail and wholesale', character: 'Retail corner and wholesale accounts', pricePerUnit: 25, unitsPerDay: 0, operatingDays: 333 },
 ];
 
-// Per-phase cost & unit profile. Same crop plan across all three phases for
+// Per-phase cost & unit profile. Same grow plan across all three phases for
 // now; unit size scales the input cost AND the canopy mass per unit
 // (which drives sowing size), so a bigger subscriber unit yields fewer units
 // per sowing. `premiumFactor` is a separate knob (input premium) held at
 // 1.0 until per-phase menus are costed. Future path: a costing engine that
-// carries distinct per-phase crop plans.
+// carries distinct per-phase grow plans.
 export interface PhaseProfile {
   phase: number;
   unitFactor: Tagged; // multiplies unit size vs the base prospect unit
@@ -244,16 +244,16 @@ export const phaseProfiles: PhaseProfile[] = [
   {
     phase: 1,
     unitFactor: t(1.0, 'STATED', '×', 'Base prospect unit, fundamental menu; the packed weight derives from the harvested yields'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Base crop plan'),
+    premiumFactor: t(1.0, 'STATED', '×', 'Base grow plan'),
   },
   {
     phase: 2,
     unitFactor: t(1.5, 'STATED', '×', '+50% unit for restaurants'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Same crop plan for now; premium menu is a future build'),
+    premiumFactor: t(1.0, 'STATED', '×', 'Same grow plan for now; premium menu is a future build'),
   },
   {
     phase: 3,
     unitFactor: t(1.5, 'STATED', '×', '+50% unit for retail and wholesale / retail'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Same crop plan for now; premium menu is a future build'),
+    premiumFactor: t(1.0, 'STATED', '×', 'Same grow plan for now; premium menu is a future build'),
   },
 ];

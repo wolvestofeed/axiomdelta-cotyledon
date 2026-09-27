@@ -29,8 +29,8 @@ export function useSustainabilityWorld(options?: LcaOption[]) {
   const water = useMemo(() => (isPlan ? resolved.sustainability.water : waterFromReadings(records?.readings ?? [], year)), [isPlan, resolved.sustainability.water, records, year]);
   const refrigerantService = useMemo(() => (isPlan ? {} : serviceFromRecords(records?.refrigerantService ?? [])), [isPlan, records]);
   const food = useMemo(
-    () => mixFoodFootprint({ basis, cropPlans: resolved.cropPlans, unitFactorByChannel: pfByChannel, selection: resolved.sustainability.inputBasis, options }),
-    [basis, resolved.cropPlans, pfByChannel, resolved.sustainability.inputBasis, options],
+    () => mixFoodFootprint({ basis, growPlans: resolved.growPlans, unitFactorByChannel: pfByChannel, selection: resolved.sustainability.inputBasis, options }),
+    [basis, resolved.growPlans, pfByChannel, resolved.sustainability.inputBasis, options],
   );
   return {
     kind: posted.kind,

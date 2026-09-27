@@ -75,10 +75,10 @@ async function SubscriberPortalPageInner({ searchParams }: { searchParams: Promi
             ) : (
               <div className="farm-scroll-x">
                 <table className="farm-table">
-                  <thead><tr><th>Date</th><th>Crop plan</th><th className="num">Units</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Grow plan</th><th className="num">Units</th><th>Status</th></tr></thead>
                   <tbody>
                     {mine.map((o) => (
-                      <tr key={o.id}><td>{o.orderDate}</td><td>{inputs.cropPlans.find((r) => r.code === o.cropPlanCode)?.name ?? o.cropPlanCode}</td><td className="num">{num(o.units)}</td><td className="capitalize!">{o.status}</td></tr>
+                      <tr key={o.id}><td>{o.orderDate}</td><td>{inputs.growPlans.find((r) => r.code === o.growPlanCode)?.name ?? o.growPlanCode}</td><td className="num">{num(o.units)}</td><td className="capitalize!">{o.status}</td></tr>
                     ))}
                   </tbody>
                 </table>

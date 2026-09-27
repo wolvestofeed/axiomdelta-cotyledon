@@ -3,14 +3,14 @@
 import type { GrowPlanDef } from '@/data/grow-plan';
 import { useState } from 'react';
 import { Card } from '@/components/ui';
-import { CROP_PLAN_STATUS_LABELS } from '@/data/plan-data';
+import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { DEFAULT_WEEKDAYS, WEEKDAY_LABELS, type SubscriptionCycleDef, type SubscriptionCycleStatus } from '@/data/subscription-cycles';
 
 /**
- * The form for a crop plan sequence — a saved subscription cycle or a subscriber's flat plan
+ * The form for a grow plan sequence — a saved subscription cycle or a subscriber's flat plan
  * (Roadmap N4a). One shape for both; the page decides where a save goes (the
- * record, or the open forecast). `channel` limits the crop plans offered to the
- * ones listed on the subscriber's channel; a saved cycle offers every crop plan.
+ * record, or the open forecast). `channel` limits the grow plans offered to the
+ * ones listed on the subscriber's channel; a saved cycle offers every grow plan.
  */
 
 export interface SequenceValues {
@@ -22,7 +22,7 @@ export interface SequenceValues {
   status: SubscriptionCycleStatus;
   notes: string | null;
   subscriberServiceId: string | null;
-  days: { day: number; cropPlanCode: string | null }[];
+  days: { day: number; growPlanCode: string | null }[];
 }
 
 export const valuesOf = (c: SubscriptionCycleDef): SequenceValues => ({
@@ -52,7 +52,7 @@ export const emptySequence = (today: string, name = ''): SequenceValues => ({
 export function FlatPlanForm({
   title,
   initial,
-  cropPlans,
+  growPlans,
   channel = null,
   services = [],
   pending = false,
@@ -62,8 +62,8 @@ export function FlatPlanForm({
 }: {
   title: string;
   initial: SequenceValues;
-  cropPlans: readonly GrowPlanDef[];
-  /** The subscriber's channel: only crop plans listed on it are offered. Null = every crop plan (a saved cycle). */
+  growPlans: readonly GrowPlanDef[];
+  /** The subscriber's channel: only grow plans listed on it are offered. Null = every grow plan (a saved cycle). */
   channel?: number | null;
   /** The subscriber's services, for a plan that serves one service only. Empty = no service scope offered. */
   services?: readonly { id: string; label: string }[];
@@ -74,14 +74,14 @@ export function FlatPlanForm({
   children?: React.ReactNode;
 }) {
   const [f, setF] = useState<SequenceValues>(initial);
-  const byDay = new Map(f.days.map((d) => [d.day, d.cropPlanCode]));
-  const offered = channel === null ? cropPlans : cropPlans.filter((r) => r.channels.includes(channel));
+  const byDay = new Map(f.days.map((d) => [d.day, d.growPlanCode]));
+  const offered = channel === null ? growPlans : growPlans.filter((r) => r.channels.includes(channel));
   const set = (patch: Partial<SequenceValues>) => setF({ ...f, ...patch });
-  const setDay = (day: number, cropPlanCode: string | null) =>
-    set({ days: [...f.days.filter((d) => d.day !== day), { day, cropPlanCode }].sort((a, b) => a.day - b.day) });
+  const setDay = (day: number, growPlanCode: string | null) =>
+    set({ days: [...f.days.filter((d) => d.day !== day), { day, growPlanCode }].sort((a, b) => a.day - b.day) });
 
   function save() {
-    const days = Array.from({ length: f.lengthDays }, (_, i) => i + 1).map((day) => ({ day, cropPlanCode: byDay.get(day) ?? null }));
+    const days = Array.from({ length: f.lengthDays }, (_, i) => i + 1).map((day) => ({ day, growPlanCode: byDay.get(day) ?? null }));
     onSave({ ...f, name: f.name.trim(), notes: f.notes?.trim() || null, days });
   }
 
@@ -118,7 +118,7 @@ export function FlatPlanForm({
       </div>
       <div className="farm-scroll-x mt-3!">
         <table className="farm-table">
-          <thead><tr><th>Day</th><th>Crop plan served</th></tr></thead>
+          <thead><tr><th>Day</th><th>Grow plan served</th></tr></thead>
           <tbody>
             {Array.from({ length: f.lengthDays }, (_, i) => i + 1).map((d) => (
               <tr key={d}>
@@ -126,7 +126,7 @@ export function FlatPlanForm({
                 <td>
                   <select className="farm-select" value={byDay.get(d) ?? ''} onChange={(e) => setDay(d, e.target.value || null)}>
                     <option value="">No service</option>
-                    {offered.map((r) => <option key={r.code} value={r.code}>{r.code} — {r.name} · {CROP_PLAN_STATUS_LABELS[r.status]}</option>)}
+                    {offered.map((r) => <option key={r.code} value={r.code}>{r.code} — {r.name} · {GROW_PLAN_STATUS_LABELS[r.status]}</option>)}
                   </select>
                 </td>
               </tr>
@@ -144,7 +144,7 @@ export function FlatPlanForm({
 }
 
 /** The days of a sequence as a one-row table. */
-export function SequenceTable({ plan, cropPlanNames }: { plan: Pick<SubscriptionCycleDef, 'days'>; cropPlanNames: Record<string, string> }) {
+export function SequenceTable({ plan, growPlanNames }: { plan: Pick<SubscriptionCycleDef, 'days'>; growPlanNames: Record<string, string> }) {
   return (
     <table className="farm-table mt-[0.3rem]!">
       <thead><tr>{plan.days.map((d) => <th key={d.day}>Day {d.day}</th>)}</tr></thead>
@@ -152,7 +152,7 @@ export function SequenceTable({ plan, cropPlanNames }: { plan: Pick<Subscription
         <tr>
           {plan.days.map((d) => (
             <td key={d.day}>
-              {d.cropPlanCode ? <>{d.cropPlanCode}<div className="farm-c-faint farm-fs-2xs">{cropPlanNames[d.cropPlanCode] ?? 'not in library'}</div></> : <span className="farm-kpi-sub">no service</span>}
+              {d.growPlanCode ? <>{d.growPlanCode}<div className="farm-c-faint farm-fs-2xs">{growPlanNames[d.growPlanCode] ?? 'not in library'}</div></> : <span className="farm-kpi-sub">no service</span>}
             </td>
           ))}
         </tr>

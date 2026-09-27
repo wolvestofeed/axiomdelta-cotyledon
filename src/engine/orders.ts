@@ -6,12 +6,12 @@
  *
  *   1. DERIVED forecast orders — for every date each service runs (its
  *      weekdays, inside the pickup point's calendar, the farm open), the subscriber's
- *      flat plan crop plan on that date × the service's units per service in force
+ *      flat plan grow plan on that date × the service's units per service in force
  *      (Roadmap N4a). Two services in a day are two orders. Computed every
  *      time; never stored.
  *   2. Stored orders — typed forecasts, confirmed counts, distributed orders.
  *      A stored row replaces the derived order with the same date, pickup point and
- *      crop plan.
+ *      grow plan.
  *
  * A prospect's full distribution day is every order on that date for that subscriber.
  */
@@ -20,7 +20,7 @@ import type { SubscriberDef } from '@/data/subscribers';
 import type { SubscriptionCycleDef, OrderDef, OrderSource, OrderStatus } from '@/data/subscription-cycles';
 import type { ResolvedPickupPointForecast } from '@/engine/demand';
 import type { DateRange } from '@/engine/periods';
-import { flatPlanCropPlanOn, flatPlansOf } from '@/engine/flat-plans';
+import { flatPlanGrowPlanOn, flatPlansOf } from '@/engine/flat-plans';
 import { normalizePicks, serviceRunsOn, volumeOn } from '@/engine/services';
 
 // ── Dates (UTC arithmetic on ISO strings; no time zone in play) ─────────────
@@ -65,10 +65,10 @@ export function cycleDayOn(cycle: Pick<SubscriptionCycleDef, 'startDate' | 'leng
   return (count % cycle.lengthDays) + 1;
 }
 
-export function cycleCropPlanOn(cycle: SubscriptionCycleDef, date: string): string | null {
+export function cycleGrowPlanOn(cycle: SubscriptionCycleDef, date: string): string | null {
   const day = cycleDayOn(cycle, date);
   if (day === null) return null;
-  return cycle.days.find((d) => d.day === day)?.cropPlanCode ?? null;
+  return cycle.days.find((d) => d.day === day)?.growPlanCode ?? null;
 }
 
 // ── The order book ──────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export type OrderBasis = 'derived' | 'record';
 export type PriceBasis = 'order' | 'contract' | 'channel';
 
 export interface BookOrder {
-  /** `${date}|${subscriberPickupPointId}|${subscriberServiceId}|${cropPlanCode}` — the identity a stored row replaces. */
+  /** `${date}|${subscriberPickupPointId}|${subscriberServiceId}|${growPlanCode}` — the identity a stored row replaces. */
   key: string;
   /** Stored row id; null for a derived forecast order. */
   id: string | null;
@@ -92,8 +92,8 @@ export interface BookOrder {
   /** distribution-pickup-point id when the subscriber pickup point is linked. */
   distributionPickupPointId: string | null;
   channel: number;
-  cropPlanCode: string;
-  cropPlanName: string;
+  growPlanCode: string;
+  growPlanName: string;
   units: number;
   status: OrderStatus;
   basis: OrderBasis;
@@ -106,8 +106,8 @@ export interface BookOrder {
   notes: string | null;
 }
 
-export const orderKey = (date: string, subscriberPickupPointId: string, cropPlanCode: string, subscriberServiceId: string | null = null): string =>
-  `${date}|${subscriberPickupPointId}|${subscriberServiceId ?? ''}|${cropPlanCode}`;
+export const orderKey = (date: string, subscriberPickupPointId: string, growPlanCode: string, subscriberServiceId: string | null = null): string =>
+  `${date}|${subscriberPickupPointId}|${subscriberServiceId ?? ''}|${growPlanCode}`;
 
 export interface OrderBookInput {
   /** Pickup points with their services, calendars and the forecast's edits applied (`resolveSubscriberPickupPoints`). */
@@ -121,8 +121,8 @@ export interface OrderBookInput {
   to: string;
   /** Channel default price, cents, by phase. */
   channelPriceCents: Record<number, number>;
-  /** Crop plan code → name, for display. */
-  cropPlanNames?: Record<string, string>;
+  /** Grow plan code → name, for display. */
+  growPlanNames?: Record<string, string>;
   /** Farm closures (major holidays): no derived forecast order falls on a closed date. Stored rows are kept. */
   closures?: readonly DateRange[];
 }
@@ -135,7 +135,7 @@ function priceFor(order: number | null, contract: number | null, channelDefault:
 
 /** The order book for a date range: derived forecast orders with stored rows in their place. */
 export function orderBook(input: OrderBookInput): BookOrder[] {
-  const names = input.cropPlanNames ?? {};
+  const names = input.growPlanNames ?? {};
   const byKey = new Map<string, BookOrder>();
 
   // Derived forecast orders: every service on every date it runs.
@@ -155,11 +155,11 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
         if (!serviceRunsOn(sv, s.calendar, date, input.closures)) continue;
         const units = volumeOn(picks, date);
         if (units <= 0) continue;
-        const served = flatPlanCropPlanOn(plans, sv.id, date);
+        const served = flatPlanGrowPlanOn(plans, sv.id, date);
         if (!served) continue;
-        const { cropPlanCode, plan } = served;
+        const { growPlanCode, plan } = served;
         const price = priceFor(null, s.pricePerUnitCents, input.channelPriceCents[s.channel]);
-        const key = orderKey(date, s.id, cropPlanCode, sv.id);
+        const key = orderKey(date, s.id, growPlanCode, sv.id);
         byKey.set(key, {
           key,
           id: null,
@@ -172,8 +172,8 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
           serviceName: sv.name,
           distributionPickupPointId: s.pickupPointId,
           channel: s.channel,
-          cropPlanCode,
-          cropPlanName: names[cropPlanCode] ?? cropPlanCode,
+          growPlanCode,
+          growPlanName: names[growPlanCode] ?? growPlanCode,
           units,
           status: 'forecast',
           basis: 'derived',
@@ -197,7 +197,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
     if (o.orderDate < input.from || o.orderDate > input.to) continue;
     const hit = pickupPointIndex.get(o.subscriberPickupPointId);
     const price = priceFor(o.pricePerUnitCents, hit?.subscriber.pricePerUnitCents ?? null, input.channelPriceCents[o.channel]);
-    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.cropPlanCode, o.subscriberServiceId);
+    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriberServiceId);
     byKey.set(key, {
       key,
       id: o.id,
@@ -210,8 +210,8 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       serviceName: o.subscriberServiceId ? serviceName.get(o.subscriberServiceId) ?? 'Service removed' : null,
       distributionPickupPointId: hit?.pickupPoint.pickupPointId ?? null,
       channel: o.channel,
-      cropPlanCode: o.cropPlanCode,
-      cropPlanName: names[o.cropPlanCode] ?? o.cropPlanCode,
+      growPlanCode: o.growPlanCode,
+      growPlanName: names[o.growPlanCode] ?? o.growPlanCode,
       units: o.units,
       status: o.status,
       basis: 'record',
@@ -231,35 +231,35 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       a.subscriberName.localeCompare(b.subscriberName) ||
       a.pickupPointName.localeCompare(b.pickupPointName) ||
       (a.serviceName ?? '').localeCompare(b.serviceName ?? '') ||
-      a.cropPlanCode.localeCompare(b.cropPlanCode),
+      a.growPlanCode.localeCompare(b.growPlanCode),
   );
 }
 
 // ── Views over the book ─────────────────────────────────────────────────────
 
-export interface CropPlanUnits {
-  cropPlanCode: string;
-  cropPlanName: string;
+export interface GrowPlanUnits {
+  growPlanCode: string;
+  growPlanName: string;
   units: number;
   orders: number;
 }
 
-export function unitsByCropPlan(orders: readonly BookOrder[]): CropPlanUnits[] {
-  const m = new Map<string, CropPlanUnits>();
+export function unitsByGrowPlan(orders: readonly BookOrder[]): GrowPlanUnits[] {
+  const m = new Map<string, GrowPlanUnits>();
   for (const o of orders) {
-    const row = m.get(o.cropPlanCode) ?? { cropPlanCode: o.cropPlanCode, cropPlanName: o.cropPlanName, units: 0, orders: 0 };
+    const row = m.get(o.growPlanCode) ?? { growPlanCode: o.growPlanCode, growPlanName: o.growPlanName, units: 0, orders: 0 };
     row.units += o.units;
     row.orders += 1;
-    m.set(o.cropPlanCode, row);
+    m.set(o.growPlanCode, row);
   }
-  return [...m.values()].sort((a, b) => b.units - a.units || a.cropPlanCode.localeCompare(b.cropPlanCode));
+  return [...m.values()].sort((a, b) => b.units - a.units || a.growPlanCode.localeCompare(b.growPlanCode));
 }
 
 export interface DistributionDay {
   date: string;
   subscriberId: string | null;
   orders: BookOrder[];
-  byCropPlan: CropPlanUnits[];
+  byGrowPlan: GrowPlanUnits[];
   totalUnits: number;
   /** Units per pickup point, in book order. */
   byPickupPoint: { subscriberPickupPointId: string; pickupPointName: string; subscriberName: string; units: number }[];
@@ -330,7 +330,7 @@ export function distributionDay(book: readonly BookOrder[], date: string, subscr
     date,
     subscriberId,
     orders,
-    byCropPlan: unitsByCropPlan(orders),
+    byGrowPlan: unitsByGrowPlan(orders),
     totalUnits: orders.reduce((a, o) => a + o.units, 0),
     byPickupPoint: [...pickupPoints.values()],
   };

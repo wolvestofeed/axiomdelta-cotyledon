@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 import { Card, Kpi, money, num } from '@/components/ui';
 
 import { PageControls } from '@/components/PageControls';
-import { CropPlanSelector, useSelectedCropPlan } from '@/components/CropPlanSelector';
+import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 import { TrendChart } from '@/components/TrendChart';
 import { deriveCapacity } from '@/engine';
 import { QUALITY_RESULTS, QUALITY_RESULT_LABELS, TIME_STUDY_BASIS_LABELS, TIME_STUDY_STREAMS, TIME_STUDY_STREAM_LABELS, type QualityResult, type SupplementEntry, type TimeStudyDoc, type TimeStudyLibrary, type TimeStudyLine, type TimeStudyStream, type WaterEntry } from '@/data/time-studies';
-import { inStandard, laborMinutesForSowing, laborStandard, nextStudyDue, standardIsEstimated, studiesForCropPlan, studySupplementMl, studyTrend, studyWaterOz, summarizeStudy, wateringDays } from '@/engine/time-studies';
+import { inStandard, laborMinutesForSowing, laborStandard, nextStudyDue, standardIsEstimated, studiesForGrowPlan, studySupplementMl, studyTrend, studyWaterOz, summarizeStudy, wateringDays } from '@/engine/time-studies';
 import { planStageDays, planStages } from '@/data/grow-plan';
 import { STAGE_BY_KEY, STAGES, type StageKey } from '@/data/stage-schedule';
 import { WATER_ONLY_KEY } from '@/data/inputs-catalog';
@@ -71,20 +71,20 @@ const mins = (m: number, dp = 0) => `${num(m, dp)} min`;
 const studyDate = (s: TimeStudyDoc) => (s.basis === 'estimated' ? 'Estimated' : s.studiedOn ?? 'Date not recorded');
 
 export function TimeStudiesClient({ library, canEdit, today }: { library: TimeStudyLibrary; canEdit: boolean; today: string }) {
-  const { cropPlan } = useSelectedCropPlan();
+  const { growPlan } = useSelectedGrowPlan();
   return (
     <>
-      <PageControls><CropPlanSelector /></PageControls>
-      <PageControls group="action"><a className="farm-btn ghost" href={`/farm/time-studies/time-study-sheet?crop plan=${encodeURIComponent(cropPlan.code)}`}>Time Study Sheet</a></PageControls>
-      <CropPlanLabor key={cropPlan.code} library={library} canEdit={canEdit} today={today} />
+      <PageControls><GrowPlanSelector /></PageControls>
+      <PageControls group="action"><a className="farm-btn ghost" href={`/farm/time-studies/time-study-sheet?growPlan=${encodeURIComponent(growPlan.code)}`}>Time Study Sheet</a></PageControls>
+      <GrowPlanLabor key={growPlan.code} library={library} canEdit={canEdit} today={today} />
     </>
   );
 }
 
-function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary; canEdit: boolean; today: string }) {
+function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary; canEdit: boolean; today: string }) {
   const { resolved, nutrients } = useScenario();
   const supplementChoices = useMemo(() => nutrients.filter((n) => n.key !== WATER_ONLY_KEY), [nutrients]);
-  const { cropPlan } = useSelectedCropPlan();
+  const { growPlan } = useSelectedGrowPlan();
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -92,18 +92,17 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
   const [form, setForm] = useState<StudyForm | null>(null);
   const [intervalDraft, setIntervalDraft] = useState('');
 
-  const studies = useMemo(() => studiesForCropPlan(library.studies, cropPlan.code), [library.studies, cropPlan.code]);
+  const studies = useMemo(() => studiesForGrowPlan(library.studies, growPlan.code), [library.studies, growPlan.code]);
   const standard = laborStandard(studies);
   const onEstimate = standardIsEstimated(standard);
   const approvedCount = studies.filter((s) => s.basis === 'observed' && s.approvedAt).length;
   const basis = standard ?? studies[0] ?? null;
-  const growPlan = cropPlan;
   const planStageList = growPlan ? planStages(growPlan) : STAGES;
 
   const selected = studies.find((s) => s.id === selectedId) ?? basis;
-  const cropPlanId = library.cropPlanIds[cropPlan.code];
+  const growPlanId = library.growPlanIds[growPlan.code];
 
-  const cap = useMemo(() => deriveCapacity(cropPlan, resolved.capacityInputs), [cropPlan, resolved.capacityInputs]);
+  const cap = useMemo(() => deriveCapacity(growPlan, resolved.capacityInputs), [growPlan, resolved.capacityInputs]);
   const planCycleDays = cap.grow?.cycleDays ?? basis?.cycleDays ?? 0;
   // Labor cost uses the plan's loaded labor rate, a placeholder until Staffing's
   // loaded rates arrive. It is never displayed: no wage or pay appears here.
@@ -111,7 +110,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
   const basisSummary = basis ? summarizeStudy(basis) : null;
   const sowingMinutes = basisSummary ? laborMinutesForSowing(basisSummary, cap.sowingSize) : null;
   const dayMinutes = sowingMinutes === null ? null : sowingMinutes * cap.cyclesPerDay;
-  const due = nextStudyDue(studies, library.intervals[cropPlan.code], today);
+  const due = nextStudyDue(studies, library.intervals[growPlan.code], today);
   const perUnitTrend = useMemo(() => studyTrend(studies, (s) => summarizeStudy(s).laborMinutesPerUnit), [studies]);
   const fixedTrend = useMemo(() => studyTrend(studies, (s) => summarizeStudy(s).fixedMinutesPerSowing), [studies]);
 
@@ -143,7 +142,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
   };
 
   const saveStudy = () => {
-    if (!form || !cropPlanId) return;
+    if (!form || !growPlanId) return;
     const lines = form.lines
       .filter((l) => l.task.trim())
       .map((l) => ({ task: l.task.trim(), station: l.station.trim() || null, staff: Math.round(Number(l.staff) || 0), elapsedMinutes: Number(l.elapsed) || 0, laborMinutes: Number(l.labor) || 0, scalesWith: l.scalesWith, stream: l.stream }));
@@ -160,7 +159,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
     run(
       () =>
         recordTimeStudy({
-          cropPlanId,
+          growPlanId,
           studiedOn: form.studiedOn,
           sowingSize: Math.round(Number(form.sowingSize)),
           cycleDays: Math.round(Number(form.cycleDays) || 0),
@@ -190,7 +189,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
   return (
     <>
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={num(studies.length)} label={`Time studies — ${cropPlan.code}`} sub={standard ? (onEstimate ? 'Standard: the estimate, until an observed study is approved' : approvedCount > 1 ? `Standard: the average of ${num(approvedCount)} approved studies` : `Standard: the ${studyDate(standard)} study, approved`) : studies.length ? 'None approved; the latest study is shown' : 'None logged'} />
+        <Kpi value={num(studies.length)} label={`Time studies — ${growPlan.code}`} sub={standard ? (onEstimate ? 'Standard: the estimate, until an observed study is approved' : approvedCount > 1 ? `Standard: the average of ${num(approvedCount)} approved studies` : `Standard: the ${studyDate(standard)} study, approved`) : studies.length ? 'None approved; the latest study is shown' : 'None logged'} />
         <Kpi value={basisSummary ? num(basisSummary.laborMinutesPerUnit, 2) : '—'} label="Labor minutes per unit" sub={basis ? `At the ${num(basis.sowingSize)}-unit sowing studied` : undefined} />
         <Kpi value={sowingMinutes === null ? '—' : num(sowingMinutes / 60, 2)} label="Labor hours per sowing" sub={`At the derived ${num(cap.sowingSize)}-unit sowing`} />
         <Kpi value={sowingMinutes === null ? '—' : money((sowingMinutes / 60) * loadedRate, 0)} label="Labor cost per sowing" sub="At the plan's placeholder loaded rate" />
@@ -199,9 +198,9 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
       </div>
       {error && <p className="farm-kpi-sub mt-3 farm-c-accent">{error}</p>}
 
-      <Card title={`Time study log — ${cropPlan.code} ${cropPlan.name}`} className="mt-4">
+      <Card title={`Time study log — ${growPlan.code} ${growPlan.name}`} className="mt-4">
         {studies.length === 0 ? (
-          <p className="farm-kpi-sub">No time study is logged for this cropPlan.{canEdit ? ' Record one below.' : ''}</p>
+          <p className="farm-kpi-sub">No time study is logged for this growPlan.{canEdit ? ' Record one below.' : ''}</p>
         ) : (
           <div className="farm-scroll-x overflow-y-auto! border! border-[color:var(--farm-line)]! rounded-[0.4rem]!" style={{ maxHeight: `${LOG_ROW_REM * 10 + 2.6}rem` }}>
             <table className="farm-table compact">
@@ -252,7 +251,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
             </table>
           </div>
         )}
-        <p className="farm-kpi-sub mt-2">Newest first; the estimated study and any study recorded without a date are listed last and have no point on the trends. An estimated study is a mock estimate per step, seeded so the crop plan has a labor standard before a sowing is timed; it stands in until an observed study is approved. Every observed study is approved by an admin, and the standard is the average of the approved studies weighted by the trays each timed; approving one also approves a standard version effective that day. Fixed minutes are the tasks that do not scale; variable minutes per unit are the tasks that scale, over the sowing size studied. Each line is on the sowing stream — counted per sowing harvested — or the harvest stream — run first thing each distribution day from staged components and counted per unit shipped that day. The Time Study Sheet above is the printable instrument for timing a sowing; a timed sowing is recorded below, dated, with the observer and the quality result, and joins this log.</p>
+        <p className="farm-kpi-sub mt-2">Newest first; the estimated study and any study recorded without a date are listed last and have no point on the trends. An estimated study is a mock estimate per step, seeded so the grow plan has a labor standard before a sowing is timed; it stands in until an observed study is approved. Every observed study is approved by an admin, and the standard is the average of the approved studies weighted by the trays each timed; approving one also approves a standard version effective that day. Fixed minutes are the tasks that do not scale; variable minutes per unit are the tasks that scale, over the sowing size studied. Each line is on the sowing stream — counted per sowing harvested — or the harvest stream — run first thing each distribution day from staged components and counted per unit shipped that day. The Time Study Sheet above is the printable instrument for timing a sowing; a timed sowing is recorded below, dated, with the observer and the quality result, and joins this log.</p>
       </Card>
 
       <div className="grid gap-4 mt-4 farm-autofit-20">
@@ -331,7 +330,7 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
               <button type="button" className="farm-btn primary mt-2" disabled={pending} onClick={() => run(() => approveTimeStudy({ id: selected.id }))}>
                 Approve
               </button>
-              <p className="farm-kpi-sub mt-1">Approving puts this study in {cropPlan.code}&rsquo;s averaged labor standard and measured water and supplements, and approves a standard version effective today: sowings from today are costed at the new average; trays already sown keep the standard they were sown at.</p>
+              <p className="farm-kpi-sub mt-1">Approving puts this study in {growPlan.code}&rsquo;s averaged labor standard and measured water and supplements, and approves a standard version effective today: sowings from today are costed at the new average; trays already sown keep the standard they were sown at.</p>
             </>
           )}
         </Card>
@@ -339,20 +338,20 @@ function CropPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
 
       <Card title="Re-study interval" className="mt-4">
         <p className="farm-kpi-sub">
-          {due.intervalDays === null ? 'No re-study interval is set for this crop plan.' : `Every ${num(due.intervalDays)} days from the last dated study (${due.lastStudiedOn ?? 'none yet'}).`} {dueText}.
+          {due.intervalDays === null ? 'No re-study interval is set for this grow plan.' : `Every ${num(due.intervalDays)} days from the last dated study (${due.lastStudiedOn ?? 'none yet'}).`} {dueText}.
         </p>
-        {canEdit && cropPlanId && (
+        {canEdit && growPlanId && (
           <div className="flex flex-wrap gap-2 items-center mt-[0.6rem]!">
             <input type="number" min={1} step={1} className="farm-input farm-cell-control w-28! text-right!" placeholder={due.intervalDays === null ? 'days' : String(due.intervalDays)} value={intervalDraft} aria-label="Re-study interval in days" onChange={(e) => setIntervalDraft(e.target.value)} />
             <span className="farm-kpi-sub">days</span>
-            <button type="button" className="farm-btn" disabled={pending || !(Number(intervalDraft) >= 1)} onClick={() => run(() => setRestudyInterval({ cropPlanId, intervalDays: Math.round(Number(intervalDraft)) }), () => setIntervalDraft(''))}>Set interval</button>
-            {due.intervalDays !== null && <button type="button" className="farm-btn" disabled={pending} onClick={() => run(() => setRestudyInterval({ cropPlanId, intervalDays: null }))}>Clear</button>}
+            <button type="button" className="farm-btn" disabled={pending || !(Number(intervalDraft) >= 1)} onClick={() => run(() => setRestudyInterval({ growPlanId, intervalDays: Math.round(Number(intervalDraft)) }), () => setIntervalDraft(''))}>Set interval</button>
+            {due.intervalDays !== null && <button type="button" className="farm-btn" disabled={pending} onClick={() => run(() => setRestudyInterval({ growPlanId, intervalDays: null }))}>Clear</button>}
           </div>
         )}
       </Card>
 
-      {canEdit && cropPlanId && (
-        <Card title={`Record a time study — ${cropPlan.code}`} className="mt-4">
+      {canEdit && growPlanId && (
+        <Card title={`Record a time study — ${growPlan.code}`} className="mt-4">
           {!form ? (
             <button type="button" className="farm-btn" onClick={startStudy}>
               Start a study

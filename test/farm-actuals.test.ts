@@ -28,16 +28,16 @@ import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 const DATE = '2026-09-14';
 const PERIOD = '2026-09';
 // The records are of the seed grow plans' reference plan, the plan the ledger resolves by default.
-const cropPlan = resolveScenarioInputs().cropPlan;
-const sowingSize = deriveCapacity(cropPlan, resolveScenarioInputs().capacityInputs).sowingSize;
+const growPlan = resolveScenarioInputs().growPlan;
+const sowingSize = deriveCapacity(growPlan, resolveScenarioInputs().capacityInputs).sowingSize;
 
 function sowingDoc(overrides: Partial<SowingRecordDoc> = {}): SowingRecordDoc {
-  const pre = standardSowingRecordPrefill(DATE, 1, sowingSize, cropPlan);
+  const pre = standardSowingRecordPrefill(DATE, 1, sowingSize, growPlan);
   return { id: 'b1000000-0000-0000-0000-000000000001', closedAt: null, ...pre, closedBy: 'R. Bogatin', ...overrides };
 }
 
 function receiptDoc(priceFactor = 1): ReceiptDoc {
-  const lines = purchaseLines(cropPlan).map((l) => ({
+  const lines = purchaseLines(growPlan).map((l) => ({
     input: l.name,
     qty: l.qtyPerTray * sowingSize,
     unit: l.unit,
@@ -106,7 +106,7 @@ describe('actuals — documents and periods', () => {
     expect(periodEnd('2026-12')).toBe('2026-12-31');
   });
 
-  it('the prefill is the crop plan standard and mass-balances before anyone types', () => {
+  it('the prefill is the grow plan standard and mass-balances before anyone types', () => {
     const doc = sowingDoc();
     expect(doc.goodUnits).toBe(sowingSize);
     expect(massBalance(toSowingExecution(doc)).balanced).toBe(true);
@@ -121,14 +121,14 @@ describe('actuals — documents and periods', () => {
     expect(bundleForPeriod(bundle, '2026-08').sowings).toHaveLength(0);
   });
 
-  it('receipt lines are costed against the crop plan standard', () => {
-    const c = costReceiptLines(receiptDoc(1.04).lines, purchaseLines(cropPlan));
+  it('receipt lines are costed against the grow plan standard', () => {
+    const c = costReceiptLines(receiptDoc(1.04).lines, purchaseLines(growPlan));
     const std = c.reduce((s, x) => s + x.standardCents, 0);
     const inv = c.reduce((s, x) => s + x.invoiceCents, 0);
     // Invoice prices are whole cents, so a line priced in fractions of a cent rounds; the premium is 4% within that.
     expect(inv).toBeGreaterThan(std);
     expect(inv / std).toBeCloseTo(1.04, 1);
-    const unknown = costReceiptLines([{ input: 'Saffron', qty: 1, unit: 'lb', lotCode: 'x', unitPriceCents: 500000 }], purchaseLines(cropPlan));
+    const unknown = costReceiptLines([{ input: 'Saffron', qty: 1, unit: 'lb', lotCode: 'x', unitPriceCents: 500000 }], purchaseLines(growPlan));
     expect(unknown[0].standardUnitPriceCents).toBeNull();
     expect(unknown[0].purchasePriceVarianceCents).toBe(0);
   });
@@ -303,7 +303,7 @@ describe('actuals — finished lots for a distribution (Roadmap I4)', () => {
     const lots = finishedLotsOf([older, blank, newer]);
     expect(lots.length).toBe(older.lots.length + newer.lots.length + blank.lots.length - 1);
     expect(lots[0].productionDate).toBe(DATE);
-    expect(lots.every((l) => l.cropPlanCode === cropPlan.code && l.lotCode.trim().length > 0)).toBe(true);
+    expect(lots.every((l) => l.growPlanCode === growPlan.code && l.lotCode.trim().length > 0)).toBe(true);
     expect(lots.at(-1)!.productionDate).toBe('2026-09-10');
   });
 });

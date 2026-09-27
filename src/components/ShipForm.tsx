@@ -18,8 +18,8 @@ export interface ShipOrder {
   orderDate: string;
   subscriberName: string;
   pickupPointName: string;
-  cropPlanCode: string;
-  cropPlanName: string;
+  growPlanCode: string;
+  growPlanName: string;
   units: number;
   pricePerUnitCents: number;
 }
@@ -37,7 +37,7 @@ export function ShipForm({
   onCancel,
 }: {
   order: ShipOrder;
-  /** Output lots from closed sowing records, for the crop plan shipped, newest first. */
+  /** Output lots from closed sowing records, for the grow plan shipped, newest first. */
   finishedLots: FinishedLot[];
   today: string;
   showPrice?: boolean;
@@ -56,7 +56,7 @@ export function ShipForm({
   const [by, setBy] = useState('');
   const [receivedBy, setReceivedBy] = useState('');
 
-  const forCropPlan = finishedLots.filter((l) => l.cropPlanCode === order.cropPlanCode);
+  const forGrowPlan = finishedLots.filter((l) => l.growPlanCode === order.growPlanCode);
   const toggleLot = (code: string) => setLots((ls) => (ls.includes(code) ? ls.filter((x) => x !== code) : [...ls, code]));
 
   function submit() {
@@ -83,7 +83,7 @@ export function ShipForm({
 
   return (
     <div className="farm-card mb-4!">
-      <div className="farm-card-title">Ship — {order.subscriberName} · {order.pickupPointName} · {order.cropPlanCode} {order.cropPlanName}</div>
+      <div className="farm-card-title">Ship — {order.subscriberName} · {order.pickupPointName} · {order.growPlanCode} {order.growPlanName}</div>
       {msg && <div className={`farm-scenariobar-msg ${msg.kind} mb-[0.6rem]!`} role="status">{msg.text}</div>}
       <p className="farm-kpi-sub mb-[0.6rem]!">
         Ordered {num(Math.round(order.units))} units for {order.orderDate}. The count below is what went out the door.
@@ -101,11 +101,11 @@ export function ShipForm({
         <label className="farm-kpi-sub">Signed for at the pickup point by<br /><input className="farm-input w-36!" value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} /></label>
       </div>
       <div className="farm-kpi-sub mb-[0.3rem]!">Lots on the truck</div>
-      {forCropPlan.length === 0 ? (
-        <p className="farm-kpi-sub">No closed sowing of {order.cropPlanCode} on file to pick from. A lot code can still be typed below.</p>
+      {forGrowPlan.length === 0 ? (
+        <p className="farm-kpi-sub">No closed sowing of {order.growPlanCode} on file to pick from. A lot code can still be typed below.</p>
       ) : (
         <div className="flex flex-wrap gap-[0.4rem] mb-2!">
-          {forCropPlan.map((l) => (
+          {forGrowPlan.map((l) => (
             <button key={l.lotCode} type="button" className={`farm-btn${lots.includes(l.lotCode) ? ' primary' : ''}`} onClick={() => toggleLot(l.lotCode)}>
               {l.lotCode}<span className="farm-fs-2xs opacity-[0.8]"> · {l.variety} · {l.productionDate}</span>
             </button>

@@ -3,10 +3,10 @@
 /**
  * Suppliers → directory section as a four-tab panel:
  *   • Directory — the table, with each operation's linked lines and a control to
- *     link one of the crop plan's lines to it.
+ *     link one of the grow plan's lines to it.
  *   • Map — producer pins on an OpenStreetMap map, a home-address sidebar, and
  *     the straight-line distance to whichever producer is selected.
- *   • Match to crop plan — crop plan lines against certified-producer products.
+ *   • Match to grow plan — grow plan lines against certified-producer products.
  *   • Linked lines — the reverse view: every operation the model points at, the
  *     lines that name it, and what today's purchase order buys from it. Includes
  *     linked operations outside the current filter, hydrated by id.
@@ -18,7 +18,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import PinMap from '@/components/PinMap';
-import { haversineMiles, type ClientSupplier, type CropPlanMatchView } from '@/engine/geo';
+import { haversineMiles, type ClientSupplier, type GrowPlanMatchView } from '@/engine/geo';
 import { money, num } from '@/components/ui';
 import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
 import { useScenario } from '@/state/scenario-store';
@@ -40,9 +40,9 @@ interface Props {
   totalInView: number;
   displayCap: number;
   capped: boolean;
-  cropPlanMatches: CropPlanMatchView[];
+  growPlanMatches: GrowPlanMatchView[];
   regionLabel: string;
-  /** The next production run's net requirement on the selected world, and every active crop plan's inputs (Roadmap N9). */
+  /** The next production run's net requirement on the selected world, and every active grow plan's inputs (Roadmap N9). */
   nextRun: { kind: 'plan' | 'actual'; distributionDate: string; productionDate: string; lines: { input: string; extendedCost: number; casesToOrder: number }[]; inputs: string[] };
 }
 
@@ -56,15 +56,15 @@ export default function SupplierDirectory({
   totalInView,
   displayCap,
   capped,
-  cropPlanMatches,
+  growPlanMatches,
   regionLabel,
   nextRun,
 }: Props) {
-  const [tab, setTab] = useState<'directory' | 'map' | 'cropPlan' | 'linked'>('directory');
+  const [tab, setTab] = useState<'directory' | 'map' | 'growPlan' | 'linked'>('directory');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // The reverse view reads the same forecast links the input lines write,
-  // so linking here and linking on Crop plans are one and the same edit.
+  // so linking here and linking on Grow plans are one and the same edit.
   const { resolved, setSustainability, isSuperAdmin } = useScenario();
   const links = resolved.sustainability.inputSupplier;
   const linkedById = useLinkedSuppliers(links);
@@ -84,9 +84,9 @@ export default function SupplierDirectory({
       else m[input] = supplierId;
       if (Object.keys(m).length === 0) delete d.inputSupplier;
     });
-  const [cropPlanCode, setCropPlanCode] = useState<string>(cropPlanMatches[0]?.code ?? '');
-  const selectedCropPlan =
-    cropPlanMatches.find((r) => r.code === cropPlanCode) ?? cropPlanMatches[0] ?? null;
+  const [growPlanCode, setGrowPlanCode] = useState<string>(growPlanMatches[0]?.code ?? '');
+  const selectedGrowPlan =
+    growPlanMatches.find((r) => r.code === growPlanCode) ?? growPlanMatches[0] ?? null;
 
   const mappable = useMemo(() => producers.filter((p) => p.lat != null && p.lng != null), [producers]);
   const unmappable = producers.length - mappable.length;
@@ -111,13 +111,13 @@ export default function SupplierDirectory({
         <TabButton active={tab === 'map'} onClick={() => setTab('map')}>
           Map
         </TabButton>
-        <TabButton active={tab === 'cropPlan'} onClick={() => setTab('cropPlan')}>
-          Match to cropPlan
+        <TabButton active={tab === 'growPlan'} onClick={() => setTab('growPlan')}>
+          Match to growPlan
         </TabButton>
         <TabButton active={tab === 'linked'} onClick={() => setTab('linked')}>
           Linked lines{reverse.length > 0 ? ` (${reverse.length})` : ''}
         </TabButton>
-        {tab !== 'cropPlan' && tab !== 'linked' && (
+        {tab !== 'growPlan' && tab !== 'linked' && (
           <div className="ml-auto! farm-fs-xs font-medium text-[rgba(255,255,255,0.8)]">
             Showing {num(producers.length)} of {num(totalInView)}
           </div>
@@ -193,7 +193,7 @@ export default function SupplierDirectory({
             their price sheet, and the purchase orders raised against them. Volume capacity, wholesale
             readiness, pricing, and lead time are not in any public directory; they come from
             conversations and are entered per supplier once engaged. Linking a line to an operation here
-            writes the same forecast link the CropPlans, Procurement, and Inputs pages write; the
+            writes the same forecast link the GrowPlans, Procurement, and Inputs pages write; the
             Linked lines tab is the same set read from the operation&apos;s side.
           </p>
         </>
@@ -257,35 +257,35 @@ export default function SupplierDirectory({
             </div>
           </aside>
         </div>
-      ) : tab === 'cropPlan' ? (
+      ) : tab === 'growPlan' ? (
         <>
           <div className="flex flex-wrap gap-3 items-end mb-[0.8rem]!">
             <label className="farm-fs-sm">
-              <div className="farm-kpi-label">Crop plan</div>
+              <div className="farm-kpi-label">Grow plan</div>
               <select
-                value={cropPlanCode}
-                onChange={(e) => setCropPlanCode(e.target.value)}
-                disabled={cropPlanMatches.length <= 1}
+                value={growPlanCode}
+                onChange={(e) => setGrowPlanCode(e.target.value)}
+                disabled={growPlanMatches.length <= 1}
                 className="py-[0.4rem]! px-[0.6rem]! border! border-[color:var(--farm-line)]! rounded-[0.4rem]! bg-[color:var(--farm-surface)]! farm-c-ink farm-fs-sm min-w-72!"
               >
-                {cropPlanMatches.map((r) => (
+                {growPlanMatches.map((r) => (
                   <option key={r.code} value={r.code}>
                     {r.name} ({r.code})
                   </option>
                 ))}
               </select>
             </label>
-            {cropPlanMatches.length <= 1 && (
+            {growPlanMatches.length <= 1 && (
               <span className="farm-fs-xs farm-c-faint pb-[0.4rem]">
-                One cropPlan on file — the list grows as cropPlans are added.
+                One growPlan on file — the list grows as growPlans are added.
               </span>
             )}
           </div>
 
-          {selectedCropPlan ? (
+          {selectedGrowPlan ? (
             <>
               <p className="farm-kpi-sub mt-0! mb-[0.6rem]!">
-                {selectedCropPlan.category} · CropPlan {selectedCropPlan.code} lines matched against
+                {selectedGrowPlan.category} · GrowPlan {selectedGrowPlan.code} lines matched against
                 certified-producer products in {regionLabel}.
               </p>
               <div className="farm-scroll-x">
@@ -294,7 +294,7 @@ export default function SupplierDirectory({
                     <tr><th>Input line</th><th className="num">Matches</th><th>Example producers</th></tr>
                   </thead>
                   <tbody>
-                    {selectedCropPlan.lines.map((m) => (
+                    {selectedGrowPlan.lines.map((m) => (
                       <tr key={m.input}>
                         <td className="font-medium!">{m.input}</td>
                         <td className={`num ${(m.count ? 'farm-c-ink' : 'farm-c-accent')}`}>{m.count}</td>
@@ -308,7 +308,7 @@ export default function SupplierDirectory({
               </div>
             </>
           ) : (
-            <p className="farm-kpi-sub">No crop plans on file.</p>
+            <p className="farm-kpi-sub">No grow plans on file.</p>
           )}
         </>
       ) : (
@@ -317,12 +317,12 @@ export default function SupplierDirectory({
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{num(reverse.length)}</div>
               <div className="farm-kpi-label">Operations the model points at</div>
-              <div className="farm-kpi-sub">Across every crop plan line</div>
+              <div className="farm-kpi-sub">Across every grow plan line</div>
             </div>
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{num(Object.keys(links).length)}</div>
               <div className="farm-kpi-label">Lines with a supplier</div>
-              <div className="farm-kpi-sub">of {num(inputNames.length)} cropPlan lines</div>
+              <div className="farm-kpi-sub">of {num(inputNames.length)} growPlan lines</div>
             </div>
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{money(reverse.reduce((t, r) => t + r.orderedSpend, 0), 0)}</div>
@@ -334,7 +334,7 @@ export default function SupplierDirectory({
           {reverse.length === 0 ? (
             <p className="farm-kpi-sub mt-3">
               No line is linked to an operation yet. Link one from the Directory tab, or from a line on
-              CropPlans, Procurement, or Inputs.
+              GrowPlans, Procurement, or Inputs.
             </p>
           ) : (
             <div className="farm-scroll-x mt-3">
@@ -407,8 +407,8 @@ export default function SupplierDirectory({
 }
 
 /**
- * An operation's linked crop plan lines, with the control to link another. The
- * select lists every line in the crop plan; choosing one points that line at this
+ * An operation's linked grow plan lines, with the control to link another. The
+ * select lists every line in the grow plan; choosing one points that line at this
  * operation, replacing whatever it pointed at before.
  */
 function LinkedLinesCell({
@@ -447,7 +447,7 @@ function LinkedLinesCell({
         <select
           className="farm-input farm-fs-xs min-w-32! mt-1!"
           value=""
-          aria-label={`Link a crop plan line to ${supplierName}`}
+          aria-label={`Link a grow plan line to ${supplierName}`}
           onChange={(e) => {
             if (e.target.value) onLink(e.target.value);
           }}

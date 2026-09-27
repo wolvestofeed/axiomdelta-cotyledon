@@ -75,7 +75,7 @@ export function ProcurementClient({
   const channelPriceCents = useMemo(() => Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>, [resolved.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(resolved.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [resolved.phaseProfiles]);
   const book = useMemo(() => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from: distributionDate, to: distributionDate, channelPriceCents, closures }), [world.pickupPoints, resolved.subscribers, cycles, orders, distributionDate, channelPriceCents, closures]);
-  const day = useMemo(() => planProductionDay({ productionDate, requirements: requirementsFor(book, resolved.cropPlans, pfByChannel), onHand: {}, cropPlans: resolved.cropPlans, capacityInputs: resolved.capacityInputs, assumptions: resolved.assumptions, cropPlanAssumptions: resolved.cropPlanAssumptions }), [productionDate, book, resolved.cropPlans, pfByChannel, resolved.capacityInputs, resolved.assumptions, resolved.cropPlanAssumptions]);
+  const day = useMemo(() => planProductionDay({ productionDate, requirements: requirementsFor(book, resolved.growPlans, pfByChannel), onHand: {}, growPlans: resolved.growPlans, capacityInputs: resolved.capacityInputs, assumptions: resolved.assumptions, growPlanAssumptions: resolved.growPlanAssumptions }), [productionDate, book, resolved.growPlans, pfByChannel, resolved.capacityInputs, resolved.assumptions, resolved.growPlanAssumptions]);
   const stock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: productionDate }), [receipts, sowings, productionDate]);
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
   const net = useMemo(() => netRequirements({ days: [{ productionDate, lines: day.purchase.lines }], stock, onOrder }), [productionDate, day.purchase.lines, stock, onOrder]);
@@ -83,29 +83,29 @@ export function ProcurementClient({
 
   // Every distinct input across the library, in service first.
   const inputs = useMemo(() => {
-    const seen = new Map<string, { name: string; unit: string; seedUnitCost: number; inService: boolean; cropPlans: number; price: ResolvedInputPrice | undefined }>();
-    for (const r of [...resolved.cropPlans].sort((a, b) => (a.status === 'in_service' ? 0 : 1) - (b.status === 'in_service' ? 0 : 1))) {
+    const seen = new Map<string, { name: string; unit: string; seedUnitCost: number; inService: boolean; growPlans: number; price: ResolvedInputPrice | undefined }>();
+    for (const r of [...resolved.growPlans].sort((a, b) => (a.status === 'in_service' ? 0 : 1) - (b.status === 'in_service' ? 0 : 1))) {
       for (const l of purchaseLines(r)) {
         const row = seen.get(l.name) ?? {
           name: l.name,
           unit: l.unit,
           seedUnitCost: l.unitCost,
           inService: r.status === 'in_service',
-          cropPlans: 0,
-          // The first crop plan to carry the line sets the price shown; the
-          // resolver gives every crop plan's copy the same catalog answer.
+          growPlans: 0,
+          // The first grow plan to carry the line sets the price shown; the
+          // resolver gives every grow plan's copy the same catalog answer.
           price: resolved.inputPrices[inputKey(r.code, l.name)],
         };
-        row.cropPlans += 1;
+        row.growPlans += 1;
         seen.set(l.name, row);
       }
     }
     return [...seen.values()].sort((a, b) => Number(b.inService) - Number(a.inService) || a.name.localeCompare(b.name));
-  }, [resolved.cropPlans, resolved.inputPrices]);
+  }, [resolved.growPlans, resolved.inputPrices]);
 
   const receiveInputs = useMemo<ReceiveInput[]>(() => {
     const seen = new Map<string, ReceiveInput>();
-    for (const r of resolved.cropPlans) {
+    for (const r of resolved.growPlans) {
       for (const l of purchaseLines(r)) {
         if (l.kind === 'light') continue;
         const row = seen.get(l.name) ?? { name: l.name, unit: l.unit, standardUnitPriceCents: Math.round(l.unitCost * 100), onFoodTraceabilityList: false };
@@ -113,7 +113,7 @@ export function ProcurementClient({
       }
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [resolved.cropPlans]);
+  }, [resolved.growPlans]);
   const issuedPos = useMemo(() => purchaseOrders.filter((po) => po.status === 'issued').sort((a, b) => a.orderedFor.localeCompare(b.orderedFor) || a.poNumber.localeCompare(b.poNumber)), [purchaseOrders]);
   const receivedAgainst = useMemo(() => {
     const m: Record<string, number> = {};
@@ -182,7 +182,7 @@ export function ProcurementClient({
       <Card title="Supply position by input" className="mt-4">
         <div className="flex flex-wrap gap-3 items-end mb-3!">
           <label className="farm-kpi-sub">Next distribution date<br /><input className="farm-input" type="date" value={distributionDate} onChange={(e) => e.target.value && setDistributionDate(e.target.value)} /></label>
-          <span className="farm-kpi-sub">produced {dateLabel(productionDate)} · {day.runs.filter((r) => r.produced > 0).map((r) => `${r.cropPlanCode} × ${r.sowingsScheduled}`).join(' · ') || 'no run'}</span>
+          <span className="farm-kpi-sub">produced {dateLabel(productionDate)} · {day.runs.filter((r) => r.produced > 0).map((r) => `${r.growPlanCode} × ${r.sowingsScheduled}`).join(' · ') || 'no run'}</span>
           <SectionSave sections={['sustainability']} title="the supplier links" />
         </div>
         <div className="farm-scroll-x">
@@ -198,7 +198,7 @@ export function ProcurementClient({
                 const n = netBy.get(ing.name);
                 return (
                   <tr key={ing.name} className={`${ing.inService ? '' : 'farm-c-faint'}`}>
-                    <td className="font-medium!">{ing.name}<div className="farm-c-faint farm-fs-2xs font-normal">{ing.cropPlans} cropPlan{ing.cropPlans === 1 ? '' : 's'}{ing.inService ? '' : ' · not in service'}</div></td>
+                    <td className="font-medium!">{ing.name}<div className="farm-c-faint farm-fs-2xs font-normal">{ing.growPlans} growPlan{ing.growPlans === 1 ? '' : 's'}{ing.inService ? '' : ' · not in service'}</div></td>
                     <td><RatingPill rating={ratingFor(inputRatings, ing.name)} /></td>
                     <td>
                       <SupplierPicker input={ing.name} linked={links[ing.name] ? suppliers[links[ing.name]] ?? null : null} canEdit={canEdit && world.forecastEditing} onLink={(id) => setLink(ing.name, id)} />
@@ -206,7 +206,7 @@ export function ProcurementClient({
                     <td className="num">
                       {money(ing.seedUnitCost, ing.seedUnitCost < 1 ? 4 : 2)} / {ing.unit}
                       <div className="farm-c-faint farm-fs-2xs" title={ing.price?.gap ?? undefined}>
-                        {ing.price?.basis === 'catalog' ? `catalog, from ${ing.price.effectiveFrom}` : 'crop plan figure'}
+                        {ing.price?.basis === 'catalog' ? `catalog, from ${ing.price.effectiveFrom}` : 'grow plan figure'}
                       </div>
                     </td>
                     <td className="num">{st ? `${num(st.onHand, 2)} ${st.unit}` : '—'}{st ? <div className="farm-c-faint farm-fs-2xs">{st.lots} lot{st.lots === 1 ? '' : 's'} · {money(st.valueCents / 100)}</div> : null}</td>
@@ -230,9 +230,9 @@ export function ProcurementClient({
         )}
         <p className="farm-kpi-sub mt-2">
           A line prices off its linked supplier&apos;s APPROVED catalog line, at the price in force
-          today; where it does not, the row says &ldquo;cropPlan figure&rdquo; and carries the reason on
+          today; where it does not, the row says &ldquo;growPlan figure&rdquo; and carries the reason on
           hover — no supplier linked, no catalog on file, a candidate line, or a price stated per a
-          different unit than the line is bought in. Purchase orders are raised from the net on <Link className="farm-link" href="/farm/production-planning?level=day">Production Planning</Link>, for a distribution day or the horizon, one per supplier with the catalog lead time giving each line an order-by date; they move to issued, received and closed on each supplier&apos;s page, and a receipt recorded here, on the order, that covers every line marks the order received. A line&apos;s supplier is set here, on <Link className="farm-link" href="/farm/crop-plans">Crop plans</Link>, or on <Link className="farm-link" href="/farm/sustainability/inputs">Inputs (Scope 3)</Link> — all three write the same link, which is part of the scenario. Certifications and lead times live in <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
+          different unit than the line is bought in. Purchase orders are raised from the net on <Link className="farm-link" href="/farm/production-planning?level=day">Production Planning</Link>, for a distribution day or the horizon, one per supplier with the catalog lead time giving each line an order-by date; they move to issued, received and closed on each supplier&apos;s page, and a receipt recorded here, on the order, that covers every line marks the order received. A line&apos;s supplier is set here, on <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>, or on <Link className="farm-link" href="/farm/sustainability/inputs">Inputs (Scope 3)</Link> — all three write the same link, which is part of the scenario. Certifications and lead times live in <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
         </p>
       </Card>
     </>

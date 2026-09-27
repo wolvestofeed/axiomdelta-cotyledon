@@ -15,7 +15,7 @@ const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
 
 /**
  * The next production run's net requirement on the selected world (Roadmap N9): the
- * order book on the next service day, exploded through each crop plan's sowing and netted
+ * order book on the next service day, exploded through each grow plan's sowing and netted
  * against raw stock and open purchase orders. Plan has no stock or orders on record;
  * Actual nets against the records. The saved open forecast, as every server page reads.
  */
@@ -37,10 +37,10 @@ export async function nextRunNet(today: string): Promise<{ kind: 'plan' | 'actua
     channelPriceCents: Object.fromEntries(inputs.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
     closures,
   });
-  const day = planProductionDay({ productionDate, requirements: requirementsFor(book, inputs.cropPlans, pf), onHand: {}, cropPlans: inputs.cropPlans, capacityInputs: inputs.capacityInputs, assumptions: inputs.assumptions, cropPlanAssumptions: inputs.cropPlanAssumptions });
+  const day = planProductionDay({ productionDate, requirements: requirementsFor(book, inputs.growPlans, pf), onHand: {}, growPlans: inputs.growPlans, capacityInputs: inputs.capacityInputs, assumptions: inputs.assumptions, growPlanAssumptions: inputs.growPlanAssumptions });
   const stock = rawStockOnHand({ receipts: isPlan ? [] : actuals.receipts, sowings: isPlan ? [] : actuals.sowings, asOf: productionDate });
   const onOrder = openOrders({ purchaseOrders: isPlan ? [] : pos.map((po) => ({ id: po.id, poNumber: po.poNumber, status: po.status, orderedFor: po.orderedFor, supplierId: po.supplierId, supplierName: po.supplierName, lines: po.lines.map((l) => ({ input: l.input, qty: l.qty, unit: l.unit, unitPriceCents: l.unitPriceCents })) })), receipts: isPlan ? [] : actuals.receipts });
   const net = netRequirements({ days: [{ productionDate, lines: day.purchase.lines }], stock, onOrder });
-  const inputNames = [...new Set(inputs.cropPlans.filter((r) => r.status === 'in_service').flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort();
+  const inputNames = [...new Set(inputs.growPlans.filter((r) => r.status === 'in_service').flatMap((r) => r.lines.map((l) => lineLabel(l))))].sort();
   return { kind, distributionDate, productionDate, lines: net.lines, inputs: inputNames };
 }

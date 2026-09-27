@@ -1,5 +1,5 @@
 /**
- * MicroFarm — supplier query, cross-reference, and crop-plan-match logic.
+ * MicroFarm — supplier query, cross-reference, and grow-plan-match logic.
  *
  * Pure functions over a SupplierOperation[]. No I/O — the caller loads the
  * compiled dataset (server-side) and passes the array in, which keeps these
@@ -71,18 +71,18 @@ export function crossRefStats(ops: SupplierOperation[]): CrossRefStats {
   };
 }
 
-// ── Match suppliers to the crop plan's input lines ────────────────────────
+// ── Match suppliers to the grow plan's input lines ────────────────────────
 
-export interface CropPlanLineMatch {
+export interface GrowPlanLineMatch {
   input: string;
   keywords: string[];
   matches: SupplierOperation[];
 }
 
 /** Minimal shape the matcher needs: a grow plan's lines, each matched by its label. */
-export type MatchableCropPlan = Pick<GrowPlanDef, 'lines'>;
+export type MatchableGrowPlan = Pick<GrowPlanDef, 'lines'>;
 
-// Keyword sets that map each crop plan line to product/type text in the dataset.
+// Keyword sets that map each grow plan line to product/type text in the dataset.
 const LINE_KEYWORDS: Record<string, string[]> = {
   'Ground beef, 85/15': ['beef', 'cattle', 'livestock', 'bison', 'grass'],
   'Pinto beans, dry': ['bean', 'legume', 'pulse'],
@@ -95,13 +95,13 @@ const LINE_KEYWORDS: Record<string, string[]> = {
   'Cheddar, shredded': ['cheese', 'cheddar', 'dairy', 'milk'],
 };
 
-export function matchCropPlanToSuppliers(
+export function matchGrowPlanToSuppliers(
   ops: SupplierOperation[],
   region: Region | 'all' = 'all',
-  targetCropPlan: MatchableCropPlan,
-): CropPlanLineMatch[] {
+  targetGrowPlan: MatchableGrowPlan,
+): GrowPlanLineMatch[] {
   const pool = region === 'all' ? ops : ops.filter((o) => o.region === region);
-  return targetCropPlan.lines.map((line) => {
+  return targetGrowPlan.lines.map((line) => {
     const ing = { name: lineLabel(line) };
     const keywords = LINE_KEYWORDS[ing.name] ?? [];
     const matches = keywords.length

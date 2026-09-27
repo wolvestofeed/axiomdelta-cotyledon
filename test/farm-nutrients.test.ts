@@ -8,7 +8,7 @@ import { tagged } from '@/data/tagged';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import { costGrowPlan, defaultGrowCostContext } from '@/engine/grow-costing';
-import { cropPlanToRows, rowsToGrowPlan } from '@/engine/crop-plan-library';
+import { growPlanToRows, rowsToGrowPlan } from '@/engine/grow-plan-library';
 import { ML_PER_GAL, costPerMlFrom, deleteRefusal, nutrientFromRow, nutrientKeyFor, nutrientToRow, nutrientsForPlan, plansNaming } from '@/engine/nutrients';
 
 const broccoli = (): GrowPlanDef => growPlanSeed.find((p) => p.code === 'BROC-01')!;
@@ -56,11 +56,11 @@ describe('a plan is costed against its workspace library', () => {
   const doubled = { ...NUTRIENT_BY_KEY['floragrow-npk']!, costPerMl: tagged(2 * NUTRIENT_BY_KEY['floragrow-npk']!.costPerMl.value, 'STATED', '$/ml', 'test') };
 
   it('the read attaches only the records the plan names, and never stores them', () => {
-    const { header, lines } = cropPlanToRows(broccoli());
+    const { header, lines } = growPlanToRows(broccoli());
     const back = rowsToGrowPlan({ ...header, id: 'x', version: 1, effectiveFrom: null, updatedAt: new Date() }, lines, { 'floragrow-npk': doubled, kelp: NUTRIENT_BY_KEY['kelp']! });
     expect(Object.keys(back.nutrients ?? {})).toEqual(['floragrow-npk']);
     expect(nutrientsForPlan(broccoli(), {})).toEqual({});
-    expect(JSON.stringify(cropPlanToRows(back))).not.toContain('nutrients');
+    expect(JSON.stringify(growPlanToRows(back))).not.toContain('nutrients');
   });
 
   it("the plan's record stands over the seed list; with none, the seed list prices it", () => {

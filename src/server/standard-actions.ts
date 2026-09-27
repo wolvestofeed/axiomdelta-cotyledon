@@ -14,7 +14,7 @@ import { withWorkspace } from '@/server/workspace';
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
 
 const ApproveInput = z.object({
-  cropPlanCode: z.string().min(1),
+  growPlanCode: z.string().min(1),
   effectiveFrom: isoDate,
   notes: z.string().max(400).nullable().default(null),
 });

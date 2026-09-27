@@ -1,8 +1,8 @@
 /**
  * MicroFarm — production staff demand (Roadmap O3). Pure.
  *
- * The days of a window, each staffed from every crop plan's labor standard — the
- * approved time studies averaged, or the crop plan's estimated study until one is approved
+ * The days of a window, each staffed from every grow plan's labor standard — the
+ * approved time studies averaged, or the grow plan's estimated study until one is approved
  * (`laborStandard`) — on the two streams (scheduler build plan §0):
  *
  *   SOWING lines, on the production day, per sowing harvested: a fixed line takes its
@@ -15,36 +15,36 @@
  *   HARVEST lines, on the distribution day, per unit shipped that day: a
  *   per-unit line its labor minutes per unit studied × the units
  *   shipped; a fixed line (loading the vehicle) once per distribution day — the
- *   largest any shipped crop plan's study names for that task, not once per crop plan.
+ *   largest any shipped grow plan's study names for that task, not once per grow plan.
  *
  * Demand is headcount and hours by task and station per day — no positions and
  * no pay. Staffing maps it to its roster, an admin adjusts it there and
- * publishes the schedule to staff. A crop plan with work and no study at all is
- * listed and carries no demand; a crop plan running on its estimate is listed as such.
+ * publishes the schedule to staff. A grow plan with work and no study at all is
+ * listed and carries no demand; a grow plan running on its estimate is listed as such.
  */
 
 import type { TimeStudyDoc, TimeStudyStream } from '@/data/time-studies';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
-import type { CropPlanRunPlan } from '@/engine/production-plan';
+import type { GrowPlanRunPlan } from '@/engine/production-plan';
 import { isoAddDays } from '@/engine/orders';
-import { laborStandard, studiesForCropPlan } from '@/engine/time-studies';
+import { laborStandard, studiesForGrowPlan } from '@/engine/time-studies';
 
 export interface DemandLine {
   task: string;
   station: string | null;
   stream: TimeStudyStream;
-  /** The people the task needs at once, the most any crop plan's study names. */
+  /** The people the task needs at once, the most any grow plan's study names. */
   headcount: number;
   /** Staff-hours the day's sowings or shipments need on this task. */
   hours: number;
-  cropPlanCodes: string[];
+  growPlanCodes: string[];
 }
 
 export interface UncoveredRun {
-  cropPlanCode: string;
-  cropPlanName: string;
+  growPlanCode: string;
+  growPlanName: string;
   sowings: number;
   units: number;
   unitsShipped: number;
@@ -66,10 +66,10 @@ export interface DemandDay {
   /** The most people any one task needs; tasks are not yet placed on the clock (Roadmap L5). */
   mostPeopleOnATask: number;
   lines: DemandLine[];
-  /** Crop plans with sowings or shipments and no time study at all: no demand is counted for them. */
+  /** Grow plans with sowings or shipments and no time study at all: no demand is counted for them. */
   uncovered: UncoveredRun[];
-  /** Crop plans staffed from their estimated study — no observed study approved yet. */
-  estimatedCropPlans: string[];
+  /** Grow plans staffed from their estimated study — no observed study approved yet. */
+  estimatedGrowPlans: string[];
 }
 
 export interface StaffDemand {
@@ -81,31 +81,31 @@ export interface StaffDemand {
   productionDays: number;
   /** Days in the window with at least one unit shipped. */
   distributionDays: number;
-  uncoveredCropPlans: string[];
-  /** Crop plans in the window staffed from an estimate rather than an observed study. */
-  estimatedCropPlans: string[];
+  uncoveredGrowPlans: string[];
+  /** Grow plans in the window staffed from an estimate rather than an observed study. */
+  estimatedGrowPlans: string[];
 }
 
 export interface DemandDayInput {
   productionDate: string;
-  runs: readonly Pick<CropPlanRunPlan, 'cropPlanCode' | 'cropPlanName' | 'sowingsScheduled' | 'produced'>[];
+  runs: readonly Pick<GrowPlanRunPlan, 'growPlanCode' | 'growPlanName' | 'sowingsScheduled' | 'produced'>[];
 }
 
-/** A distribution day's shipments, in base units per crop plan. */
+/** A distribution day's shipments, in base units per grow plan. */
 export interface HarvestDayInput {
   date: string;
-  shipments: readonly { cropPlanCode: string; cropPlanName: string; units: number }[];
+  shipments: readonly { growPlanCode: string; growPlanName: string; units: number }[];
 }
 
 /** A day's trays on the grow units, per plan. */
 export interface ShelfDayInput {
   date: string;
-  trays: readonly { cropPlanCode: string; cropPlanName: string; trays: number }[];
+  trays: readonly { growPlanCode: string; growPlanName: string; trays: number }[];
 }
 
 /** Each plan's cycle days, for the shelf occupancy. */
-export function cycleDaysByCode(cropPlans: readonly GrowPlanDef[]): Record<string, number> {
-  return Object.fromEntries(cropPlans.map((r) => [r.code, cycleDays(planStageDays(r))]));
+export function cycleDaysByCode(growPlans: readonly GrowPlanDef[]): Record<string, number> {
+  return Object.fromEntries(growPlans.map((r) => [r.code, cycleDays(planStageDays(r))]));
 }
 
 /**
@@ -114,18 +114,18 @@ export function cycleDaysByCode(cropPlans: readonly GrowPlanDef[]): Record<strin
  * absent.
  */
 export function traysOnShelf(days: readonly DemandDayInput[], cycle: Readonly<Record<string, number>>, from: string, to: string): ShelfDayInput[] {
-  const byDate = new Map<string, Map<string, { cropPlanCode: string; cropPlanName: string; trays: number }>>();
+  const byDate = new Map<string, Map<string, { growPlanCode: string; growPlanName: string; trays: number }>>();
   for (const d of days) {
     for (const run of d.runs) {
-      const n = cycle[run.cropPlanCode] ?? 0;
+      const n = cycle[run.growPlanCode] ?? 0;
       if (run.produced <= 0 || n <= 0) continue;
       for (let k = 0; k < n; k += 1) {
         const date = isoAddDays(d.productionDate, k);
         if (date < from || date > to) continue;
         const m = byDate.get(date) ?? new Map();
-        const row = m.get(run.cropPlanCode) ?? { cropPlanCode: run.cropPlanCode, cropPlanName: run.cropPlanName, trays: 0 };
+        const row = m.get(run.growPlanCode) ?? { growPlanCode: run.growPlanCode, growPlanName: run.growPlanName, trays: 0 };
         row.trays += run.produced;
-        m.set(run.cropPlanCode, row);
+        m.set(run.growPlanCode, row);
         byDate.set(date, m);
       }
     }
@@ -143,7 +143,7 @@ export function staffDemand(input: {
 }): StaffDemand {
   const standards = new Map<string, TimeStudyDoc | null>();
   const standardFor = (code: string): TimeStudyDoc | null => {
-    if (!standards.has(code)) standards.set(code, laborStandard(studiesForCropPlan(input.studies, code)));
+    if (!standards.has(code)) standards.set(code, laborStandard(studiesForGrowPlan(input.studies, code)));
     return standards.get(code) ?? null;
   };
   const inWindow = (date: string) => date >= input.from && date <= input.to;
@@ -168,16 +168,16 @@ export function staffDemand(input: {
     }
     return a;
   };
-  const lineFor = (a: Acc, l: TimeStudyDoc['lines'][number], cropPlanCode: string): DemandLine => {
+  const lineFor = (a: Acc, l: TimeStudyDoc['lines'][number], growPlanCode: string): DemandLine => {
     const key = `${l.stream}|${l.task}|${l.station ?? ''}`;
-    const row = a.byKey.get(key) ?? { task: l.task, station: l.station, stream: l.stream, headcount: 0, hours: 0, cropPlanCodes: [] };
+    const row = a.byKey.get(key) ?? { task: l.task, station: l.station, stream: l.stream, headcount: 0, hours: 0, growPlanCodes: [] };
     row.headcount = Math.max(row.headcount, l.staff);
-    if (!row.cropPlanCodes.includes(cropPlanCode)) row.cropPlanCodes.push(cropPlanCode);
+    if (!row.growPlanCodes.includes(growPlanCode)) row.growPlanCodes.push(growPlanCode);
     a.byKey.set(key, row);
     return row;
   };
   const uncover = (a: Acc, code: string, name: string, sowings: number, units: number, shipped: number) => {
-    const u = a.uncovered.get(code) ?? { cropPlanCode: code, cropPlanName: name, sowings: 0, units: 0, unitsShipped: 0 };
+    const u = a.uncovered.get(code) ?? { growPlanCode: code, growPlanName: name, sowings: 0, units: 0, unitsShipped: 0 };
     u.sowings += sowings;
     u.units += units;
     u.unitsShipped += shipped;
@@ -191,16 +191,16 @@ export function staffDemand(input: {
       if (run.sowingsScheduled <= 0) continue;
       a.sowings += run.sowingsScheduled;
       a.units += run.produced;
-      const study = standardFor(run.cropPlanCode);
+      const study = standardFor(run.growPlanCode);
       if (!study) {
-        uncover(a, run.cropPlanCode, run.cropPlanName, run.sowingsScheduled, run.produced, 0);
+        uncover(a, run.growPlanCode, run.growPlanName, run.sowingsScheduled, run.produced, 0);
         continue;
       }
-      if (study.basis === 'estimated') a.estimated.add(run.cropPlanCode);
+      if (study.basis === 'estimated') a.estimated.add(run.growPlanCode);
       for (const l of study.lines) {
         if (l.stream !== 'sowing') continue;
         const minutes = l.scalesWith === 'fixed' ? l.laborMinutes * run.sowingsScheduled : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * run.produced : 0;
-        lineFor(a, l, run.cropPlanCode).hours += minutes / 60;
+        lineFor(a, l, run.growPlanCode).hours += minutes / 60;
       }
     }
   }
@@ -212,13 +212,13 @@ export function staffDemand(input: {
     const a = accFor(d.date);
     for (const t of on) {
       a.traysOnShelf += t.trays;
-      const study = standardFor(t.cropPlanCode);
+      const study = standardFor(t.growPlanCode);
       if (!study) continue;
-      if (study.basis === 'estimated') a.estimated.add(t.cropPlanCode);
+      if (study.basis === 'estimated') a.estimated.add(t.growPlanCode);
       for (const l of study.lines) {
         if (l.stream !== 'daily') continue;
         const minutes = l.scalesWith === 'fixed' ? l.laborMinutes : study.sowingSize > 0 ? (l.laborMinutes / study.sowingSize) * t.trays : 0;
-        lineFor(a, l, t.cropPlanCode).hours += minutes / 60;
+        lineFor(a, l, t.growPlanCode).hours += minutes / 60;
       }
     }
   }
@@ -230,15 +230,15 @@ export function staffDemand(input: {
     const a = accFor(d.date);
     for (const s of shipped) {
       a.unitsShipped += s.units;
-      const study = standardFor(s.cropPlanCode);
+      const study = standardFor(s.growPlanCode);
       if (!study) {
-        uncover(a, s.cropPlanCode, s.cropPlanName, 0, 0, s.units);
+        uncover(a, s.growPlanCode, s.growPlanName, 0, 0, s.units);
         continue;
       }
-      if (study.basis === 'estimated') a.estimated.add(s.cropPlanCode);
+      if (study.basis === 'estimated') a.estimated.add(s.growPlanCode);
       for (const l of study.lines) {
         if (l.stream !== 'harvest') continue;
-        const row = lineFor(a, l, s.cropPlanCode);
+        const row = lineFor(a, l, s.growPlanCode);
         if (l.scalesWith === 'fixed') {
           const key = `${l.stream}|${l.task}|${l.station ?? ''}`;
           a.fixedHarvest.set(key, Math.max(a.fixedHarvest.get(key) ?? 0, l.laborMinutes));
@@ -267,7 +267,7 @@ export function staffDemand(input: {
         mostPeopleOnATask: lines.reduce((m, l) => Math.max(m, l.headcount), 0),
         lines,
         uncovered: [...a.uncovered.values()],
-        estimatedCropPlans: [...a.estimated].sort(),
+        estimatedGrowPlans: [...a.estimated].sort(),
       };
     })
     .sort((x, y) => x.date.localeCompare(y.date));
@@ -279,8 +279,8 @@ export function staffDemand(input: {
     staffHours: days.reduce((s, d) => s + d.staffHours, 0),
     productionDays: days.filter((d) => d.sowings > 0).length,
     distributionDays: days.filter((d) => d.unitsShipped > 0).length,
-    uncoveredCropPlans: [...new Set(days.flatMap((d) => d.uncovered.map((u) => u.cropPlanCode)))].sort(),
-    estimatedCropPlans: [...new Set(days.flatMap((d) => d.estimatedCropPlans))].sort(),
+    uncoveredGrowPlans: [...new Set(days.flatMap((d) => d.uncovered.map((u) => u.growPlanCode)))].sort(),
+    estimatedGrowPlans: [...new Set(days.flatMap((d) => d.estimatedGrowPlans))].sort(),
   };
 }
 
@@ -291,7 +291,7 @@ export interface StaffDemandDocument {
   from: string;
   to: string;
   preparedAt: string;
-  days: { date: string; lines: { task: string; station: string | null; headcount: number; hours: number }[]; uncoveredCropPlans: string[] }[];
+  days: { date: string; lines: { task: string; station: string | null; headcount: number; hours: number }[]; uncoveredGrowPlans: string[] }[];
 }
 
 export function staffDemandDocument(demand: StaffDemand, preparedAt: string): StaffDemandDocument {
@@ -304,7 +304,7 @@ export function staffDemandDocument(demand: StaffDemand, preparedAt: string): St
     days: demand.days.map((d) => ({
       date: d.date,
       lines: d.lines.map((l) => ({ task: l.task, station: l.station, headcount: l.headcount, hours: Math.round(l.hours * 100) / 100 })),
-      uncoveredCropPlans: d.uncovered.map((u) => u.cropPlanCode),
+      uncoveredGrowPlans: d.uncovered.map((u) => u.growPlanCode),
     })),
   };
 }

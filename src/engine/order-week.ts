@@ -4,8 +4,8 @@
  *
  * Seven days starting today. Each day: units on order by channel and in
  * total, and the input cost and labor cost of those units — each order priced
- * at its crop plan's unit input cost on the channel's unit and its crop plan's
- * labor standard at the crop plan's own one-line sowing (the seeded estimate until
+ * at its grow plan's unit input cost on the channel's unit and its grow plan's
+ * labor standard at the grow plan's own one-line sowing (the seeded estimate until
  * an observed study is approved). Orders are the order book: derived forecast
  * orders with stored rows in their place.
  */
@@ -13,10 +13,10 @@
 import type { GrowPlanDef } from '@/data/grow-plan';
 import type { assumptions as planAssumptions } from '@/data/plan-data';
 import type { TimeStudyDoc } from '@/data/time-studies';
-import { costCropPlan, deriveCapacity, type CapacityInputs } from '@/engine';
+import { costPlanPerUnit, deriveCapacity, type CapacityInputs } from '@/engine';
 import { isoAddDays, weekdayOf, type BookOrder } from '@/engine/orders';
 import { unitFactorFor } from '@/engine/production-plan';
-import { laborMinutesForSowing, laborStandard, studiesForCropPlan, summarizeStudy } from '@/engine/time-studies';
+import { laborMinutesForSowing, laborStandard, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
 
 export interface OrderWeekDay {
   date: string;
@@ -36,32 +36,32 @@ export interface OrderWeek {
   units: number;
   inputCost: number;
   laborCost: number;
-  /** Orders whose crop plan is not in the library: counted as units, carrying no cost. */
+  /** Orders whose grow plan is not in the library: counted as units, carrying no cost. */
   uncostedUnits: number;
 }
 
 /**
- * Unit food and labor cost of a crop plan served on a channel.
+ * Unit food and labor cost of a grow plan served on a channel.
  *
- * Labor is the crop plan's own standard (Roadmap N3): its assumptions when the
- * resolver supplied them, else its study. A crop plan with NO study carries no
+ * Labor is the grow plan's own standard (Roadmap N3): its assumptions when the
+ * resolver supplied them, else its study. A grow plan with NO study carries no
  * labor and says so (`laborGap`) — it is never charged a typed figure that
- * belongs to another crop plan.
+ * belongs to another grow plan.
  */
 export function unitCostsFor(
-  cropPlan: GrowPlanDef,
+  growPlan: GrowPlanDef,
   channel: number,
   cap: CapacityInputs,
   a: typeof planAssumptions,
   studies: readonly TimeStudyDoc[],
   unitFactorByChannel: Record<number, number>,
-  cropPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>,
+  growPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>,
 ): { food: number; labor: number; laborGap: boolean } {
-  const pf = unitFactorFor(cropPlan, channel, unitFactorByChannel);
-  const food = costCropPlan(cropPlan, a.yield.shrinkAllowance.value, pf).totalInputCostPerUnit;
-  const sowing = deriveCapacity(cropPlan, cap, pf).sowingSize;
-  const own = cropPlanAssumptions?.[cropPlan.code];
-  const standard = own ? null : laborStandard(studiesForCropPlan(studies, cropPlan.code));
+  const pf = unitFactorFor(growPlan, channel, unitFactorByChannel);
+  const food = costPlanPerUnit(growPlan, a.yield.shrinkAllowance.value, pf).totalInputCostPerUnit;
+  const sowing = deriveCapacity(growPlan, cap, pf).sowingSize;
+  const own = growPlanAssumptions?.[growPlan.code];
+  const standard = own ? null : laborStandard(studiesForGrowPlan(studies, growPlan.code));
   let minutesPerUnit = 0;
   let laborGap = false;
   if (own) {
@@ -80,23 +80,23 @@ export function orderWeek(input: {
   from: string;
   days?: number;
   channels: readonly number[];
-  cropPlans: readonly GrowPlanDef[];
+  growPlans: readonly GrowPlanDef[];
   cap: CapacityInputs;
   assumptions: typeof planAssumptions;
   studies: readonly TimeStudyDoc[];
   unitFactorByChannel: Record<number, number>;
-  /** Each crop plan's own assumptions from the resolver (Roadmap N3); preferred over the studies. */
-  cropPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>;
+  /** Each grow plan's own assumptions from the resolver (Roadmap N3); preferred over the studies. */
+  growPlanAssumptions?: Readonly<Record<string, typeof planAssumptions>>;
 }): OrderWeek {
   const n = input.days ?? 7;
   const to = isoAddDays(input.from, n - 1);
-  const byCode = new Map(input.cropPlans.map((r) => [r.code, r]));
+  const byCode = new Map(input.growPlans.map((r) => [r.code, r]));
   const unit = new Map<string, { food: number; labor: number }>();
   const costsFor = (code: string, channel: number) => {
     const key = `${code}|${channel}`;
     if (!unit.has(key)) {
       const r = byCode.get(code);
-      unit.set(key, r ? unitCostsFor(r, channel, input.cap, input.assumptions, input.studies, input.unitFactorByChannel, input.cropPlanAssumptions) : { food: 0, labor: 0, laborGap: false });
+      unit.set(key, r ? unitCostsFor(r, channel, input.cap, input.assumptions, input.studies, input.unitFactorByChannel, input.growPlanAssumptions) : { food: 0, labor: 0, laborGap: false });
     }
     return unit.get(key)!;
   };
@@ -109,8 +109,8 @@ export function orderWeek(input: {
       if (o.orderDate !== date || o.units <= 0) continue;
       day.unitsByChannel[o.channel] = (day.unitsByChannel[o.channel] ?? 0) + o.units;
       day.units += o.units;
-      if (!byCode.has(o.cropPlanCode)) uncostedUnits += o.units;
-      const c = costsFor(o.cropPlanCode, o.channel);
+      if (!byCode.has(o.growPlanCode)) uncostedUnits += o.units;
+      const c = costsFor(o.growPlanCode, o.channel);
       day.inputCost += c.food * o.units;
       day.laborCost += c.labor * o.units;
     }

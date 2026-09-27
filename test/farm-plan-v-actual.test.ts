@@ -7,16 +7,16 @@ import { fullInventory } from '@/engine/inventory';
 import { emptyMeasures, pvaBreakdown, pvaMeasures, servedCostPerUnitCents, sumMeasures, type PvaSideInput } from '@/engine/plan-v-actual';
 
 const R = resolveScenarioInputs({});
-const cropPlan = R.cropPlans.find((r) => r.code === R.cropPlan.code)!;
-const channel = cropPlan.channels[0];
+const growPlan = R.growPlans.find((r) => r.code === R.growPlan.code)!;
+const channel = growPlan.channels[0];
 
 function side(): PvaSideInput {
-  const doc = { ...standardSowingRecordPrefill('2026-10-05', 1, 400, cropPlan as never), id: 'B1', closedAt: '2026-10-05', actualLaborHours: 10, actualLaborRate: 20 };
+  const doc = { ...standardSowingRecordPrefill('2026-10-05', 1, 400, growPlan as never), id: 'B1', closedAt: '2026-10-05', actualLaborHours: 10, actualLaborRate: 20 };
   // The measures read the posting's amounts only.
   const led = { amounts: { materialIssuedToWip: 812.5, directLaborActual: 200, packagingCost: 180, servingsProduced: 400 } } as unknown as ProductionSowingLedger;
-  const d = (id: string, date: string, units: number, subscriberId: string): DistributionDoc => ({ id, distributedOn: date, phase: channel, pickupPointId: null, pickupPointName: null, units, pricePerUnitCents: 1000, lotCodes: [], distributedBy: null, subscriberId, cropPlanCode: cropPlan.code, notes: null });
-  const basis = { ...emptySustainabilityBasis('actual', '2026-10-01', '2026-10-31'), units: [{ cropPlanCode: cropPlan.code, channel, units: 300 }], totalUnits: 300, producedByCropPlan: { [cropPlan.code]: 400 } };
-  const food = mixFoodFootprint({ basis, cropPlans: R.cropPlans, unitFactorByChannel: {} });
+  const d = (id: string, date: string, units: number, subscriberId: string): DistributionDoc => ({ id, distributedOn: date, phase: channel, pickupPointId: null, pickupPointName: null, units, pricePerUnitCents: 1000, lotCodes: [], distributedBy: null, subscriberId, growPlanCode: growPlan.code, notes: null });
+  const basis = { ...emptySustainabilityBasis('actual', '2026-10-01', '2026-10-31'), units: [{ growPlanCode: growPlan.code, channel, units: 300 }], totalUnits: 300, producedByGrowPlan: { [growPlan.code]: 400 } };
+  const food = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: {} });
   return {
     period: '2026-10',
     sowings: [doc],
@@ -24,8 +24,8 @@ function side(): PvaSideInput {
     distributions: [d('D1', '2026-10-06', 200, 'C1'), d('D2', '2026-10-07', 100, 'C2')],
     receipts: [],
     orders: [
-      { orderDate: '2026-10-06', subscriberId: 'C1', channel, cropPlanCode: cropPlan.code, units: 200 },
-      { orderDate: '2026-10-07', subscriberId: 'C2', channel, cropPlanCode: cropPlan.code, units: 100 },
+      { orderDate: '2026-10-06', subscriberId: 'C1', channel, growPlanCode: growPlan.code, units: 200 },
+      { orderDate: '2026-10-07', subscriberId: 'C2', channel, growPlanCode: growPlan.code, units: 100 },
     ],
     firstOrderOn: new Map([['C1', '2026-09-01'], ['C2', '2026-10-07']]),
     statement: null,
@@ -35,7 +35,7 @@ function side(): PvaSideInput {
     energy: { ...R.sustainability.energy, electricityKwh: 1200 },
     waterGal: 5000,
     shrinkAllowance: 0.05,
-    cropPlans: R.cropPlans,
+    growPlans: R.growPlans,
     subscribers: [
       { id: 'C1', name: 'One', rating: { status: 'rated', stars: 3 } },
       { id: 'C2', name: 'Two', rating: { status: 'not_rated' } },

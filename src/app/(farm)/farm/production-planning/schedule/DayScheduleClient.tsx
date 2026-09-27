@@ -46,7 +46,7 @@ export function DayScheduleClient({
   cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
-  sowings: { sowingId: string; cropPlanCode: string; productionDate: string; goodUnits: number }[];
+  sowings: { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number }[];
   distributions: { id: string; distributedOn: string; units: number }[];
   studies: TimeStudyDoc[];
 }) {
@@ -70,13 +70,13 @@ export function DayScheduleClient({
         from: today,
         to,
         channelPriceCents: Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>,
-        cropPlanNames: Object.fromEntries(resolved.cropPlans.map((r) => [r.code, r.name])),
+        growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.cropPlans, cycles, orders, today, to, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, to, closures],
   );
-  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.cropPlans, pfByChannel), [orders, distributions, resolved.cropPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, cropPlans: resolved.cropPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.cropPlans]);
+  const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -84,17 +84,17 @@ export function DayScheduleClient({
         from: today,
         to,
         book,
-        cropPlans: resolved.cropPlans,
+        growPlans: resolved.growPlans,
         capacityInputs: C,
         assumptions: A,
-        cropPlanAssumptions: resolved.cropPlanAssumptions,
+        growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
         shelfLifeDays: A.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, today, to, book, resolved.cropPlans, resolved.phases, C, A, pfByChannel, openingLots],
+    [closures, today, to, book, resolved.growPlans, resolved.phases, C, A, pfByChannel, openingLots],
   );
 
   // Every day of the window: trays on the shelves are watered on days nothing is sown or harvested.
@@ -109,17 +109,17 @@ export function DayScheduleClient({
     const production = horizon.productionDays.find((d) => d.productionDate === day);
     const distribution = horizon.distributionDays.find((d) => d.date === day);
     return scheduleInputsForDay({
-      productionRuns: production?.runs.map((r) => ({ cropPlanCode: r.cropPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
-      shipments: distribution?.byCropPlan.map((r) => ({ cropPlanCode: r.cropPlanCode, filledBase: r.filledBase })) ?? [],
-      cropPlans: resolved.cropPlans,
+      productionRuns: production?.runs.map((r) => ({ growPlanCode: r.growPlanCode, sowingsScheduled: r.sowingsScheduled, produced: r.produced })) ?? [],
+      shipments: distribution?.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, filledBase: r.filledBase })) ?? [],
+      growPlans: resolved.growPlans,
       studies,
       equipment: resolved.equipment,
       routing: resolved.routing,
     });
-  }, [horizon.productionDays, horizon.distributionDays, day, resolved.cropPlans, resolved.equipment, resolved.routing, studies]);
+  }, [horizon.productionDays, horizon.distributionDays, day, resolved.growPlans, resolved.equipment, resolved.routing, studies]);
 
   // The daily stream: the trays on the shelves that day on each plan's daily lines, beside the clock.
-  const shelf = useMemo(() => traysOnShelf(horizon.productionDays, cycleDaysByCode(resolved.cropPlans), day, day)[0] ?? null, [horizon.productionDays, resolved.cropPlans, day]);
+  const shelf = useMemo(() => traysOnShelf(horizon.productionDays, cycleDaysByCode(resolved.growPlans), day, day)[0] ?? null, [horizon.productionDays, resolved.growPlans, day]);
   const daily = useMemo(() => (shelf ? staffDemand({ from: day, to: day, days: [], shelf: [shelf], studies }).days[0] ?? null : null), [shelf, studies, day]);
   const dailyLines = daily?.lines.filter((l) => l.stream === 'daily') ?? [];
   const dailyHours = daily?.dailyStaffHours ?? 0;
@@ -136,7 +136,7 @@ export function DayScheduleClient({
     const s = spanOf(result.blocks, { startMin: result.openMin, endMin: result.closeMin });
     return timeScale(s.startMin, s.endMin, 'hour');
   }, [result]);
-  const cropPlanName = (code: string | null) => (code ? resolved.cropPlans.find((r) => r.code === code)?.name ?? code : '');
+  const growPlanName = (code: string | null) => (code ? resolved.growPlans.find((r) => r.code === code)?.name ?? code : '');
   const blockLabel = (b: ScheduledBlock) => `${b.orderId ?? 'Day'} · ${b.task}`;
   const lanes: TimelineLane[] = useMemo(() => {
     const keys = [...new Set(result.blocks.map((b) => b.resourceKey ?? LANE_LABOR))];
@@ -168,7 +168,7 @@ export function DayScheduleClient({
     const pairs: { fromId: string; toId: string }[] = [];
     for (const b of result.blocks) {
       if (!b.orderId || !b.stepId) continue;
-      const route = inputs.routes.find((r) => r.cropPlanCode === b.cropPlanCode);
+      const route = inputs.routes.find((r) => r.growPlanCode === b.growPlanCode);
       const step = route?.steps.find((s) => s.id === b.stepId);
       for (const a of step?.after ?? []) {
         const from = result.blocks.find((x) => x.orderId === b.orderId && x.stepId === a && x.kind === 'step');
@@ -293,7 +293,7 @@ export function DayScheduleClient({
                   <tr key={`${l.task}|${l.station ?? ''}`}>
                     <td>{l.task}</td>
                     <td className="farm-c-soft">{l.station ?? '—'}</td>
-                    <td className="farm-c-soft">{l.cropPlanCodes.join(', ')}</td>
+                    <td className="farm-c-soft">{l.growPlanCodes.join(', ')}</td>
                     <td className="num">{num(l.headcount)}</td>
                     <td className="num">{num(l.hours * 60, 1)}</td>
                   </tr>
@@ -308,8 +308,8 @@ export function DayScheduleClient({
         )}
         {shelf && (
           <p className="farm-kpi-sub mt-2">
-            On the shelves: {shelf.trays.map((t) => `${t.cropPlanCode} ${num(t.trays)} ${t.trays === 1 ? 'tray' : 'trays'}`).join(' · ')}.
-            {daily && daily.estimatedCropPlans.length > 0 ? ` On the estimated study until an observed one is approved: ${daily.estimatedCropPlans.join(', ')}.` : ''}
+            On the shelves: {shelf.trays.map((t) => `${t.growPlanCode} ${num(t.trays)} ${t.trays === 1 ? 'tray' : 'trays'}`).join(' · ')}.
+            {daily && daily.estimatedGrowPlans.length > 0 ? ` On the estimated study until an observed one is approved: ${daily.estimatedGrowPlans.join(', ')}.` : ''}
           </p>
         )}
         <p className="farm-kpi-sub mt-2">
@@ -354,7 +354,7 @@ export function DayScheduleClient({
                 <tr key={b.id} className={`${flagged.has(b.id) ? 'bg-[color:var(--farm-accent-wash)]!' : ''}`}>
                   <td className="num">{clock(b.startMin)}</td>
                   <td className="num">{clock(b.endMin)}</td>
-                  <td>{b.orderId ?? '—'}{b.cropPlanCode ? <div className="farm-c-faint farm-fs-xs">{cropPlanName(b.cropPlanCode)}</div> : null}</td>
+                  <td>{b.orderId ?? '—'}{b.growPlanCode ? <div className="farm-c-faint farm-fs-xs">{growPlanName(b.growPlanCode)}</div> : null}</td>
                   <td>{b.task}</td>
                   <td className="farm-c-soft">{b.stream === 'day' ? 'Day' : TIME_STUDY_STREAM_LABELS[b.stream]}</td>
                   <td className="farm-c-soft">{b.resourceKey ?? '—'}</td>

@@ -3,13 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq, sql } from 'drizzle-orm';
-import { farmPackages, farmCropPlanPackages } from '@/db';
+import { farmPackages, farmGrowPlanPackages } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — packaging library and crop plan packaging picks, writes.
+ * MicroFarm — packaging library and grow plan packaging picks, writes.
  * SUPER ADMIN ONLY (Roadmap N1). An edited seed package becomes `user_built`.
  */
 
@@ -91,7 +91,7 @@ async function createPackageInner(input: unknown): Promise<Result<{ id: string }
   return { ok: true, id: inserted[0].id };
 }
 
-/** Remove a package no crop plan picks. */
+/** Remove a package no grow plan picks. */
 export async function deletePackage(...args: Parameters<typeof deletePackageInner>): ReturnType<typeof deletePackageInner> {
   return withWorkspace(() => deletePackageInner(...args));
 }
@@ -106,26 +106,26 @@ async function deletePackageInner(input: unknown): Promise<Result> {
   }
   const [{ used } = { used: 0 }] = await db
     .select({ used: sql<number>`count(*)::int` })
-    .from(farmCropPlanPackages)
-    .where(eq(farmCropPlanPackages.packageId, parsed.data.id));
-  if (Number(used) > 0) return { ok: false, error: `${used} crop plan${Number(used) === 1 ? '' : 's'} pick this package; remove it from ${Number(used) === 1 ? 'that cropPlan' : 'those cropPlans'} first.` };
+    .from(farmGrowPlanPackages)
+    .where(eq(farmGrowPlanPackages.packageId, parsed.data.id));
+  if (Number(used) > 0) return { ok: false, error: `${used} grow plan${Number(used) === 1 ? '' : 's'} pick this package; remove it from ${Number(used) === 1 ? 'that growPlan' : 'those growPlans'} first.` };
   await db.delete(farmPackages).where(eq(farmPackages.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }
 
 const PickInput = z.object({
-  cropPlanId: z.string().uuid(),
+  growPlanId: z.string().uuid(),
   packageId: z.string().uuid(),
   qtyPerUnit: z.number().gt(0, 'Per unit must be above zero').max(1000).default(1),
 });
 
-/** Pick a package for a crop plan; picking it again sets its per-unit count. */
-export async function addCropPlanPackage(...args: Parameters<typeof addCropPlanPackageInner>): ReturnType<typeof addCropPlanPackageInner> {
-  return withWorkspace(() => addCropPlanPackageInner(...args));
+/** Pick a package for a grow plan; picking it again sets its per-unit count. */
+export async function addGrowPlanPackage(...args: Parameters<typeof addGrowPlanPackageInner>): ReturnType<typeof addGrowPlanPackageInner> {
+  return withWorkspace(() => addGrowPlanPackageInner(...args));
 }
 
-async function addCropPlanPackageInner(input: unknown): Promise<Result> {
+async function addGrowPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = PickInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   let access;
@@ -135,18 +135,18 @@ async function addCropPlanPackageInner(input: unknown): Promise<Result> {
     return refuse(e);
   }
   await db
-    .insert(farmCropPlanPackages)
+    .insert(farmGrowPlanPackages)
     .values({ ...parsed.data, createdBy: access.userId })
-    .onConflictDoUpdate({ target: [farmCropPlanPackages.cropPlanId, farmCropPlanPackages.packageId], set: { qtyPerUnit: parsed.data.qtyPerUnit } });
+    .onConflictDoUpdate({ target: [farmGrowPlanPackages.growPlanId, farmGrowPlanPackages.packageId], set: { qtyPerUnit: parsed.data.qtyPerUnit } });
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }
 
-export async function updateCropPlanPackage(...args: Parameters<typeof updateCropPlanPackageInner>): ReturnType<typeof updateCropPlanPackageInner> {
-  return withWorkspace(() => updateCropPlanPackageInner(...args));
+export async function updateGrowPlanPackage(...args: Parameters<typeof updateGrowPlanPackageInner>): ReturnType<typeof updateGrowPlanPackageInner> {
+  return withWorkspace(() => updateGrowPlanPackageInner(...args));
 }
 
-async function updateCropPlanPackageInner(input: unknown): Promise<Result> {
+async function updateGrowPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid(), qtyPerUnit: z.number().gt(0, 'Per unit must be above zero').max(1000) }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -154,16 +154,16 @@ async function updateCropPlanPackageInner(input: unknown): Promise<Result> {
   } catch (e) {
     return refuse(e);
   }
-  await db.update(farmCropPlanPackages).set({ qtyPerUnit: parsed.data.qtyPerUnit }).where(eq(farmCropPlanPackages.id, parsed.data.id));
+  await db.update(farmGrowPlanPackages).set({ qtyPerUnit: parsed.data.qtyPerUnit }).where(eq(farmGrowPlanPackages.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }
 
-export async function removeCropPlanPackage(...args: Parameters<typeof removeCropPlanPackageInner>): ReturnType<typeof removeCropPlanPackageInner> {
-  return withWorkspace(() => removeCropPlanPackageInner(...args));
+export async function removeGrowPlanPackage(...args: Parameters<typeof removeGrowPlanPackageInner>): ReturnType<typeof removeGrowPlanPackageInner> {
+  return withWorkspace(() => removeGrowPlanPackageInner(...args));
 }
 
-async function removeCropPlanPackageInner(input: unknown): Promise<Result> {
+async function removeGrowPlanPackageInner(input: unknown): Promise<Result> {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
   try {
@@ -171,7 +171,7 @@ async function removeCropPlanPackageInner(input: unknown): Promise<Result> {
   } catch (e) {
     return refuse(e);
   }
-  await db.delete(farmCropPlanPackages).where(eq(farmCropPlanPackages.id, parsed.data.id));
+  await db.delete(farmGrowPlanPackages).where(eq(farmGrowPlanPackages.id, parsed.data.id));
   revalidatePath('/farm', 'layout');
   return { ok: true };
 }
