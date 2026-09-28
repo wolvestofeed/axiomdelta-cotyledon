@@ -1,6 +1,5 @@
 import 'server-only';
 import { loadDefinitions, resolveWithDefinitions } from '@/server/scenarios';
-import { listSubscriptionCycles } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listReadings, listRefrigerantService } from '@/server/sustainability-records';
 import type { SustainabilityRecords } from '@/engine/sustainability-records';
@@ -15,15 +14,14 @@ import type { FarmScenarioConfig } from '@/engine/scenario';
  * recorded documents over the reporting year, a calendar year.
  */
 export async function postSustainabilityBasis(kind: 'plan' | 'actual', config: FarmScenarioConfig): Promise<SustainabilityBasis> {
-  const [definitions, cycles] = await Promise.all([loadDefinitions(), listSubscriptionCycles()]);
+  const definitions = await loadDefinitions();
   const inputs = resolveWithDefinitions(config, definitions);
   const common = {
-    shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value,
     growPlans: inputs.growPlans,
     unitFactorByChannel: Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>,
   };
   if (kind === 'plan') {
-    const timeline = simulateForecast({ inputs, cycles });
+    const timeline = simulateForecast({ inputs });
     const end = horizonEnd(timeline.from, 1);
     return sustainabilityBasis({ kind, bundle: planBundle(timeline), from: timeline.from, to: end < timeline.to ? end : timeline.to, ...common });
   }

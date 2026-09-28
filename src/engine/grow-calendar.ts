@@ -91,6 +91,14 @@ export function stockDateFor(growPlan: GrowPlanDef | undefined, productionDate: 
   return growPlan ? isoAddDays(productionDate, daysToHarvestOf(planStageDays(growPlan))) : productionDate;
 }
 
+/**
+ * A finished lot's shelf life, days: the plan's harvest window (outline §3), the days a live tray is
+ * distributed in and cut greens are harvested from it; a code not in the library has none.
+ */
+export function shelfLifeDaysFor(growPlan: GrowPlanDef | undefined): number {
+  return growPlan ? planStageDays(growPlan)['harvest-window'] : 0;
+}
+
 export interface CalendarSowing {
   id: string;
   growPlanCode: string;

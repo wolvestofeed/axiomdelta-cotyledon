@@ -296,7 +296,9 @@ export function productionSowingLedger(
   const trays = sowing.traysSown;
   const units = sowing.goodUnits;
   const date = sowing.productionDate;
-  const std = (perTrayCost: number) => perTrayCost * trays * (1 + shrink);
+  // Variable overhead is applied at its standard per tray on the trays sown; the shrink allowance is
+  // seed and medium bought and never packed, so it never grosses up the light or the consumables.
+  const std = (perTrayCost: number) => perTrayCost * trays;
 
   // ── Material issued: the quantities the record issued, at the cost of the lots drawn.
   //    Normal shrink is inventoriable: the record issues it with the trays, so it rides into

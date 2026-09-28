@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, Kpi, num } from '@/components/ui';
 
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import { TIME_STUDY_STREAM_LABELS, type TimeStudyDoc } from '@/data/time-studies';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon } from '@/engine/production-plan';
@@ -24,7 +24,6 @@ const hours = (h: number) => num(h, 1);
 
 export function ScheduleClient({
   today,
-  cycles,
   orders: recordedOrders,
   closures,
   sowings: recordedSowings,
@@ -32,7 +31,6 @@ export function ScheduleClient({
   studies,
 }: {
   today: string;
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
   /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
@@ -46,7 +44,6 @@ export function ScheduleClient({
   const { orders, sowings, distributions } = world;
   const A = resolved.assumptions;
   const C = resolved.capacityInputs;
-  const shelfLife = A.inventory.blackoutShelfLife.value;
 
   // ── Staff demand: the next two weeks of production, from the order book ───
   const from = today;
@@ -58,7 +55,6 @@ export function ScheduleClient({
       orderBook({
         pickupPoints: world.pickupPoints,
         subscribers: resolved.subscribers,
-        cycles,
         orders,
         from,
         to: bookTo,
@@ -66,10 +62,10 @@ export function ScheduleClient({
         growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, from, bookTo, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, from, bookTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: from, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, from, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: from, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, from, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -83,11 +79,10 @@ export function ScheduleClient({
         growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
-        shelfLifeDays: shelfLife,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, from, bookTo, book, resolved.growPlans, C, A, pfByChannel, openingLots, shelfLife, resolved.phases],
+    [closures, from, bookTo, book, resolved.growPlans, C, A, pfByChannel, openingLots, resolved.phases],
   );
   const harvest = useMemo(
     () => horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, growPlanName: r.growPlanName, units: r.filledBase })) })),

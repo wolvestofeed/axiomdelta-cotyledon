@@ -112,7 +112,7 @@ export default function WastePage() {
 
       <Card title="Finished units past shelf life, unshipped" className="mt-4">
         <div className="grid gap-3 farm-autofit-11">
-          <Kpi value={num(Math.round(expired.units))} label="Units past shelf life" sub={`${A.inventory.blackoutShelfLife.value}-day shelf life`} />
+          <Kpi value={num(Math.round(expired.units))} label="Units past shelf life" sub="Past the plan's harvest window" />
           <Kpi value={`${expired.kg.toFixed(0)} kg`} label="Shipped mass" sub="Each grow plan's own shipped mass per unit" />
         </div>
         {Object.keys(basis.expiredByGrowPlan).length > 0 && (

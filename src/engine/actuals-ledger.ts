@@ -461,11 +461,12 @@ export function postActuals(
       const std = standardFor(code, date);
       const card = costPlan(std.growPlan);
       if (!card) return null;
+      // The shrink allowance grosses up the materials only: light, tray wear and sanitizer apply at their standard per tray.
       const grossUp = 1 + std.assumptions.yield.shrinkAllowance.value;
       return {
         materials: ((card.perTray.seed + card.perTray.medium + card.perTray.nutrient) * grossUp + std.assumptions.perUnit.packaging.value) * 100,
         labor: costPerUnit(std.growPlan, std.assumptions, inputs.capacityInputs).directLabor * 100,
-        overhead: ((card.perTray.light + card.perTray.consumables) * grossUp + (std.overheadRatePerUnit ?? absorption.ratePerUnit)) * 100,
+        overhead: (card.perTray.light + card.perTray.consumables + (std.overheadRatePerUnit ?? absorption.ratePerUnit)) * 100,
       };
     };
 

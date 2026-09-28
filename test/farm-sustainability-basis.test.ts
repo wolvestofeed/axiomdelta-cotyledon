@@ -30,7 +30,7 @@ describe('farm sustainability basis (Roadmap N6 slice 4)', () => {
     ],
     distributions: [distribution(harvest('2025-12-01'), 100), distribution(harvest('2026-03-02'), 400), distribution(isoAddDays(harvest('2026-03-02'), 1), 100, { growPlanCode: null, pickupPointId: 'pickup-point-02', pickupPointName: 'Test Pickup point 2' })],
   };
-  const basis = sustainabilityBasis({ kind: 'actual', bundle, from: '2026-01-01', to: '2026-12-31', shelfLifeDays: 30, growPlans: R.growPlans, unitFactorByChannel: pf });
+  const basis = sustainabilityBasis({ kind: 'actual', bundle, from: '2026-01-01', to: '2026-12-31', growPlans: R.growPlans, unitFactorByChannel: pf });
 
   it('counts only the window: units by grow plan and channel, days, production and receipts', () => {
     expect(basis.totalUnits).toBe(500);

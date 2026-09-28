@@ -1,6 +1,6 @@
 import { getFarmAccess } from '@/server/access';
 import { getResolvedActiveInputs } from '@/server/scenarios';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listPurchaseOrders } from '@/server/supplier-catalog';
 import { loadCalendar } from '@/server/periods';
@@ -26,10 +26,9 @@ export default async function FloorPage() {
 }
 
 async function FloorPageInner() {
-  const [access, { inputs }, cycles, orders, actuals, pos, calendar] = await Promise.all([
+  const [access, { inputs }, orders, actuals, pos, calendar] = await Promise.all([
     getFarmAccess(),
     getResolvedActiveInputs(),
-    listSubscriptionCycles(),
     listOrders(),
     loadActuals(),
     listPurchaseOrders(),
@@ -59,7 +58,6 @@ async function FloorPageInner() {
         phases: inputs.phases,
         phaseProfiles: inputs.phaseProfiles,
       }}
-      cycles={cycles}
       orders={orders}
       receipts={actuals.receipts}
       sowings={actuals.sowings}

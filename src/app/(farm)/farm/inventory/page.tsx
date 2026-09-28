@@ -76,12 +76,11 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
         });
     };
   }
-  const shelfLife = inputs.assumptions.inventory.blackoutShelfLife.value;
   const pfByChannel = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
 
   // ── Finished goods: sowings less distributions, FIFO, inside shelf life, as of `today`.
   const consumed = consumedFrom(pfByChannel);
-  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, growPlans: inputs.growPlans });
+  const fg = finishedGoodsOnHand({ sowings: actuals.sowings, consumed, asOf: today, growPlans: inputs.growPlans });
   const growPlanName = (code: string) => inputs.growPlans.find((r) => r.code === code)?.name ?? code;
   const sowingByCode = new Map(actuals.sowings.map((b) => [b.sowingId, b]));
   const open = fg.lots
@@ -158,9 +157,8 @@ async function InventoryPageInner({ searchParams }: { searchParams: Promise<{ pe
       {monthBar}
 
       <div className="grid gap-3 farm-autofit-11">
-        <Kpi value={num(Math.round(totalRemaining))} label="Units on hand" sub={`${open.length} open lot${open.length === 1 ? '' : 's'} inside shelf life as of ${today}`} />
-        <Kpi value={shelfLife + ' days'} label="Blackout shelf life" sub="Slush-state cold hold" />
-        <Kpi value={nearExpiry.length} label="Lots within 7 days of expiry" sub="Against shelf life" />
+        <Kpi value={num(Math.round(totalRemaining))} label="Units on hand" sub={`${open.length} open lot${open.length === 1 ? '' : 's'} inside its plan's harvest window as of ${today}`} />
+        <Kpi value={nearExpiry.length} label="Lots within 7 days of expiry" sub="Against the plan's harvest window" />
         {!isPlan && <Kpi value={`${traced} / ${open.length}`} label="Lots traceable to a supplier" sub="Input lots on the record, or a recorded link" />}
         <Kpi value={money(rawValue)} label="Raw materials on hand, at invoice" sub={`${rawLots.length} lot${rawLots.length === 1 ? '' : 's'} · ${rawLots.filter((l) => l.daysToUseBy !== null && l.daysToUseBy <= 7).length} dated within 7 days`} />
       </div>

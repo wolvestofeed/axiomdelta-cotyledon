@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, Kpi, num } from '@/components/ui';
 import { MonthGrid, type MonthDay } from '@/components/timeline/MonthGrid';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import type { TimeStudyDoc } from '@/data/time-studies';
 import { isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
@@ -30,7 +30,6 @@ const addMonths = (m: string, n: number) => {
 
 export function CalendarClient({
   today,
-  cycles,
   orders: recordedOrders,
   closures,
   sowings: recordedSowings,
@@ -38,7 +37,6 @@ export function CalendarClient({
   studies,
 }: {
   today: string;
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
   /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
@@ -74,7 +72,6 @@ export function CalendarClient({
       orderBook({
         pickupPoints: world.pickupPoints,
         subscribers: resolved.subscribers,
-        cycles,
         orders,
         from: today,
         to: horizonTo,
@@ -82,10 +79,10 @@ export function CalendarClient({
         growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, horizonTo, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, today, horizonTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -99,7 +96,6 @@ export function CalendarClient({
         growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
-        shelfLifeDays: A.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),

@@ -1229,9 +1229,9 @@ export type FarmGrowPlanInsert = typeof farmGrowPlans.$inferInsert;
 export type FarmGrowPlanLineRow = typeof farmGrowPlanLines.$inferSelect;
 export type FarmGrowPlanLineInsert = typeof farmGrowPlanLines.$inferInsert;
 
-// ── Subscribers and pickup points (0050) ──────────────────────────────────────────────
+// ── Subscribers and pickup points ──────────────────────────────────────────────
 
-/** A district, company or marketplace on one expansion phase. */
+/** A subscriber on one channel: a person, a restaurant or a retail account. */
 export const farmSubscribers = farmSchema.table(
   'subscribers',
   {
@@ -1240,12 +1240,9 @@ export const farmSubscribers = farmSchema.table(
     id: uuid('id').primaryKey().defaultRandom(),
     // @classification: Confidential
     name: text('name').notNull(),
-    /** 'district' | 'company' | 'marketplace' | 'other' */
-    // @classification: Internal
-    kind: text('kind').notNull().default('other'),
     // @classification: Internal
     channel: integer('channel').notNull(),
-    /** 'prospect' | 'contracted' | 'forecast' | 'inactive' — 'forecast' is a Forecast Subscriber, never on Actual (0071). */
+    /** 'prospect' | 'contracted' | 'forecast' | 'inactive' — 'forecast' is a Forecast Subscriber, never on Actual. */
     // @classification: Internal
     status: text('status').notNull().default('prospect'),
     /** Null = the channel's default price. */
@@ -1281,7 +1278,7 @@ export const farmSubscribers = farmSchema.table(
   (t) => [index('farm_subscribers_channel_idx').on(t.channel)],
 );
 
-/** Where a subscriber is served, with the pickup point's own participation forecast. */
+/** Where a subscriber is served: the house, a shared pickup spot, or their own address on a route. */
 export const farmSubscriberPickupPoints = farmSchema.table(
   'subscriber_pickup_points',
   {
@@ -1297,16 +1294,6 @@ export const farmSubscriberPickupPoints = farmSchema.table(
     pickupPointId: text('pickup_point_id'),
     // @classification: Confidential
     name: text('name').notNull(),
-    // @classification: Internal
-    trayFormats: jsonb('tray_formats').notNull().default([]),
-    // @classification: Internal
-    serviceDaysPerYear: integer('service_days_per_year').notNull().default(180),
-    // @classification: Confidential
-    enrollment: integer('enrollment'),
-    // @classification: Confidential
-    participationRate: doublePrecision('participation_rate'),
-    // @classification: Confidential
-    expectedUnitsPerDay: doublePrecision('expected_units_per_day'),
     /** 'active' | 'planned' | 'inactive' */
     // @classification: Internal
     status: text('status').notNull().default('active'),
@@ -1322,193 +1309,17 @@ export const farmSubscriberPickupPoints = farmSchema.table(
   (t) => [index('farm_subscriber_pickup_points_subscriber_idx').on(t.subscriberId), index('farm_subscriber_pickup_points_pickup_point_idx').on(t.pickupPointId)],
 );
 
-/**
- * One service at a pickup point: one loading and harvest/distribution of an order (0071,
- * Roadmap N4a). Two services in a day are two orders.
- */
-export const farmSubscriberServices = farmSchema.table(
-  'subscriber_services',
-  {
-  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
-    // @classification: Internal
-    id: uuid('id').primaryKey().defaultRandom(),
-    // @classification: Internal
-    subscriberPickupPointId: uuid('subscriber_pickup_point_id')
-      .notNull()
-      .references(() => farmSubscriberPickupPoints.id, { onDelete: 'cascade' }),
-    // @classification: Internal
-    name: text('name').notNull(),
-    /** e.g. [1,2,3,4,5]; 0 = Sunday. */
-    // @classification: Internal
-    weekdays: jsonb('weekdays').notNull().default([1, 2, 3, 4, 5]),
-    /** 'active' | 'inactive' */
-    // @classification: Internal
-    status: text('status').notNull().default('active'),
-    // @classification: Internal
-    position: integer('position').notNull().default(0),
-    // @classification: Internal
-    notes: text('notes'),
-    // @classification: Internal
-    createdBy: text('created_by'),
-    // @classification: Internal
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    // @classification: Internal
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [index('farm_subscriber_services_pickup_point_idx').on(t.subscriberPickupPointId)],
-);
-
-/** Units per service from a date, carrying forward until the next pick (0071). */
-export const farmServiceVolumePicks = farmSchema.table(
-  'service_volume_picks',
-  {
-  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
-    // @classification: Internal
-    id: uuid('id').primaryKey().defaultRandom(),
-    // @classification: Internal
-    serviceId: uuid('service_id')
-      .notNull()
-      .references(() => farmSubscriberServices.id, { onDelete: 'cascade' }),
-    // @classification: Internal
-    effectiveDate: date('effective_date').notNull(),
-    // @classification: Confidential
-    units: doublePrecision('units').notNull(),
-    // @classification: Internal
-    notes: text('notes'),
-    // @classification: Internal
-    createdBy: text('created_by'),
-    // @classification: Internal
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    // @classification: Internal
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex('service_volume_picks_service_id_effective_date_key').on(t.serviceId, t.effectiveDate)],
-);
-
-/** A pickup point's service calendar: terms it takes units in and breaks inside them (0071). */
-export const farmPickupPointCalendarRanges = farmSchema.table(
-  'pickup_point_calendar_ranges',
-  {
-  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
-    // @classification: Internal
-    id: uuid('id').primaryKey().defaultRandom(),
-    // @classification: Internal
-    subscriberPickupPointId: uuid('subscriber_pickup_point_id')
-      .notNull()
-      .references(() => farmSubscriberPickupPoints.id, { onDelete: 'cascade' }),
-    /** 'term' | 'break' */
-    // @classification: Internal
-    kind: text('kind').notNull(),
-    // @classification: Internal
-    label: text('label'),
-    // @classification: Internal
-    startDate: date('start_date').notNull(),
-    // @classification: Internal
-    endDate: date('end_date').notNull(),
-    // @classification: Internal
-    createdBy: text('created_by'),
-    // @classification: Internal
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [index('farm_pickup_point_calendar_ranges_pickup_point_idx').on(t.subscriberPickupPointId, t.startDate)],
-);
-
-export type FarmSubscriberServiceRow = typeof farmSubscriberServices.$inferSelect;
-export type FarmServiceVolumePickRow = typeof farmServiceVolumePicks.$inferSelect;
-export type FarmPickupPointCalendarRangeRow = typeof farmPickupPointCalendarRanges.$inferSelect;
-
 export type FarmSubscriberRow = typeof farmSubscribers.$inferSelect;
 export type FarmSubscriberInsert = typeof farmSubscribers.$inferInsert;
 export type FarmSubscriberPickupPointRow = typeof farmSubscriberPickupPoints.$inferSelect;
 export type FarmSubscriberPickupPointInsert = typeof farmSubscriberPickupPoints.$inferInsert;
 
-// ── Subscription cycles and orders (0051) ───────────────────────────────────────────
-
-/**
- * A repeating grow plan sequence: day N of the cycle serves one grow plan.
- * `startDate` anchors day 1; `weekdays` are the service days it advances on.
- * With `subscriberId` NULL the row is a saved subscription cycle on the shared list; with
- * it set, the row is that subscriber's flat plan (0071, Roadmap N4a) — copied
- * from `fromCycleId` or programmed for the subscriber alone. A forecast order
- * generated from a flat plan is derived, never stored.
- */
-export const farmSubscriptionCycles = farmSchema.table(
-  'subscription_cycles',
-  {
-  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
-    // @classification: Internal
-    id: uuid('id').primaryKey().defaultRandom(),
-    /** @deprecated 0071: cycles are not assigned to channels. Null on every row; dropped in N9. */
-    // @classification: Internal
-    channel: integer('channel'),
-    /** Null = a saved subscription cycle; set = this subscriber's flat plan (0071). */
-    // @classification: Internal
-    subscriberId: uuid('subscriber_id').references((): AnyPgColumn => farmSubscribers.id, { onDelete: 'cascade' }),
-    /** Set = the plan for this one service, winning over the subscriber's all-services plan (0071). */
-    // @classification: Internal
-    subscriberServiceId: uuid('subscriber_service_id').references((): AnyPgColumn => farmSubscriberServices.id, { onDelete: 'cascade' }),
-    /** The saved cycle a flat plan was copied from (0071). */
-    // @classification: Internal
-    fromCycleId: uuid('from_cycle_id').references((): AnyPgColumn => farmSubscriptionCycles.id, { onDelete: 'set null' }),
-    /** Null = open-ended (0071). */
-    // @classification: Internal
-    endDate: date('end_date'),
-    // @classification: Internal
-    name: text('name').notNull(),
-    // @classification: Internal
-    startDate: date('start_date').notNull(),
-    // @classification: Internal
-    lengthDays: integer('length_days').notNull().default(5),
-    /** e.g. [1,2,3,4,5]; 0 = Sunday. */
-    // @classification: Internal
-    weekdays: jsonb('weekdays').notNull().default([1, 2, 3, 4, 5]),
-    /** 'active' | 'inactive' */
-    // @classification: Internal
-    status: text('status').notNull().default('active'),
-    // @classification: Internal
-    notes: text('notes'),
-    /** 'seed' | 'user_built' */
-    // @classification: Internal
-    source: text('source').notNull().default('user_built'),
-    // @classification: Internal
-    createdBy: text('created_by'),
-    // @classification: Internal
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    // @classification: Internal
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    index('farm_subscription_cycles_channel_idx').on(t.channel),
-    index('farm_subscription_cycles_subscriber_idx').on(t.subscriberId, t.startDate),
-    index('farm_subscription_cycles_from_idx').on(t.fromCycleId),
-  ],
-);
-
-/** One day of a subscription cycle and the grow plan served; null = no service. */
-export const farmSubscriptionCycleDays = farmSchema.table(
-  'subscription_cycle_days',
-  {
-  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
-    // @classification: Internal
-    id: uuid('id').primaryKey().defaultRandom(),
-    // @classification: Internal
-    cycleId: uuid('cycle_id')
-      .notNull()
-      .references(() => farmSubscriptionCycles.id, { onDelete: 'cascade' }),
-    // @classification: Internal
-    day: integer('day').notNull(),
-    // @classification: Internal
-    growPlanCode: text('grow_plan_code'),
-    // @classification: Internal
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [index('farm_subscription_cycle_days_cycle_idx').on(t.cycleId, t.day)],
-);
+// ── Orders ───────────────────────────────────────────
 
 /**
  * A stored order: a typed forecast, a confirmed count, or a distributed order
- * naming its distribution record. One row per date, pickup point and grow plan; it replaces
- * the derived forecast order with the same key.
+ * naming its distribution record. One row per date, pickup point, subscription and grow plan;
+ * it replaces the derived forecast order with the same key.
  */
 export const farmOrders = farmSchema.table(
   'orders',
@@ -1540,15 +1351,10 @@ export const farmOrders = farmSchema.table(
     pricePerUnitCents: integer('price_per_unit_cents'),
     // @classification: Internal
     distributionId: uuid('distribution_id').references(() => farmDistributions.id, { onDelete: 'set null' }),
-    // @classification: Internal
-    subscriptionCycleId: uuid('subscription_cycle_id').references(() => farmSubscriptionCycles.id, { onDelete: 'set null' }),
-    /** The service the order is for (0071). Null on rows typed before services existed. */
-    // @classification: Internal
-    subscriberServiceId: uuid('subscriber_service_id').references(() => farmSubscriberServices.id, { onDelete: 'set null' }),
-    /** The subscription the order is a distribution of (0019); null on an order from a service or typed. */
+    /** The subscription the order is a distribution of; null on a typed order. */
     // @classification: Internal
     subscriptionId: uuid('subscription_id'),
-    /** 'typed' | 'cycle' | 'subscription' | 'sales' | 'portal' */
+    /** 'typed' | 'subscription' | 'sales' | 'portal' */
     // @classification: Internal
     source: text('source').notNull().default('typed'),
     // @classification: Internal
@@ -1565,13 +1371,9 @@ export const farmOrders = farmSchema.table(
     index('farm_orders_subscriber_idx').on(t.subscriberId, t.orderDate),
     index('farm_orders_pickup_point_idx').on(t.subscriberPickupPointId),
     index('farm_orders_distribution_idx').on(t.distributionId),
-    index('farm_orders_service_idx').on(t.subscriberServiceId),
   ],
 );
 
-export type FarmSubscriptionCycleRow = typeof farmSubscriptionCycles.$inferSelect;
-export type FarmSubscriptionCycleInsert = typeof farmSubscriptionCycles.$inferInsert;
-export type FarmSubscriptionCycleDayRow = typeof farmSubscriptionCycleDays.$inferSelect;
 export type FarmOrderRow = typeof farmOrders.$inferSelect;
 export type FarmOrderInsert = typeof farmOrders.$inferInsert;
 

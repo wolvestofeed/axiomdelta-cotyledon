@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { loadCalendar } from '@/server/periods';
 import { GrowCalendarClient } from '@/app/(farm)/farm/production-planning/grow-calendar/GrowCalendarClient';
@@ -15,7 +15,7 @@ export default async function GrowCalendarPage() {
 }
 
 async function GrowCalendarPageInner() {
-  const [cycles, orders, actuals, calendar] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar()]);
+  const [orders, actuals, calendar] = await Promise.all([listOrders(), loadActuals(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
   const onShelves = await experimentSowings(actuals.sowings, await listGrowPlans(), today);
   return (
@@ -41,7 +41,6 @@ async function GrowCalendarPageInner() {
       />
       <GrowCalendarClient
         today={today}
-        cycles={cycles}
         orders={orders}
         closures={calendar.closures}
         sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, growPlanCode: b.growPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits, experimentId: b.experimentId ?? null }))}

@@ -23,19 +23,19 @@ const t = tagged;
 
 export const assumptions = {
   labor: {
-    sowWage: t(20, 'PLACEHOLDER', '$/hr', 'Austin market placeholder; replace with quote'),
-    leadWage: t(28, 'PLACEHOLDER', '$/hr', 'Austin market placeholder; replace with quote'),
+    sowWage: t(20, 'PLACEHOLDER', '$/hr', 'The Grower, the next production hire: not stated; Staffing\'s rate replaces it'),
+    leadWage: t(28, 'PLACEHOLDER', '$/hr', 'Rob\'s own time on the sow, daily and harvest streams: not stated; Staffing\'s rate replaces it'),
     payrollBurden: t(
       0.22,
       'PLACEHOLDER',
       '% of wage',
-      'Total employer burden as a share of wages',
+      'Total employer burden as a share of wages; not stated',
     ),
     blendedLoadedWage: t(
       29.28,
       'DERIVED',
       '$/hr',
-      'Average of the two roles, loaded at the payroll burden',
+      'Average of the two placeholder wages, loaded at the placeholder burden; the labor rate every stream is costed at until Staffing\'s rates arrive',
     ),
   },
   perUnit: {
@@ -48,16 +48,7 @@ export const assumptions = {
     // costs — a stored per-unit figure was a derived value typed as an input.
   },
   yield: {
-    shrinkAllowance: t(0.03, 'STATED', '% of input cost', 'Trim loss, over-packing, spoilage'),
-  },
-  inventory: {
-    blackoutShelfLife: t(
-      30,
-      'STATED',
-      'days',
-      'Slush-state, high-barrier packaging; 14-day alternative. The plan of record overlays 7 — the current capability on the Phase 1 equipment under Food Code 3-502.12(D)(c); 30 is the 34°F hold-room path, a potential room on the Facility Design and Build plan (2026-09-17).',
-    ),
-    daysOfCoverTarget: t(5, 'STATED', 'days', 'Finished inventory the plan aims to hold'),
+    shrinkAllowance: t(0.03, 'PLACEHOLDER', '% of seed, medium and nutrient cost', 'Seed sorted out before sowing and medium bought and never packed. Not stated for the farm; the working figure until closed sowings observe it'),
   },
   /**
    * Absorption policy. ASC 330-10-30-3 and IAS 2.13 allocate FIXED production
@@ -220,32 +211,17 @@ export const phases: readonly PhaseRow[] = [
   { phase: 3, market: 'Retail and wholesale', character: 'Retail corner and wholesale accounts', pricePerUnit: 30, unitsPerDay: 0, operatingDays: 0 },
 ];
 
-// Per-phase cost & unit profile. Same grow plan across all three phases for
-// now; unit size scales the input cost AND the canopy mass per unit
-// (which drives sowing size), so a bigger subscriber unit yields fewer units
-// per sowing. `premiumFactor` is a separate knob (input premium) held at
-// 1.0 until per-phase menus are costed. Future path: a costing engine that
-// carries distinct per-phase grow plans.
+/** Per-channel unit profile. Both factors are one: a channel neither resizes the tray nor premiums its inputs. */
 export interface PhaseProfile {
   phase: number;
-  unitFactor: Tagged; // multiplies unit size vs the base prospect unit
-  premiumFactor: Tagged; // multiplies input cost (premium proteins, etc.)
+  unitFactor: Tagged;
+  premiumFactor: Tagged;
 }
 
+// A unit is a tray in the plan's format on every channel (outline §4): no channel multiplies it.
+const ONE_TRAY = 'A unit is a tray in the plan\'s format; the same tray on every channel';
 export const phaseProfiles: PhaseProfile[] = [
-  {
-    phase: 1,
-    unitFactor: t(1.0, 'STATED', '×', 'Base prospect unit, fundamental menu; the packed weight derives from the harvested yields'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Base grow plan'),
-  },
-  {
-    phase: 2,
-    unitFactor: t(1.5, 'STATED', '×', '+50% unit for restaurants'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Same grow plan for now; premium menu is a future build'),
-  },
-  {
-    phase: 3,
-    unitFactor: t(1.5, 'STATED', '×', '+50% unit for retail and wholesale / retail'),
-    premiumFactor: t(1.0, 'STATED', '×', 'Same grow plan for now; premium menu is a future build'),
-  },
+  { phase: 1, unitFactor: t(1.0, 'STATED', '×', ONE_TRAY), premiumFactor: t(1.0, 'STATED', '×', ONE_TRAY) },
+  { phase: 2, unitFactor: t(1.0, 'STATED', '×', ONE_TRAY), premiumFactor: t(1.0, 'STATED', '×', ONE_TRAY) },
+  { phase: 3, unitFactor: t(1.0, 'STATED', '×', ONE_TRAY), premiumFactor: t(1.0, 'STATED', '×', ONE_TRAY) },
 ];

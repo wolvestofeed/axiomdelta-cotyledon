@@ -17,11 +17,9 @@
  */
 
 import type { SubscriberDef } from '@/data/subscribers';
-import type { SubscriptionCycleDef, OrderDef, OrderSource, OrderStatus } from '@/data/subscription-cycles';
+import type { OrderDef, OrderSource, OrderStatus } from '@/data/orders';
 import type { ResolvedPickupPointForecast } from '@/engine/demand';
 import type { DateRange } from '@/engine/periods';
-import { flatPlanGrowPlanOn, flatPlansOf } from '@/engine/flat-plans';
-import { normalizePicks, serviceRunsOn, volumeOn } from '@/engine/services';
 import { subscriptionDistributions } from '@/engine/subscriptions';
 
 // ── Dates (UTC arithmetic on ISO strings; no time zone in play) ─────────────
@@ -44,34 +42,6 @@ export function datesBetween(from: string, to: string): string[] {
   return out;
 }
 
-// ── Cycle position ──────────────────────────────────────────────────────────
-
-/**
- * The cycle day (1 .. lengthDays) a date falls on: the count of the cycle's
- * service weekdays from the start date to the date, modulo the length. Null
- * before the start date, on a weekday the cycle does not serve, or when the
- * cycle is inactive.
- */
-export function cycleDayOn(cycle: Pick<SubscriptionCycleDef, 'startDate' | 'lengthDays' | 'weekdays' | 'status'>, date: string): number | null {
-  if (cycle.status !== 'active') return null;
-  if (date < cycle.startDate) return null;
-  if (!cycle.weekdays.includes(weekdayOf(date))) return null;
-  if (cycle.lengthDays < 1) return null;
-  // Service weekdays in [startDate, date): whole weeks by arithmetic, the remainder counted.
-  const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${cycle.startDate}T00:00:00Z`)) / 86_400_000);
-  const perWeek = new Set(cycle.weekdays).size;
-  let count = Math.floor(days / 7) * perWeek;
-  const startWeekday = weekdayOf(cycle.startDate);
-  for (let i = 0; i < days % 7; i++) if (cycle.weekdays.includes((startWeekday + i) % 7)) count++;
-  return (count % cycle.lengthDays) + 1;
-}
-
-export function cycleGrowPlanOn(cycle: SubscriptionCycleDef, date: string): string | null {
-  const day = cycleDayOn(cycle, date);
-  if (day === null) return null;
-  return cycle.days.find((d) => d.day === day)?.growPlanCode ?? null;
-}
-
 // ── The order book ──────────────────────────────────────────────────────────
 
 export type OrderBasis = 'derived' | 'record';
@@ -79,7 +49,7 @@ export type OrderBasis = 'derived' | 'record';
 export type PriceBasis = 'order' | 'contract' | 'channel' | 'own-use';
 
 export interface BookOrder {
-  /** `${date}|${subscriberPickupPointId}|${subscriberServiceId}|${growPlanCode}` — the identity a stored row replaces. */
+  /** `${date}|${subscriberPickupPointId}|${subscriptionId}|${growPlanCode}` — the identity a stored row replaces. */
   key: string;
   /** Stored row id; null for a derived forecast order. */
   id: string | null;
@@ -88,10 +58,7 @@ export interface BookOrder {
   subscriberName: string;
   subscriberPickupPointId: string;
   pickupPointName: string;
-  /** The service the order is for; null on a stored row typed before services existed. */
-  subscriberServiceId: string | null;
-  serviceName: string | null;
-  /** The subscription the order is a distribution of; null on an order from a service or typed. */
+  /** The subscription the order is a distribution of; null on a typed order. */
   subscriptionId: string | null;
   /** distribution-pickup-point id when the subscriber pickup point is linked. */
   distributionPickupPointId: string | null;
@@ -106,21 +73,18 @@ export interface BookOrder {
   pricePerUnitCents: number;
   priceBasis: PriceBasis;
   distributionId: string | null;
-  subscriptionCycleId: string | null;
   notes: string | null;
 }
 
-/** The identity a stored row replaces a derived one by; the stream is the order's service or subscription. */
-export const orderKey = (date: string, subscriberPickupPointId: string, growPlanCode: string, streamId: string | null = null): string =>
-  `${date}|${subscriberPickupPointId}|${streamId ?? ''}|${growPlanCode}`;
+/** The identity a stored row replaces a derived one by: the date, the pickup point, the subscription and the grow plan. */
+export const orderKey = (date: string, subscriberPickupPointId: string, growPlanCode: string, subscriptionId: string | null = null): string =>
+  `${date}|${subscriberPickupPointId}|${subscriptionId ?? ''}|${growPlanCode}`;
 
 export interface OrderBookInput {
-  /** Pickup points with their services, calendars and the forecast's edits applied (`resolveSubscriberPickupPoints`). */
+  /** The pickup points the world serves, with the forecast's edits applied (`resolveSubscriberPickupPoints`). */
   pickupPoints: readonly ResolvedPickupPointForecast[];
-  /** The subscriber library, for names and prices on stored rows whose pickup point is no longer forecast. */
+  /** The subscriber library: the subscriptions, and names and prices on stored rows whose pickup point is no longer forecast. */
   subscribers: readonly SubscriberDef[];
-  /** Saved subscription cycles and every subscriber's flat plans. A forecast's own copy of a plan rides on the pickup point. */
-  cycles: readonly SubscriptionCycleDef[];
   orders: readonly OrderDef[];
   from: string;
   to: string;
@@ -144,59 +108,8 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
   const names = input.growPlanNames ?? {};
   const byKey = new Map<string, BookOrder>();
 
-  // Derived forecast orders: every service on every date it runs.
-  const plansBySubscriber = new Map<string, SubscriptionCycleDef[]>();
-  const plansFor = (s: ResolvedPickupPointForecast): SubscriptionCycleDef[] => {
-    if (s.flatPlans) return s.flatPlans;
-    let p = plansBySubscriber.get(s.subscriberId);
-    if (!p) plansBySubscriber.set(s.subscriberId, (p = flatPlansOf(input.cycles, s.subscriberId)));
-    return p;
-  };
-  for (const s of input.pickupPoints) {
-    const plans = plansFor(s);
-    for (const sv of s.services) {
-      const picks = normalizePicks(sv.picks);
-      if (!picks.some((p) => p.units > 0)) continue;
-      for (const date of datesBetween(input.from, input.to)) {
-        if (!serviceRunsOn(sv, s.calendar, date, input.closures)) continue;
-        const units = volumeOn(picks, date);
-        if (units <= 0) continue;
-        const served = flatPlanGrowPlanOn(plans, sv.id, date);
-        if (!served) continue;
-        const { growPlanCode, plan } = served;
-        const price = priceFor(null, s.pricePerUnitCents, input.channelPriceCents[s.channel]);
-        const key = orderKey(date, s.id, growPlanCode, sv.id);
-        byKey.set(key, {
-          key,
-          id: null,
-          orderDate: date,
-          subscriberId: s.subscriberId,
-          subscriberName: s.subscriberName,
-          subscriberPickupPointId: s.id,
-          pickupPointName: s.name,
-          subscriberServiceId: sv.id,
-          serviceName: sv.name,
-          subscriptionId: null,
-          distributionPickupPointId: s.pickupPointId,
-          channel: s.channel,
-          growPlanCode,
-          growPlanName: names[growPlanCode] ?? growPlanCode,
-          units,
-          status: 'forecast',
-          basis: 'derived',
-          source: 'cycle',
-          pricePerUnitCents: price.cents,
-          priceBasis: price.basis,
-          distributionId: null,
-          subscriptionCycleId: plan.id,
-          notes: null,
-        });
-      }
-    }
-  }
-
-  // Derived forecast orders from subscriptions: every distribution the cadence carries, one per flat plan
-  // line, at a pickup point the world serves (`pickupPoints`: on Actual, never a Forecast Subscriber's).
+  // Derived forecast orders: every distribution each subscription carries, one per flat plan line, at a
+  // pickup point the world serves (`pickupPoints`: on Actual, never a Forecast Subscriber's).
   const served = new Set(input.pickupPoints.map((p) => p.id));
   for (const c of input.subscribers) {
     if (c.status === 'inactive') continue;
@@ -216,8 +129,6 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
             subscriberName: c.name,
             subscriberPickupPointId: pp.id,
             pickupPointName: pp.name,
-            subscriberServiceId: null,
-            serviceName: null,
             subscriptionId: sub.id,
             distributionPickupPointId: pp.pickupPointId,
             channel: c.channel,
@@ -230,7 +141,6 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
             pricePerUnitCents: price.cents,
             priceBasis: price.basis,
             distributionId: null,
-            subscriptionCycleId: null,
             notes: null,
           });
         }
@@ -241,13 +151,11 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
   // Stored rows replace derived ones with the same key.
   const pickupPointIndex = new Map<string, { subscriber: SubscriberDef; pickupPoint: SubscriberDef['pickupPoints'][number] }>();
   for (const c of input.subscribers) for (const s of c.pickupPoints) pickupPointIndex.set(s.id, { subscriber: c, pickupPoint: s });
-  const serviceName = new Map<string, string>();
-  for (const c of input.subscribers) for (const s of c.pickupPoints) for (const sv of s.services ?? []) serviceName.set(sv.id, sv.name);
   for (const o of input.orders) {
     if (o.orderDate < input.from || o.orderDate > input.to) continue;
     const hit = pickupPointIndex.get(o.subscriberPickupPointId);
     const price = priceFor(o.pricePerUnitCents, hit?.subscriber.pricePerUnitCents ?? null, input.channelPriceCents[o.channel], hit?.subscriber.ownUse === true);
-    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriberServiceId ?? o.subscriptionId);
+    const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriptionId);
     byKey.set(key, {
       key,
       id: o.id,
@@ -256,8 +164,6 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       subscriberName: hit?.subscriber.name ?? 'Subscriber removed',
       subscriberPickupPointId: o.subscriberPickupPointId,
       pickupPointName: hit?.pickupPoint.name ?? 'Pickup point removed',
-      subscriberServiceId: o.subscriberServiceId,
-      serviceName: o.subscriberServiceId ? serviceName.get(o.subscriberServiceId) ?? 'Service removed' : null,
       subscriptionId: o.subscriptionId,
       distributionPickupPointId: hit?.pickupPoint.pickupPointId ?? null,
       channel: o.channel,
@@ -270,7 +176,6 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       pricePerUnitCents: price.cents,
       priceBasis: price.basis,
       distributionId: o.distributionId,
-      subscriptionCycleId: o.subscriptionCycleId,
       notes: o.notes,
     });
   }
@@ -281,7 +186,6 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
       a.channel - b.channel ||
       a.subscriberName.localeCompare(b.subscriberName) ||
       a.pickupPointName.localeCompare(b.pickupPointName) ||
-      (a.serviceName ?? '').localeCompare(b.serviceName ?? '') ||
       a.growPlanCode.localeCompare(b.growPlanCode),
   );
 }
@@ -324,7 +228,7 @@ export interface PickupPointActualVsForecast {
   pickupPointName: string;
   subscriberName: string;
   channel: number;
-  /** Service dates in the range with any order for the pickup point. */
+  /** Distribution dates in the range with any order for the pickup point. */
   serviceDates: number;
   /** Units on derived orders and on typed forecast rows — not yet confirmed. */
   forecastUnits: number;

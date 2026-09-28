@@ -329,13 +329,13 @@ export const TRAYS_PER_SHELF_1020 = 4;
 
 /**
  * Energy and fixture cost of one 1020 tray for one day under a regime: the shelf's fixtures, at
- * their count on a shelf, watts scaled to the target intensity where they dim, times hours, times
- * the rate, shared across the four 1020 flats on the shelf, plus the fixtures' amortized cost.
+ * their count on a shelf and their full watts (the fixtures Rob runs are not dimmed), times the
+ * regime's hours, times the rate, shared across the four 1020 flats on the shelf, plus the
+ * fixtures' amortized cost (outline §4).
  */
-export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegimeDef, ppfdTarget: number = regime.ppfdTarget.value, ratePerKwh: number = ENERGY_RATE_PER_KWH.value, perShelf: number = fixture.perShelf.value): number {
-  const dim = Math.min(1, ppfdTarget / fixture.ppfdAtTray.value);
+export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegimeDef, ratePerKwh: number = ENERGY_RATE_PER_KWH.value, perShelf: number = fixture.perShelf.value): number {
   const hours = regime.photoperiodHours.value;
-  const kwhPerShelfDay = ((fixture.watts.value * perShelf * dim) / 1000) * hours;
+  const kwhPerShelfDay = ((fixture.watts.value * perShelf) / 1000) * hours;
   const energy = (kwhPerShelfDay * ratePerKwh) / TRAYS_PER_SHELF_1020;
   const fixtureDaysOfLife = fixture.fixtureLifeHours.value / hours;
   const amortized = (fixture.fixtureCost.value * perShelf) / fixtureDaysOfLife / TRAYS_PER_SHELF_1020;

@@ -83,7 +83,9 @@ export function costPlanPerUnit(
     return { ...l, costPerUnit: l.costPerTray * unitFactor, seedOz, harvestedOz, packedOz: harvestedOz };
   });
   const inputCostPerUnit = lines.reduce((t, l) => t + l.costPerUnit, 0) + g.perTray.consumables * unitFactor;
-  const shrinkPerUnit = inputCostPerUnit * shrinkAllowance;
+  // The shrink allowance is seed, medium and nutrient bought and never packed (`accounting-policy.md` §5):
+  // it grosses up those lines and never the light, the tray wear or the sanitizer.
+  const shrinkPerUnit = lines.filter((l) => l.line.kind !== 'light').reduce((t, l) => t + l.costPerUnit, 0) * shrinkAllowance;
   const totalInputCostPerUnit = inputCostPerUnit + shrinkPerUnit;
   const seedOzPerUnit = lines.reduce((t, l) => t + l.seedOz, 0);
   const harvestedOzPerUnit = lines.reduce((t, l) => t + l.harvestedOz, 0);
@@ -441,7 +443,7 @@ export function sowingCosting(
     packedLb: lb(c.packedOzPerUnit),
     sowingInputCost,
     shrinkAllowance,
-    sowingInputCostWithShrink: sowingInputCost * (1 + shrinkAllowance),
+    sowingInputCostWithShrink: sowingInputCost + c.shrinkPerUnit * sowing,
     unitInputCost: c.totalInputCostPerUnit,
   };
 }

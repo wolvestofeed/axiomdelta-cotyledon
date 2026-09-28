@@ -91,9 +91,9 @@ describe('farm scheduler — the golden day', () => {
     expect(r.blocks.filter((b) => b.stepId === 'load')).toHaveLength(1);
   });
 
-  it('closedown is placed once at the close, two people for 30 minutes', () => {
+  it('closedown is placed once at the close, one person for 30 minutes', () => {
     const c = r.blocks.filter((b) => b.kind === 'closedown');
-    expect(c.map((b) => [b.startMin, b.endMin, b.staff, b.laborMinutes])).toEqual([[1110, 1140, 2, 60]]);
+    expect(c.map((b) => [b.startMin, b.endMin, b.staff, b.laborMinutes])).toEqual([[1110, 1140, 1, 30]]);
   });
 
   it('no violations; the metrics', () => {
@@ -103,7 +103,7 @@ describe('farm scheduler — the golden day', () => {
     expect(r.metrics.sowingLaborHours).toBeCloseTo(320 / 60, 9);
     expect(r.metrics.harvestLaborHours).toBeCloseTo(475 / 60, 9);
     expect(r.metrics.laborHours).toBeCloseTo(795 / 60, 9);
-    expect(r.metrics.closedownHours).toBe(1);
+    expect(r.metrics.closedownHours).toBe(0.5);
     expect(r.metrics.utilizationByResource['K']).toBeCloseTo(120 / 720, 9);
   });
 

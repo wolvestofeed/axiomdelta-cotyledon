@@ -1,9 +1,9 @@
 /**
- * MicroFarm — working capital reference data (Roadmap Phase K).
+ * MicroFarm — working capital reference data.
  *
- * Payment terms, the opening position and the payroll calendar. Every figure is
- * tagged; the decisions are Robert's (2026-09-14) unless tagged PLACEHOLDER.
- * The terms reference in words is `docs/farm/accounting-policy.md` §16.
+ * Payment terms, the opening position and the payroll calendar. Every figure is tagged; nothing
+ * here has been stated for the farm, so the opening position and the payroll calendar are
+ * placeholders until Rob states them. The terms reference in words is `docs/accounting-policy.md` §16.
  */
 
 import { tagged } from '@/data/tagged';
@@ -53,18 +53,18 @@ export const PAID_AT_ORDER_CHANNELS: readonly number[] = [3];
 // ── Opening position ────────────────────────────────────────────────────────
 
 export const openingPosition = {
-  ownerEquity: tagged(200_000, 'STATED', '$', "Opening owners' equity"),
-  loanStartDate: tagged('2027-01-01', 'STATED', 'date', 'The equipment and leasehold loans start'),
+  ownerEquity: tagged(200_000, 'PLACEHOLDER', '$', "Opening owners' equity in cash at the forecast start. Not stated for the farm; the forecast opens on it until Rob states the opening position"),
+  loanStartDate: tagged('2027-01-01', 'PLACEHOLDER', 'date', 'The date a loan would start; no loan is seeded'),
 };
 
-/** The fiscal year the forecast statements are drawn on: the year the loans start. */
+/** The fiscal year the forecast statements are drawn on. */
 export const FORECAST_FISCAL_YEAR = 2027;
 
 // ── Payroll calendar ────────────────────────────────────────────────────────
 
 export const payrollCalendar = {
-  periodDays: tagged(14, 'STATED', 'days', 'Biweekly, 26 pay periods: Monday through the second Sunday'),
-  payLagDays: tagged(5, 'STATED', 'days', 'Paid the Friday five days after the period ends'),
+  periodDays: tagged(14, 'PLACEHOLDER', 'days', 'Biweekly, 26 pay periods: Monday through the second Sunday. Not stated; Staffing sets the calendar'),
+  payLagDays: tagged(5, 'PLACEHOLDER', 'days', 'Paid the Friday five days after the period ends. Not stated; Staffing sets the calendar'),
   firstPeriodStart: tagged(
     '2027-01-04',
     'PLACEHOLDER',

@@ -1,7 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
-import { getScenarioView, loadDefinitions, resolveWithDefinitions } from '@/server/scenarios';
-import { listSubscriptionCycles } from '@/server/orders';
+import { getActiveScenario, getScenarioView, loadDefinitions, resolveWithDefinitions } from '@/server/scenarios';
 import { loadActuals } from '@/server/actuals';
 import { simulateForecast, type ForecastTimeline } from '@/engine/forecast-timeline';
 import { planBundle, postPlanLedger, type PlanLedger } from '@/engine/plan-ledger';
@@ -12,10 +11,12 @@ import { LEDGER_COOKIE, isLedgerKind, type LedgerKind } from '@/engine/ledger-vi
 import type { ScenarioView } from '@/server/scenarios';
 
 /**
- * MicroFarm — posting the selected ledger on the server (Roadmap N6). One path for
- * the live statement actions (the working copy the browser sends) and for server
- * pages (the saved open forecast): Plan runs the timeline and the Plan ledger,
- * Actual posts the recorded documents. Both hand back the documents they posted.
+ * MicroFarm — posting the selected ledger on the server. Plan runs the timeline and the Plan
+ * ledger on the forecast asked for: the working copy the browser sends, else the saved open
+ * forecast. Actual posts the recorded documents at the plan of record, whatever is open: a
+ * forecast edit never restates the books (`accounting-policy.md` §11), and a sowing with no
+ * approved standard is costed at the plan of record's labor standard and overhead and absorbs at
+ * its Plan ledger's rate (§5, §14). Both hand back the documents they posted.
  */
 
 export async function getLedgerKind(): Promise<LedgerKind> {
@@ -29,20 +30,18 @@ export type PostedLedger =
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-/** Post a ledger. `config` omitted = the saved open forecast (or the plan of record). */
+/** Post a ledger. Plan: `config`, else the saved open forecast (or the plan of record). Actual: the plan of record. */
 export async function postLedger(kind: LedgerKind, config?: FarmScenarioConfig): Promise<PostedLedger> {
   const [definitions, view] = await Promise.all([loadDefinitions(), getScenarioView()]);
-  const inputs = resolveWithDefinitions(config ?? view.config, definitions);
   if (kind === 'plan') {
-    const cycles = await listSubscriptionCycles();
-    const timeline = simulateForecast({ inputs, cycles });
+    const inputs = resolveWithDefinitions(config ?? view.config, definitions);
+    const timeline = simulateForecast({ inputs });
     const ledger = postPlanLedger({ timeline, inputs });
     return { kind, view, inputs, timeline, ledger, bundle: planBundle(timeline), empty: false };
   }
-  // Actual sowings without an approved standard absorb at the rate the same forecast's Plan
-  // ledger sets on its own production — one absorption basis on both ledgers.
-  const [bundle, cycles] = await Promise.all([loadActuals(), listSubscriptionCycles()]);
-  const absorption = postPlanLedger({ timeline: simulateForecast({ inputs, cycles }), inputs }).absorption;
+  const [bundle, plan] = await Promise.all([loadActuals(), getActiveScenario()]);
+  const inputs = resolveWithDefinitions(plan?.config ?? {}, definitions);
+  const absorption = postPlanLedger({ timeline: simulateForecast({ inputs }), inputs }).absorption;
   const ledger = postActualLedger(bundle, inputs, today(), undefined, { absorption });
   return { kind, view, inputs, timeline: null, ledger, bundle, empty: ledger.empty };
 }

@@ -69,7 +69,6 @@ export function sustainabilityBasis(input: {
   bundle: Pick<ActualsBundle, 'sowings' | 'receipts' | 'distributions'>;
   from: string;
   to: string;
-  shelfLifeDays: number;
   growPlans: readonly GrowPlanDef[];
   unitFactorByChannel: Record<number, number>;
 }): SustainabilityBasis {
@@ -117,7 +116,7 @@ export function sustainabilityBasis(input: {
       date: d.distributedOn,
       baseUnits: d.units * unitFactorFor(input.growPlans.find((r) => r.code === d.growPlanCode), d.phase, input.unitFactorByChannel),
     }));
-  const onHand = finishedGoodsOnHand({ sowings: bundle.sowings.filter((b) => b.productionDate <= to), consumed, shelfLifeDays: input.shelfLifeDays, asOf: to, growPlans: input.growPlans });
+  const onHand = finishedGoodsOnHand({ sowings: bundle.sowings.filter((b) => b.productionDate <= to), consumed, asOf: to, growPlans: input.growPlans });
   const expiredByGrowPlan: Record<string, number> = {};
   for (const lot of onHand.lots) {
     if (lot.remaining <= 1e-9 || lot.expires >= to || lot.expires < from) continue;

@@ -29,16 +29,16 @@ const plan = (code: string) => G.growPlans.find((p) => p.code === code)!;
 const seedPlan = (code: string) => growPlanSeed.find((p) => p.code === code)!;
 const PF = { 1: 1, 2: 1.5, 3: 1.5 };
 const order = (date: string, code: string, unitsOrdered: number, channel = 1): BookOrder => ({
-  key: `${date}|p|s|${code}|${channel}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriberServiceId: 's', serviceName: null, distributionPickupPointId: null,
-  channel, growPlanCode: code, growPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'cycle', subscriptionCycleId: null, notes: null, editable: true,
+  key: `${date}|p|s|${code}|${channel}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriptionId: 's', distributionPickupPointId: null,
+  channel, growPlanCode: code, growPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'subscription', notes: null, editable: true,
 } as unknown as BookOrder);
 // 2027-03-22 is a Monday.
 const DIST = '2027-03-22';
 const shrink = G.assumptions.yield.shrinkAllowance.value;
 /** One of the seed's lit racks, no dark rack: one sowing of 20 trays for a cycle. */
 const ONE_RACK: GrowUnit[] = (G.capacityInputs.growUnits ?? []).filter((u) => !u.darkOnly).map((u) => ({ ...u, units: 1 }));
-const plan30 = (book: BookOrder[], openingLots: Parameters<typeof planHorizon>[0]['openingLots'] = [], shelfLifeDays = 30) =>
-  planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots, shelfLifeDays });
+const plan30 = (book: BookOrder[], openingLots: Parameters<typeof planHorizon>[0]['openingLots'] = []) =>
+  planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots });
 
 describe('requirements from the order book', () => {
   it('explodes a distribution day into base units per plan at the channel unit factor, largest first', () => {
@@ -54,30 +54,31 @@ describe('requirements from the order book', () => {
 });
 
 describe('finished goods on hand from records', () => {
-  // Records of a plan off the library are stock from their production date; a grow plan's from its harvest.
+  // A grow sowing is stock from its first harvest day (BROC-01: eleven days after the sow), for the plan's
+  // three-day harvest window: sown 1 and 2 September, stock 12 and 13 September, expiring 15 and 16 September.
   const sowings = [
-    { sowingId: 'B-1', growPlanCode: 'TEST-01', productionDate: '2026-09-01', goodUnits: 550 },
-    { sowingId: 'B-2', growPlanCode: 'TEST-01', productionDate: '2026-09-10', goodUnits: 550 },
+    { sowingId: 'B-1', growPlanCode: 'BROC-01', productionDate: '2026-09-01', goodUnits: 550 },
+    { sowingId: 'B-2', growPlanCode: 'BROC-01', productionDate: '2026-09-02', goodUnits: 550 },
   ];
 
-  it('lots inside shelf life count; distributed orders draw oldest first', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [{ growPlanCode: 'TEST-01', date: '2026-09-11', baseUnits: 600 }], shelfLifeDays: 30, asOf: '2026-09-14', growPlans: G.growPlans });
-    expect(s.byGrowPlan['TEST-01']).toBe(500);
+  it('lots inside the harvest window count; distributed orders draw oldest first', () => {
+    const s = finishedGoodsOnHand({ sowings, consumed: [{ growPlanCode: 'BROC-01', date: '2026-09-13', baseUnits: 600 }], asOf: '2026-09-14', growPlans: G.growPlans });
+    expect(s.byGrowPlan['BROC-01']).toBe(500);
     expect(s.lots[0].remaining).toBe(0);
     expect(s.lots[1].remaining).toBe(500);
     expect(s.unmatchedByGrowPlan).toEqual({});
   });
 
-  it('a lot past shelf life is expired, not on hand; consumption with no stock is unmatched', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [{ growPlanCode: 'TEST-02', date: '2026-09-14', baseUnits: 10 }], shelfLifeDays: 7, asOf: '2026-09-14', growPlans: G.growPlans });
-    expect(s.byGrowPlan['TEST-01']).toBe(550);
-    expect(s.expiredByGrowPlan['TEST-01']).toBe(550);
+  it('a lot past its harvest window is expired, not on hand; consumption with no stock is unmatched', () => {
+    const s = finishedGoodsOnHand({ sowings, consumed: [{ growPlanCode: 'TEST-02', date: '2026-09-14', baseUnits: 10 }], asOf: '2026-09-20', growPlans: G.growPlans });
+    expect(s.byGrowPlan['BROC-01']).toBeUndefined();
+    expect(s.expiredByGrowPlan['BROC-01']).toBe(1100);
     expect(s.unmatchedByGrowPlan['TEST-02']).toBe(10);
   });
 
-  it('a record after the as-of date is not stock yet', () => {
-    const s = finishedGoodsOnHand({ sowings, consumed: [], shelfLifeDays: 30, asOf: '2026-09-05', growPlans: G.growPlans });
-    expect(s.byGrowPlan['TEST-01']).toBe(550);
+  it('a record whose harvest has not begun by the as-of date is not stock yet', () => {
+    const s = finishedGoodsOnHand({ sowings, consumed: [], asOf: '2026-09-12', growPlans: G.growPlans });
+    expect(s.byGrowPlan['BROC-01']).toBe(550);
   });
 });
 
@@ -131,7 +132,7 @@ describe('distribution date to production date', () => {
 
 describe('the horizon', () => {
   it('carries a row per date that ties to the totals: what was made, what shipped, what expired, what is left', () => {
-    const h = plan30([order(DIST, 'BROC-01', 10), order('2027-03-31', 'MUNG-01', 30)]);
+    const h = plan30([order(DIST, 'BROC-01', 10), order('2027-03-27', 'MUNG-01', 30)]);
     expect(h.byDate.map((r) => r.date)).toEqual([...h.byDate.map((r) => r.date)].sort());
     expect(h.byDate.every((r) => r.date >= '2027-03-01' && r.date <= '2027-03-31')).toBe(true);
     const made = h.byDate.reduce((s, r) => s + r.unitsProduced, 0);
@@ -161,7 +162,7 @@ describe('the horizon', () => {
   });
 
   it('opening stock is drawn first, and what the grow units cannot make is unfilled and shared across channels', () => {
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 50)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, growUnits: ONE_RACK, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots: [{ sowingId: 'x', growPlanCode: 'BROC-01', produced: '2027-03-01', expires: '2027-03-30', qtyProduced: 10, remaining: 10 }], shelfLifeDays: 30 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 50)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, growUnits: ONE_RACK, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: PF, openingLots: [{ sowingId: 'x', growPlanCode: 'BROC-01', produced: '2027-03-01', expires: '2027-03-30', qtyProduced: 10, remaining: 10 }] });
     const run = h.productionDays[0]!.runs[0]!;
     expect(run.onHand).toBe(10);
     expect(run.sowingsNeeded).toBe(2);
@@ -196,7 +197,7 @@ describe('a single plan run', () => {
 
 describe('the grow model', () => {
   const horizon = (book: BookOrder[], R = G, growUnits?: GrowUnit[]) =>
-    planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, growUnits });
+    planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], growUnits });
 
   it('the run sows the trays ordered, split past what one grow unit takes, and packs what it harvests', () => {
     const broc = plan('BROC-01');
@@ -257,7 +258,7 @@ describe('the grow model', () => {
   });
 
   it('a grow sowing is stock from its first harvest day, and its shelf life counts from there', () => {
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 10)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 7 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 10)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, growPlanAssumptions: G.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [] });
     const harvest = h.growCalendar!.sowings[0]!.harvestFrom;
     expect(harvest).toBe(DIST);
     // On the shelves from the sow date to the harvest: no stock.
@@ -274,10 +275,10 @@ describe('the grow model', () => {
   it('a closed grow sowing record is stock from its first harvest day; an order before it finds none', () => {
     const sowDate = sowDateFor(seedPlan('BROC-01'), DIST);
     const records = [{ sowingId: 'G-1', growPlanCode: 'BROC-01', productionDate: sowDate, goodUnits: 20 }];
-    const onShelf = finishedGoodsOnHand({ sowings: records, consumed: [], shelfLifeDays: 7, asOf: '2027-03-15', growPlans: G.growPlans });
+    const onShelf = finishedGoodsOnHand({ sowings: records, consumed: [], asOf: '2027-03-15', growPlans: G.growPlans });
     expect(onShelf.lots).toHaveLength(0);
-    const harvested = finishedGoodsOnHand({ sowings: records, consumed: [{ growPlanCode: 'BROC-01', date: '2027-03-15', baseUnits: 20 }], shelfLifeDays: 7, asOf: DIST, growPlans: G.growPlans });
-    expect(harvested.lots[0]).toMatchObject({ produced: DIST, expires: '2027-03-29', remaining: 20 });
+    const harvested = finishedGoodsOnHand({ sowings: records, consumed: [{ growPlanCode: 'BROC-01', date: '2027-03-15', baseUnits: 20 }], asOf: DIST, growPlans: G.growPlans });
+    expect(harvested.lots[0]).toMatchObject({ produced: DIST, expires: '2027-03-25', remaining: 20 });
     expect(harvested.byGrowPlan['BROC-01']).toBe(20);
     expect(harvested.unmatchedByGrowPlan['BROC-01']).toBe(20);
   });
@@ -303,7 +304,7 @@ describe('the grow model', () => {
     expect(labor.units).toBe(20);
     // A stored study stands over the estimate.
     const doc = { id: 's', growPlanCode: 'BROC-01', approvedAt: '2027-01-01T00:00:00Z', approvedBy: null, source: 'user_built' as const, ...study, basis: 'observed' as const, lines: study.lines.map((l) => (l.stream === 'sowing' ? { ...l, laborMinutes: l.laborMinutes * 2 } : l)) };
-    const withStudy = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 20)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, studies: [doc] as never });
+    const withStudy = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order(DIST, 'BROC-01', 20)], growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], studies: [doc] as never });
     expect(withStudy.productionDays[0]!.labor.totalStaffHours).toBeCloseTo(labor.totalStaffHours * 2, 9);
   });
 });

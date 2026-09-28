@@ -441,7 +441,7 @@ export function ScenarioProvider({
       mutate((d) => {
         const f = (d.forecast ??= {});
         fn(f);
-        for (const k of ['subscribers', 'services', 'flatPlans', 'equipment'] as const) {
+        for (const k of ['subscribers', 'equipment'] as const) {
           const all = f[k] as Record<string, object> | undefined;
           if (!all) continue;
           for (const [id, row] of Object.entries(all)) {

@@ -3,7 +3,7 @@ import { money, num, pct } from '@/components/ui';
 import type { FarmAccess } from '@/server/access';
 import { postSelectedLedger, type PostedLedger } from '@/server/ledgers';
 import { loadActuals } from '@/server/actuals';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadCalendar } from '@/server/periods';
 import { listTimeStudies } from '@/server/time-studies';
 import { listPurchaseOrders, listAllCatalog } from '@/server/supplier-catalog';
@@ -77,7 +77,6 @@ interface Ctx {
   /** The recorded documents, whatever the selected world. */
   records: ActualsBundle;
   orders: Awaited<ReturnType<typeof listOrders>>;
-  cycles: Awaited<ReturnType<typeof listSubscriptionCycles>>;
   closures: Awaited<ReturnType<typeof loadCalendar>>['closures'];
   studies: Awaited<ReturnType<typeof listTimeStudies>>;
   pos: Awaited<ReturnType<typeof listPurchaseOrders>>;
@@ -101,11 +100,10 @@ export interface ReportLibrary {
 /** The library for one reader: every report their role can open, built once. */
 export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibrary> {
   const today = new Date().toISOString().slice(0, 10);
-  const [selected, records, orders, cycles, calendar, studies, pos, catalog] = await Promise.all([
+  const [selected, records, orders, calendar, studies, pos, catalog] = await Promise.all([
     postSelectedLedger(),
     loadActuals(),
     listOrders(),
-    listSubscriptionCycles(),
     loadCalendar(),
     listTimeStudies(),
     listPurchaseOrders(),
@@ -115,16 +113,14 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
   const isPlan = selected.kind === 'plan';
   const closures = calendar.closures;
   const pf = Object.fromEntries(R.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
-  const shelfLife = R.assumptions.inventory.blackoutShelfLife.value;
 
-  // The next two weeks on the selected world (Roadmap N9): Plan reads the forecast's pickup points and
+  // The next two weeks on the selected world: Plan reads the forecast's pickup points and
   // nothing on record; Actual reads the subscribers' pickup points, the orders on file and the closed sowings.
   const horizonFrom = today;
   const horizonTo = isoAddDays(today, 13);
   const book = orderBook({
     pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
-    cycles,
     orders: isPlan ? [] : orders,
     from: horizonFrom,
     to: horizonTo,
@@ -136,7 +132,7 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
   const consumed = isPlan
     ? worldBundle.distributions.filter((d) => d.growPlanCode).map((d) => ({ growPlanCode: d.growPlanCode!, date: d.distributedOn, baseUnits: d.units * unitFactorFor(R.growPlans.find((r) => r.code === d.growPlanCode), d.phase, pf) }))
     : distributedConsumption(orders, records.distributions, R.growPlans, pf);
-  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, shelfLifeDays: shelfLife, asOf: today, growPlans: R.growPlans });
+  const finished = finishedGoodsOnHand({ sowings: worldBundle.sowings, consumed, asOf: today, growPlans: R.growPlans });
   const horizon = planHorizon({
     closures,
     from: horizonFrom,
@@ -148,11 +144,10 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
     growPlanAssumptions: R.growPlanAssumptions,
     unitFactorByChannel: pf,
     openingLots: finished.lots.filter((l) => l.remaining > 0),
-    shelfLifeDays: shelfLife,
     channels: R.phases.map((p) => p.phase),
   });
   const worldLabel = isPlan ? `Plan — ${selected.view.label ?? 'plan defaults'}` : 'Actual — the recorded documents';
-  const ctx: Ctx = { today, access, selected, records, orders, cycles, closures, studies, pos, catalog, pf, horizon, horizonFrom, horizonTo, finished, worldLabel };
+  const ctx: Ctx = { today, access, selected, records, orders, closures, studies, pos, catalog, pf, horizon, horizonFrom, horizonTo, finished, worldLabel };
 
   const defs = reportsFor(access.isSuperAdmin);
   const reports = await Promise.all(defs.map(async (def) => ({ def, data: await buildOne(def, ctx) })));
@@ -201,7 +196,7 @@ const alertsRegister: Builder = (ctx) => {
     if (r.gaps.length > 0) items.push({ finding: 'Stage record with a gap', item: r.sowingId, detail: `${r.planName}, sown ${r.date}: ${r.gaps.map((g) => g.point.name).join(', ')} not recorded`, module: 'Produce Safety' });
   }
   const pfc = ctx.pf;
-  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.growPlans, pfc), shelfLifeDays: R.assumptions.inventory.blackoutShelfLife.value, asOf: today, growPlans: R.growPlans });
+  const recordedFinished = finishedGoodsOnHand({ sowings: records.sowings, consumed: distributedConsumption(ctx.orders, records.distributions, R.growPlans, pfc), asOf: today, growPlans: R.growPlans });
   for (const l of recordedFinished.lots.filter((x) => x.remaining > 1e-9)) {
     const days = daysBetween(today, l.expires);
     if (days <= 7) items.push({ finding: 'Finished lot within seven days of shelf life', item: l.sowingId, detail: `${growPlanName(l.growPlanCode)}: ${num(Math.round(l.remaining))} units on hand, shelf life ends ${l.expires} (${days} day${days === 1 ? '' : 's'})`, module: 'Inventory' });
@@ -585,7 +580,6 @@ const inventoryPosition: Builder = (ctx) => {
     row(['Lots within seven days of shelf life', expiring.length], expiring.length > 0 ? 'over' : undefined),
     row(['Units in those lots', num(Math.round(expiring.reduce((s, l) => s + l.remaining, 0)))]),
     row(['Units past shelf life, unconsumed', num(Math.round(expiredUnconsumed.reduce((s, l) => s + l.remaining, 0)))], expiredUnconsumed.length > 0 ? 'over' : undefined),
-    row(['Blackout shelf life, days', R.assumptions.inventory.blackoutShelfLife.value]),
     row(['Raw lots on hand', raw.length]),
     row(['Raw lots past the date on the case', rawPast.length], rawPast.length > 0 ? 'over' : undefined),
     row(['Raw materials on hand, at invoice', cents(rawValue)]),
@@ -905,7 +899,7 @@ const trainingCompletion: Builder = async () => {
 // ── Sales ───────────────────────────────────────────────────────────────────
 
 const orderBookAccuracy: Builder = (ctx) => {
-  const { selected, orders, cycles, closures, records, today } = ctx;
+  const { selected, orders, closures, records, today } = ctx;
   const R = selected.inputs;
   const isPlan = selected.kind === 'plan';
   const from = isoAddDays(today, -30);
@@ -913,7 +907,6 @@ const orderBookAccuracy: Builder = (ctx) => {
   const book: BookOrder[] = orderBook({
     pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
-    cycles,
     orders: isPlan ? [] : orders,
     from,
     to,
@@ -959,8 +952,8 @@ const subscribersAndPipeline: Builder = (ctx) => {
   byChannel.push(row(['All channels', ...statuses.map((s) => R.subscribers.filter((c) => c.status === s).length), R.subscribers.reduce((n, c) => n + c.pickupPoints.length, 0)], 'total'));
   const pipelineRows = Object.entries(pipe.byStatus).sort(([, a], [, b]) => b - a).map(([s, n]) => row([`Prospect pipeline — ${s}`, n, '', '', '']));
   pipelineRows.push(row(['Prospect prospects in the directory', pipe.total, '', '', `${num(pipe.totalStudents)} headcount`], 'total'));
-  const detail = table([{ label: 'Subscriber' }, { label: 'Channel' }, { label: 'Status' }, { label: 'Kind' }, { label: 'Pickup points', num: true }, { label: 'Payment terms' }, { label: 'Contract' }],
-    [...R.subscribers].sort((a, b) => a.name.localeCompare(b.name)).map((c) => row([c.name, channelName(c.channel), SUBSCRIBER_STATUS_LABELS[c.status], c.kind, c.pickupPoints.length, c.paymentTerms ?? 'None on file', c.contractStart ? `${c.contractStart} to ${c.contractEnd ?? 'open'}` : '—'], c.status === 'inactive' ? 'faint' : undefined)));
+  const detail = table([{ label: 'Subscriber' }, { label: 'Channel' }, { label: 'Status' }, { label: 'Pickup points', num: true }, { label: 'Payment terms' }, { label: 'Contract' }],
+    [...R.subscribers].sort((a, b) => a.name.localeCompare(b.name)).map((c) => row([c.name, channelName(c.channel), SUBSCRIBER_STATUS_LABELS[c.status], c.pickupPoints.length, c.paymentTerms ?? 'None on file', c.contractStart ? `${c.contractStart} to ${c.contractEnd ?? 'open'}` : '—'], c.status === 'inactive' ? 'faint' : undefined)));
   return {
     summary: table([{ label: 'Channel or stage' }, { label: 'Contracted', num: true }, { label: 'Forecast subscriber', num: true }, { label: 'Prospect', num: true }, { label: 'Inactive', num: true }, { label: 'Pickup points', num: true }], [...byChannel, ...pipelineRows.map((r) => ({ ...r, cells: [r.cells[0], r.cells[1], '', '', '', r.cells[4]] }))]),
     detail,

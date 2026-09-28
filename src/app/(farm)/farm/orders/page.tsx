@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { finishedLotsOf } from '@/engine/actuals';
 import { loadCalendar } from '@/server/periods';
@@ -14,7 +14,7 @@ export default async function OrdersPage() {
 }
 
 async function OrdersPageInner() {
-  const [access, cycles, orders, actuals, calendar] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar()]);
+  const [access, orders, actuals, calendar] = await Promise.all([getFarmAccess(), listOrders(), loadActuals(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -22,7 +22,7 @@ async function OrdersPageInner() {
       <PageHeader
         title="Orders"
         purpose="See every order by date and subscriber, forecast or on file."
-        functions={['Order book', 'Distribution day', 'Saved subscription cycles', 'Pickup points']}
+        functions={['Order book', 'Distribution day', 'Pickup points']}
         connects={[
           { href: '/farm/subscribers', dir: 'from' },
           { href: '/farm/production-planning', dir: 'to' },
@@ -30,11 +30,10 @@ async function OrdersPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>Every subscriber has its own flat plan: a saved subscription cycle copied onto it, or a sequence programmed for it alone.</li>
-            <li>A forecast order is the plan&rsquo;s grow plan on a date times the service&rsquo;s units per service, on each date the service runs.</li>
+            <li>A forecast order is a distribution a subscription carries: one order per flat plan line on each date the cadence falls on.</li>
             <li>Forecast orders are computed from Subscribers each time the page is read, never stored.</li>
             <li>A typed count, a confirmed count or a distributed order is a row on file, and each replaces the forecast order it stands for.</li>
-            <li>A prospect&rsquo;s distribution day is every order on that date for that subscriber.</li>
+            <li>A subscriber&rsquo;s distribution day is every order on that date for that subscriber.</li>
           </ul>
         }
         status="live"
@@ -43,7 +42,6 @@ async function OrdersPageInner() {
         canEdit={access.isSuperAdmin}
         canRecord={access.isOperator}
         closures={calendar.closures}
-        cycles={cycles}
         orders={orders}
         distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units, pricePerUnitCents: d.pricePerUnitCents, phase: d.phase, subscriberId: d.subscriberId ?? null, invoiceId: d.invoiceId ?? null }))}
         finishedLots={finishedLotsOf(actuals.sowings)}

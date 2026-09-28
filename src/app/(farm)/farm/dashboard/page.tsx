@@ -12,8 +12,8 @@ import { listTimeStudies } from '@/server/time-studies';
 import { activeGrowPlanAverages } from '@/engine/active-averages';
 import { orderWeek } from '@/engine/order-week';
 import { orderBook } from '@/engine/orders';
-import { WEEKDAY_LABELS } from '@/data/subscription-cycles';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { WEEKDAY_LABELS } from '@/data/orders';
+import { listOrders } from '@/server/orders';
 import { listSubscribers } from '@/server/subscribers';
 import { loadCalendar } from '@/server/periods';
 import { loadSupplierTerms, loadTimeClock } from '@/server/working-capital';
@@ -72,7 +72,7 @@ async function FarmDashboardInner() {
 async function loadOperatingPicture() {
   // The dashboard reflects what this person is looking at: the open forecast, or the plan of
   // record (plan-data defaults when none has been set), in the world selected in the scenario bar.
-  const [view, library, subscribers, calendar, supplierTerms, pos, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, kind, cycles, orders, production, supplierOptions] = await Promise.all([getScenarioView(), listGrowPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listPurchaseOrders(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies(), getLedgerKind(), listSubscriptionCycles(), listOrders(), loadProductionRecords(), listSupplierLcaOptions()]);
+  const [view, library, subscribers, calendar, supplierTerms, pos, equipment, packaging, catalog, loans, fixedCostLines, leasehold, timeStudies, kind, orders, production, supplierOptions] = await Promise.all([getScenarioView(), listGrowPlans(), listSubscribers(), loadCalendar(), loadSupplierTerms(), listPurchaseOrders(), listEquipment(), listPackagingLibrary(), listAllCatalog(), listLoans(), listFixedCostLines(), listLeasehold(), listTimeStudies(), getLedgerKind(), listOrders(), loadProductionRecords(), listSupplierLcaOptions()]);
   const R = resolveScenarioInputs(view.config, library, subscribers, calendar.closures, supplierTerms, equipment, packaging, catalog, undefined, loans, fixedCostLines, leasehold, timeStudies.studies);
   const closures = calendar.closures;
   const isPlan = kind === 'plan';
@@ -90,7 +90,6 @@ async function loadOperatingPicture() {
   const book = orderBook({
     pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
-    cycles,
     orders: worldOrders,
     from: today,
     to: isoAddDaysLocal(today, 14),
@@ -98,10 +97,9 @@ async function loadOperatingPicture() {
     growPlanNames: Object.fromEntries(R.growPlans.map((r) => [r.code, r.name])),
     closures,
   });
-  const shelfLife = R.assumptions.inventory.blackoutShelfLife.value;
   const openingLots = isPlan
     ? []
-    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.growPlans, pf), shelfLifeDays: shelfLife, asOf: today, growPlans: R.growPlans }).lots.filter((l) => l.remaining > 0);
+    : finishedGoodsOnHand({ sowings: production.sowings, consumed: distributedConsumption(orders, production.distributions, R.growPlans, pf), asOf: today, growPlans: R.growPlans }).lots.filter((l) => l.remaining > 0);
   const day = dashboardToday({ today, book, growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: pf, openingLots, closures, channels: R.phases.map((p) => p.phase) });
 
   // Food: active-grow-plan averages per unit, and the period's footprint on the selected ledger.
@@ -109,7 +107,7 @@ async function loadOperatingPicture() {
   const basis = await postSustainabilityBasis(kind, view.config);
   const mix = mixFoodFootprint({ basis, growPlans: R.growPlans, unitFactorByChannel: pf, selection: R.sustainability.inputBasis, options: [...curatedOptions, ...supplierOptions] });
   const foodCo2 = { perUnit: mean(foots.map((f) => f.totalKgCo2ePerUnit)), periodKg: mix.referenceKg, periodLabel: isPlan ? `forecast year from ${basis.from}` : `reporting year ${basis.from.slice(0, 4)}`, unmappedGrowPlans: mix.growPlansWithUnmappedLines.length, activeCount: active.length };
-  return { R, pos, plant, day, foodCo2, closures, isPlan, cycles, orders };
+  return { R, pos, plant, day, foodCo2, closures, isPlan, orders };
 }
 
 type Picture = Awaited<ReturnType<typeof loadOperatingPicture>>;
@@ -149,7 +147,7 @@ function sustainabilityCard({ foodCo2 }: Picture): SectionCardProps {
 async function AdminDashboard() {
   // Actuals carry the staff register and the clock: loaded for admins only.
   const [picture, actuals, studies, selected] = await Promise.all([loadOperatingPicture(), loadActuals(), listTimeStudies(), postSelectedLedger()]);
-  const { cycles, orders } = picture;
+  const { orders } = picture;
   const { R, pos } = picture;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -159,7 +157,6 @@ async function AdminDashboard() {
   const book = orderBook({
     pickupPoints: R.demand.pickupPoints,
     subscribers: R.subscribers,
-    cycles,
     orders,
     from: today,
     to: weekTo,
@@ -442,7 +439,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       <div className="farm-hero">
         <HeroStat value={num(plant.sowingSize)} label="Most one unit takes — active-grow-plan average" sub={`Trays one grow unit holds; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
-        <HeroStat value={coverText(day)} label="Days of cover" sub={`Finished stock over a distribution day's orders; ${picture.R.assumptions.inventory.blackoutShelfLife.value}-day shelf life`} />
+        <HeroStat value={coverText(day)} label="Days of cover" sub="Finished stock over a distribution day's orders, inside each plan's harvest window" />
         <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-grow-plan average, at the plan's price" />
       </div>
 

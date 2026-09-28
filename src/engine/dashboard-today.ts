@@ -57,7 +57,6 @@ export function dashboardToday(input: {
     growPlanAssumptions: input.growPlanAssumptions,
     unitFactorByChannel: input.unitFactorByChannel,
     openingLots: input.openingLots,
-    shelfLifeDays: input.assumptions.inventory.blackoutShelfLife.value,
     closures: input.closures,
     channels: input.channels,
   });

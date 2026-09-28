@@ -128,13 +128,13 @@ describe('the calendar from requirements', () => {
 
 describe('the horizon on grow plans', () => {
   const order = (date: string, code: string, unitsOrdered: number): BookOrder => ({
-    key: `${date}|p|s|${code}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriberServiceId: 's', serviceName: null, distributionPickupPointId: null,
-    channel: 1, growPlanCode: code, growPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'cycle', subscriptionCycleId: null, notes: null, editable: true,
+    key: `${date}|p|s|${code}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'p', pickupPointName: 'P', subscriptionId: 's', distributionPickupPointId: null,
+    channel: 1, growPlanCode: code, growPlanName: code, units: unitsOrdered, pricePerUnitCents: 2000, status: 'forecast', source: 'subscription', notes: null, editable: true,
   } as unknown as BookOrder);
 
   it('makes an order on its plan\'s sow date, places the sowing on the rack, and carries the calendar', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [] });
     const sowDate = sowDateFor(broc, '2027-03-22');
     expect(h.productionDays.map((p) => p.productionDate)).toEqual([sowDate]);
     expect(h.distributionDays[0]!.productionDate).toBe(sowDate);
@@ -149,7 +149,7 @@ describe('the horizon on grow plans', () => {
 
   it('a second sowing inside the first\'s cycle has no room on one rack: the day does not fit and the calendar says so', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3 });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20), order('2027-03-24', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [] });
     expect(h.productionDays).toHaveLength(2);
     expect(h.productionDays[0]!.fits).toBe(true);
     expect(h.productionDays[1]!.fits).toBe(false);
@@ -160,7 +160,7 @@ describe('the horizon on grow plans', () => {
 
   it('an opening sowing on the shelves blocks the rack until its cycle ends', () => {
     const R = resolveScenarioInputs({}, lib);
-    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, openingSowings: [{ growPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
+    const h = planHorizon({ from: '2027-03-01', to: '2027-03-31', book: [order('2027-03-22', 'BROC-01', 20)], growPlans: R.growPlans, capacityInputs: R.capacityInputs, growUnits: units, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], openingSowings: [{ growPlanCode: 'BROC-01', sowDate: '2027-03-05', trays: 20 }] });
     expect(h.productionDays[0]!.fits).toBe(false);
     expect(h.growCalendar!.sowings.filter((s) => s.distributionDate === null && s.placed)).toHaveLength(1);
   });

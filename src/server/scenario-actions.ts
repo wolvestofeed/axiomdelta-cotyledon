@@ -9,7 +9,6 @@ import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin, requireFarmOperator } from '@/server/access';
 import { appendPosting } from '@/server/posting-log';
 import { loadDefinitions } from '@/server/scenarios';
-import { listSubscriptionCycles } from '@/server/orders';
 import { periodOf } from '@/engine/actuals';
 import { withWorkspace } from '@/server/workspace';
 
@@ -142,19 +141,19 @@ async function applyScenarioInner(input: unknown): Promise<OkResult> {
   // The master records as they stand, frozen with the entry: a past month compares
   // with the plan as it was, not with definitions edited since. JSON round-trip so the stored detail and
   // the hashed detail are the same value.
-  const [definitions, cycles] = await Promise.all([loadDefinitions(), listSubscriptionCycles()]);
-  const snapshot = JSON.parse(JSON.stringify({ definitions, cycles })) as unknown;
+  const definitions = await loadDefinitions();
+  const snapshot = JSON.parse(JSON.stringify({ definitions })) as unknown;
   const at = new Date();
   await db.transaction(async (tx) => {
+    // The workspace's state row is written on its first apply; a workspace has none until then.
     await tx
-      .update(farmWorkspaceState)
-      .set({
-        activeScenarioId: parsed.data.scenarioId,
-        appliedAt: at,
-        appliedBy: access.userId,
-      })
-      .where(eq(farmWorkspaceState.id, WORKSPACE_ID));
-    // The plan of record's history (Roadmap N7): the forecast, its config and the master records as applied.
+      .insert(farmWorkspaceState)
+      .values({ id: WORKSPACE_ID, activeScenarioId: parsed.data.scenarioId, appliedAt: at, appliedBy: access.userId })
+      .onConflictDoUpdate({
+        target: [farmWorkspaceState.workspaceId, farmWorkspaceState.id],
+        set: { activeScenarioId: parsed.data.scenarioId, appliedAt: at, appliedBy: access.userId },
+      });
+    // The plan of record's history: the forecast, its config and the master records as applied.
     // A later save to the forecast, or an edit to a definition, does not restate the months it was in force.
     await appendPosting(tx, {
       actorUserId: access.userId,

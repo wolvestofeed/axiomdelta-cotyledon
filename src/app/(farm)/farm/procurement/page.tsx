@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listPurchaseOrders } from '@/server/supplier-catalog';
 import { loadCalendar } from '@/server/periods';
@@ -14,7 +14,7 @@ export default async function ProcurementPage() {
 }
 
 async function ProcurementPageInner() {
-  const [access, cycles, orders, actuals, pos, calendar] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar()]);
+  const [access, orders, actuals, pos, calendar] = await Promise.all([getFarmAccess(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar()]);
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
@@ -41,7 +41,6 @@ async function ProcurementPageInner() {
         canEdit={access.isSuperAdmin}
         canRecord={access.isOperator}
         closures={calendar.closures}
-        cycles={cycles}
         orders={orders}
         receipts={actuals.receipts}
         sowings={actuals.sowings}

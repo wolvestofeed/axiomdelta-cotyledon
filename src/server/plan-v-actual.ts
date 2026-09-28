@@ -1,7 +1,6 @@
 import 'server-only';
 import { getActiveScenario, loadDefinitions, resolveWithDefinitions, type Definitions } from '@/server/scenarios';
-import type { SubscriptionCycleDef } from '@/data/subscription-cycles';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listPlanOfRecordHistory } from '@/server/plan-of-record';
 import { listReadings, listRefrigerantService } from '@/server/sustainability-records';
@@ -82,9 +81,8 @@ interface PostedPlan {
 const pfOf = (inputs: ResolvedInputs) => Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
 
 export async function buildPlanVsActual(periods: readonly string[]): Promise<PlanVsActual> {
-  const [definitions, cycles, bundle, storedOrders, history, active, readings, service, supplierOptions] = await Promise.all([
+  const [definitions, bundle, storedOrders, history, active, readings, service, supplierOptions] = await Promise.all([
     loadDefinitions(),
-    listSubscriptionCycles(),
     loadActuals(),
     listOrders(),
     listPlanOfRecordHistory(),
@@ -101,12 +99,12 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
   // A trail entry with a snapshot posts on the master records frozen with it; otherwise on the definitions now.
   const posted = new Map<string, PostedPlan>();
   const planFor = (config: FarmScenarioConfig, snapshot: unknown = null, entryKey = ''): PostedPlan => {
-    const frozen = snapshot as { definitions?: Definitions; cycles?: SubscriptionCycleDef[] } | null;
+    const frozen = snapshot as { definitions?: Definitions } | null;
     const key = frozen?.definitions ? `trail:${entryKey}` : JSON.stringify(config);
     const hit = posted.get(key);
     if (hit) return hit;
     const inputs = resolveWithDefinitions(config, frozen?.definitions ?? definitions);
-    const timeline = simulateForecast({ inputs, cycles: frozen?.cycles ?? cycles });
+    const timeline = simulateForecast({ inputs });
     const ledger = postPlanLedger({ timeline, inputs });
     const planned = planBundle(timeline);
     const yearEnd = horizonEnd(timeline.from, 1);
@@ -154,7 +152,7 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     });
     const statement = input.statement;
     const pf = pfOf(inputs);
-    const basis = sustainabilityBasis({ kind: input.kind, bundle: input.docs, from, to, shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, growPlans: inputs.growPlans, unitFactorByChannel: pf });
+    const basis = sustainabilityBasis({ kind: input.kind, bundle: input.docs, from, to, growPlans: inputs.growPlans, unitFactorByChannel: pf });
     const food = mixFoodFootprint({ basis, growPlans: inputs.growPlans, unitFactorByChannel: pf, selection: inputs.sustainability.inputBasis, options });
     const suppliers = leanSuppliersById(Object.values(inputs.sustainability.inputSupplier));
     const inventory = fullInventory(inputs, to, { basis, energy: input.energy, refrigerantService: input.refrigerantService }, suppliers, options);

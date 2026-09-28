@@ -127,8 +127,8 @@ describe('farm scenario — the scheduler’s sections', () => {
   it('resolves the schedule policy defaults, tagged, and the scenario’s edits onto them', () => {
     const d = resolveScenarioInputs().schedulePolicy;
     expect(d.distributionTimeMin).toMatchObject({ value: 630, status: 'PLACEHOLDER' });
-    expect(d.closedownStaff).toMatchObject({ value: 2, status: 'STATED' });
-    expect(d.closedownMinutes).toMatchObject({ value: 30, status: 'STATED' });
+    expect(d.closedownStaff).toMatchObject({ value: 1, status: 'PLACEHOLDER' });
+    expect(d.closedownMinutes).toMatchObject({ value: 30, status: 'PLACEHOLDER' });
     const e = resolveScenarioInputs({ schedulePolicy: { distributionTimeMin: 660, priorityRule: 'longest-path' } }).schedulePolicy;
     expect(e.distributionTimeMin.value).toBe(660);
     expect(e.priorityRule.value).toBe('longest-path');

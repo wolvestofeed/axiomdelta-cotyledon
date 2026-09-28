@@ -211,7 +211,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
         const ppfd = line.ppfd?.value ?? lead?.light.ppfdRange?.max ?? regime.ppfdTarget.value;
         const daysLit = lightDaysFrom(line.startsAt, days, stages);
         lightDays = daysLit;
-        const perTrayDay = lightCostPerTrayDay(ctx.fixture, regime, ppfd, ctx.energyRatePerKwh) * density;
+        const perTrayDay = lightCostPerTrayDay(ctx.fixture, regime, ctx.energyRatePerKwh) * density;
         lines.push({
           line,
           label: regime.name,
@@ -220,7 +220,7 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
           unitCost: perTrayDay,
           costPerTray: perTrayDay * daysLit,
           status: ctx.fixture.watts.status,
-          source: `${ctx.fixture.name} at ${ppfd} µmol, ${regime.photoperiodHours.value} h/day, $${ctx.energyRatePerKwh}/kWh`,
+          source: `${ctx.fixture.name}, ${ctx.fixture.perShelf.value} a shelf at full power, ${regime.photoperiodHours.value} h/day, $${ctx.energyRatePerKwh}/kWh; the plan asks for ${ppfd} µmol`,
           basis: line.ppfd ? 'Typed intensity' : lead?.light.ppfdRange ? `${lead.name}'s own range` : `${regime.name} target`,
         });
         break;

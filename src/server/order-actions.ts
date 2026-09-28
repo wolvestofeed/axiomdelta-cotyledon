@@ -2,18 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
-import {
-  farmSubscriptionCycles,
-  farmSubscriptionCycleDays,
-  farmOrders,
-  farmSubscribers,
-  farmSubscriberPickupPoints,
-  farmSubscriberServices,
-  farmDistributions,
-  farmGrowPlans,
-  farmSubscriptions,
-} from '@/db';
+import { and, eq, isNull } from 'drizzle-orm';
+import { farmOrders, farmSubscribers, farmSubscriberPickupPoints, farmDistributions, farmGrowPlans, farmSubscriptions } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmOperator, requireFarmSuperAdmin } from '@/server/access';
 import { periodOf } from '@/engine/actuals';
@@ -22,15 +12,12 @@ import { appendPosting } from '@/server/posting-log';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — subscription cycles, flat plans and orders, writes. SUPER ADMIN ONLY.
+ * MicroFarm — orders, writes. SUPER ADMIN ONLY, except distributing, which an operator records.
  *
- * A saved subscription cycle, a subscriber's flat plan and a stored order are facts of
- * record (Roadmap N4a). Assigning a cycle copies it onto the subscriber; editing
- * a saved cycle moves only the plans picked in the apply-to picker. A forecast
- * order a flat plan generates is derived on read and is not written here;
- * confirming it writes the row that replaces it. A Forecast Subscriber takes no
- * stored order and no distribution: it is never on Actual. Distributing an order writes the distribution
- * record (the document revenue posts from) and links the order to it.
+ * A stored order is a fact of record. A forecast order a subscription derives is read, not written
+ * here; confirming it writes the row that replaces it. A Forecast Subscriber takes no stored order
+ * and no distribution: it is never on Actual. Distributing an order writes the distribution record
+ * (the document revenue posts from) and links the order to it.
  */
 
 type Result<T = unknown> = ({ ok: true } & (T extends object ? T : object)) | { ok: false; error: string };
@@ -43,224 +30,18 @@ function refuse(e: unknown): { ok: false; error: string } {
 }
 const fail = (issues: z.ZodIssue[]) => ({ ok: false as const, error: issues.map((i) => i.message).join('; ') });
 
-// ── Subscription cycles ─────────────────────────────────────────────────────────────
-
-const CycleInput = z.object({
-  /** Null = a saved subscription cycle on the shared list; set = a flat plan programmed for this subscriber. */
-  subscriberId: z.string().uuid().nullable().default(null),
-  /** Set = the plan for one of the subscriber's services. */
-  subscriberServiceId: z.string().uuid().nullable().default(null),
-  name: z.string().trim().min(1, 'Name the cycle').max(200),
-  startDate: isoDate,
-  endDate: isoDate.nullable().default(null),
-  lengthDays: z.number().int().min(1).max(60),
-  weekdays: z.array(z.number().int().min(0).max(6)).min(1, 'A cycle serves on at least one weekday'),
-  status: z.enum(['active', 'inactive']).default('active'),
-  notes: z.string().max(2000).nullable().default(null),
-  days: z.array(z.object({ day: z.number().int().min(1), growPlanCode: z.string().max(40).nullable() })),
-});
-
-/** A plan for a service must name one of the subscriber's services. */
-async function checkPlanOwner(d: { subscriberId: string | null; subscriberServiceId: string | null; endDate: string | null; startDate: string }): Promise<string | null> {
-  if (d.endDate !== null && d.endDate < d.startDate) return 'The end date is before the start date.';
-  if (d.subscriberServiceId === null) return null;
-  if (d.subscriberId === null) return 'A saved subscription cycle is not tied to a service; assign it to a subscriber first.';
-  const rows = await db
-    .select({ id: farmSubscriberServices.id })
-    .from(farmSubscriberServices)
-    .innerJoin(farmSubscriberPickupPoints, eq(farmSubscriberPickupPoints.id, farmSubscriberServices.subscriberPickupPointId))
-    .where(and(eq(farmSubscriberServices.id, d.subscriberServiceId), eq(farmSubscriberPickupPoints.subscriberId, d.subscriberId)))
-    .limit(1);
-  return rows[0] ? null : 'The service is not one of this subscriber’s services.';
-}
-
-async function checkCycleDays(d: z.infer<typeof CycleInput>): Promise<string | null> {
-  const seen = new Set<number>();
-  for (const day of d.days) {
-    if (day.day > d.lengthDays) return `Day ${day.day} is past the cycle length of ${d.lengthDays}.`;
-    if (seen.has(day.day)) return `Day ${day.day} appears twice.`;
-    seen.add(day.day);
-  }
-  const codes = [...new Set(d.days.map((x) => x.growPlanCode).filter((c): c is string => c !== null))];
-  if (codes.length === 0) return null;
-  const found = await db.select({ code: farmGrowPlans.code }).from(farmGrowPlans);
-  const have = new Set(found.map((r) => r.code));
-  const missing = codes.filter((c) => !have.has(c));
-  return missing.length ? `Not in the grow plan library: ${missing.join(', ')}.` : null;
-}
-
-export async function createSubscriptionCycle(...args: Parameters<typeof createSubscriptionCycleInner>): ReturnType<typeof createSubscriptionCycleInner> {
-  return withWorkspace(() => createSubscriptionCycleInner(...args));
-}
-
-async function createSubscriptionCycleInner(input: unknown): Promise<Result<{ id: string }>> {
-  const parsed = CycleInput.safeParse(input);
-  if (!parsed.success) return fail(parsed.error.issues);
-  let access;
-  try {
-    access = await requireFarmSuperAdmin();
-  } catch (e) {
-    return refuse(e);
-  }
-  const problem = (await checkCycleDays(parsed.data)) ?? (await checkPlanOwner(parsed.data));
-  if (problem) return { ok: false, error: problem };
-  const { days, ...header } = parsed.data;
-  const inserted = await db
-    .insert(farmSubscriptionCycles)
-    .values({ ...header, weekdays: [...new Set(header.weekdays)].sort(), createdBy: access.userId })
-    .returning({ id: farmSubscriptionCycles.id });
-  const id = inserted[0]?.id;
-  if (!id) return { ok: false, error: 'Failed to save the subscription cycle.' };
-  if (days.length) await db.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
-  revalidatePath('/farm', 'layout');
-  return { ok: true, id };
-}
-
-/**
- * Edit a saved subscription cycle or a flat plan. For a saved cycle, `applyToPlanIds`
- * names the flat plans copied from it that take the new sequence — length,
- * weekdays and grow plan per day — the apply-to picker's selection or all of
- * them. A plan not named keeps its sequence. Each plan keeps its own subscriber,
- * service, start and end.
- */
-export async function updateSubscriptionCycle(...args: Parameters<typeof updateSubscriptionCycleInner>): ReturnType<typeof updateSubscriptionCycleInner> {
-  return withWorkspace(() => updateSubscriptionCycleInner(...args));
-}
-
-async function updateSubscriptionCycleInner(input: unknown): Promise<Result<{ applied: number }>> {
-  const parsed = CycleInput.extend({ id: z.string().uuid(), applyToPlanIds: z.array(z.string().uuid()).default([]) }).safeParse(input);
-  if (!parsed.success) return fail(parsed.error.issues);
-  try {
-    await requireFarmSuperAdmin();
-  } catch (e) {
-    return refuse(e);
-  }
-  const problem = (await checkCycleDays(parsed.data)) ?? (await checkPlanOwner(parsed.data));
-  if (problem) return { ok: false, error: problem };
-  const { id, days, applyToPlanIds, ...header } = parsed.data;
-  const current = await db.select({ id: farmSubscriptionCycles.id, subscriberId: farmSubscriptionCycles.subscriberId }).from(farmSubscriptionCycles).where(eq(farmSubscriptionCycles.id, id)).limit(1);
-  if (!current[0]) return { ok: false, error: 'Subscription cycle not found.' };
-  if ((current[0].subscriberId === null) !== (header.subscriberId === null)) return { ok: false, error: 'A saved cycle stays on the shared list and a flat plan stays with its subscriber; assign a copy instead.' };
-  if (current[0].subscriberId !== null && current[0].subscriberId !== header.subscriberId) return { ok: false, error: 'A flat plan stays with its subscriber.' };
-  if (current[0].subscriberId !== null && applyToPlanIds.length > 0) return { ok: false, error: 'Only a saved subscription cycle is applied to subscribers.' };
-  const weekdays = [...new Set(header.weekdays)].sort();
-  const applied = await db.transaction(async (tx) => {
-    await tx.update(farmSubscriptionCycles).set({ ...header, weekdays, source: 'user_built', updatedAt: new Date() }).where(eq(farmSubscriptionCycles.id, id));
-    await tx.delete(farmSubscriptionCycleDays).where(eq(farmSubscriptionCycleDays.cycleId, id));
-    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
-    if (applyToPlanIds.length === 0) return 0;
-    const plans = await tx
-      .select({ id: farmSubscriptionCycles.id })
-      .from(farmSubscriptionCycles)
-      .where(and(inArray(farmSubscriptionCycles.id, applyToPlanIds), eq(farmSubscriptionCycles.fromCycleId, id)));
-    const planIds = plans.map((p) => p.id);
-    if (planIds.length === 0) return 0;
-    await tx.update(farmSubscriptionCycles).set({ lengthDays: header.lengthDays, weekdays, updatedAt: new Date() }).where(inArray(farmSubscriptionCycles.id, planIds));
-    await tx.delete(farmSubscriptionCycleDays).where(inArray(farmSubscriptionCycleDays.cycleId, planIds));
-    if (days.length) await tx.insert(farmSubscriptionCycleDays).values(planIds.flatMap((cycleId) => days.map((d) => ({ cycleId, day: d.day, growPlanCode: d.growPlanCode }))));
-    return planIds.length;
-  });
-  revalidatePath('/farm', 'layout');
-  return { ok: true, applied };
-}
-
-const AssignInput = z.object({
-  cycleId: z.string().uuid(),
-  subscriberIds: z.array(z.string().uuid()).min(1, 'Pick a subscriber'),
-  /** Set = the plan for one service of a single subscriber. */
-  subscriberServiceId: z.string().uuid().nullable().default(null),
-  /** Absent = the cycle's own start date. */
-  startDate: isoDate.nullable().default(null),
-});
-
-/** One-click assign: copy a saved subscription cycle onto each subscriber as its flat plan. */
-export async function assignSubscriptionCycle(...args: Parameters<typeof assignSubscriptionCycleInner>): ReturnType<typeof assignSubscriptionCycleInner> {
-  return withWorkspace(() => assignSubscriptionCycleInner(...args));
-}
-
-async function assignSubscriptionCycleInner(input: unknown): Promise<Result<{ ids: string[] }>> {
-  const parsed = AssignInput.safeParse(input);
-  if (!parsed.success) return fail(parsed.error.issues);
-  let access;
-  try {
-    access = await requireFarmSuperAdmin();
-  } catch (e) {
-    return refuse(e);
-  }
-  const d = parsed.data;
-  if (d.subscriberServiceId && d.subscriberIds.length !== 1) return { ok: false, error: 'A service plan is assigned to one subscriber at a time.' };
-  const cycle = await db.select().from(farmSubscriptionCycles).where(and(eq(farmSubscriptionCycles.id, d.cycleId), isNull(farmSubscriptionCycles.subscriberId))).limit(1);
-  const c = cycle[0];
-  if (!c) return { ok: false, error: 'Saved subscription cycle not found.' };
-  if (d.subscriberServiceId) {
-    const problem = await checkPlanOwner({ subscriberId: d.subscriberIds[0], subscriberServiceId: d.subscriberServiceId, endDate: null, startDate: d.startDate ?? String(c.startDate) });
-    if (problem) return { ok: false, error: problem };
-  }
-  const days = await db.select().from(farmSubscriptionCycleDays).where(eq(farmSubscriptionCycleDays.cycleId, c.id));
-  const found = await db.select({ id: farmSubscribers.id }).from(farmSubscribers).where(inArray(farmSubscribers.id, d.subscriberIds));
-  if (found.length !== new Set(d.subscriberIds).size) return { ok: false, error: 'A picked subscriber is not on the list.' };
-  const ids = await db.transaction(async (tx) => {
-    const out: string[] = [];
-    for (const subscriberId of new Set(d.subscriberIds)) {
-      const row = await tx
-        .insert(farmSubscriptionCycles)
-        .values({
-          subscriberId,
-          subscriberServiceId: d.subscriberServiceId,
-          fromCycleId: c.id,
-          name: c.name,
-          startDate: d.startDate ?? c.startDate,
-          lengthDays: c.lengthDays,
-          weekdays: c.weekdays,
-          status: 'active',
-          notes: `Copied from ${c.name}.`,
-          createdBy: access.userId,
-        })
-        .returning({ id: farmSubscriptionCycles.id });
-      const id = row[0]?.id;
-      if (!id) continue;
-      if (days.length) await tx.insert(farmSubscriptionCycleDays).values(days.map((x) => ({ cycleId: id, day: x.day, growPlanCode: x.growPlanCode })));
-      out.push(id);
-    }
-    return out;
-  });
-  revalidatePath('/farm', 'layout');
-  return { ok: true, ids };
-}
-
-export async function deleteSubscriptionCycle(...args: Parameters<typeof deleteSubscriptionCycleInner>): ReturnType<typeof deleteSubscriptionCycleInner> {
-  return withWorkspace(() => deleteSubscriptionCycleInner(...args));
-}
-
-async function deleteSubscriptionCycleInner(input: unknown): Promise<Result> {
-  const parsed = z.object({ id: z.string().uuid() }).safeParse(input);
-  if (!parsed.success) return fail(parsed.error.issues);
-  try {
-    await requireFarmSuperAdmin();
-  } catch (e) {
-    return refuse(e);
-  }
-  await db.delete(farmSubscriptionCycles).where(eq(farmSubscriptionCycles.id, parsed.data.id));
-  revalidatePath('/farm', 'layout');
-  return { ok: true };
-}
-
-// ── Orders ──────────────────────────────────────────────────────────────────
-
 const OrderInput = z.object({
   orderDate: isoDate,
   subscriberId: z.string().uuid(),
   subscriberPickupPointId: z.string().uuid(),
-  subscriberServiceId: z.string().uuid().nullable().default(null),
   subscriptionId: z.string().uuid().nullable().default(null),
   growPlanCode: z.string().min(1, 'Name the grow plan').max(40),
   units: z.number().min(0),
   status: z.enum(['forecast', 'confirmed']).default('forecast'),
   pricePerUnitCents: z.number().int().min(0).nullable().default(null),
-  subscriptionCycleId: z.string().uuid().nullable().default(null),
-  source: z.enum(['typed', 'cycle', 'subscription', 'sales', 'portal']).default('typed'),
+  source: z.enum(['typed', 'subscription', 'sales', 'portal']).default('typed'),
   notes: z.string().max(2000).nullable().default(null),
-}).refine((v) => v.subscriberServiceId === null || v.subscriptionId === null, { message: 'An order is from a service or a subscription, not both.' });
+});
 
 /** The pickup point must belong to the subscriber; the order takes the subscriber's channel. */
 async function pickupPointOf(subscriberId: string, subscriberPickupPointId: string): Promise<{ channel: number; pickupPointId: string | null; name: string; subscriberStatus: string } | null> {
@@ -296,10 +77,6 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
   const pickupPoint = await pickupPointOf(d.subscriberId, d.subscriberPickupPointId);
   if (!pickupPoint) return { ok: false, error: 'The pickup point is not one of this subscriber’s pickup points.' };
   if (pickupPoint.subscriberStatus === 'forecast') return { ok: false, error: 'A Forecast Subscriber is never on Actual; its orders live in forecasts only.' };
-  if (d.subscriberServiceId) {
-    const sv = await db.select({ id: farmSubscriberServices.id }).from(farmSubscriberServices).where(and(eq(farmSubscriberServices.id, d.subscriberServiceId), eq(farmSubscriberServices.subscriberPickupPointId, d.subscriberPickupPointId))).limit(1);
-    if (!sv[0]) return { ok: false, error: 'The service is not one of this pickup point’s services.' };
-  }
   if (d.subscriptionId) {
     const sub = await db.select({ id: farmSubscriptions.id }).from(farmSubscriptions).where(and(eq(farmSubscriptions.id, d.subscriptionId), eq(farmSubscriptions.subscriberPickupPointId, d.subscriberPickupPointId))).limit(1);
     if (!sub[0]) return { ok: false, error: 'The subscription is not one at this pickup point.' };
@@ -313,12 +90,11 @@ async function createOrderInner(input: unknown): Promise<Result<{ id: string }>>
         eq(farmOrders.orderDate, d.orderDate),
         eq(farmOrders.subscriberPickupPointId, d.subscriberPickupPointId),
         eq(farmOrders.growPlanCode, d.growPlanCode),
-        d.subscriberServiceId ? eq(farmOrders.subscriberServiceId, d.subscriberServiceId) : isNull(farmOrders.subscriberServiceId),
         d.subscriptionId ? eq(farmOrders.subscriptionId, d.subscriptionId) : isNull(farmOrders.subscriptionId),
       ),
     )
     .limit(1);
-  if (clash[0]) return { ok: false, error: 'An order for that pickup point, service or subscription, date and grow plan is already on file; edit it instead.' };
+  if (clash[0]) return { ok: false, error: 'An order for that pickup point, subscription, date and grow plan is already on file; edit it instead.' };
   const inserted = await db
     .insert(farmOrders)
     .values({ ...d, channel: pickupPoint.channel, createdBy: access.userId })
@@ -352,7 +128,7 @@ async function updateOrderInner(input: unknown): Promise<Result> {
     return refuse(e);
   }
   const { id, ...rest } = parsed.data;
-  const current = await db.select({ status: farmOrders.status, subscriberPickupPointId: farmOrders.subscriberPickupPointId, subscriberServiceId: farmOrders.subscriberServiceId }).from(farmOrders).where(eq(farmOrders.id, id)).limit(1);
+  const current = await db.select({ status: farmOrders.status, subscriberPickupPointId: farmOrders.subscriberPickupPointId, subscriptionId: farmOrders.subscriptionId }).from(farmOrders).where(eq(farmOrders.id, id)).limit(1);
   if (!current[0]) return { ok: false, error: 'Order not found.' };
   if (current[0].status === 'distributed') return { ok: false, error: 'A distributed order is not edited; its distribution record is the fact.' };
   if (!(await growPlanExists(rest.growPlanCode))) return { ok: false, error: `${rest.growPlanCode} is not in the grow plan library.` };
@@ -364,11 +140,11 @@ async function updateOrderInner(input: unknown): Promise<Result> {
         eq(farmOrders.orderDate, rest.orderDate),
         eq(farmOrders.subscriberPickupPointId, current[0].subscriberPickupPointId),
         eq(farmOrders.growPlanCode, rest.growPlanCode),
-        current[0].subscriberServiceId ? eq(farmOrders.subscriberServiceId, current[0].subscriberServiceId) : isNull(farmOrders.subscriberServiceId),
+        current[0].subscriptionId ? eq(farmOrders.subscriptionId, current[0].subscriptionId) : isNull(farmOrders.subscriptionId),
       ),
     )
     .limit(1);
-  if (clash[0] && clash[0].id !== id) return { ok: false, error: 'Another order for that pickup point, service, date and grow plan is already on file.' };
+  if (clash[0] && clash[0].id !== id) return { ok: false, error: 'Another order for that pickup point, subscription, date and grow plan is already on file.' };
   await db.update(farmOrders).set({ ...rest, updatedAt: new Date() }).where(eq(farmOrders.id, id));
   revalidatePath('/farm', 'layout');
   return { ok: true };

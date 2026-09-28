@@ -25,8 +25,8 @@ const studies: TimeStudyDoc[] = seedLibrary.map((r, i) => ({
 }));
 const pf = { 1: 1, 2: 1.5, 3: 1.5 };
 const order = (date: string, channel: number, growPlanCode: string, units: number): BookOrder => ({
-  key: `${date}|pickup point|${growPlanCode}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'pickupPoint', pickupPointName: 'S', subscriberServiceId: null, subscriptionId: null, serviceName: null, distributionPickupPointId: null,
-  channel, growPlanCode, growPlanName: growPlanCode, units, status: 'forecast', basis: 'derived', source: 'cycle', pricePerUnitCents: 1000, priceBasis: 'channel', distributionId: null, subscriptionCycleId: null, notes: null,
+  key: `${date}|pickup point|${growPlanCode}`, id: null, orderDate: date, subscriberId: 'c', subscriberName: 'C', subscriberPickupPointId: 'pickupPoint', pickupPointName: 'S', subscriptionId: null, distributionPickupPointId: null,
+  channel, growPlanCode, growPlanName: growPlanCode, units, status: 'forecast', basis: 'derived', source: 'subscription', pricePerUnitCents: 1000, priceBasis: 'channel', distributionId: null, notes: null,
 });
 
 describe('farm dashboard — the week of orders', () => {

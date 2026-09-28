@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/ui';
 import { getFarmAccess } from '@/server/access';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { listPurchaseOrders } from '@/server/supplier-catalog';
 import { loadCalendar } from '@/server/periods';
@@ -17,7 +17,7 @@ export default async function ProductionPlanningPage() {
 }
 
 async function ProductionPlanningPageInner() {
-  const [access, cycles, orders, actuals, pos, calendar, studyLibrary] = await Promise.all([getFarmAccess(), listSubscriptionCycles(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar(), listTimeStudies()]);
+  const [access, orders, actuals, pos, calendar, studyLibrary] = await Promise.all([getFarmAccess(), listOrders(), loadActuals(), listPurchaseOrders(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   const onShelves = await experimentSowings(actuals.sowings, await listGrowPlans(), today);
 
@@ -48,7 +48,6 @@ async function ProductionPlanningPageInner() {
         canEdit={access.isSuperAdmin}
         showFinancials={access.isSuperAdmin}
         closures={calendar.closures}
-        cycles={cycles}
         orders={orders}
         sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, growPlanCode: b.growPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits, experimentId: b.experimentId ?? null, closedBy: b.closedBy }))}
         distributions={actuals.distributions.map((d) => ({ id: d.id, distributedOn: d.distributedOn, units: d.units }))}

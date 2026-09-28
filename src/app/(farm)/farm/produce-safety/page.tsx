@@ -43,7 +43,7 @@ async function ProduceSafetyPageInner() {
   const completeSowings = growSowings.filter((g) => g.checks.complete).length;
   const failedPoints = growSowings.reduce((n, g) => n + g.checks.points.filter((p) => p.status === 'failed').length, 0);
   const pf = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
-  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.growPlans, pf), shelfLifeDays: inputs.assumptions.inventory.blackoutShelfLife.value, asOf: today, growPlans: inputs.growPlans });
+  const onHand = finishedGoodsOnHand({ sowings: actuals.sowings, consumed: distributedConsumption(orders, actuals.distributions, inputs.growPlans, pf), asOf: today, growPlans: inputs.growPlans });
   const lotBySowing = new Map(onHand.lots.map((l) => [l.sowingId, l]));
   const edges: LotEdge[] = rows
     .filter((r) => r.fromKind === 'lot')

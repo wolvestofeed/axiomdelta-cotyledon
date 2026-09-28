@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, Kpi, num } from '@/components/ui';
 import { MonthGrid, type MonthDay } from '@/components/timeline/MonthGrid';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import { STAGE_BY_KEY, type StageKey } from '@/data/stage-schedule';
 import { isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
@@ -30,7 +30,6 @@ const STAGE_ORDER: StageKey[] = ['soak', 'sow', 'germination', 'blackout', 'ligh
 
 export function GrowCalendarClient({
   today,
-  cycles,
   orders: recordedOrders,
   closures,
   sowings: recordedSowings,
@@ -38,7 +37,6 @@ export function GrowCalendarClient({
   experimentSowings,
 }: {
   today: string;
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
   /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
@@ -73,7 +71,6 @@ export function GrowCalendarClient({
       orderBook({
         pickupPoints: world.pickupPoints,
         subscribers: resolved.subscribers,
-        cycles,
         orders,
         from: today,
         to: horizonTo,
@@ -81,10 +78,10 @@ export function GrowCalendarClient({
         growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, horizonTo, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, today, horizonTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   // Recorded sowings still inside their cycle, and open experiments, are on the shelves when the window opens.
   const openingSowings = useMemo(
     () => [
@@ -114,7 +111,6 @@ export function GrowCalendarClient({
         unitFactorByChannel: pfByChannel,
         openingLots,
         openingSowings,
-        shelfLifeDays: A.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),

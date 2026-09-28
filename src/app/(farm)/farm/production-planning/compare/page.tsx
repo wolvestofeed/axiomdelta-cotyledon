@@ -7,7 +7,7 @@ import { listEquipment } from '@/server/equipment';
 import { listPackagingLibrary } from '@/server/packaging';
 import { listAllCatalog } from '@/server/supplier-catalog';
 import { listLoans, listFixedCostLines, listLeasehold } from '@/server/finance';
-import { listSubscriptionCycles } from '@/server/orders';
+
 import { loadCalendar } from '@/server/periods';
 import { loadSupplierTerms } from '@/server/working-capital';
 import { listTimeStudies } from '@/server/time-studies';
@@ -24,7 +24,7 @@ export default async function ComparePage() {
 async function ComparePageInner() {
   const access = await getFarmAccess();
   // No signed-in user owns no forecast: the page still compares against the plan-data defaults.
-  const [scenarios, library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, cycles, studies] = await Promise.all([
+  const [scenarios, library, subscribers, calendar, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, studies] = await Promise.all([
     access.userId ? listScenarios({ userId: access.userId, isSuperAdmin: access.isSuperAdmin }) : Promise.resolve([]),
     listGrowPlans(),
     listSubscribers(),
@@ -36,7 +36,6 @@ async function ComparePageInner() {
     listLoans(),
     listFixedCostLines(),
     listLeasehold(),
-    listSubscriptionCycles(),
     listTimeStudies(),
   ]);
   const today = new Date().toISOString().slice(0, 10);
@@ -74,7 +73,6 @@ async function ComparePageInner() {
         fixedCostLines={fixedCostLines}
         leasehold={leasehold}
         packaging={packaging}
-        cycles={cycles}
         studies={studies.studies}
       />
     </>

@@ -34,7 +34,7 @@ import type { CrewShift } from '@/data/crews';
 import type { RequirementLine } from '@/engine/catalog';
 import { defaultGrowUnits } from '@/engine';
 import { sowingsFor, type GrowUnit } from '@/engine/grow-capacity';
-import { ShelfLedger, calendarFromSowings, sowDateFor, stockDateFor, type GrowCalendar } from '@/engine/grow-calendar';
+import { ShelfLedger, calendarFromSowings, shelfLifeDaysFor, sowDateFor, stockDateFor, type GrowCalendar } from '@/engine/grow-calendar';
 import { isExperimentSowing } from '@/engine/actuals';
 
 type Assumptions = ResolvedInputs['assumptions'];
@@ -172,27 +172,27 @@ function drawFifo(lots: FinishedLot[], growPlanCode: string, date: string, qty: 
 /**
  * Finished goods from the sowing records: each closed sowing is a lot of good
  * units that is stock from its stock date (a grow sowing's first harvest day,
- * otherwise its production date), inside shelf life for `shelfLifeDays`
- * from then. Distributed orders draw from the oldest lot of their grow plan first.
+ * otherwise its production date), inside the plan's harvest window from then.
+ * Distributed orders draw from the oldest lot of their grow plan first.
  */
 export function finishedGoodsOnHand(input: {
   /** The closed sowing records; an experiment's (`experimentId`) are research, never stock. */
   sowings: readonly { sowingId: string; growPlanCode: string; productionDate: string; goodUnits: number; experimentId?: string | null }[];
   consumed: readonly Consumption[];
-  shelfLifeDays: number;
   asOf: string;
-  /** The library the records' plans are read from, for each lot's stock date. */
+  /** The library the records' plans are read from, for each lot's stock date and harvest window. */
   growPlans: readonly GrowPlanDef[];
 }): OnHand {
   const lots: FinishedLot[] = input.sowings
     .filter((b) => !isExperimentSowing(b))
     .map((b) => {
-      const produced = stockDateFor(input.growPlans.find((r) => r.code === b.growPlanCode), b.productionDate);
+      const growPlan = input.growPlans.find((r) => r.code === b.growPlanCode);
+      const produced = stockDateFor(growPlan, b.productionDate);
       return {
         sowingId: b.sowingId,
         growPlanCode: b.growPlanCode,
         produced,
-        expires: isoAddDays(produced, input.shelfLifeDays),
+        expires: isoAddDays(produced, shelfLifeDaysFor(growPlan)),
         qtyProduced: b.goodUnits,
         remaining: b.goodUnits,
       };
@@ -530,7 +530,6 @@ export function planHorizon(input: {
   assumptions: Assumptions;
   unitFactorByChannel: Record<number, number>;
   openingLots: readonly FinishedLot[];
-  shelfLifeDays: number;
   productionWeekdays?: readonly number[];
   channels?: readonly number[];
   /** Each grow plan's own assumptions (Roadmap N3); passed through to each day. */
@@ -614,9 +613,10 @@ export function planHorizon(input: {
       const plan = planProductionDay({ productionDate: ev.date, requirements, onHand, growPlans: input.growPlans, capacityInputs: input.capacityInputs, assumptions: input.assumptions, growPlanAssumptions: input.growPlanAssumptions, crews: input.crews, placeSowing: placeSowingFor(servesFrom), studies: input.studies });
       for (const run of plan.runs) {
         if (run.produced <= 0) continue;
-        // A grow sowing is stock from its first harvest day, and its shelf life counts from there.
-        const produced = stockDateFor(input.growPlans.find((r) => r.code === run.growPlanCode), ev.date);
-        lots.push({ sowingId: `plan-${ev.date}-${run.growPlanCode}`, growPlanCode: run.growPlanCode, produced, expires: isoAddDays(produced, input.shelfLifeDays), qtyProduced: run.produced, remaining: run.produced });
+        // A grow sowing is stock from its first harvest day, for the plan's harvest window.
+        const growPlan = input.growPlans.find((r) => r.code === run.growPlanCode);
+        const produced = stockDateFor(growPlan, ev.date);
+        lots.push({ sowingId: `plan-${ev.date}-${run.growPlanCode}`, growPlanCode: run.growPlanCode, produced, expires: isoAddDays(produced, shelfLifeDaysFor(growPlan)), qtyProduced: run.produced, remaining: run.produced });
       }
       productionDays.push({ ...plan, distributionDates: served });
     } else {
@@ -816,7 +816,9 @@ export function singleGrowPlanRun(input: {
     closing: input.openingInventory + produced - baseUnits,
     cyclesRequired: sowings,
     cyclesAvailable: cap.cyclesPerDay,
-    fits: sowings <= cap.cyclesPerDay,
+    // The run fits when its sowings make what the orders need; the grow calendar, not a count of
+    // starts a day, says whether the trays have room on the shelves.
+    fits: produced >= net - 1e-9,
     purchasedLb: lb(c.seedOzPerUnit),
     harvestedLb: lb(c.harvestedOzPerUnit),
     packedLb: lb(c.packedOzPerUnit),

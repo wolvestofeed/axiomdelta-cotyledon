@@ -3,15 +3,15 @@
  *
  * Ledger-free, database-free, deterministic. A forecast is a dated timeline
  * from its start date: one year by default, expandable to two or three on the
- * forecast. Nothing in it is automated (decision 15):
- * the engine takes what the forecast carries — its subscribers, services, dated
- * volume, flat plans, equipment dates, loans and fixed-cost lines — runs it
+ * forecast. Nothing in it is automated:
+ * the engine takes what the forecast carries — its subscribers and their
+ * subscriptions, equipment dates, loans and fixed-cost lines — runs it
  * across the calendar, and writes out the documents the business would record,
- * in the same shapes as actuals, so the Plan ledger (N5) posts them through
+ * in the same shapes as actuals, so the Plan ledger posts them through
  * the same functions as the Actual ledger.
  *
- *   orders          the order book: every service on every date it runs, the
- *                   subscriber's flat plan grow plan (`orderBook`)
+ *   orders          the order book: every distribution each subscription carries,
+ *                   one order per flat plan line (`orderBook`)
  *   production      the rolling horizon — the trays ordered, net of stock, lines in
  *                   service on the date, shelf life (`planHorizon`)
  *   sowing records   each production day's runs at standard, labor at the
@@ -38,7 +38,6 @@
  * definition or to the forecast recomputes it (decision 16).
  */
 
-import type { SubscriptionCycleDef } from '@/data/subscription-cycles';
 import type { DistributionDoc, SowingRecordDoc, ReceiptDoc, ReceiptLine, PeriodBillDoc, CapitalPurchaseDoc, LoanDrawDoc, LoanPaymentDoc, EquityContributionDoc, ProcessorDepositDoc } from '@/engine/actuals';
 import { CHANNEL_COMMISSION_PHASE3 } from '@/engine/phase';
 import { BILL_ACCOUNTS, billCategoryForLine, periodEnd, periodOf, periodStart, standardSowingRecordPrefill } from '@/engine/actuals';
@@ -140,8 +139,6 @@ export interface ForecastTimeline {
 export interface TimelineInput {
   /** The forecast, resolved: its overlay applied to the definitions. */
   inputs: ResolvedInputs;
-  /** Saved subscription cycles and the subscribers' flat plans on record; a forecast's own copies ride on the pickup points. */
-  cycles: readonly SubscriptionCycleDef[];
   /** Years from the start date. Absent = the forecast's own choice, one year unless expanded to two or three. */
   horizonYears?: 1 | 2 | 3;
 }
@@ -169,11 +166,10 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
   // ── Orders ────────────────────────────────────────────────────────────────
   const channelPriceCents = Object.fromEntries(inputs.phases.map((p) => [p.phase, cents(p.pricePerUnit)]));
   const growPlanNames = Object.fromEntries(inputs.growPlans.map((r) => [r.code, r.name]));
-  const orders = orderBook({ pickupPoints: inputs.demand.pickupPoints, subscribers: inputs.subscribers, cycles: input.cycles, orders: [], from, to, channelPriceCents, growPlanNames, closures: inputs.closures });
+  const orders = orderBook({ pickupPoints: inputs.demand.pickupPoints, subscribers: inputs.subscribers, orders: [], from, to, channelPriceCents, growPlanNames, closures: inputs.closures });
 
   // ── Production ────────────────────────────────────────────────────────────
   const assumptions = inputs.assumptions;
-  const shelfLifeDays = assumptions.inventory.blackoutShelfLife.value;
   const unitFactorByChannel = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value]));
   const horizon = planHorizon({
     from,
@@ -185,7 +181,6 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     growPlanAssumptions: inputs.growPlanAssumptions,
     unitFactorByChannel,
     openingLots: [],
-    shelfLifeDays,
     channels: inputs.phases.map((p) => p.phase),
     closures: inputs.closures,
   });
@@ -253,7 +248,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       subscriberId: o.subscriberId,
       invoiceId: null,
       growPlanCode: o.growPlanCode,
-      notes: `${o.subscriberName} · ${o.serviceName ?? 'service'} · ${o.growPlanCode} · ${o.priceBasis === 'contract' ? 'contracted price' : 'channel price'}`,
+      notes: `${o.subscriberName} · ${o.growPlanCode} · ${o.priceBasis === 'own-use' ? 'own use' : o.priceBasis === 'contract' ? 'contracted price' : 'channel price'}`,
     });
   }
   if (unfilledUnits > 1e-6) gap('unfilled_units', 'Units ordered that no grow unit had room to sow in time: not distributed and not invoiced.', Math.round(unfilledUnits));

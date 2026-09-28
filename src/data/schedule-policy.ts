@@ -40,7 +40,7 @@ export interface SchedulePolicy {
   harvestDirection: Tagged<HarvestDirection>;
 }
 
-const CLOSEDOWN = 'End-of-day closedown: two people for 30 minutes, placed once at the close of the operating day, on no study.';
+const CLOSEDOWN = 'End-of-day closedown: one person, Rob, for 30 minutes, placed once at the close of the operating day, on no study. Not stated; a time study replaces it.';
 
 export const schedulePolicy: SchedulePolicy = {
   distributionTimeMin: tagged(
@@ -49,8 +49,8 @@ export const schedulePolicy: SchedulePolicy = {
     'min from midnight',
     'Assumed until stated. 10:30 is a working figure for a subscription distribution. A forecast default; an order carries an override once its shape is stated.',
   ),
-  closedownStaff: tagged(2, 'STATED', 'people', CLOSEDOWN),
-  closedownMinutes: tagged(30, 'STATED', 'min', CLOSEDOWN),
+  closedownStaff: tagged(1, 'PLACEHOLDER', 'people', CLOSEDOWN),
+  closedownMinutes: tagged(30, 'PLACEHOLDER', 'min', CLOSEDOWN),
   priorityRule: tagged<PriorityRule>('earliest-due', 'PLACEHOLDER', undefined, 'No priority rule is stated; the scheduler can run each and the days compare.'),
   crewMode: tagged<CrewMode>(
     'requirement',

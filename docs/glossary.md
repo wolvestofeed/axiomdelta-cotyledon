@@ -26,13 +26,13 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Nutrition target.** What a subscriber wants more of: iron, protein, vitamin C, sulforaphane, fiber. A flat plan is composed against it.
 
-**Flat plan.** A subscriber's standing order: which varieties, which formats, how often.
+**Flat plan.** What each distribution of a subscription carries: the grow plans and how many units of each, kept as dated versions so a change takes effect from the next distribution not yet sown.
 
-**Subscription cycle.** The cadence flats arrive: every week, every two weeks or every month.
+**Subscription.** A subscriber's standing order at one pickup point: weekly, every two weeks, or monthly on the same weekday of the same week of the month, from its first distribution, with its flat plan. A distribution is skipped, or the subscription paused, only before the distribution's sow date.
 
 **Pickup point.** Where a subscriber collects: the farm, a shared location, or their own address on a delivery route.
 
-**Harvest window.** The days a live tray is at its best for eating. Microgreens are cut when the cotyledons are full and the first true leaves appear.
+**Harvest window.** The days a live tray is distributed in and cut greens are harvested from it, after the cotyledons are full and the first true leaves appear. A finished tray is stock for its window and waste after it.
 
 **Cotyledon.** The seed leaves, the first pair to open. Microgreens are harvested at the cotyledon stage or just after.
 
@@ -270,7 +270,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Nutrient line.** A nutrient solution, its concentration, and the stage it starts, on a grow plan.
 
-**Light line.** The light spec on a grow plan: spectrum, photoperiod, PPFD or fixture height, and the stage it starts. Costed as energy per tray per day plus amortized fixture cost, and matched by the scheduler against grow units' fixtures.
+**Light line.** The light spec on a grow plan: spectrum, photoperiod, PPFD or fixture height, and the stage it starts. Costed as the shelf's fixtures at full power per tray per day plus their amortized cost; any lit shelf takes it.
 
 **Fixture.** A grow light on a grow unit: model, spectrum, watts, and its PPFD map at tray height.
 
@@ -288,7 +288,7 @@ This file is the vocabulary authority for Phase 2, the way `outline.md` §3 was 
 
 **Unit.** One of whatever a grow plan produces: a flat, tray, insert, jar or cut ounce, per its format.
 
-**Grow unit.** A shelf, rack, sprouting rack or jar stand. A sowing is what one grow unit takes; a second grow unit is a parallel stream.
+**Grow unit.** A shelf, rack, sprouting rack or jar stand, lit or dark. A sowing is the trays its orders need; a sowing larger than one unit holds is split across units.
 
 **Sowing stream.** Labor counted per sowing on the sow day: soak, sow, weight.
 

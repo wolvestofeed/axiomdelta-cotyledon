@@ -83,7 +83,7 @@ describe('approved standard versions (Roadmap J5)', () => {
     const live = standardSnapshot(growPlan, ownAssumptions);
     const std = version(1, '2026-09-01', { snapshot: { ...live, variableOverheadPerTray: { light: 1, consumables: 0.5 } } });
     const led = postActuals(bundle([sowing('2026-09-14', standardLabel(std))], [std])).periods[0]!.sowings[0]!;
-    const trays = led.amounts.traysSown * (1 + assumptions.yield.shrinkAllowance.value);
+    const trays = led.amounts.traysSown;
     expect(led.amounts.lightApplied).toBeCloseTo(trays, 6);
     expect(led.amounts.consumablesApplied).toBeCloseTo(trays * 0.5, 6);
   });

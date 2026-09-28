@@ -27,8 +27,6 @@ import { growPlanSeed } from '@/data/grow-plans-seed';
 import { laborMinutesPerUnit } from '@/engine/unit-cost';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeGrowPlanAverages } from '@/engine/active-averages';
-import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
 import { simulateForecast } from '@/engine/forecast-timeline';
 import { postPlanLedger } from '@/engine/plan-ledger';
 
@@ -256,9 +254,7 @@ describe('C5 — the audit findings of §5 are gone', () => {
 
 describe('C6 — every Plan ledger month balances and its cash flow ties', () => {
   it('the engine-default forecast over its first year', () => {
-    const saved = seedSubscriptionCycles(R.growPlans, '2026-09-14');
-    const cycles = [...saved, ...seedFlatPlans(seedSubscribers(), saved)];
-    const plan = postPlanLedger({ timeline: simulateForecast({ inputs: R, cycles }), inputs: R });
+    const plan = postPlanLedger({ timeline: simulateForecast({ inputs: R }), inputs: R });
     // A month that posts something: a trivially empty ledger would balance on nothing.
     expect(plan.months.some((m) => m.unitsDistributed > 0)).toBe(true);
     for (const m of plan.months) {

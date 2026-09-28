@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
 import type { SubscriptionDef } from '@/data/subscriptions';
-import type { OrderDef } from '@/data/subscription-cycles';
+import type { OrderDef } from '@/data/orders';
 import { cadenceDates, flatPlanOn, startProblem, subscriptionDistributions, weekOfMonth } from '@/engine/subscriptions';
 import { firstUnsown, skipRefusal, sowDateOf, startRefusal, withFlatPlan } from '@/engine/subscription-cutoffs';
 import { orderBook, orderKey } from '@/engine/orders';
@@ -130,7 +130,7 @@ describe('the order book', () => {
   });
 
   it('a confirmed order naming the subscription replaces the derived one', () => {
-    const stored: OrderDef = { id: 'o1', orderDate: '2026-11-07', subscriberId: base.id, subscriberPickupPointId: pp.id, subscriberServiceId: null, subscriptionId: 'sub-1', channel: 1, growPlanCode: 'BROC-01', units: 3, status: 'confirmed', pricePerUnitCents: null, distributionId: null, subscriptionCycleId: null, source: 'subscription', notes: null };
+    const stored: OrderDef = { id: 'o1', orderDate: '2026-11-07', subscriberId: base.id, subscriberPickupPointId: pp.id, subscriptionId: 'sub-1', channel: 1, growPlanCode: 'BROC-01', units: 3, status: 'confirmed', pricePerUnitCents: null, distributionId: null, source: 'subscription', notes: null };
     const book = orderBook({ ...input, orders: [stored] });
     const hit = book.filter((o) => o.key === orderKey('2026-11-07', pp.id, 'BROC-01', 'sub-1'));
     expect(hit).toHaveLength(1);

@@ -11,15 +11,11 @@ import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
 describe('farm financials — per-phase economics', () => {
-  it('Phase 1 is the base; Phase 2/3 units are 1.5×', () => {
+  it('a unit is a tray in the plan\'s format on every channel: no channel multiplies it', () => {
     const e = phaseEconomics();
-    expect(e[0].unitFactor).toBe(1);
-    expect(e[1].unitFactor).toBe(1.5);
-    expect(e[2].unitFactor).toBe(1.5);
-  });
-  it('unit factor scales input cost per unit', () => {
-    const e = phaseEconomics();
-    expect(e[1].inputCostPerUnit).toBeCloseTo(e[0].inputCostPerUnit * 1.5, 6);
+    expect(e.map((x) => x.unitFactor)).toEqual([1, 1, 1]);
+    expect(e[1].inputCostPerUnit).toBeCloseTo(e[0].inputCostPerUnit, 6);
+    expect(e[2].inputCostPerUnit).toBeCloseTo(e[0].inputCostPerUnit, 6);
   });
   it('the sowing is what one grow unit takes in trays, whatever the channel\'s unit factor', () => {
     const e = phaseEconomics();

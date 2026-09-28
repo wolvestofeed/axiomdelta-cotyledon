@@ -16,21 +16,17 @@ import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { inputKey } from '@/engine/scenario';
 import type { ResolvedInputPrice } from '@/engine/input-price';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
-import { requirementsFor, planProductionDay, productionDateFor } from '@/engine/production-plan';
+import { planHorizon } from '@/engine/production-plan';
 import { rawStockOnHand, openOrders, netRequirements } from '@/engine/net-requirements';
 import { ReceiveForm, type ReceiveInput, type ReceivePo } from '@/components/ReceiveForm';
 import type { DateRange } from '@/engine/periods';
 
-const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
+/** How far ahead the next distribution is looked for. */
+const LOOKAHEAD_DAYS = 60;
 const dateLabel = (d: string) => `${WEEKDAY_LABELS[weekdayOf(d)]} ${d}`;
-const nextServiceDay = (d: string) => {
-  let x = isoAddDays(d, 1);
-  for (let i = 0; i < 7 && !SERVICE_WEEKDAYS.includes(weekdayOf(x)); i++) x = isoAddDays(x, 1);
-  return x;
-};
 
 /** Where a line's price came from, in a few words. */
 function basisLabel(p: ResolvedInputPrice | undefined): string {
@@ -43,7 +39,6 @@ export function ProcurementClient({
   canEdit,
   canRecord,
   closures,
-  cycles,
   orders: recordedOrders,
   receipts: recordedReceipts,
   sowings: recordedSowings,
@@ -54,7 +49,6 @@ export function ProcurementClient({
   /** Operators receive goods against a purchase order; the supplier links stay with super admins. */
   canRecord: boolean;
   closures: DateRange[];
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   receipts: ReceiptDoc[];
   sowings: SowingRecordDoc[];
@@ -65,9 +59,7 @@ export function ProcurementClient({
   // Plan runs the open forecast's own world; Actual the real farm (Roadmap N6 slice 3).
   const world = useOperationsWorld({ orders: recordedOrders, receipts: recordedReceipts, sowings: recordedSowings, purchaseOrders: recordedPurchaseOrders });
   const { orders, receipts, sowings, purchaseOrders } = world;
-  const [distributionDate, setDistributionDate] = useState(() => nextServiceDay(today));
   const [receivingPoId, setReceivingPoId] = useState<string | null>(null);
-  const productionDate = productionDateFor(distributionDate, SERVICE_WEEKDAYS, closures);
 
   const links = resolved.sustainability.inputSupplier;
   const suppliers = useLinkedSuppliers(links);
@@ -79,14 +71,25 @@ export function ProcurementClient({
       if (Object.keys(m).length === 0) delete d.inputSupplier;
     });
 
-  // The next run: the order book on the distribution date, exploded and netted.
+  // The next run: the order book on the next distribution date with any order, each plan's trays sown on
+  // its own sow date (outline §5 rule 1), exploded through the lines and netted. The date can be moved.
   const channelPriceCents = useMemo(() => Object.fromEntries(resolved.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>, [resolved.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(resolved.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [resolved.phaseProfiles]);
-  const book = useMemo(() => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from: distributionDate, to: distributionDate, channelPriceCents, closures }), [world.pickupPoints, resolved.subscribers, cycles, orders, distributionDate, channelPriceCents, closures]);
-  const day = useMemo(() => planProductionDay({ productionDate, requirements: requirementsFor(book, resolved.growPlans, pfByChannel), onHand: {}, growPlans: resolved.growPlans, capacityInputs: resolved.capacityInputs, assumptions: resolved.assumptions, growPlanAssumptions: resolved.growPlanAssumptions }), [productionDate, book, resolved.growPlans, pfByChannel, resolved.capacityInputs, resolved.assumptions, resolved.growPlanAssumptions]);
+  const ahead = useMemo(() => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, orders, from: isoAddDays(today, 1), to: isoAddDays(today, LOOKAHEAD_DAYS), channelPriceCents, closures }), [world.pickupPoints, resolved.subscribers, orders, today, channelPriceCents, closures]);
+  const nextDistribution = useMemo(() => ahead.map((o) => o.orderDate).sort()[0] ?? isoAddDays(today, 1), [ahead, today]);
+  const [chosenDate, setChosenDate] = useState<string | null>(null);
+  const distributionDate = chosenDate ?? nextDistribution;
+  const book = useMemo(() => (ahead.some((o) => o.orderDate === distributionDate) ? ahead.filter((o) => o.orderDate === distributionDate) : orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, orders, from: distributionDate, to: distributionDate, channelPriceCents, closures })), [ahead, distributionDate, world.pickupPoints, resolved.subscribers, orders, channelPriceCents, closures]);
+  const horizon = useMemo(
+    () => planHorizon({ from: today, to: distributionDate, book, growPlans: resolved.growPlans, capacityInputs: resolved.capacityInputs, assumptions: resolved.assumptions, growPlanAssumptions: resolved.growPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: [], channels: resolved.phases.map((p) => p.phase), closures }),
+    [today, distributionDate, book, resolved.growPlans, resolved.capacityInputs, resolved.assumptions, resolved.growPlanAssumptions, resolved.phases, pfByChannel, closures],
+  );
+  const sowDays = useMemo(() => horizon.productionDays.filter((d) => d.runs.some((r) => r.produced > 0)), [horizon]);
+  const productionDate = sowDays.map((d) => d.productionDate).sort()[0] ?? distributionDate;
+  const day = useMemo(() => ({ runs: sowDays.flatMap((d) => d.runs.filter((r) => r.produced > 0).map((r) => ({ ...r, sowDate: d.productionDate }))), totalProduced: sowDays.reduce((t, d) => t + d.totalProduced, 0), purchase: { total: sowDays.reduce((t, d) => t + d.purchase.total, 0), lines: sowDays.flatMap((d) => d.purchase.lines) } }), [sowDays]);
   const stock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: productionDate }), [receipts, sowings, productionDate]);
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
-  const net = useMemo(() => netRequirements({ days: [{ productionDate, lines: day.purchase.lines }], stock, onOrder }), [productionDate, day.purchase.lines, stock, onOrder]);
+  const net = useMemo(() => netRequirements({ days: sowDays.map((d) => ({ productionDate: d.productionDate, lines: d.purchase.lines })), stock, onOrder }), [sowDays, stock, onOrder]);
   const netBy = useMemo(() => new Map(net.lines.map((l) => [l.input, l])), [net.lines]);
 
   // Every distinct input across the library, in service first.
@@ -144,7 +147,7 @@ export function ProcurementClient({
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={money(stockValue)} label="Raw stock on hand, at invoice" sub={`${Object.keys(stock.byInput).length} input${Object.keys(stock.byInput).length === 1 ? '' : 's'} with a lot on hand as of ${productionDate}`} />
         <Kpi value={num(openPos)} label="Open purchase orders" sub={`${onOrderLines} line${onOrderLines === 1 ? '' : 's'} still to receive`} />
-        <Kpi value={money(day.purchase.total)} label="Next run, gross at the order's price" sub={`${num(Math.round(day.totalProduced))} base units on ${dateLabel(productionDate)}`} />
+        <Kpi value={money(day.purchase.total)} label="Next run, gross at the order's price" sub={`${num(Math.round(day.totalProduced))} base units, sown from ${dateLabel(productionDate)} for ${dateLabel(distributionDate)}`} />
         <Kpi value={money(net.netTotal)} label="Next run, net to buy" sub={`${net.toBuy.length} line${net.toBuy.length === 1 ? '' : 's'} after stock and open orders`} />
       </div>
       <div className="grid gap-3 mt-3 farm-autofit-11">
@@ -193,8 +196,8 @@ export function ProcurementClient({
 
       <Card title="Supply position by input" className="mt-4">
         <div className="flex flex-wrap gap-3 items-end mb-3!">
-          <label className="farm-kpi-sub">Next distribution date<br /><input className="farm-input" type="date" value={distributionDate} onChange={(e) => e.target.value && setDistributionDate(e.target.value)} /></label>
-          <span className="farm-kpi-sub">produced {dateLabel(productionDate)} · {day.runs.filter((r) => r.produced > 0).map((r) => `${r.growPlanCode} × ${r.sowingsScheduled}`).join(' · ') || 'no run'}</span>
+          <label className="farm-kpi-sub">Distribution date<br /><input className="farm-input" type="date" value={distributionDate} onChange={(e) => e.target.value && setChosenDate(e.target.value)} /></label>
+          <span className="farm-kpi-sub">{day.runs.map((r) => `${r.growPlanCode} × ${r.sowingsScheduled} sown ${dateLabel(r.sowDate)}`).join(' · ') || 'no sowing for this date'}</span>
           <SectionSave sections={['sustainability']} title="the supplier links" />
         </div>
         <div className="farm-scroll-x">

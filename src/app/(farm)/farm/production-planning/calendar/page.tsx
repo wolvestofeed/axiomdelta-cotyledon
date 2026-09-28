@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/ui';
-import { listSubscriptionCycles, listOrders } from '@/server/orders';
+import { listOrders } from '@/server/orders';
 import { loadActuals } from '@/server/actuals';
 import { loadCalendar } from '@/server/periods';
 import { listTimeStudies } from '@/server/time-studies';
@@ -14,7 +14,7 @@ export default async function CalendarPage() {
 }
 
 async function CalendarPageInner() {
-  const [cycles, orders, actuals, calendar, library] = await Promise.all([listSubscriptionCycles(), listOrders(), loadActuals(), loadCalendar(), listTimeStudies()]);
+  const [orders, actuals, calendar, library] = await Promise.all([listOrders(), loadActuals(), loadCalendar(), listTimeStudies()]);
   const today = new Date().toISOString().slice(0, 10);
   return (
     <>
@@ -38,7 +38,6 @@ async function CalendarPageInner() {
       />
       <CalendarClient
         today={today}
-        cycles={cycles}
         orders={orders}
         closures={calendar.closures}
         sowings={actuals.sowings.map((b) => ({ sowingId: b.sowingId, growPlanCode: b.growPlanCode, productionDate: b.productionDate, goodUnits: b.goodUnits, experimentId: b.experimentId ?? null }))}

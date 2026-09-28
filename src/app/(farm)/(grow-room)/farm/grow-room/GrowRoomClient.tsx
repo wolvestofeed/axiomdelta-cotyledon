@@ -10,7 +10,7 @@ import { GrowSowingCloseForm } from '@/components/GrowSowingCloseForm';
 import { isGrowSowing } from '@/engine/sowing-record';
 import { defaultGrowUnits } from '@/engine';
 import { ShipForm, type ShipOrder } from '@/components/ShipForm';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import type { ResolvedInputs } from '@/engine/scenario';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
 import { finishedGoodsOnHand, planHorizon, unitFactorFor, type Consumption } from '@/engine/production-plan';
@@ -69,7 +69,6 @@ export function GrowRoomClient({
   isAdmin,
   closures,
   inputs,
-  cycles,
   orders,
   receipts,
   sowings,
@@ -89,7 +88,6 @@ export function GrowRoomClient({
   isAdmin: boolean;
   closures: DateRange[];
   inputs: FloorInputs;
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   receipts: ReceiptDoc[];
   sowings: SowingRecordDoc[];
@@ -108,11 +106,10 @@ export function GrowRoomClient({
 
   const A = inputs.assumptions;
   const shrink = A.yield.shrinkAllowance.value;
-  const shelfLife = A.inventory.blackoutShelfLife.value;
   const growPlanNames = useMemo(() => Object.fromEntries(inputs.growPlans.map((r) => [r.code, r.name])), [inputs.growPlans]);
   const channelPriceCents = useMemo(() => Object.fromEntries(inputs.phases.map((p) => [p.phase, Math.round(p.pricePerUnit * 100)])) as Record<number, number>, [inputs.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [inputs.phaseProfiles]);
-  const bookFor = (from: string, to: string) => orderBook({ pickupPoints: inputs.pickupPoints, subscribers: inputs.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures });
+  const bookFor = (from: string, to: string) => orderBook({ pickupPoints: inputs.pickupPoints, subscribers: inputs.subscribers, orders, from, to, channelPriceCents, growPlanNames, closures });
 
   // ── Receive: issued purchase orders with a line still outstanding ──────────
   const onOrder = useMemo(() => openOrders({ purchaseOrders, receipts }), [purchaseOrders, receipts]);
@@ -148,7 +145,7 @@ export function GrowRoomClient({
   // ── Sow: the grow calendar's sowings dated today, back-planned from the order book ──
   const growQueue = useMemo<CalendarSowing[]>(() => {
     const to = isoAddDays(today, 28);
-    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: today, growPlans: inputs.growPlans });
+    const stock = finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: inputs.growPlans });
     const openingSowings = [
       ...sowings
         .filter((b) => b.goodUnits > 0)
@@ -156,10 +153,10 @@ export function GrowRoomClient({
         .filter((b) => { const r = inputs.growPlans.find((x) => x.code === b.growPlanCode); return r !== undefined && stageOn(r, b.sowDate, today).stage !== 'off'; }),
       ...experimentSowings,
     ];
-    const h = planHorizon({ from: today, to, book: bookFor(today, to), growPlans: inputs.growPlans, capacityInputs: inputs.capacityInputs, assumptions: A, growPlanAssumptions: inputs.growPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, shelfLifeDays: shelfLife, productionWeekdays: SERVICE_WEEKDAYS, closures });
+    const h = planHorizon({ from: today, to, book: bookFor(today, to), growPlans: inputs.growPlans, capacityInputs: inputs.capacityInputs, assumptions: A, growPlanAssumptions: inputs.growPlanAssumptions, unitFactorByChannel: pfByChannel, openingLots: stock.lots.filter((l) => l.remaining > 0), openingSowings, productionWeekdays: SERVICE_WEEKDAYS, closures });
     return h.growCalendar.sowings.filter((x) => x.sowDate === today && x.distributionDate !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputs, cycles, orders, sowings, consumption, shelfLife, today, pfByChannel, A, closures, experimentSowings]);
+  }, [inputs, orders, sowings, consumption, today, pfByChannel, A, closures, experimentSowings]);
   const sowingCountByDate = useMemo(() => sowings.reduce<Record<string, number>>((m, b) => { m[b.productionDate] = (m[b.productionDate] ?? 0) + 1; return m; }, {}), [sowings]);
   const rawStock = useMemo(() => rawStockOnHand({ receipts, sowings, asOf: today }), [receipts, sowings, today]);
   const closingGrowPlan = closing ? inputs.growPlans.find((r) => r.code === closing.growPlanCode) : undefined;
@@ -178,7 +175,7 @@ export function GrowRoomClient({
   }, [closing, closingGrowPlan, today, sowingCountByDate, shrink, standards]);
 
   // ── Ship: today's confirmed orders ────────────────────────────────────────
-  const toShip = useMemo(() => bookFor(today, today).filter((o) => o.basis === 'record' && o.status === 'confirmed' && o.id), [inputs, cycles, orders, today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const toShip = useMemo(() => bookFor(today, today).filter((o) => o.basis === 'record' && o.status === 'confirmed' && o.id), [inputs, orders, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const finishedLots = useMemo(() => finishedLotsOf(sowings), [sowings]);
 
   // ── Lots by use-by ────────────────────────────────────────────────────────

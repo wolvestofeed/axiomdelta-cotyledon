@@ -1,9 +1,9 @@
 import 'server-only';
 import { asc, inArray } from 'drizzle-orm';
-import { farmSubscriptions, farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges } from '@/db';
+import { farmSubscriptions, farmSubscribers, farmSubscriberPickupPoints } from '@/db';
 import { db } from '@/lib/db';
-import type { SubscriberDef, SubscriberKind, SubscriberServiceDef, SubscriberStatus, SubscriberPickupPointStatus, PickupPointCalendarRangeDef } from '@/data/subscribers';
-import { withSeedLock, insertSubscribers, dbSeedSubscribers, insertMissingFlatPlans } from '@/server/seed-writes';
+import type { SubscriberDef, SubscriberStatus, SubscriberPickupPointStatus } from '@/data/subscribers';
+import { withSeedLock, insertSubscribers, dbSeedSubscribers } from '@/server/seed-writes';
 import { isSubscriberPaymentTerms } from '@/data/working-capital';
 import { isCadence, type FlatPlanLine, type SubscriptionDef } from '@/data/subscriptions';
 import type { FarmSubscriptionRow } from '@/db';
@@ -11,10 +11,9 @@ import type { FarmSubscriptionRow } from '@/db';
 /**
  * MicroFarm — subscribers read layer (server-only).
  *
- * On first read of an empty table the Plan seed is inserted, `source = 'seed'`
- * (`seed-writes.ts`): the one contracted subscriber at its stated 125 units a
- * day, and a prospect per channel carrying no volume. The insert runs under an
- * advisory lock so two parallel first reads cannot both seed.
+ * On first read of an empty table the Plan seed is inserted, `source = 'seed'` (`seed-writes.ts`):
+ * the nineteen Forecast Subscribers on weekly subscriptions and Rob's own tray. The insert runs
+ * under an advisory lock so two parallel first reads cannot both seed.
  */
 
 const iso = (d: string | Date | null): string | null =>
@@ -28,7 +27,6 @@ async function seedIfEmpty(): Promise<void> {
     if (again[0]) return;
     await insertSubscribers(tx, dbSeedSubscribers());
   });
-  await withSeedLock(db, 'cycles', (tx) => insertMissingFlatPlans(tx));
 }
 
 export async function listSubscribers(): Promise<SubscriberDef[]> {
@@ -40,35 +38,6 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
     .from(farmSubscriberPickupPoints)
     .where(inArray(farmSubscriberPickupPoints.subscriberId, rows.map((r) => r.id)))
     .orderBy(asc(farmSubscriberPickupPoints.createdAt));
-  const pickupPointIds = pickupPoints.map((s) => s.id);
-  const [serviceRows, calendarRows] = pickupPointIds.length
-    ? await Promise.all([
-        db.select().from(farmSubscriberServices).where(inArray(farmSubscriberServices.subscriberPickupPointId, pickupPointIds)).orderBy(asc(farmSubscriberServices.position), asc(farmSubscriberServices.createdAt)),
-        db.select().from(farmPickupPointCalendarRanges).where(inArray(farmPickupPointCalendarRanges.subscriberPickupPointId, pickupPointIds)).orderBy(asc(farmPickupPointCalendarRanges.startDate)),
-      ])
-    : [[], []];
-  const pickRows = serviceRows.length
-    ? await db.select().from(farmServiceVolumePicks).where(inArray(farmServiceVolumePicks.serviceId, serviceRows.map((r) => r.id))).orderBy(asc(farmServiceVolumePicks.effectiveDate))
-    : [];
-  const servicesByPickupPoint = new Map<string, SubscriberServiceDef[]>();
-  for (const r of serviceRows) {
-    const arr = servicesByPickupPoint.get(r.subscriberPickupPointId) ?? [];
-    arr.push({
-      id: r.id,
-      name: r.name,
-      weekdays: Array.isArray(r.weekdays) ? (r.weekdays as number[]).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6) : [1, 2, 3, 4, 5],
-      status: r.status === 'inactive' ? 'inactive' : 'active',
-      notes: r.notes,
-      picks: pickRows.filter((p) => p.serviceId === r.id).map((p) => ({ id: p.id, effectiveDate: iso(p.effectiveDate)!, units: p.units, notes: p.notes })),
-    });
-    servicesByPickupPoint.set(r.subscriberPickupPointId, arr);
-  }
-  const calendarByPickupPoint = new Map<string, PickupPointCalendarRangeDef[]>();
-  for (const r of calendarRows) {
-    const arr = calendarByPickupPoint.get(r.subscriberPickupPointId) ?? [];
-    arr.push({ id: r.id, kind: r.kind === 'break' ? 'break' : 'term', label: r.label, startDate: iso(r.startDate)!, endDate: iso(r.endDate)! });
-    calendarByPickupPoint.set(r.subscriberPickupPointId, arr);
-  }
   const subscriptionsBySubscriber = new Map<string, SubscriptionDef[]>();
   for (const r of await db.select().from(farmSubscriptions).where(inArray(farmSubscriptions.subscriberId, rows.map((x) => x.id))).orderBy(asc(farmSubscriptions.startDate))) {
     subscriptionsBySubscriber.set(r.subscriberId, [...(subscriptionsBySubscriber.get(r.subscriberId) ?? []), toSubscription(r)]);
@@ -82,7 +51,6 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
-    kind: r.kind as SubscriberKind,
     channel: r.channel,
     status: (['prospect', 'contracted', 'forecast', 'inactive'].includes(r.status) ? r.status : 'prospect') as SubscriberStatus,
     pricePerUnitCents: r.pricePerUnitCents,
@@ -98,15 +66,8 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
       id: s.id,
       pickupPointId: s.pickupPointId,
       name: s.name,
-      trayFormats: Array.isArray(s.trayFormats) ? (s.trayFormats as string[]) : [],
-      serviceDaysPerYear: s.serviceDaysPerYear,
-      enrollment: s.enrollment,
-      participationRate: s.participationRate,
-      expectedUnitsPerDay: s.expectedUnitsPerDay,
       status: s.status as SubscriberPickupPointStatus,
       notes: s.notes,
-      services: servicesByPickupPoint.get(s.id) ?? [],
-      calendar: calendarByPickupPoint.get(s.id) ?? [],
     })),
     subscriptions: subscriptionsBySubscriber.get(r.id) ?? [],
   }));

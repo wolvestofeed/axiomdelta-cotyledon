@@ -14,7 +14,7 @@ import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
 import { WorldNote } from '@/components/ledger/WorldNote';
 import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { STAGE_BY_KEY } from '@/data/stage-schedule';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
@@ -28,7 +28,7 @@ import {
   type FinishedLot,
   type HorizonProductionDay,
 } from '@/engine/production-plan';
-import { stageOn, type CalendarSowing } from '@/engine/grow-calendar';
+import { shelfLifeDaysFor, stageOn, type CalendarSowing } from '@/engine/grow-calendar';
 
 import { GRAMS_PER_LB, costPlan } from '@/engine/grow-costing';
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
@@ -58,7 +58,6 @@ export function ProductionPlanningClient({
   canEdit,
   showFinancials,
   closures,
-  cycles,
   orders: recordedOrders,
   sowings: recordedSowings,
   distributions: recordedDistributions,
@@ -74,7 +73,6 @@ export function ProductionPlanningClient({
   showFinancials: boolean;
   /** Farm closures (Roadmap J1): no production and no derived order on those dates. */
   closures: DateRange[];
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   sowings: SowingRow[];
   distributions: { id: string; distributedOn: string; units: number }[];
@@ -107,7 +105,6 @@ export function ProductionPlanningClient({
 
   // ── Shared ────────────────────────────────────────────────────────────────
   const A = resolved.assumptions;
-  const shelfLife = A.inventory.blackoutShelfLife.value;
   const shrink = A.yield.shrinkAllowance.value;
   const channels = useMemo(() => resolved.phases.map((p) => ({ phase: p.phase, market: p.market, pricePerUnit: p.pricePerUnit, priceCents: Math.round(p.pricePerUnit * 100), unitsPerDay: p.unitsPerDay })), [resolved.phases]);
   const pfByChannel = useMemo(() => Object.fromEntries(resolved.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>, [resolved.phaseProfiles]);
@@ -116,8 +113,8 @@ export function ProductionPlanningClient({
   const channelPriceCents = useMemo(() => Object.fromEntries(channels.map((c) => [c.phase, c.priceCents])) as Record<number, number>, [channels]);
   const channelLabel = (ch: number) => channels.find((c) => c.phase === ch)?.market ?? `Channel ${ch}`;
   const bookFor = useCallback(
-    (from: string, to: string) => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, cycles, orders, from, to, channelPriceCents, growPlanNames, closures }),
-    [world.pickupPoints, resolved.subscribers, cycles, orders, channelPriceCents, growPlanNames, closures],
+    (from: string, to: string) => orderBook({ pickupPoints: world.pickupPoints, subscribers: resolved.subscribers, orders, from, to, channelPriceCents, growPlanNames, closures }),
+    [world.pickupPoints, resolved.subscribers, orders, channelPriceCents, growPlanNames, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
   const planOf = useCallback((code: string) => {
@@ -189,14 +186,14 @@ export function ProductionPlanningClient({
   // The day on the grow model: each order back-planned to its plan's sow date, the sowings placed on
   // the grow units for their cycle — the horizon over this one distribution date.
   const dayLots = useMemo(() => {
-    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: dayDate, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.growPlanCode] === undefined);
+    const lots: FinishedLot[] = finishedGoodsOnHand({ sowings, consumed: consumption, asOf: dayDate, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0 && onHandOverride[l.growPlanCode] === undefined);
     // A typed on-hand figure stands in for the records of its plan as one lot inside shelf life.
     for (const [code, qty] of Object.entries(onHandOverride)) {
       const produced = isoAddDays(dayDate, -1);
-      lots.push({ sowingId: `typed-${code}`, growPlanCode: code, produced, expires: isoAddDays(produced, shelfLife), qtyProduced: qty, remaining: qty });
+      lots.push({ sowingId: `typed-${code}`, growPlanCode: code, produced, expires: isoAddDays(produced, shelfLifeDaysFor(resolved.growPlans.find((p) => p.code === code))), qtyProduced: qty, remaining: qty });
     }
     return lots;
-  }, [sowings, consumption, shelfLife, dayDate, onHandOverride, resolved.growPlans]);
+  }, [sowings, consumption, dayDate, onHandOverride, resolved.growPlans]);
   const dayHorizon = useMemo(
     () =>
       planHorizon({
@@ -213,11 +210,10 @@ export function ProductionPlanningClient({
             unitFactorByChannel: pfByChannel,
             openingLots: dayLots,
             openingSowings,
-            shelfLifeDays: shelfLife,
             productionWeekdays: SERVICE_WEEKDAYS,
             channels: channels.map((c) => c.phase),
           }),
-    [closures, resolved.crews, dayDate, dayBook, resolved.growPlans, resolved.capacityInputs, A, resolved.growPlanAssumptions, pfByChannel, dayLots, openingSowings, shelfLife, channels, studies],
+    [closures, resolved.crews, dayDate, dayBook, resolved.growPlans, resolved.capacityInputs, A, resolved.growPlanAssumptions, pfByChannel, dayLots, openingSowings, channels, studies],
   );
   const dayRuns = useMemo(() => dayHorizon.productionDays.flatMap((p) => p.runs.map((r) => ({ ...r, sowDate: p.productionDate }))), [dayHorizon]);
   const daySowings = useMemo(() => (dayHorizon.growCalendar?.sowings ?? []).filter((s) => s.distributionDate === dayDate).sort((a, b) => a.sowDate.localeCompare(b.sowDate) || a.growPlanCode.localeCompare(b.growPlanCode)), [dayHorizon, dayDate]);
@@ -246,7 +242,7 @@ export function ProductionPlanningClient({
   const [hFrom, setHFrom] = useState(today);
   const [hTo, setHTo] = useState(isoAddDays(today, 27));
   const hBook = useMemo(() => bookFor(hFrom, hTo), [bookFor, hFrom, hTo]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: shelfLife, asOf: hFrom, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, shelfLife, hFrom, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: hFrom, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, hFrom, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -263,11 +259,10 @@ export function ProductionPlanningClient({
         unitFactorByChannel: pfByChannel,
         openingLots,
         openingSowings,
-        shelfLifeDays: shelfLife,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: channels.map((c) => c.phase),
       }),
-    [closures, hFrom, hTo, hBook, resolved.growPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, shelfLife, channels, resolved.crews, resolved.growPlanAssumptions, studies],
+    [closures, hFrom, hTo, hBook, resolved.growPlans, resolved.capacityInputs, A, pfByChannel, openingLots, openingSowings, channels, resolved.crews, resolved.growPlanAssumptions, studies],
   );
   const hStock = useMemo(() => rawStockOnHand({ receipts, sowings: rawSowings, asOf: hFrom }), [receipts, rawSowings, hFrom]);
   const hNet = useMemo(
@@ -447,7 +442,7 @@ export function ProductionPlanningClient({
               </div>
             )}
             <p className="farm-kpi-sub mt-2">
-              On hand is what the closed sowing records say is inside the {shelfLife}-day shelf life on the distribution date, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. A sowing is what one grow unit takes in trays of the plan&rsquo;s format; overshoot on whole sowings is the closing stock, and the horizon carries it to the next distribution date.
+              On hand is what the closed sowing records say is inside its plan&rsquo;s harvest window on the distribution date, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. A sowing is what one grow unit takes in trays of the plan&rsquo;s format; overshoot on whole sowings is the closing stock, and the horizon carries it to the next distribution date.
             </p>
           </Card>
 
@@ -534,7 +529,7 @@ export function ProductionPlanningClient({
               <span className="farm-kpi-sub">{horizon.distributionDays.length} distribution date{horizon.distributionDays.length === 1 ? '' : 's'} · {horizon.productionDays.length} sow day{horizon.productionDays.length === 1 ? '' : 's'} · opening stock {num(Math.round(openingLots.reduce((s, l) => s + l.remaining, 0)))} trays from records{openingSowings.length ? ` · ${num(openingSowings.reduce((s, x) => s + x.trays, 0))} trays on the shelves from records and experiments` : ''}</span>
             </div>
             <p className="farm-kpi-sub mt-2">
-              The order book for the period, rolled through the shelves: each order is sown on its plan&rsquo;s sow date, the sowing holds its grow unit for the plan&rsquo;s cycle, whole sowings overshoot into stock inside the {shelfLife}-day shelf life, and a distribution date draws its orders from stock oldest first. A sowing no unit can hold is an unfilled order, shared equally across the channels on that plan — the same rule as equal distribution on the annual allocation.
+              The order book for the period, rolled through the shelves: each order is sown on its plan&rsquo;s sow date, the sowing holds its grow unit for the plan&rsquo;s cycle, whole sowings overshoot into stock inside each plan&rsquo;s harvest window, and a distribution date draws its orders from stock oldest first. A sowing no unit can hold is an unfilled order, shared equally across the channels on that plan — the same rule as equal distribution on the annual allocation.
             </p>
           </Card>
 

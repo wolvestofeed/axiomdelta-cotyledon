@@ -70,7 +70,6 @@ describe('an experiment on the grow units', () => {
       assumptions: G.assumptions,
       unitFactorByChannel: { 1: 1 },
       openingLots: [],
-      shelfLifeDays: 3,
       openingSowings: experimentsOnShelves([e], [], blendSeed, '2026-10-01'),
     });
     const s = h.growCalendar.sowings.find((x) => x.growPlanCode === balanced.code)!;

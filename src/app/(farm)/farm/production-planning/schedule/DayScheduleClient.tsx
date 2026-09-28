@@ -9,7 +9,7 @@ import { Card, Kpi, StatusBadge, num } from '@/components/ui';
 import { CrewLoadStrip, TimelineGrid, type TimelineBlock, type TimelineLane } from '@/components/timeline/Timeline';
 import { hhmm, spanOf, timeScale } from '@/components/timeline/scale';
 import { clock } from '@/data/crews';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS, type OrderDef } from '@/data/orders';
 import { TIME_STUDY_STREAM_LABELS, type TimeStudyDoc } from '@/data/time-studies';
 import { datesBetween, isoAddDays, orderBook, weekdayOf } from '@/engine/orders';
 import type { DateRange } from '@/engine/periods';
@@ -35,7 +35,6 @@ const COLOR: Record<string, string> = {
 
 export function DayScheduleClient({
   today,
-  cycles,
   orders: recordedOrders,
   closures,
   sowings: recordedSowings,
@@ -43,7 +42,6 @@ export function DayScheduleClient({
   studies,
 }: {
   today: string;
-  cycles: SubscriptionCycleDef[];
   orders: OrderDef[];
   closures: DateRange[];
   /** Closed sowing records; an experiment's (`experimentId`) are research, never stock. */
@@ -66,7 +64,6 @@ export function DayScheduleClient({
       orderBook({
         pickupPoints: world.pickupPoints,
         subscribers: resolved.subscribers,
-        cycles,
         orders,
         from: today,
         to,
@@ -74,10 +71,10 @@ export function DayScheduleClient({
         growPlanNames: Object.fromEntries(resolved.growPlans.map((r) => [r.code, r.name])),
         closures,
       }),
-    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, cycles, orders, today, to, closures],
+    [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, today, to, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, shelfLifeDays: A.inventory.blackoutShelfLife.value, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -91,7 +88,6 @@ export function DayScheduleClient({
         growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pfByChannel,
         openingLots,
-        shelfLifeDays: A.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),

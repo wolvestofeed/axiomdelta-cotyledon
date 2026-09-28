@@ -67,7 +67,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Micro
 | delivery day, delivery | distribution day, distribution | Pickup or delivery |
 | delivery site, site | pickup point | A subscriber's address or a shared pickup location |
 | school lunches, corporate catering, ghost kitchen | subscriptions, restaurants, retail & wholesale | The three channels, added in that order |
-| menu cycle | subscription cycle | |
+| menu cycle | subscription, on a cadence | Weekly, every two weeks or monthly; no cycle object |
 | meal plan | flat plan | A subscriber's standing composition |
 | meal pattern, crediting, grade group | nutrient profile, nutrition targets, tray format | See §4 |
 | Floor | Grow Room | Operator surface |

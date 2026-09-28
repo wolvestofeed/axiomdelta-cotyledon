@@ -29,7 +29,7 @@ const net = (entries: { lines: { accountCode: string; debitCents: number; credit
 describe('own use', () => {
   it('is in the seed as a real subscriber, on Actual, whose orders are priced at nothing', () => {
     expect(R.subscribers.find((c) => c.ownUse)?.id).toBe(own.id);
-    const book = orderBook({ pickupPoints: recordPickupPoints(R.subscribers), subscribers: R.subscribers, cycles: [], orders: [], from: '2026-10-01', to: '2026-10-31', channelPriceCents: { 1: 3000, 2: 3000, 3: 3000 } });
+    const book = orderBook({ pickupPoints: recordPickupPoints(R.subscribers), subscribers: R.subscribers, orders: [], from: '2026-10-01', to: '2026-10-31', channelPriceCents: { 1: 3000, 2: 3000, 3: 3000 } });
     expect(book.length).toBeGreaterThan(0);
     expect(book.every((o) => o.subscriberId === own.id && o.pricePerUnitCents === 0 && o.priceBasis === 'own-use')).toBe(true);
   });

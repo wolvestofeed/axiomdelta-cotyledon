@@ -1,40 +1,41 @@
 import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
-import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
+import { PLAN_SUBSCRIBERS, planSeedSubscribers } from '@/data/subscribers';
+import { datesBetween } from '@/engine/orders';
 import { simulateForecast, horizonEnd } from '@/engine/forecast-timeline';
-import { isBlackoutRack } from '@/engine/equipment';
 
-// The suite runs on the service model's test subscribers, whose test term is 2027, and the longest
-// option: a forecast expanded to three years.
-const subscribers = seedSubscribers();
+// The suite runs on the Plan's subscribers: nineteen weekly subscriptions and Rob's own tray, 20 trays
+// each Saturday from 2026-10-17, open-ended; and the longest option, a forecast expanded to three years.
+const subscribers = planSeedSubscribers();
 const resolve = (config: Parameters<typeof resolveScenarioInputs>[0] = {}) => resolveScenarioInputs(config, undefined, subscribers);
 const inputs = resolve({ forecast: { horizonYears: 3 } });
-const seedGrowPlans = inputs.growPlans;
-const saved = seedSubscriptionCycles(seedGrowPlans, '2026-09-14');
-const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
+const ownUseId = subscribers.find((c) => c.ownUse)!.id;
+const saturdaysIn = (year: number) => datesBetween(`${year}-01-01`, `${year}-12-31`).filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === 6).length;
 
 const started = performance.now();
-const t = simulateForecast({ inputs, cycles });
+const t = simulateForecast({ inputs });
 const elapsedMs = performance.now() - started;
 
 describe('the timeline length: one year by default, two or three on the forecast', () => {
   it('runs one year from the start unless the forecast expands it', () => {
-    const one = simulateForecast({ inputs: resolve(), cycles });
+    const one = simulateForecast({ inputs: resolve() });
     expect([one.from, one.to, one.horizonYears, one.years.length]).toEqual(['2027-01-01', '2027-12-31', 1, 1]);
-    const two = simulateForecast({ inputs: resolve({ forecast: { horizonYears: 2, startDate: '2027-07-01' } }), cycles });
+    const two = simulateForecast({ inputs: resolve({ forecast: { horizonYears: 2, startDate: '2027-07-01' } }) });
     expect([two.from, two.to, two.years.length]).toEqual(['2027-07-01', '2029-06-30', 2]);
     expect(resolve({ forecast: { horizonYears: 7 as never } }).forecast.horizonYears).toBe(1);
   });
 
-  it('the first year of a three-year timeline is the one-year timeline', () => {
-    const one = simulateForecast({ inputs: resolve(), cycles });
-    expect(one.years[0]).toEqual(t.years[0]);
-    expect(one.documents.sowings).toEqual(t.documents.sowings.filter((b) => b.productionDate <= one.to));
+  it('the first year of a three-year timeline orders and distributes what the one-year timeline does', () => {
+    // The three-year timeline also sows inside year one for January of year two, so only the orders and
+    // distributions of the year are the same on both.
+    const one = simulateForecast({ inputs: resolve() });
+    expect(one.years[0]!.orderedUnits).toBe(t.years[0]!.orderedUnits);
+    expect(one.years[0]!.distributedUnits).toBe(t.years[0]!.distributedUnits);
+    expect(one.years[0]!.revenueCents).toBe(t.years[0]!.revenueCents);
   });
 });
 
-describe('the forecast timeline (Roadmap N4b)', () => {
+describe('the forecast timeline', () => {
   it('runs three years from the forecast start, and says how long it took', () => {
     expect(t.from).toBe('2027-01-01');
     expect(t.to).toBe('2029-12-31');
@@ -49,13 +50,12 @@ describe('the forecast timeline (Roadmap N4b)', () => {
   });
 
   it('is deterministic: the same definitions give the same timeline', () => {
-    expect(simulateForecast({ inputs, cycles })).toEqual(t);
+    expect(simulateForecast({ inputs })).toEqual(t);
   });
 
-  it('extends only what is entered: the test term is 2027, so later years carry no orders', () => {
-    expect(t.years[0]!.orderedUnits).toBe(180_000);
-    expect(t.years[1]!.orderedUnits).toBe(0);
-    expect(t.years[2]!.orderedUnits).toBe(0);
+  it('carries the subscriptions as entered: 20 trays every Saturday, open-ended, so every year is ordered', () => {
+    for (const [i, year] of [2027, 2028, 2029].entries()) expect(t.years[i]!.orderedUnits).toBe((PLAN_SUBSCRIBERS + 1) * saturdaysIn(year));
+    expect(t.documents.orders.every((o) => new Date(`${o.orderDate}T00:00:00Z`).getUTCDay() === 6)).toBe(true);
   });
 
   it('distributes no more than was ordered, and every unfilled unit is a named gap', () => {
@@ -66,11 +66,14 @@ describe('the forecast timeline (Roadmap N4b)', () => {
     expect(unfilled?.count ?? 0).toBe(Math.round(ordered - distributed));
   });
 
-  it('sowing records carry the day’s runs at standard, and pay periods carry exactly their labor', () => {
+  it('sowing records carry the day’s runs at standard, and pay periods carry exactly the labor on the days they cover', () => {
     const producedDays = t.horizon.productionDays.reduce((s, d) => s + d.totalProduced, 0);
     expect(t.documents.sowings.reduce((s, b) => s + b.goodUnits, 0)).toBe(producedDays);
-    const laborCents = t.horizon.productionDays.reduce((s, d) => s + d.laborCost, 0) * 100;
+    // A sow day before the first pay period (the calendar counts from its placeholder Monday) accrues nothing (`accounting-policy.md` §16).
+    const covered = (d: string) => t.documents.payrollPeriods.some((p) => d >= p.periodStart && d <= p.periodEnd);
+    const laborCents = t.horizon.productionDays.filter((d) => covered(d.productionDate)).reduce((s, d) => s + d.laborCost, 0) * 100;
     const paid = t.documents.payrollPeriods.reduce((s, p) => s + p.wagesCents + p.payrollTaxesCents + p.workersCompCents + p.benefitsCents, 0);
+    expect(paid).toBeGreaterThan(0);
     expect(Math.abs(paid - laborCents)).toBeLessThanOrEqual(t.documents.payrollPeriods.length);
     expect(t.documents.payrollPeriods.every((p) => p.payDate > p.periodEnd)).toBe(true);
   });
@@ -85,7 +88,7 @@ describe('the forecast timeline (Roadmap N4b)', () => {
 
   it('names missing terms and settles them on the document date', () => {
     const kinds = t.gaps.map((g) => g.kind);
-    // The test subscribers carry no payment terms and no supplier is linked on the code grow plan.
+    // The Plan subscribers carry no payment terms and no supplier is linked on the seed grow plans.
     expect(kinds).toContain('no_subscriber_terms');
     expect(kinds).toContain('no_supplier');
     for (const i of t.documents.invoices) {
@@ -103,18 +106,19 @@ describe('the forecast timeline (Roadmap N4b)', () => {
     expect(t.documents.equityContributions).toEqual([{ id: 'PLAN-EQUITY', contributedOn: '2027-01-01', amountCents: Math.round(inputs.openingPosition.ownerEquity * 100), notes: "Owners' equity at the forecast start" }]);
   });
 
-  it('invoices once per invoiced subscriber per month, naming every invoiced distribution', () => {
+  it('invoices once per invoiced subscriber per month, naming every invoiced distribution; own use is never invoiced', () => {
     const keys = t.documents.invoices.map((i) => `${i.subscriberId}|${i.period}`);
     expect(new Set(keys).size).toBe(keys.length);
-    const invoiced = t.documents.distributions.filter((d) => d.phase !== 3);
+    const invoiced = t.documents.distributions.filter((d) => d.phase !== 3 && d.subscriberId !== ownUseId);
     expect(invoiced.every((d) => d.invoiceId !== null)).toBe(true);
+    expect(t.documents.distributions.filter((d) => d.subscriberId === ownUseId).every((d) => d.invoiceId === null && d.pricePerUnitCents === 0)).toBe(true);
     expect(t.documents.invoices.every((i) => i.issuedOn!.slice(0, 7) === i.period)).toBe(true);
   });
 
   it('fixed-cost lines bill each month they are in force; loans draw and repay inside the window', () => {
     // The seed's lines are at zero until stated, so they bill nothing; a stated line bills every month.
     expect(t.documents.bills).toEqual([]);
-    const stated = simulateForecast({ inputs: resolve({ capex: { fixedCostLines: { 'home-admin': { householdAmountCents: 60_00 } } } }), cycles });
+    const stated = simulateForecast({ inputs: resolve({ capex: { fixedCostLines: { 'home-admin': { householdAmountCents: 60_00 } } } }) });
     expect(new Set(stated.documents.bills.map((b) => b.period)).size).toBe(12);
     for (const l of inputs.loans.filter((x) => x.principalCents > 0)) {
       expect(t.documents.loanDraws.some((d) => d.loanKey === l.key)).toBe(true);
@@ -125,16 +129,6 @@ describe('the forecast timeline (Roadmap N4b)', () => {
   it('normal capacity is the plan’s own production a year, net of planned downtime', () => {
     expect(t.normalCapacity.perYear).toBeCloseTo(t.horizon.totals.producedBase / 3, 9);
     expect(t.normalCapacity.netPerYear).toBeCloseTo(t.normalCapacity.perYear * (1 - t.normalCapacity.plannedDowntimeRate), 9);
-  });
-});
-
-describe('the forecast reads no rack', () => {
-  it('dating the blackout racks later leaves every sowing where it was, and every plan has a grow unit', () => {
-    expect(t.gaps.find((g) => g.kind === 'no_grow_unit')).toBeUndefined();
-    const late = resolve({ forecast: { horizonYears: 3, equipment: Object.fromEntries(inputs.datedEquipment.filter((l) => isBlackoutRack(l.item) && l.phase === 1).map((l) => [l.key, { inServiceDate: '2027-02-01' }])) } });
-    const t3 = simulateForecast({ inputs: late, cycles });
-    expect(t3.horizon.totals.producedBase).toBe(t.horizon.totals.producedBase);
-    expect(t3.horizon.totals.sowings).toBe(t.horizon.totals.sowings);
   });
 });
 

@@ -158,7 +158,7 @@ describe('an experiment in the Actual ledger', () => {
   it('is never stock: not a finished lot, not on hand', () => {
     expect(finishedLotsOf([exp, prod])).toEqual(finishedLotsOf([prod]));
     expect(finishedLotsOf([exp])).toEqual([]);
-    const onHand = finishedGoodsOnHand({ sowings: [exp], consumed: [], shelfLifeDays: 30, asOf: '2026-12-31', growPlans: [growPlan] });
+    const onHand = finishedGoodsOnHand({ sowings: [exp], consumed: [], asOf: '2026-12-31', growPlans: [growPlan] });
     expect(onHand.lots).toHaveLength(0);
   });
 });

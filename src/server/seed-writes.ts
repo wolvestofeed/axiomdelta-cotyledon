@@ -1,24 +1,22 @@
-import { eq, inArray, ne, sql } from 'drizzle-orm';
-import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmGrowPlans, farmGrowPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle, farmSubscriptions } from '@/db';
+import { eq, inArray, sql } from 'drizzle-orm';
+import { farmSubscribers, farmSubscriberPickupPoints, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmPackages, farmGrowPlans, farmGrowPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle, farmSubscriptions } from '@/db';
 import type { EquipmentLine, LeaseholdLine } from '@/data/capex';
 import { seedLoans, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { PackageSeed } from '@/data/packaging';
 import type { TimeStudySeed } from '@/data/time-studies';
 import { planSeedSubscribers, type SubscriberDef } from '@/data/subscribers';
-import { seedSubscriptionCycles, seedFlatPlans, DEFAULT_WEEKDAYS, type SubscriptionCycleDef } from '@/data/subscription-cycles';
 import { librarySeed } from '@/data/grow-plans-seed';
 import type { GrowPlanDef } from '@/data/grow-plan';
-import { growPlanToRows, type LibraryGrowPlan } from '@/engine/grow-plan-library';
+import { growPlanToRows } from '@/engine/grow-plan-library';
 
 /**
  * MicroFarm — the placeholder seed, written once.
  *
- * One writer for the read layers (`_lib/subscribers.ts`, `_lib/grow-plans.ts`,
- * `_lib/orders.ts`) and the reset script (`pnpm farm:reseed`), so the rows the
- * database starts with come from one place. Every seed runs inside a
- * transaction holding an advisory lock: the layout and a page read the same
- * table in parallel on a first render, and without the lock both inserted the
- * placeholders.
+ * One writer for the read layers (`server/subscribers.ts`, `server/grow-plans.ts`) and the
+ * reset script (`pnpm farm:reseed`), so the rows the database starts with come from one
+ * place. Every seed runs inside a transaction holding an advisory lock: the layout and a
+ * page read the same table in parallel on a first render, and without the lock both
+ * inserted the placeholders.
  *
  * Not `server-only`: the reset script runs outside Next.
  */
@@ -26,7 +24,7 @@ import { growPlanToRows, type LibraryGrowPlan } from '@/engine/grow-plan-library
 /** Any Drizzle handle or transaction that can read and write. */
 export type SeedDb = Pick<DbHandle['db'], 'select' | 'insert' | 'delete' | 'update'>;
 
-const LOCK = { growPlans: 74_001, subscribers: 74_002, cycles: 74_003, equipment: 74_004, packaging: 74_005, timeStudies: 74_006, finance: 74_007, leasehold: 74_008 } as const;
+const LOCK = { growPlans: 74_001, subscribers: 74_002, equipment: 74_004, packaging: 74_005, timeStudies: 74_006, finance: 74_007, leasehold: 74_008 } as const;
 
 export async function withSeedLock<T>(db: DbHandle['db'], key: keyof typeof LOCK, fn: (tx: SeedDb) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => {
@@ -246,7 +244,6 @@ export async function insertSubscribers(db: SeedDb, subscribers: readonly Subscr
       .insert(farmSubscribers)
       .values({
         name: c.name,
-        kind: c.kind,
         channel: c.channel,
         status: c.status,
         pricePerUnitCents: c.pricePerUnitCents,
@@ -269,18 +266,12 @@ export async function insertSubscribers(db: SeedDb, subscribers: readonly Subscr
           subscriberId: id,
           pickupPointId: s.pickupPointId,
           name: s.name,
-          trayFormats: s.trayFormats,
-          serviceDaysPerYear: s.serviceDaysPerYear,
-          enrollment: s.enrollment,
-          participationRate: s.participationRate,
-          expectedUnitsPerDay: s.expectedUnitsPerDay,
           status: s.status,
           notes: s.notes,
         })
         .returning({ id: farmSubscriberPickupPoints.id });
       const pickupPointId = pickupPoint[0]?.id;
       if (!pickupPointId) continue;
-      await insertPickupPointServices(db, pickupPointId, s);
       for (const sub of (c.subscriptions ?? []).filter((x) => x.subscriberPickupPointId === s.id)) {
         await db.insert(farmSubscriptions).values({
           subscriberId: id,
@@ -299,99 +290,18 @@ export async function insertSubscribers(db: SeedDb, subscribers: readonly Subscr
   return n;
 }
 
-/** A pickup point's services, their volume picks and its calendar (Roadmap N4a). */
-export async function insertPickupPointServices(db: SeedDb, pickupPointId: string, s: Pick<SubscriberDef['pickupPoints'][number], 'services' | 'calendar'>): Promise<void> {
-  for (const [position, sv] of s.services.entries()) {
-    const row = await db
-      .insert(farmSubscriberServices)
-      .values({ subscriberPickupPointId: pickupPointId, name: sv.name, weekdays: sv.weekdays, status: sv.status, position, notes: sv.notes })
-      .returning({ id: farmSubscriberServices.id });
-    const serviceId = row[0]?.id;
-    if (!serviceId || sv.picks.length === 0) continue;
-    await db.insert(farmServiceVolumePicks).values(sv.picks.map((p) => ({ serviceId, effectiveDate: p.effectiveDate, units: p.units, notes: p.notes })));
-  }
-  if (s.calendar.length > 0) {
-    await db.insert(farmPickupPointCalendarRanges).values(s.calendar.map((r) => ({ subscriberPickupPointId: pickupPointId, kind: r.kind, label: r.label, startDate: r.startDate, endDate: r.endDate })));
-  }
-}
-
-export async function insertSubscriptionCycles(db: SeedDb, cycles: readonly SubscriptionCycleDef[]): Promise<number> {
-  let n = 0;
-  for (const c of cycles) {
-    const inserted = await db
-      .insert(farmSubscriptionCycles)
-      .values({
-        channel: null,
-        subscriberId: c.subscriberId,
-        subscriberServiceId: c.subscriberServiceId,
-        fromCycleId: c.fromCycleId,
-        name: c.name,
-        startDate: c.startDate,
-        endDate: c.endDate,
-        lengthDays: c.lengthDays,
-        weekdays: c.weekdays,
-        status: c.status,
-        notes: c.notes,
-        source: 'seed',
-      })
-      .returning({ id: farmSubscriptionCycles.id });
-    const id = inserted[0]?.id;
-    if (!id) continue;
-    n++;
-    if (c.days.length) await db.insert(farmSubscriptionCycleDays).values(c.days.map((d) => ({ cycleId: id, day: d.day, growPlanCode: d.growPlanCode })));
-  }
-  return n;
-}
-
 /**
  * The database's subscriber seed: the Plan's nineteen Forecast Subscribers with their weekly
- * subscriptions (`planSeedSubscribers`). Nothing on Actual: the farm has no customer on record.
+ * subscriptions and Rob's own tray (`planSeedSubscribers`).
  */
 export function dbSeedSubscribers(): SubscriberDef[] {
   return planSeedSubscribers();
 }
 
-export function dbSeedSubscriptionCycles(library: readonly (GrowPlanDef | LibraryGrowPlan)[], today: string): SubscriptionCycleDef[] {
-  return seedSubscriptionCycles(library, today);
-}
-
-/**
- * A flat plan for every subscriber that is not inactive and has none, copied
- * from the saved cycle its channel's grow plans are offered from (Roadmap N4a).
- * Runs after either seed, so whichever of subscribers and cycles lands second
- * completes the pair. Returns the plans inserted.
- */
-export async function insertMissingFlatPlans(db: SeedDb): Promise<number> {
-  const subscribers = await db.select({ id: farmSubscribers.id, channel: farmSubscribers.channel, status: farmSubscribers.status }).from(farmSubscribers).where(ne(farmSubscribers.status, 'inactive'));
-  if (subscribers.length === 0) return 0;
-  const rows = await db.select().from(farmSubscriptionCycles);
-  const saved = rows.filter((r) => r.subscriberId === null);
-  if (saved.length === 0) return 0;
-  const days = await db.select().from(farmSubscriptionCycleDays).where(inArray(farmSubscriptionCycleDays.cycleId, saved.map((r) => r.id)));
-  const cycles: SubscriptionCycleDef[] = rows.map((r) => ({
-    id: r.id,
-    channel: null,
-    subscriberId: r.subscriberId,
-    subscriberServiceId: r.subscriberServiceId,
-    fromCycleId: r.fromCycleId,
-    name: r.name,
-    startDate: typeof r.startDate === 'string' ? r.startDate : String(r.startDate),
-    endDate: r.endDate === null ? null : String(r.endDate),
-    lengthDays: r.lengthDays,
-    weekdays: Array.isArray(r.weekdays) ? (r.weekdays as number[]) : [...DEFAULT_WEEKDAYS],
-    status: r.status === 'inactive' ? 'inactive' : 'active',
-    notes: r.notes,
-    source: r.source === 'seed' ? 'seed' : 'user_built',
-    days: days.filter((d) => d.cycleId === r.id).map((d) => ({ day: d.day, growPlanCode: d.growPlanCode })),
-  }));
-  return insertSubscriptionCycles(db, seedFlatPlans(subscribers, cycles));
-}
-
-/** Remove every seed row (source = 'seed') so the next read seeds afresh. Orders on seed subscribers cascade. */
-export async function deleteSeedRows(db: SeedDb): Promise<{ subscribers: number; cycles: number }> {
+/** Remove every seed subscriber (source = 'seed') so the next read seeds afresh. Their pickup points, subscriptions and orders cascade. */
+export async function deleteSeedRows(db: SeedDb): Promise<{ subscribers: number }> {
   const c = await db.delete(farmSubscribers).where(eq(farmSubscribers.source, 'seed')).returning({ id: farmSubscribers.id });
-  const y = await db.delete(farmSubscriptionCycles).where(eq(farmSubscriptionCycles.source, 'seed')).returning({ id: farmSubscriptionCycles.id });
-  return { subscribers: c.length, cycles: y.length };
+  return { subscribers: c.length };
 }
 
 /**

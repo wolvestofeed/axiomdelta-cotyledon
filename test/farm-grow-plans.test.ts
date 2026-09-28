@@ -32,7 +32,6 @@ import { costPlanPerUnit, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowin
 import { equipmentSeed } from '@/data/capex';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
-import { seedSubscriptionCycles } from '@/data/subscription-cycles';
 import { assumptionsFor } from '@/engine/scenario';
 import { laborMinutesPerUnit } from '@/engine/unit-cost';
 
@@ -155,17 +154,18 @@ describe('costing on the four line kinds', () => {
     expect(typed.lines[2]!.costPerTray).toBeCloseTo(2 * line.costPerTray, 9);
   });
 
-  it('light: the fixture\'s cost per tray-day at the variety\'s own intensity, over the days under light', () => {
+  it('light: the shelf\'s fixtures at full power per tray-day, over the days under light; the intensity the plan asks for is named', () => {
     const line = c.lines[3]!;
     const regime = REGIME_BY_KEY['balanced'];
     const days = planStageDays(broccoli());
     const lit = lightDaysFrom('light', days);
     expect(lit).toBe(days.light + days['harvest-window']);
     expect(c.lightDays).toBe(lit);
-    // Broccoli has its own range (50 to 70 µmol); the plan reads its top, not the regime's target.
+    // Broccoli has its own range (50 to 70 µmol); the plan names its top, and the fixture is costed at full power.
     const ppfd = v.light.ppfdRange!.max;
-    expect(line.unitCost).toBeCloseTo(lightCostPerTrayDay(c.fixture, regime, ppfd), 9);
-    expect(line.costPerTray).toBeCloseTo(lightCostPerTrayDay(c.fixture, regime, ppfd) * lit, 9);
+    expect(line.source).toContain(`${ppfd} µmol`);
+    expect(line.unitCost).toBeCloseTo(lightCostPerTrayDay(c.fixture, regime), 9);
+    expect(line.costPerTray).toBeCloseTo(lightCostPerTrayDay(c.fixture, regime) * lit, 9);
     expect(line.basis).toContain('own range');
     const pea = costGrowPlan(byCode('PEA-01'));
     expect(pea.lines[3]!.basis).toContain('target');
@@ -289,7 +289,8 @@ describe('the library: rows round-trip the plan', () => {
     expect(packedUnitOz(lib).totalOz).toBeCloseTo(250 / 28.349523125, 9);
     expect(canopyMassPerUnit(lib)).toBeCloseTo(250 / 453.59237, 9);
     const shrunk = costPlanPerUnit(lib, 0.03);
-    expect(shrunk.totalInputCostPerUnit).toBeCloseTo(g.perTray.total * 1.03, 9);
+    // The shrink allowance grosses up the seed, medium and nutrient lines only.
+    expect(shrunk.totalInputCostPerUnit).toBeCloseTo(g.perTray.total + (g.perTray.seed + g.perTray.medium + g.perTray.nutrient) * 0.03, 9);
   });
 
   it('a scenario what-if price on the projected seed line reaches the grow costing', () => {
@@ -335,7 +336,7 @@ describe('the library: rows round-trip the plan', () => {
     expect(u.directLabor).toBeCloseTo((21 / 60) * a.labor.blendedLoadedWage.value, 9);
   });
 
-  it('every seed plan projects, costs, sizes, estimates a study and seeds a cycle without throwing', () => {
+  it('every seed plan projects, costs, sizes and estimates a study without throwing', () => {
     const libs = growPlanSeed.map(rows);
     const R = resolveScenarioInputs({}, libs);
     expect(R.growPlans).toHaveLength(12);
@@ -346,9 +347,6 @@ describe('the library: rows round-trip the plan', () => {
       expect(Number.isFinite(cap.sowingSize)).toBe(true);
       expect(estimatedTimeStudy(lib, Math.max(1, cap.sowingSize)).lines.length).toBeGreaterThan(0);
     }
-    const cycles = seedSubscriptionCycles(libs, '2026-09-28');
-    expect(cycles.length).toBeGreaterThan(0);
-    expect(cycles.every((c) => c.days.every((d) => d.growPlanCode === 'BROC-01'))).toBe(true);
   });
 
   it('a plan is labelled by its format and its varieties', () => {

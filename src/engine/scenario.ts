@@ -49,14 +49,14 @@ import { resolveInputPrice, type ResolvedInputPrice } from '@/engine/input-price
 import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixedCostLines, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import { leaseholdSeed, type LeaseholdLine } from '@/data/capex';
 import type { CatalogLine } from '@/engine/catalog';
-import { channelDemand, forecastHorizonOf, forecastStartOf, type ChannelDemand, type SubscriberPickupPointOverlay, type ForecastHorizonYears, type ForecastOverlay } from '@/engine/demand';
+import { channelDemand, forecastHorizonOf, forecastStartOf, type ChannelDemand, type ForecastHorizonYears, type ForecastOverlay } from '@/engine/demand';
 import { datedEquipment, type DatedEquipmentLine } from '@/engine/equipment';
 import { openingPosition as defaultOpeningPosition, type PaymentTerms } from '@/data/working-capital';
 import { DEFAULT_PAY_CALENDAR, type PayCalendar } from '@/engine/payroll';
 import { routeResources, type ResourceOverlay, type RouteResource, type RouteStepOverlay } from '@/engine/routing';
 import { schedulePolicy as defaultSchedulePolicy, type CrewMode, type HarvestDirection, type PriorityRule, type SchedulePolicy } from '@/data/schedule-policy';
 
-export type { SubscriberPickupPointOverlay, ForecastOverlay, ResourceOverlay, RouteStepOverlay };
+export type { ForecastOverlay, ResourceOverlay, RouteStepOverlay };
 
 // ── The overlay shape (what a saved scenario stores) ────────────────────────
 
@@ -73,7 +73,6 @@ export interface AssumptionsOverlay {
    */
   perUnit?: Partial<{ packaging: number; distribution: number }>;
   yield?: Partial<{ shrinkAllowance: number }>;
-  inventory?: Partial<{ blackoutShelfLife: number; daysOfCoverTarget: number }>;
   laborSplit?: Partial<{
     fixedMinutesPerSowing: number;
     variableMinutesPerUnit: number;
@@ -344,11 +343,9 @@ export interface FarmScenarioConfig {
   sustainability?: SustainabilityOverlay;
   /** Keyed by distribution-pickup-point id. */
   pickupPoints?: Record<string, PickupPointOverlay>;
-  /** Keyed by prospect prospect id. */
+  /** Keyed by prospect id. */
   sales?: Record<string, SalesOverlay>;
-  /** @deprecated Roadmap N4a: replaced by `forecast`. Ignored on read. */
-  subscriberPickupPoints?: Record<string, SubscriberPickupPointOverlay>;
-  /** What the forecast is built from beyond the master list: included subscribers, service edits, flat plans, equipment dates (Roadmap N4a). */
+  /** What the forecast is built from beyond the master list: included subscribers and equipment dates. */
   forecast?: ForecastOverlay;
   /** Route step edits, keyed by `<grow plan code>::<step id>` (`routeKey`). */
   routing?: Record<string, RouteStepOverlay>;
@@ -370,7 +367,6 @@ export const SCENARIO_SECTIONS: ScenarioSection[] = [
   'sustainability',
   'pickupPoints',
   'sales',
-  'subscriberPickupPoints',
   'forecast',
   'routing',
   'resources',
@@ -445,9 +441,9 @@ export interface ResolvedInputs {
   sales: Record<string, SalesOverlay>;
   /** The subscriber library (facts of record), before what-if edits. */
   subscribers: SubscriberDef[];
-  /** Demand from pickup points and services with the forecast's edits applied, over the forecast's first year. */
+  /** Demand from the pickup points' subscriptions with the forecast's edits applied, over the forecast's first year. */
   demand: ChannelDemand;
-  /** The forecast's own edits (Roadmap N4a), defaults filled where a reader needs them. */
+  /** The forecast's own edits, defaults filled where a reader needs them. */
   forecast: ForecastOverlay & { startDate: string; horizonYears: ForecastHorizonYears };
   /** Each equipment line with the date it counts from in this forecast (decision 20). */
   datedEquipment: DatedEquipmentLine[];
@@ -525,10 +521,6 @@ export function resolveScenarioInputs(
       distribution: { value: number };
     };
     yield: { shrinkAllowance: { value: number } };
-    inventory: {
-      blackoutShelfLife: { value: number };
-      daysOfCoverTarget: { value: number };
-    };
     laborSplit: {
       fixedMinutesPerSowing: { value: number };
       variableMinutesPerUnit: { value: number };
@@ -548,8 +540,6 @@ export function resolveScenarioInputs(
   // the sum of its picked packages at the library's cost, written in below.
   put(assumptions.perUnit.distribution, a.perUnit?.distribution);
   put(assumptions.yield.shrinkAllowance, a.yield?.shrinkAllowance);
-  put(assumptions.inventory.blackoutShelfLife, a.inventory?.blackoutShelfLife);
-  put(assumptions.inventory.daysOfCoverTarget, a.inventory?.daysOfCoverTarget);
   // Labor minutes are never typed (Roadmap N3): each grow plan's come from its own
   // labor standard, written in below. A `laborSplit` saved on an older forecast
   // is ignored, as a legacy phase `unitsPerDay` is — the time study is the source.

@@ -132,12 +132,13 @@ describe('inputs catalog', () => {
     const vg80 = LIGHT_FIXTURES.find((f) => f.key === 'mars-hydro-vg80')!;
     const barrina = LIGHT_FIXTURES.find((f) => f.key === 'barrina-t5-6000k')!;
     expect(LIGHT_FIXTURES.map((f) => [f.key, f.perShelf.value])).toEqual([['mars-hydro-vg80', 2], ['barrina-t5-6000k', 3]]);
-    // Energy scales with the lights on the shelf.
-    const one = lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250, 0.13, 1);
-    expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250, 0.13, 2)).toBeCloseTo(2 * one, 9);
+    // Energy scales with the lights on the shelf, at full power: the fixtures are not dimmed.
+    const one = lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 0.13, 1);
+    expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 0.13, 2)).toBeCloseTo(2 * one, 9);
     expect(lightCostPerTrayDay(barrina, REGIME_BY_KEY.balanced)).toBeGreaterThan(0);
-    // A dimmed target costs less energy than full power.
-    expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 60)).toBeLessThan(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250));
+    const hours = REGIME_BY_KEY.balanced.photoperiodHours.value;
+    const energy = ((vg80.watts.value * 2) / 1000) * hours * 0.13 / 4;
+    expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 0.13, 2)).toBeGreaterThan(energy);
     expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced)).toBeGreaterThan(0);
   });
 });

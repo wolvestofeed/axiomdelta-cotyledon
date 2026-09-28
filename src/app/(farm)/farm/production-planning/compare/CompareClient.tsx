@@ -10,7 +10,7 @@ import { CompareTable } from '@/components/CompareTable';
 import type { EquipmentLine } from '@/data/capex';
 import { clock } from '@/data/crews';
 import type { SubscriberDef } from '@/data/subscribers';
-import { WEEKDAY_LABELS, type SubscriptionCycleDef } from '@/data/subscription-cycles';
+import { WEEKDAY_LABELS } from '@/data/orders';
 import type { PackagingLibrary } from '@/data/packaging';
 import type { CatalogLine } from '@/engine/catalog';
 import type { FixedCostLineDef, LoanDef } from '@/data/finance';
@@ -50,7 +50,6 @@ export function CompareClient({
   loans,
   fixedCostLines,
   leasehold,
-  cycles,
   studies,
 }: {
   today: string;
@@ -65,7 +64,6 @@ export function CompareClient({
   loans: LoanDef[];
   fixedCostLines: FixedCostLineDef[];
   leasehold: LeaseholdLine[];
-  cycles: SubscriptionCycleDef[];
   studies: TimeStudyDoc[];
 }) {
   const options = useMemo(
@@ -88,7 +86,6 @@ export function CompareClient({
       const book = orderBook({
         pickupPoints: resolved.demand.pickupPoints,
         subscribers: resolved.subscribers,
-        cycles,
         orders: [],
         from: today,
         to,
@@ -108,13 +105,12 @@ export function CompareClient({
         growPlanAssumptions: resolved.growPlanAssumptions,
         unitFactorByChannel: pf,
         openingLots,
-        shelfLifeDays: resolved.assumptions.inventory.blackoutShelfLife.value,
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       });
       return { label: chosen.label, resolved, horizon };
     },
-    [options, library, subscribers, closures, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, studies, cycles, today],
+    [options, library, subscribers, closures, supplierTerms, equipment, packaging, catalog, loans, fixedCostLines, leasehold, studies, today],
   );
 
   const A = useMemo(() => side(aId), [side, aId]);

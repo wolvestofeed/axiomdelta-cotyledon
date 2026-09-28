@@ -114,8 +114,9 @@ describe('the production sowing journal', () => {
 
   it('applies light to the grow stage and tray wear and sanitizer to the sow stage as overhead, never from raw materials', () => {
     const apply = led.entries.find((e) => e.id.endsWith('-APPLY'))!;
-    expect(apply.lines.find((l) => l.accountCode === ACC_WIP_GROW)!.debitCents).toBe(Math.round(card.perTray.light * trays * (1 + shrink) * 100));
-    expect(apply.lines.find((l) => l.accountCode === ACC_WIP_SOW)!.debitCents).toBe(Math.round(card.perTray.consumables * trays * (1 + shrink) * 100));
+    // Variable overhead applies at its standard per tray: the shrink allowance grosses up the materials only.
+    expect(apply.lines.find((l) => l.accountCode === ACC_WIP_GROW)!.debitCents).toBe(Math.round(card.perTray.light * trays * 100));
+    expect(apply.lines.find((l) => l.accountCode === ACC_WIP_SOW)!.debitCents).toBe(Math.round(card.perTray.consumables * trays * 100));
     expect(apply.lines.some((l) => l.accountCode === ACC_VAR_OH_APPLIED && l.creditCents > 0)).toBe(true);
     expect(apply.lines.some((l) => l.accountCode === ACC_OH_APPLIED)).toBe(false);
     expect(apply.lines.some((l) => l.accountCode === ACC_RAW_MATERIALS)).toBe(false);

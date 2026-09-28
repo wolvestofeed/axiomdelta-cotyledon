@@ -108,7 +108,8 @@ rate per unit = budgeted annual fixed manufacturing overhead
 ```
 
 **What is in the budget.** Only MANUFACTURING overhead: for a home grow room, the grow
-room's share of the household electricity; for a rented commercial facility, its rent and
+room's share of the household services other than the grow lights' electricity, which is
+variable overhead applied per tray (§2); for a rented commercial facility, its rent and
 utilities; and straight-line depreciation of the equipment and any build-out
 (ASC 330-10-30-1 — costs of bringing product to its condition and location).
 Admin, insurance, software and licenses are general and administrative expense and
@@ -316,8 +317,7 @@ These are named rather than resolved. Nothing here is settled by the engine.
 - The light a tray takes, its tray wear and the sanitizer are applied to work in process
   at their standard per tray (5195); the forecast bills no electricity by tray-day, no
   trays and no sanitizer against them, so on the Plan ledger their applied credit stands
-  with nothing incurred beside it. The electricity sits in the utilities of the fixed
-  overhead budget.
+  with nothing incurred beside it.
 - A sowing record with no crew recorded posts labor at the approved standard; Plan ledger
   sowings carry none.
 
@@ -375,8 +375,6 @@ holidays; the farm runs year-round). A closure takes its dates out of production
 derived forecast; orders already on file are unchanged.
 
 ## 16. Working capital, invoicing and payroll (Roadmap Phase K)
-
-Decisions of record: Robert, 2026-09-14.
 
 ### Payment terms — the reference
 

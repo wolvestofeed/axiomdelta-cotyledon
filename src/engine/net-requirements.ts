@@ -229,14 +229,14 @@ export interface ReceiptCoverage {
   lines: { input: string; ordered: number; received: number; short: number }[];
 }
 
-/** Whether receipts have covered every line of an order (to 0.5% of the line). */
+/** Whether receipts have covered every line of an order in full: receiving has no tolerance (`accounting-policy.md` §16). */
 export function receiptCoverage(po: Pick<PoLike, 'id' | 'lines'>, receipts: readonly ReceiptDoc[]): ReceiptCoverage {
   const got = receivedAgainst(po, receipts);
   const lines = po.lines.map((l) => {
     const received = got[l.input] ?? 0;
     return { input: l.input, ordered: l.qty, received, short: Math.max(0, l.qty - received) };
   });
-  return { covered: lines.every((l) => l.received >= l.ordered * 0.995), lines };
+  return { covered: lines.every((l) => l.received >= l.ordered - 1e-9), lines };
 }
 
 export function openOrders(input: { purchaseOrders: readonly PoLike[]; receipts: readonly ReceiptDoc[] }): OpenOrders {
