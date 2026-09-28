@@ -7,7 +7,7 @@ import { equipmentFromRow } from '@/engine/equipment';
 import { withSeedLock, insertEquipment } from '@/server/seed-writes';
 
 /**
- * MicroFarm — equipment library read layer (server-only).
+ * Cotyledon — equipment library read layer (server-only).
  *
  * On first read of an empty table the capex schedule is inserted, split into
  * Planned Phase 1 and Planned Phase 2 (Roadmap N1), `source = 'seed'`, under an

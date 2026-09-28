@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the front door's router (Roadmap P7): where a signed-in person lands, by the list their
+ * Cotyledon — the front door's router (Roadmap P7): where a signed-in person lands, by the list their
  * email is on. Pure, so the order of the checks is testable; `(front)/farm/enter/page.tsx` reads the
  * lists and redirects.
  *

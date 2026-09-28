@@ -1,5 +1,5 @@
 /**
- * MicroFarm — supplier dataset generator.
+ * Cotyledon — supplier dataset generator.
  *
  * Reads the git-ignored source exports (USDA Organic INTEGRITY, four states +
  * the TDA Farm Fresh Network Austin-metro extract) and emits a committed,

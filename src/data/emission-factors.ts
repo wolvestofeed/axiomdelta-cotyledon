@@ -1,5 +1,5 @@
 /**
- * MicroFarm — emission factors and resource rates (reference data).
+ * Cotyledon — emission factors and resource rates (reference data).
  *
  * Every factor here is VERSIONED STATIC REFERENCE DATA, never a live API call.
  * Each row carries the publisher, URL, version, effective date and a status

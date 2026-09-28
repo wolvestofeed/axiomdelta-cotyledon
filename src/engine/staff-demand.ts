@@ -1,5 +1,5 @@
 /**
- * MicroFarm — production staff demand (Roadmap O3). Pure.
+ * Cotyledon — production staff demand (Roadmap O3). Pure.
  *
  * The days of a window, each staffed from every grow plan's labor standard — the
  * approved time studies averaged, or the grow plan's estimated study until one is approved

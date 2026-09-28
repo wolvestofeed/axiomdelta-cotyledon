@@ -1,5 +1,5 @@
 /**
- * MicroFarm — capital, financing and the fixed-cost base.
+ * Cotyledon — capital, financing and the fixed-cost base.
  *
  * Ledger-FREE and phase-FREE by design, below `phase.ts`; `proforma.ts`
  * re-exports it so existing importers keep working.

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — approved standard versions (Roadmap J5, `accounting-policy.md` §5). Pure.
+ * Cotyledon — approved standard versions (Roadmap J5, `accounting-policy.md` §5). Pure.
  *
  * Materials are carried at actual cost and need no standard. What stands in for an actual cost
  * until one is recorded is the labor standard and the overhead rates: a version freezes a grow

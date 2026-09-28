@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MicroFarm — Scope 3 food emission factors generator.
+Cotyledon — Scope 3 food emission factors generator.
 
 Reads the Poore & Nemecek (2018) meta-analysis workbook (Science 360:987–992,
 Data S2 "Life Cycle Assessment of Food & Drink Products: Meta-Analysis Model")

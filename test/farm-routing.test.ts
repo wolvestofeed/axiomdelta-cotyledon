@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the process route per plan, the units as resources and the scheduler's scenario
+ * Cotyledon — the process route per plan, the units as resources and the scheduler's scenario
  * sections (scheduler build plan §0, W0 steps 3 and 4), on the seed grow plans.
  */
 

@@ -1,6 +1,6 @@
 # Phase 0 — Lift  status: DONE, except the first run against a live database
 
-Muse Kitchen · Impact OS lifted verbatim from the Comptable repo into this one, with everything that tied it to CompTable removed. Commit `e69f0e9`.
+Muse Kitchen lifted verbatim from the Comptable repo into this one, with everything that tied it to CompTable removed. Commit `e69f0e9`.
 
 ## Steps
 

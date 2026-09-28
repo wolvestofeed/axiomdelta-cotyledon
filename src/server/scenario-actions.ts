@@ -13,7 +13,7 @@ import { periodOf } from '@/engine/actuals';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — scenario write actions.
+ * Cotyledon — scenario write actions.
  *
  *   saveScenario   — any operator or admin; creates or updates a scenario they own
  *                    (super admins may update any). Never touches the live

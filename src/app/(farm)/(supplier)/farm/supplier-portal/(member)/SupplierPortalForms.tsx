@@ -55,7 +55,7 @@ export function SupplierPortalForms({ suppliers }: { suppliers: { id: string; na
             <label className="farm-kpi-sub">Notes<br /><textarea className="farm-input w-full!" rows={3} /></label>
             <button type="button" className="farm-btn primary" disabled>Submit assessment</button>
           </div>
-          <p className="farm-kpi-sub mt-2">{MARK.scope} Ratings are assigned by MicroFarm.</p>
+          <p className="farm-kpi-sub mt-2">{MARK.scope} Ratings are assigned by the farm.</p>
           {notConnected}
         </Card>
       </div>

@@ -9,7 +9,7 @@ import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — packaging library and grow plan packaging picks, writes.
+ * Cotyledon — packaging library and grow plan packaging picks, writes.
  * SUPER ADMIN ONLY (Roadmap N1). An edited seed package becomes `user_built`.
  */
 

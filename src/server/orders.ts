@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import type { OrderDef, OrderSource, OrderStatus } from '@/data/orders';
 
 /**
- * MicroFarm — orders, read layer (server-only). Orders are never seeded: a forecast order is
+ * Cotyledon — orders, read layer (server-only). Orders are never seeded: a forecast order is
  * derived on read from the subscriptions, and every stored order is a fact somebody typed,
  * confirmed or distributed.
  */

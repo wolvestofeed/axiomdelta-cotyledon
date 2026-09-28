@@ -1,5 +1,5 @@
 /**
- * MicroFarm — manufacturing extension to the Staffing chart of accounts.
+ * Cotyledon — manufacturing extension to the Staffing chart of accounts.
  *
  * Staffing's `DEFAULT_HOSPITALITY_COA` is a restaurant chart: one inventory
  * account, no work in process, no variance accounts. A facility running

@@ -7,7 +7,7 @@ depends on is [`../staffing-contract.md`](../staffing-contract.md).
 
 ## 1. Scope
 
-1. **HR belongs to Staffing.** MicroFarm runs its HR on Staffing — roster, wages, burden,
+1. **HR belongs to Staffing.** Cotyledon runs its HR on Staffing — roster, wages, burden,
    benefits, the published schedule, payroll. Farm is the production system: it knows the labor
    hours the plan requires, the hours charged to each sowing, and the punches taken on its clocks.
 2. **Pay is confidential.** No pay or confidential employee information is held in Farm, and none
@@ -156,7 +156,7 @@ operator's client.
       builder, the payroll-period and labor-cost readers, coverage by day, handled-once filtering and
       the notice signature (`_engine/staffing-contract.ts`, `_lib/staffing-signing.ts`,
       `farm-staffing-contract.test.ts`).
-- [ ] Transport: MicroFarm on its own domain, a MicroFarm account in Staffing, signing secrets,
+- [ ] Transport: Cotyledon on its own domain, a Cotyledon account in Staffing, signing secrets,
       endpoints on both sides, a Farm table of handled events.
 - [ ] The Staffing side (punch landing, demand intake and position map, a biweekly pay-period close,
       monthly labor pricing from hours, an org-scoped read API, a Farm connection; contract §4). Each

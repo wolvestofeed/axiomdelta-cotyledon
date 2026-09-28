@@ -12,7 +12,7 @@ import { appendPosting } from '@/server/posting-log';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — orders, writes. SUPER ADMIN ONLY, except distributing, which an operator records.
+ * Cotyledon — orders, writes. SUPER ADMIN ONLY, except distributing, which an operator records.
  *
  * A stored order is a fact of record. A forecast order a subscription derives is read, not written
  * here; confirming it writes the row that replaces it. A Forecast Subscriber takes no stored order

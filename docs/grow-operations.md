@@ -1,4 +1,4 @@
-# MicroFarm — Grow Operations
+# Cotyledon — Grow Operations
 
 How a tray is grown: the stages a sowing runs through, the days each variety spends in them, the watering and the checks at each stage, the labor a tray takes, and how the grow calendar places a sowing on a grow unit. The domain terms are defined in [`outline.md`](outline.md) §4 and [`glossary.md`](glossary.md); the engine rules they obey are `outline.md` §5. The figures here are the ones the app runs on, each with its provenance tag.
 

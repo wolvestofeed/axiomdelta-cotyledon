@@ -7,7 +7,7 @@ import { approveStandardVersion, type StandardApproval } from '@/server/standard
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — approving a standard-cost version (Roadmap J5) from the Grow plans page. Super admin
+ * Cotyledon — approving a standard-cost version (Roadmap J5) from the Grow plans page. Super admin
  * only; the approval itself is `standard-approval.ts`, which a time study's approval also runs.
  */
 

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the stage control points, evaluated (pure).
+ * Cotyledon — the stage control points, evaluated (pure).
  *
  * A verdict is COMPUTED from what the record holds, never stored beside it: a stored
  * flag can disagree with its own record, so the platform derives the verdict and

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the sow-date rules on a subscription (outline §4 Subscriber). Pure.
+ * Cotyledon — the sow-date rules on a subscription (outline §4 Subscriber). Pure.
  *
  * A distribution's trays are sown days before it: each line's grow plan on its sow date, the
  * distribution date less the plan's days to harvest on a production day (`sowDateFor`), and the

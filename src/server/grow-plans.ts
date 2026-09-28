@@ -9,7 +9,7 @@ import { listNutrientsWith } from '@/server/nutrient-rows';
 import { listMediaWith } from '@/server/media-rows';
 
 /**
- * MicroFarm — grow plan library read layer (server-only).
+ * Cotyledon — grow plan library read layer (server-only).
  *
  * The library is the source of grow plans. Every seed plan whose code is not in the library — one
  * single-variety plan per variety — is inserted on read, marked `source = 'seed'`, under an

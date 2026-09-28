@@ -1,5 +1,5 @@
 /**
- * MicroFarm — Plan v Actual (Roadmap N7). One month's figures computed the same way
+ * Cotyledon — Plan v Actual (Roadmap N7). One month's figures computed the same way
  * on either side: the plan of record in force at the month end, posted through its
  * own timeline and Plan ledger, and the records posted through the Actual ledger.
  * A quarter is the sum of its months, each against its own plan; rates recompute

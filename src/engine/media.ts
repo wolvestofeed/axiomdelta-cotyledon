@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the Media library, rows to records. Pure.
+ * Cotyledon — the Media library, rows to records. Pure.
  *
  * A row is one growing medium a grow plan's medium line names by its key. Its figures are tagged
  * documents stored whole, so a seeded figure keeps its tag and its note and a figure typed on the

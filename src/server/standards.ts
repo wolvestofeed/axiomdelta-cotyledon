@@ -4,7 +4,7 @@ import { farmStandardVersions } from '@/db';
 import { db } from '@/lib/db';
 import { readSnapshot, type StandardVersionDoc } from '@/engine/standards';
 
-/** MicroFarm — approved standard versions, read layer (server-only). */
+/** Cotyledon — approved standard versions, read layer (server-only). */
 export async function loadStandards(): Promise<StandardVersionDoc[]> {
   const rows = await db.select().from(farmStandardVersions).orderBy(asc(farmStandardVersions.growPlanCode), asc(farmStandardVersions.version));
   return rows.map((r) => ({

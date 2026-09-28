@@ -24,7 +24,7 @@ import { pickupPointCoordinates } from '@/data/pickup-point-geo';
 import type { LeanSupplier } from '@/engine/supplier-links';
 
 /**
- * MicroFarm — the one server-side directory every picker searches.
+ * Cotyledon — the one server-side directory every picker searches.
  *
  * Each kind resolves to the same lean shape, so one control can link a record of
  * any kind. The full compiled datasets never reach the browser: a search returns

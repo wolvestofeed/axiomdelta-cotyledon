@@ -1,5 +1,5 @@
 /**
- * MicroFarm — which forecast was the plan of record for a month (Roadmap N7).
+ * Cotyledon — which forecast was the plan of record for a month (Roadmap N7).
  *
  * Setting the plan of record posts to the trail with the forecast's config as
  * applied. A month compares with the plan of record in force at its end. A month that ends before the first entry on the trail reads the plan

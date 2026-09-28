@@ -1,5 +1,5 @@
 /**
- * MicroFarm — tray formats (outline §4, glossary tier 1).
+ * Cotyledon — tray formats (outline §4, glossary tier 1).
  *
  * A format is the physical thing a unit is: a 1020 flat, a 7x11 large tray, a 5x5 insert,
  * a pint jar for sprouts, or a cut ounce. A grow plan names its format; a variety's seeding

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the equipment library (Roadmap N1). Pure.
+ * Cotyledon — the equipment library (Roadmap N1). Pure.
  *
  * Equipment is a definition with a real-world status (docs/farm/roadmaps/
  * operating-model-roadmap.md §2.1): in service, planned for a build-out phase,

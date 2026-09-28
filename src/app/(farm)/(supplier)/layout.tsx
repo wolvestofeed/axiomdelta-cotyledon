@@ -7,13 +7,13 @@ import { PortalShell } from '@/components/PortalShell';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * The Supplier portal shell (Roadmap P1b, P3): suppliers, by invitation from MicroFarm — no open sign-up.
+ * The Supplier portal shell (Roadmap P1b, P3): suppliers, by invitation from the farm — no open sign-up.
  * The shell itself is open so its sign-in and sign-up pages render for a signed-out visitor; the portal's
  * own pages sit in `(member)`, which requires a sign-in (Roadmap P3).
  */
 
 export const metadata: Metadata = {
-  title: 'MicroFarm — Supplier Portal',
+  title: 'Cotyledon — Supplier Portal',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };

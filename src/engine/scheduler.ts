@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the scheduler: one operating day placed on the clock
+ * Cotyledon — the scheduler: one operating day placed on the clock
  * (scheduler build plan §4.1, as amended by §0 decisions 3, 7, 14–23). Pure.
  *
  * A day is the operating day on its date (decision 19): that date's harvest,

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the floor layout engine (Roadmap Q6): geometry, measurement
+ * Cotyledon — the floor layout engine (Roadmap Q6): geometry, measurement
  * and the conformance checks against a drawn plan.
  */
 

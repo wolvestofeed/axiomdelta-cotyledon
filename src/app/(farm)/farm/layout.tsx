@@ -28,7 +28,7 @@ import { loadCalendar } from '@/server/periods';
 import { withWorkspace } from '@/server/workspace';
 
 export const metadata: Metadata = {
-  title: 'MicroFarm',
+  title: 'Cotyledon',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };
@@ -48,7 +48,7 @@ async function FarmLayoutInner({ children }: { children: React.ReactNode }) {
       <div className={`farm-root ${farmFontVars}`}>
         <div className="max-w-136 my-[12vh]! mx-auto! py-0 px-6">
           <div className="farm-brand-name farm-c-ink">
-            MicroFarm
+            Cotyledon
           </div>
           <div className="farm-card mt-5!">
             <div className="farm-card-title">Access</div>

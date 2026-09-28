@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the estimated time study every grow plan is seeded with: Vallecito's tray study.
+ * Cotyledon — the estimated time study every grow plan is seeded with: Vallecito's tray study.
  */
 
 import { describe, it, expect } from 'vitest';

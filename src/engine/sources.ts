@@ -1,5 +1,5 @@
 /**
- * MicroFarm — sources registry helpers (pure, no I/O).
+ * Cotyledon — sources registry helpers (pure, no I/O).
  *
  * Used by the seed script, the upload route and the pages. The factor library
  * is the authority on provenance ids; these helpers only group and describe.

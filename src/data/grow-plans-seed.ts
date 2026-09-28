@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow plan library's seed: one single-variety plan per variety, built from the
+ * Cotyledon — the grow plan library's seed: one single-variety plan per variety, built from the
  * variety records (`singleVarietyPlan`), so every figure on a seed plan is the variety's own with
  * its own tag. Microgreens are planned on the 1020 flat, the reference format; sprouts in the pint
  * jar. The blends in R&D (`blends.ts`) join them in the library seed as developing plans.

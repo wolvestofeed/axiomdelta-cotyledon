@@ -11,7 +11,7 @@ import { LEDGER_COOKIE, isLedgerKind, type LedgerKind } from '@/engine/ledger-vi
 import type { ScenarioView } from '@/server/scenarios';
 
 /**
- * MicroFarm — posting the selected ledger on the server. Plan runs the timeline and the Plan
+ * Cotyledon — posting the selected ledger on the server. Plan runs the timeline and the Plan
  * ledger on the forecast asked for: the working copy the browser sends, else the saved open
  * forecast. Actual posts the recorded documents at the plan of record, whatever is open: a
  * forecast edit never restates the books (`accounting-policy.md` §11), and a sowing with no

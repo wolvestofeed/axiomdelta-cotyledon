@@ -1,5 +1,5 @@
 /**
- * MicroFarm — experiments in R&D (outline §4 Experiment). Pure.
+ * Cotyledon — experiments in R&D (outline §4 Experiment). Pure.
  *
  * An experiment is a titled run of a developing grow plan: the plan, a sow date and whole trays.
  * Until a sowing record names it, it sits on the grow units from its sow date for the plan's

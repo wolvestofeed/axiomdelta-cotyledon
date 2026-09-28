@@ -198,7 +198,7 @@ export function FlatBuilderClient({ initialSubscriberId, data }: { initialSubscr
           </tbody>
         </table>
         <button type="button" className="farm-btn primary mt-3" disabled title="Submitting an order is not connected yet">Submit order</button>
-        <p className="farm-kpi-sub mt-2">Submitting is not connected yet. A submitted order is reviewed by MicroFarm staff before it is committed to production. Distribution and any service charges are not priced here.</p>
+        <p className="farm-kpi-sub mt-2">Submitting is not connected yet. A submitted order is reviewed by the farm&rsquo;s staff before it is committed to production. Distribution and any service charges are not priced here.</p>
       </Card>
     </>
   );

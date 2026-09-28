@@ -1,5 +1,5 @@
 /**
- * MicroFarm — pure calculation engine.
+ * Cotyledon — pure calculation engine.
  *
  * These are deterministic functions with no I/O. Every dollar and unit the
  * UI shows comes from here, not from typed constants. The invariants in

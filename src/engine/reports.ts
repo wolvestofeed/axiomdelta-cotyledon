@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the Reports library (Roadmap Phase E). Pure, client-safe.
+ * Cotyledon — the Reports library (Roadmap Phase E). Pure, client-safe.
  *
  * The catalog names every report package the library carries, one or more per
  * section of the main menu, in the menu's own order. A report is a reading

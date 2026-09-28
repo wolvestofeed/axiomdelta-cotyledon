@@ -1,5 +1,5 @@
 /**
- * MicroFarm — a flat plan scored against nutrition targets (outline §4). Pure.
+ * Cotyledon — a flat plan scored against nutrition targets (outline §4). Pure.
  *
  * A subscriber names targets; a flat plan is the grow plans in it. Each target is covered when a
  * plan on the flat carries a variety whose profile names it. The score is facts: which targets

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the generated arrangement (Roadmap Q6). Pure.
+ * Cotyledon — the generated arrangement (Roadmap Q6). Pure.
  *
  * Lays the plant out in the register's flow order from the derived areas and
  * the spacing rules the register carries, so the editor's checks can verify

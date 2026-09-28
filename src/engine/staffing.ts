@@ -1,5 +1,5 @@
 /**
- * MicroFarm — labor as a REQUIREMENT of the plan, and crews checked against it.
+ * Cotyledon — labor as a REQUIREMENT of the plan, and crews checked against it.
  *
  * The plant's capacity is the grow units and the operating day (`deriveCapacity`). A production
  * day emits the labor it needs: each grow plan's sowing-stream lines from its labor standard,

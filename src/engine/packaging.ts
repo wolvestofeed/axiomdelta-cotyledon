@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the packaging library (Roadmap N1). Pure.
+ * Cotyledon — the packaging library (Roadmap N1). Pure.
  *
  * A package's unit cost is the linked supplier catalog item's price when one is
  * on file — per each, or per pack ÷ the units in the pack — else its manual

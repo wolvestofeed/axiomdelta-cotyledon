@@ -24,7 +24,7 @@ import { lcaOptions as curatedOptions } from '@/data/lca-options';
 import { ratingFor, supplierRatings } from '@/data/mark';
 
 /**
- * MicroFarm — Plan v Actual, assembled (Roadmap N7). Each month posts the plan of
+ * Cotyledon — Plan v Actual, assembled (Roadmap N7). Each month posts the plan of
  * record in force at its end through that plan's own timeline and Plan ledger, and
  * the records through the Actual ledger (at the plan of record set now, as every
  * Actual page does). Plans are posted once per distinct config applied.

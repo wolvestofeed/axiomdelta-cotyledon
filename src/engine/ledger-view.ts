@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the ledger a page is reading (Roadmap N6). Types only, safe for the
+ * Cotyledon — the ledger a page is reading (Roadmap N6). Types only, safe for the
  * browser: the books themselves are posted on the server (`_lib/ledger-actions.ts`).
  *
  * The scenario bar selects **Plan** — the open forecast, or the plan of record —

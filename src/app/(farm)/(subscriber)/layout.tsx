@@ -13,7 +13,7 @@ import { withWorkspace } from '@/server/workspace';
  */
 
 export const metadata: Metadata = {
-  title: 'MicroFarm — Subscriber Portal',
+  title: 'Cotyledon — Subscriber Portal',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };

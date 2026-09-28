@@ -1,5 +1,5 @@
 /**
- * MicroFarm — sync the home and commercial setup seed.
+ * Cotyledon — sync the home and commercial setup seed.
  *
  * Brings the workspace's seed equipment and fixed-cost lines in line with the code seed (the
  * home grow room and list, the commercial list Unset, the fixed costs at zero until stated),

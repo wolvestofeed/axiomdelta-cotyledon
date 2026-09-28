@@ -1,5 +1,5 @@
 /**
- * MicroFarm — supplier geo-enrichment.
+ * Cotyledon — supplier geo-enrichment.
  *
  * Adds { lat, lng, geoSource } to every record in suppliers-compiled.json so
  * the Suppliers map tab can drop a pin per producer. Fully in-house / free:

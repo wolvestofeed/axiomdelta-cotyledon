@@ -4,7 +4,7 @@ import { farmSources, farmSourceFigures } from '@/db';
 import { db } from '@/lib/db';
 
 /**
- * MicroFarm — sources registry read layer (server-only).
+ * Cotyledon — sources registry read layer (server-only).
  *
  * Metadata queries never select `file_bytes`; only `getSourceFile` does, and
  * only the file route calls it.

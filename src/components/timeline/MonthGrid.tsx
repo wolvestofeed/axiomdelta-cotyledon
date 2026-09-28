@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MicroFarm — the month grid (scheduler build plan §5.1). A CSS-grid month,
+ * Cotyledon — the month grid (scheduler build plan §5.1). A CSS-grid month,
  * Monday first, each day carrying what the horizon made that date: sowings and
  * units, how much of the plant's cycles the day used, stock expiring, and
  * how many findings the placement raised. Text only — no dots and no icons; a

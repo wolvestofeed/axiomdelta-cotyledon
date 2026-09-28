@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import type { TrainingAssignmentDoc, TrainingDocDoc } from '@/engine/training';
 
 /**
- * MicroFarm — training documents read layer (server-only).
+ * Cotyledon — training documents read layer (server-only).
  *
  * `fileBytes` is never selected here. The file is served by its own route,
  * which is the only place that reads the column.

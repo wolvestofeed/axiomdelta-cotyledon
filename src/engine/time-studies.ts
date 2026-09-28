@@ -1,5 +1,5 @@
 /**
- * MicroFarm — time studies (Roadmap O2). Pure.
+ * Cotyledon — time studies (Roadmap O2). Pure.
  *
  * Labor is fixed per sowing, plus variable per tray per day, plus variable per unit, on three
  * streams (outline §5 rule 3). A study's fixed minutes are its fixed sowing and harvest lines; its

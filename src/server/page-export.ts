@@ -4,7 +4,7 @@ import { BRAND_LINE } from '@/components/ui';
 import { pageExportFileName, sheetNameFor, type PageExport } from '@/engine/page-export';
 
 /**
- * MicroFarm — a module page as a workbook (Roadmap Phase E follow-up). Follows the
+ * Cotyledon — a module page as a workbook (Roadmap Phase E follow-up). Follows the
  * evidence-pack pattern (exceljs): a Read Me sheet naming the page, the path, the
  * world the reader had selected and when; a Figures sheet of the KPI tiles; then
  * one sheet per table, each under the card title it sat in. The rows are the
@@ -31,7 +31,7 @@ function cellValue(s: string): string | number {
 
 export async function buildPageWorkbook(page: PageExport, preparedAt: string): Promise<{ buffer: Buffer; fileName: string }> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MicroFarm';
+  wb.creator = 'Cotyledon';
   wb.created = new Date();
 
   const readme = wb.addWorksheet('Read Me');

@@ -10,7 +10,7 @@ import { appendPosting } from '@/server/posting-log';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — period lock and the production calendar (Roadmap J1,
+ * Cotyledon — period lock and the production calendar (Roadmap J1,
  * J3). Super admin only. A lock and a reopen are both entries on the posting
  * trail, written in the same transaction as the change.
  */

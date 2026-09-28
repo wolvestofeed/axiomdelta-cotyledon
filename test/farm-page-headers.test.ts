@@ -1,5 +1,5 @@
 /**
- * MicroFarm — page headers (page-headers build plan U8). A header's purpose
+ * Cotyledon — page headers (page-headers build plan U8). A header's purpose
  * line stays inside its budget; a migrated page carries no lede; the nav has
  * no blurb field (decision D4).
  */

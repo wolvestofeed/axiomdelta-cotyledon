@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the standard cost of a unit, per grow plan (Roadmap N3).
+ * Cotyledon — the standard cost of a unit, per grow plan (Roadmap N3).
  *
  * The finding this closes (audit A2): every grow plan was charged one typed labor
  * split — AMK-E-001's plan study scaled linearly — because nothing passed a

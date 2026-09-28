@@ -1,5 +1,5 @@
 /**
- * MicroFarm — per-phase economics (unit + premium + price).
+ * Cotyledon — per-phase economics (unit + premium + price).
  *
  * Pure, no I/O, and deliberately free of any `@/ledger` import so it can be
  * used from a client component (the Unit Economics calculator) without dragging

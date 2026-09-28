@@ -14,7 +14,7 @@ import { WORK_ROLES, clockStateOf, isWorkRole, localDate, punchRefusal, roleOfOp
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the time clock and the staff register, writes
+ * Cotyledon — the time clock and the staff register, writes
  * (Roadmap K5).
  *
  * A punch on the floor is taken by an operator for the person clocking in,

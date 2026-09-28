@@ -1,5 +1,5 @@
 /**
- * MicroFarm — time studies per grow plan (Roadmap O2).
+ * Cotyledon — time studies per grow plan (Roadmap O2).
  */
 
 import { describe, it, expect } from 'vitest';

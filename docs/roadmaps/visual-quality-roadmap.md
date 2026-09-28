@@ -1,6 +1,6 @@
 # BUILD PLAN — visual quality: palette, type, depth
 
-The MicroFarm keeps its copper, green and off-white palette and its three-dimensional surface (bevel
+Cotyledon keeps its copper, green and off-white palette and its three-dimensional surface (bevel
 highlights, strokes, shadows) and is tuned for many hours a day at a screen: soft colours, no glare, and
 contrast strong enough that figures, titles and headers read at arm's length.
 

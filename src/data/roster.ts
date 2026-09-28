@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the facility's roster until Staffing's (Phase 4) is connected. Rob grows alone;
+ * Cotyledon — the facility's roster until Staffing's (Phase 4) is connected. Rob grows alone;
  * the next production hire is a Grower, carried at no headcount until hired (STATED by Rob).
  * No pay is held here: Staffing holds wages and burden. Training assigns courses and
  * certificates to these titles.

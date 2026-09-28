@@ -554,15 +554,15 @@ Legend:
 Each portal page gets a purpose line in the second person, a primary action, and at most one help
 line. No Connects and no How this page works. Build notes move to a staff-only banner.
 
-- **Supplier Portal:** "Keep your catalog with MicroFarm up to date."
+- **Supplier Portal:** "Keep your catalog with the farm up to date."
   - [Upload a line sheet] [Submit a new item] [Complete RATING rating]
 - **Flat Builder:** "Pick a date, choose your units and quantities, and tell us how to distribute."
   - Steps: Date · Units · Allergies · Packaging · Distribution
 - **Subscriber Portal:** "Place an order, check past orders, and pay invoices."
   - [Start a new order]
-- **Welcome, supplier:** "MicroFarm invited you to the Supplier Portal. Confirm your contact details to get started."
-- **Sign in (supplier):** "Sign in to manage your catalog with MicroFarm."
-  - Help: "New here? You need an invitation from MicroFarm."
+- **Welcome, supplier:** "The farm invited you to the Supplier Portal. Confirm your contact details to get started."
+- **Sign in (supplier):** "Sign in to manage your catalog with the farm."
+  - Help: "New here? You need an invitation from the farm."
 - **Create an account (subscriber):** "Order units for your office, restaurant or special event."
   - Help: "We'll send a verification email, and our team reviews every new account before your first order."
 - **Parent Portal:** "Choose how to pay for your child's prospect units."
@@ -587,4 +587,4 @@ The longest always-visible sentence drops from 131 words to 15.
 |---|---|
 | 2026-09-19 | Plan drafted from four review passes (component design + three UX-copy groups over 60 headers). Status PROPOSED; awaiting Robert's decisions D1–D7 before any build. Not yet entered in `roadmap.md`: another session has that file open with uncommitted edits. |
 | 2026-09-19 | Approved (D1–D7 above). Built: U0 (F1–F7), U1 (the slots, CSS, print, dev warning), U2 (Capacity, Inventory, Payables on the drafts), the D4 half of U7 (blurbs deleted), a first cut of U8. U3–U6, the glossary and the print footnote remain. |
-| 2026-09-19 | **U3–U6 built** across every remaining header (56 more), the Orders page included. The brand line ("MicroFarm") no longer renders on any page header: the `brand` prop is gone; the line stays on the footer and on documents. U8 now checks every page: no `lede` beyond the two subtitles. |
+| 2026-09-19 | **U3–U6 built** across every remaining header (56 more), the Orders page included. The brand line ("Cotyledon") no longer renders on any page header: the `brand` prop is gone; the line stays on the footer and on documents. U8 now checks every page: no `lede` beyond the two subtitles. |

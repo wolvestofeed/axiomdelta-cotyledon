@@ -482,7 +482,7 @@ function SowPanel({ prospect, defaults }: { prospect: ClientProspect; defaults: 
       <div className="farm-card-title">Scope of work — draft</div>
       <div className="border border-[color:var(--farm-line)] rounded-[0.5rem] py-[1.1rem] px-[1.3rem] leading-[1.6] farm-fs-base">
         <SowSection title="1. Parties">
-          <strong>Provider:</strong> MicroFarm (facility). <strong>Client:</strong>{' '}
+          <strong>Provider:</strong> the farm. <strong>Client:</strong>{' '}
           {prospect.name}, {prospect.location}.
         </SowSection>
         <SowSection title="2. Program scope">

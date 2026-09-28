@@ -1,5 +1,5 @@
 /**
- * MicroFarm — regenerate `src/data/glossary.ts` from `docs/glossary.md`, tiers 1 and 2.
+ * Cotyledon — regenerate `src/data/glossary.ts` from `docs/glossary.md`, tiers 1 and 2.
  *
  * The document is the authority. Each entry is a paragraph `**Term.** Definition [rows]` under the
  * tier 1 or tier 2 heading; tier 3 is internal and is not generated. The key is the term as a slug.
@@ -55,7 +55,7 @@ export function parseGlossary(md: string): Entry[] {
 export function renderGlossary(entries: readonly Entry[]): string {
   const rows = entries.map((e) => `  { key: ${quote(e.key)}, term: ${quote(e.term)}, tier: ${e.tier}, definition: ${quote(e.definition)}, rows: [${e.rows.join(', ')}] },`).join('\n');
   return `/**
- * MicroFarm — the glossary as data, tiers 1 and 2 (\`docs/glossary.md\` is the authority; tier 3 is internal and stays there).
+ * Cotyledon — the glossary as data, tiers 1 and 2 (\`docs/glossary.md\` is the authority; tier 3 is internal and stays there).
  * Regenerated from the document by \`pnpm farm:glossary\`; a subscriber-facing term links its science rows.
  */
 

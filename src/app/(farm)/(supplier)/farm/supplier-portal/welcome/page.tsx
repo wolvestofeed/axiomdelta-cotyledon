@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PageHeader, Card } from '@/components/ui';
 
 /**
- * Accept a supplier invitation (Roadmap P1b, P4): suppliers join by a link MicroFarm sends from the
+ * Accept a supplier invitation (Roadmap P1b, P4): suppliers join by a link the farm sends from the
  * supplier's record. The UI surface only: invitations, the verification email and the
  * admin notification are not connected yet.
  */
@@ -11,7 +11,7 @@ export default function SupplierWelcomePage() {
     <>
       <PageHeader
         title="Welcome, supplier"
-        purpose="Confirm your contact details to accept MicroFarm's invitation to the Supplier Portal."
+        purpose="Confirm your contact details to accept the farm's invitation to the Supplier Portal."
         status="designed"
       />
       <Card title="Your contact details">
@@ -23,7 +23,7 @@ export default function SupplierWelcomePage() {
           <button type="button" className="farm-btn primary" disabled>Accept invitation</button>
         </div>
         <p className="farm-kpi-sub mt-3">
-          Your contact details are kept on your operation&rsquo;s record at MicroFarm — the same record our staff
+          Your contact details are kept on your operation&rsquo;s record at the farm — the same record its staff
           work from. We send a verification email, and staff are told when you join. Supplier submissions are
           reviewed by staff before they are committed to production. Please call the farm for faster service.
         </p>

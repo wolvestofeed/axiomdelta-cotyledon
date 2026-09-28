@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the certification mark's supplier rating.
+ * Cotyledon — the certification mark's supplier rating.
  *
  * The mark combines regenerative and organic standards across the whole food
  * supply, including people and workplaces. Its rating is the main credential a

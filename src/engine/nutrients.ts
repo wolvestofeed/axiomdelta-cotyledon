@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the Nutrients & Supplements library, rows to records. Pure.
+ * Cotyledon — the Nutrients & Supplements library, rows to records. Pure.
  *
  * A row is one nutrient solution or supplement a grow plan's nutrient line names by its key. Its
  * figures are tagged documents stored whole, so a seeded figure keeps its tag and its note and a

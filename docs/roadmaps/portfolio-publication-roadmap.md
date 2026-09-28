@@ -1,6 +1,6 @@
-# BUILD PLAN — portfolio publication: MicroFarm on axiomdelta.ai
+# BUILD PLAN — portfolio publication: Cotyledon on axiomdelta.ai
 
-MicroFarm is added to the AxiomDelta venture-studio pickup point as its fourth platform, ordered first, with
+Cotyledon is added to the AxiomDelta venture-studio pickup point as its fourth platform, ordered first, with
 a homepage card, an entry on `/projects` and a full project detail page. This plan owns the Farm
 half of that work: what may be said publicly, the fact table the page is built from, and the
 accuracy review before it ships. The page itself is built in a different repo
@@ -26,8 +26,8 @@ PP6 remain. On the AD side the page itself is not built yet. Nothing committed i
 
 Code comments and the AD-side plan cite these by number.
 
-1. **MicroFarm may be named publicly.** CLAUDE.md §1: "**MicroFarm** and
-   **MicroFarm** are Robert Bogatin's own brand and product names, owned and used by him … they may
+1. **Cotyledon may be named publicly.** CLAUDE.md §1: "**Cotyledon** and
+   **Cotyledon** are Robert Bogatin's own brand and product names, owned and used by him … they may
    appear publicly." The confidentiality rule covers the source company, its incubator, its
    standards partner and their people — never these two names. axiomdelta.ai is the same kind of
    public surface as the Wolves To Feed publishing page named in that rule.
@@ -64,7 +64,7 @@ Code comments and the AD-side plan cite these by number.
    emerald `#0B2A22` as the card fill, emerald `#0E6B4E` as the stroke it is on the brand sheet, mint
    `#9FD8BE` as the text on it — rather than a farm-derived accent fitted into AD's palette. No value
    on the brand sheet changes.
-8. **The public name is "MicroFarm"**, with **MicroFarm** as the
+8. **The public name is "Cotyledon"**, with **Cotyledon** as the
    short form. Both are permitted by decision 1 and both match CLAUDE.md §1: the company brand and
    the product name, in that order. The AD slug is `/projects/farm-impact-os`.
 9. **Claude captures the screenshots through Robert's own Chrome**. The OS is
@@ -72,7 +72,7 @@ Code comments and the AD-side plan cite these by number.
    The scrub in `PP4` is unchanged by who holds the camera, and nothing is handed over until it
    passes.
 10. **The page is about the application, not the business**: "We're not saying
-    anything specifically about MicroFarm, the business. We're only writing up what the
+    anything specifically about Cotyledon, the business. We're only writing up what the
     application can do itself. We're only talking about the main components found in the left bar,
     main navigation section headers, and the summary write-up." Three content sources, listed in
     §3.1, and nothing else. This subsumes much of decision 2: a page that never describes a business
@@ -100,7 +100,7 @@ Code comments and the AD-side plan cite these by number.
 
 ## 1. Why this is a Farm plan and not only an AD one
 
-The AD pickup point's job is to describe MicroFarm accurately. Three things make that harder than it looks,
+The AD pickup point's job is to describe Cotyledon accurately. Three things make that harder than it looks,
 and all three live on this side of the boundary:
 
 - **The content sources are files, not prose.** Under decision 10 the page is built from `nav.ts`,
@@ -117,7 +117,7 @@ and all three live on this side of the boundary:
 
 ## 2. What the page says the product is
 
-**The page describes the application, not MicroFarm** (decision 10). The framing, in Robert's
+**The page describes the application, not Cotyledon** (decision 10). The framing, in Robert's
 words (2026-09-22): an all-inclusive operating system for a sustainable scratch farm, with full
 business operations, production planning, facility planning, and a sustainability suite that
 provides carbon and resource metrics across everything you do, per unit.
@@ -282,7 +282,7 @@ each confirmed order as it leaves. What is typed here is the record the books po
 than a purpose line; trim or quote in full.
 
 **Finding 4 — one purpose line names the brand.** Supplier Portal reads "Keep your catalog with
-MicroFarm up to date." Permitted by decision 1 — it is the brand name, not the confidential
+the farm up to date." Permitted by decision 1 — it is the brand name, not the confidential
 source company — but worth noticing before 51 lines are pasted onto a public page.
 
 **Finding 5 — the sustainability suite is the most `partial` section on the board.** Two of its ten
@@ -375,7 +375,7 @@ The copy source for the page's section tiles. Every line verbatim from its `Page
 
 **Supplier** (1)
 
-- **Supplier Portal** — Keep your catalog with MicroFarm up to date.
+- **Supplier Portal** — Keep your catalog with the farm up to date.
 
 **Parent** (2)
 
@@ -398,8 +398,8 @@ The brand sheet, verbatim from `README.txt`:
 > Light copper (sun) #D9A06F · Deep copper #8E5323 · Soil base #6B3C1A · Mint #9FD8BE · Limestone
 > cream #F4EEE3
 >
-> Type — FARM FARM: Cormorant Garamond SemiBold, tracked +120 · IMPACT OS: Poppins Medium,
-> tracked +500
+> Type — the Cotyledon wordmark as cut from the reference logo · POWERED BY: Poppins Regular, tracked ·
+> EMBER OS: Montserrat Bold + Light
 
 Two consequences for the AD page:
 
@@ -511,7 +511,7 @@ table rather than carried into it:
 | 2026-09-22 | **PP4 part done, and one image refused.** Robert supplied four captures. Three cleared, optimized and handed to the AD repo. The Sales CRM capture is **not publishable**: it shows a real prospect pipeline — named organizations with addresses, named individuals with titles, the internal research named in a banner, and 67 prospects by commercial status. That is decisions 2, 3 and 10 all at once, and a privacy problem on its own terms; cropping does not fix it. Also settled: the registered-sources claim is **37 reference sources**, so row 23 of §3.4 clears and the table is 25 of 25. Noted: the Sustainability capture is on the Actual ledger so it reads all zeros, and the Admin Dashboard capture shows the three channel names as column headers — UI in a screenshot rather than a claim in copy, so left alone. |
 | 2026-09-22 | **PP1 done — the fact table is built.** 25 claims in §3.4, each with its evidence file and its real `nav.ts` status; 24 cleared. Counts re-derived rather than quoted: 51 modules / 12 sections / 33 live / 11 partial / 7 designed, 28 report packages spanning all 12 sections, 60 page headers, 12 agent fixtures, 59 Farm test files. Five findings in §3.5, the material one being that **78 registered sources cannot ship** — it is a `farm.sources` row count after seeding, and the committed files carry 37 reference sources + 28 spec sheets + 10 factor publications = 75. Also recorded: headers are not modules (60 vs 51, the error the first pass made), the Grow Room has no `PageHeader`, and the sustainability suite is mostly `partial` so its split has to be stated. §3.6 carries all 51 purpose lines as the copy source. Decision 13 added: the training one-pager may be excerpted. |
 | 2026-09-22 | **Last two answered**. The stat strip is the basics — 51 modules, 12 sections, 28 report packages, 78 registered sources. The Staffing integration stays: "It will be eventually connected API and webhook to Staffing" — a property of the application, so it survives decision 10 and joins §3.1 as a fourth, narrow content source. Decision 12 pins the tense: the contract and schemas are built and the transport is not, so "integrates with Staffing" would be false today while "built to connect, contract already specified" is both true and the stronger claim. Decisions 11 and 12 recorded; §3.1 and `PP1` extended. No questions remain but the training one-pager. |
-| 2026-09-22 | **Scope narrowed to the application**: "We're not saying anything specifically about MicroFarm, the business. We're only writing up what the application can do itself." Decision 10 recorded; §2 and §3 rewritten around three content sources — the left bar, the page-header purpose lines, and the product framing. `nav.ts` read directly: **51 modules across 12 sections, 33 live, 11 partial, 7 designed**; the section table is now in §3.1 and the removed business material is listed in §3.2 so it is not reintroduced. The earlier "roughly 60 module pages" was a header count carried from a summary and is dropped — an instance of exactly what decision 5 exists to prevent. Two of the three questions in §7 are answered by the narrowing; the Staffing-section question is added. |
-| 2026-09-22 | **The remaining four answered**. The palette mechanism is a branded ground for the Farm cards on the AD pickup point — deep emerald fill, emerald stroke, mint text — so no brand value changes and the mint-against-sage collision dissolves. Public name is "MicroFarm", short form "MicroFarm", slug `/projects/farm-impact-os`. Screenshots are captured by Claude through Robert's signed-in Chrome rather than handed over, which takes `PP4` off Robert's pack. Decisions 7–9 recorded; `PP3` and `PP4` rewritten. |
+| 2026-09-22 | **Scope narrowed to the application**: "We're not saying anything specifically about Cotyledon, the business. We're only writing up what the application can do itself." Decision 10 recorded; §2 and §3 rewritten around three content sources — the left bar, the page-header purpose lines, and the product framing. `nav.ts` read directly: **51 modules across 12 sections, 33 live, 11 partial, 7 designed**; the section table is now in §3.1 and the removed business material is listed in §3.2 so it is not reintroduced. The earlier "roughly 60 module pages" was a header count carried from a summary and is dropped — an instance of exactly what decision 5 exists to prevent. Two of the three questions in §7 are answered by the narrowing; the Staffing-section question is added. |
+| 2026-09-22 | **The remaining four answered**. The palette mechanism is a branded ground for the Farm cards on the AD pickup point — deep emerald fill, emerald stroke, mint text — so no brand value changes and the mint-against-sage collision dissolves. Public name is "Cotyledon", short form "Cotyledon", slug `/projects/farm-impact-os`. Screenshots are captured by Claude through Robert's signed-in Chrome rather than handed over, which takes `PP4` off Robert's pack. Decisions 7–9 recorded; `PP3` and `PP4` rewritten. |
 | 2026-09-22 | **Four decisions answered**. The page links to `/farm` and calls the product live; the Farm brand is used as authored and AD adjusts its own card system around it, not the reverse; screenshots are captured rather than substituted with brand art, which puts `PP4` on the critical path; and the pickup point reads "four live platforms". Decisions 6 and 7 recorded, §4 and `PP4` rewritten. Open on this side: whether the Austin-prospects line may run publicly as written, whether the derived facility figures are for public reading, and whether the training one-pager may be excerpted. |
-| 2026-09-22 | **Plan opened.** MicroFarm goes on axiomdelta.ai as the fourth platform, ordered first. This file owns the Farm half: the confidentiality clearance, the fact table the page is built from, and the accuracy review. Six decisions recorded, six steps drafted, three questions open for Robert. No code in this repo changes. The build plan for the page itself is `docs/farm-impact-os-portfolio.md` in the axiomdelta-ai repo, where seven decisions are open — the three that gate the most work being that there is no public URL to link to, there are no product screenshots in this repo, and no Farm brand color can be used verbatim as an accent on that pickup point's dark ground. |
+| 2026-09-22 | **Plan opened.** Cotyledon goes on axiomdelta.ai as the fourth platform, ordered first. This file owns the Farm half: the confidentiality clearance, the fact table the page is built from, and the accuracy review. Six decisions recorded, six steps drafted, three questions open for Robert. No code in this repo changes. The build plan for the page itself is `docs/farm-impact-os-portfolio.md` in the axiomdelta-ai repo, where seven decisions are open — the three that gate the most work being that there is no public URL to link to, there are no product screenshots in this repo, and no Farm brand color can be used verbatim as an accent on that pickup point's dark ground. |

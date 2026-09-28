@@ -15,7 +15,7 @@ import { receiptCoverage } from '@/engine/net-requirements';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — recording actuals. Receipts, sowing closes and
+ * Cotyledon — recording actuals. Receipts, sowing closes and
  * distributions are recorded by OPERATORS (`requireFarmOperator`, Roadmap I1 —
  * super admins are operators); period bills and the removal of any record stay
  * SUPER ADMIN. Every action gates on a throwing guard.

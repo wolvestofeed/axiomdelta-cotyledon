@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the statement shapes and classifiers shared by both ledgers.
+ * Cotyledon — the statement shapes and classifiers shared by both ledgers.
  *
  * The fiscal-year journal that used to live here — the forecast year posted as one
  * sowing record, with its annual opening, overhead, financing and settlement entries —

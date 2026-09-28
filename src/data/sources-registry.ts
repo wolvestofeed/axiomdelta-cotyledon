@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the reference sources the platform cites.
+ * Cotyledon — the reference sources the platform cites.
  *
  * RULE: every source of data the platform cites publicly — a code, a rule, a
  * dataset, a rate schedule, a study, a spec sheet — is registered on the Sources

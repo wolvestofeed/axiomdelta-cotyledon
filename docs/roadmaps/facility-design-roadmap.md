@@ -593,7 +593,7 @@ second jar stand, convection oven — are reserved in the block plan so nothing 
 
 ### 10.6 Open decisions the block plan needs
 
-1. **Is MicroFarm audited against BRCGS, SQF or FSSC 22000?** If yes, the packaging room's
+1. **Is the farm audited against BRCGS, SQF or FSSC 22000?** If yes, the packaging room's
    floor-to-ceiling segregation, filtered positive-pressure air and gowning sequence are requirements,
    not choices, and the high-risk classification in §10.3 applies. If no, they are prudent practice and
    the room can be lighter. A facility selling into prospects is often audited. This single answer

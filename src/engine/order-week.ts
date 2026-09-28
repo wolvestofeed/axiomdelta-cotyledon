@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the dashboard's Production card: the week of orders from the
+ * Cotyledon — the dashboard's Production card: the week of orders from the
  * day in use. Pure.
  *
  * Seven days starting today. Each day: units on order by channel and in

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — supplier query, cross-reference, and grow-plan-match logic.
+ * Cotyledon — supplier query, cross-reference, and grow-plan-match logic.
  *
  * Pure functions over a SupplierOperation[]. No I/O — the caller loads the
  * compiled dataset (server-side) and passes the array in, which keeps these

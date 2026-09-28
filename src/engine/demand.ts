@@ -1,5 +1,5 @@
 /**
- * MicroFarm — demand from subscribers and their subscriptions.
+ * Cotyledon — demand from subscribers and their subscriptions.
  *
  * Ledger-free. A pickup point's demand is the units each of its subscriptions carries on each
  * distribution date the cadence falls on, the farm open. The resolver writes the channel sums

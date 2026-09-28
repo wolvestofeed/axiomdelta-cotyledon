@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the stage control points (outline §4). What is checked and recorded at each stage
+ * Cotyledon — the stage control points (outline §4). What is checked and recorded at each stage
  * of the grow, in place of the thermal critical control points of the Phase 1-era plan.
  *
  * Each control point names its stage, the hazard, the check, the record and its source. The

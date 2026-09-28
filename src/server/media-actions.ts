@@ -13,7 +13,7 @@ import { listGrowPlans } from '@/server/grow-plans';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the Media library, writes. SUPER ADMIN ONLY.
+ * Cotyledon — the Media library, writes. SUPER ADMIN ONLY.
  *
  * A figure typed here is STATED, its note naming what was typed; a figure left alone keeps its
  * tag. A price is typed as what was paid and how much it gave in the medium's unit (the gallons a

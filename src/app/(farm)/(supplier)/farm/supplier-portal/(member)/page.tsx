@@ -37,7 +37,7 @@ async function SupplierPortalPageInner() {
     <>
       <PageHeader
         title="Supplier Portal"
-        purpose="Keep your catalog with MicroFarm up to date."
+        purpose="Keep your catalog with the farm up to date."
         status="designed"
       />
 

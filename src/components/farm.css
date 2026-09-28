@@ -1,6 +1,6 @@
 /*
  * ════════════════════════════════════════════════════════════════════════════
- * IMPACT OS — MASTER THEME  (`_components/farm.css`)
+ * COTYLEDON — MASTER THEME  (`src/components/farm.css`)
  * ════════════════════════════════════════════════════════════════════════════
  *
  * ONE MATERIAL, ONE THEME.
@@ -241,45 +241,12 @@
   background: linear-gradient(90deg, var(--farm-side-mark), transparent 72%);
   opacity: 0.6;
 }
+/* The sidebar's lockup: Cotyledon, powered by Ember OS, stacked on its deep forest tile. */
 .farm-brand-logo {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 0.4rem;
-}
-/* The sidebar stack: icon, the farm farm name in the H1 face, then the tagline. */
-.farm-brand-icon {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.farm-brand-wordmark {
-  display: block;
-  margin-top: 0.6rem;
-  font-family: var(--farm-serif);
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  text-align: center;
-  white-space: nowrap;
-  color: var(--farm-side-ink);
-}
-/* The tagline under the logo: copper, all caps, IBM Plex Sans. */
-.farm-brand-tagline {
-  display: block;
-  margin-top: 0.55rem;
-  font-family: var(--farm-font-sans), system-ui, sans-serif;
-  /* Sized so the line is as wide as farm farm above it; the indent offsets the trailing letter space so it centres. */
-  font-size: 1.38rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.32em;
-  text-indent: 0.32em;
-  white-space: nowrap;
-  text-align: center;
-  color: var(--farm-side-mark);
 }
 .farm-brand-name {
   font-family: var(--farm-serif);
@@ -1355,11 +1322,9 @@
 .farm-floor-top .farm-brand-name { color: var(--farm-ink); }
 .farm-floor-top { align-items: center; }
 .farm-floor-top .farm-brand-sub { margin-top: 0; }
-.farm-floor-brand { display: inline-flex; align-items: center; gap: 0.7rem; }
-.farm-floor-top .farm-brand-icon { width: 3.25rem; }
-.farm-floor-top .farm-brand-wordmark { margin-top: 0; font-size: 1.1rem; text-align: left; }
-/* The same width as farm farm above it, as in the sidebar. */
-.farm-floor-top .farm-brand-tagline { margin-top: 0.15rem; font-size: 1.17rem; text-indent: 0; text-align: left; }
+.farm-floor-brand { display: inline-flex; align-items: center; }
+/* The header lockup on the floor and the portals: the tile beside the wordmark and the endorsement. */
+.farm-floor-logo { display: block; height: 3.5rem; width: auto; }
 .farm-floor-content { padding: 1.1rem 1.25rem 3rem; max-width: 72rem; width: 100%; }
 /* Larger targets for gloved hands: every control on the floor is at least 44px tall. */
 .farm-floor .farm-input,
@@ -1413,13 +1378,9 @@
   padding: 1.25rem 1rem 2.5rem;
 }
 .farm-front-welcome { display: flex; flex-direction: column; align-items: center; gap: 1rem; text-align: center; width: 100%; }
-/* The OS header stack, scaled up: the mark as wide as farm farm, IMPACT OS as wide again. The name is the
-   logo's dark green (#0B2A22), the tagline copper.
-   Everything is in em off one size, so the stack scales as a unit with the viewport. */
+/* The stacked lockup, set in the sky. Sized in em off one size, so it scales with the viewport. */
 .farm-front-brand { font-size: min(1.3rem, 4.6vw, 1.6vh); width: 11.5em; }
-.farm-front-brand .farm-brand-icon { width: 100%; filter: drop-shadow(0 0.35em 0.8em rgba(var(--farm-shade), 0.28)); }
-.farm-front-brand .farm-brand-wordmark { font-size: 1.3em; margin-top: 0.5em; color: #0b2a22; }
-.farm-front-brand .farm-brand-tagline { font-size: 1.38em; margin-top: 0.4em; color: var(--farm-accent); }
+.farm-front-logo { display: block; width: 100%; height: auto; border-radius: 0.6em; filter: drop-shadow(0 0.35em 0.8em rgba(var(--farm-shade), 0.28)); }
 .farm-front-title { font-size: clamp(1rem, 2.4vw, 1.35rem); font-weight: 600; letter-spacing: 0.06em; color: #f4eee3; }
 .farm-front-enter { font-size: var(--farm-fs-md); padding: 0.7rem 1.4rem; text-decoration: none; letter-spacing: 0.04em; }
 /* The links under a Clerk form: clear of the card, on the logo's dark green so they read over the soil. */

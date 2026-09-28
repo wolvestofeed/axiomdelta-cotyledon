@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 /**
- * MicroFarm — in-table editing controls, shared by the definition
+ * Cotyledon — in-table editing controls, shared by the definition
  * libraries (Equipment, Packaging). A value is saved when the field is left or
  * Enter is pressed. Controls size to their content; `.farm-input`'s 12rem floor
  * is for forms, not table cells.

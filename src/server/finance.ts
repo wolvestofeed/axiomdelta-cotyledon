@@ -15,7 +15,7 @@ import { withSeedLock, insertLoans, insertFixedCostLines, insertLeaseholdLines, 
 import { leaseholdSeed, type LeaseholdLine } from '@/data/capex';
 
 /**
- * MicroFarm — loans and fixed-cost lines read layer (server-only).
+ * Cotyledon — loans and fixed-cost lines read layer (server-only).
  *
  * On first read of an empty table the seed is written under an advisory lock:
  * the two loans the plan carries, at the capex totals in force on the day the

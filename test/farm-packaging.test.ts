@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the packaging library (Roadmap N1).
+ * Cotyledon — the packaging library (Roadmap N1).
  */
 
 import { describe, it, expect } from 'vitest';

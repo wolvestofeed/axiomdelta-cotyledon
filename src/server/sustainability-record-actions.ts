@@ -12,7 +12,7 @@ import { READING_METRICS, READING_METRIC_KEYS } from '@/engine/sustainability-re
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — sustainability records, writes (Roadmap N6 slice 4, 0072). An operator
+ * Cotyledon — sustainability records, writes (Roadmap N6 slice 4, 0072). An operator
  * enters a bill, lab result, inspection or refrigerant service ticket on Actual; a
  * super admin removes one with the reason. Every entry and removal is on the posting
  * trail. No record is edited: a wrong one is removed and the right one entered.

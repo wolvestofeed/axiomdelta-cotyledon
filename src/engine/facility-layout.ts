@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the floor layout (Roadmap Q6). Pure geometry.
+ * Cotyledon — the floor layout (Roadmap Q6). Pure geometry.
  *
  * A layout is the shell, the rooms drawn in it and where each unit of the
  * equipment library stands, all in feet from the shell's top-left corner, y

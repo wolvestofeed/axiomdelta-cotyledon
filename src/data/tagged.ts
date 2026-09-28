@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the provenance primitive.
+ * Cotyledon — the provenance primitive.
  *
  * Every figure the platform carries is a `Tagged` value: a number (or other
  * leaf) plus the status of where it came from. Lives in its own module so any

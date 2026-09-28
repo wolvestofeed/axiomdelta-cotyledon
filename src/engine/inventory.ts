@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the greenhouse-gas inventory (pure).
+ * Cotyledon — the greenhouse-gas inventory (pure).
  *
  * Assembles every scope from the resolved model into emission postings, the
  * same way the financial statements assemble from the ledger, and reports

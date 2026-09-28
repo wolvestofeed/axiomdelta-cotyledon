@@ -1,10 +1,10 @@
-# MicroFarm — Outline of Record
+# Cotyledon — Outline of Record
 
-Working title: **MicroFarm**. The microgreens and sprouts production operating system of Axiom Delta Wellness Center, and a product other farmers subscribe to. This document is the whole plan. When something changes, the old text is replaced here.
+**Cotyledon**, powered by Ember OS: the microgreens and sprouts production operating system of Axiom Delta Wellness Center, and a product other farmers subscribe to. This document is the whole plan. When something changes, the old text is replaced here.
 
 ---
 
-## 1. The business and where MicroFarm sits
+## 1. The business and where Cotyledon sits
 
 **Axiom Delta Wellness Center** is one business operation, Robert Bogatin's (Joshin's), with one client base. A client may at once be a bodywork client, a microgreens subscriber and a Feed The Wolf subscriber.
 
@@ -14,33 +14,34 @@ Working title: **MicroFarm**. The microgreens and sprouts production operating s
 | Wolves To Feed | Marketing website for Rob's whole coaching practice |
 | Feed The Wolf | Rob's own digital coaching platform: ancient wisdom and his collected work in a library, delivered as an online digital sequencing platform |
 | AxiomDelta Coaching Engine | The product other coaches license and subscribe to for their own businesses |
-| MicroFarm | The production OS for the microgreens and sprouts facility, and a product other farmers subscribe to |
+| Ember OS | The platform brand. Each application on it keeps its own mark and is endorsed "powered by Ember OS": Muse Kitchen for the commissary kitchen, Cotyledon for the farm |
+| Cotyledon | The production OS for the microgreens and sprouts facility, and a product other farmers subscribe to. Powered by Ember OS |
 
-MicroFarm is two things at once:
+Cotyledon is two things at once:
 
 1. **The facility.** The wellness center's microgreens and sprouts production, the successor to Vallecito Micro Farm (Bayfield CO, 2023–24). It sells live flats and trays, still growing, to subscribers who water and harvest them at home, each composed for the subscriber's own nutritional needs and performance objectives. It runs from Rob's South Austin home until the center is operating well enough to take a commercial facility.
-2. **The software.** The operating system that runs the facility, ported from Muse Kitchen · Impact OS (a commissary-kitchen OS Rob built inside Comptable, Sept 2026) with the kitchen vocabulary replaced by growing vocabulary. Multi-tenant from the start. The wellness center's facility is tenant zero.
+2. **The software.** The operating system that runs the facility, ported from Muse Kitchen (the commissary kitchen application of Ember OS, which Rob built inside Comptable, Sept 2026) with the kitchen vocabulary replaced by growing vocabulary. Multi-tenant from the start. The wellness center's facility is tenant zero.
 
-Bodywork, coaching, the library and sequencing live in the other products. MicroFarm holds a subscriber's nutrition targets for their flats and nothing else about them as a client of the center.
+Bodywork, coaching, the library and sequencing live in the other products. Cotyledon holds a subscriber's nutrition targets for their flats and nothing else about them as a client of the center.
 
 ## 2. Locked decisions
 
-- **Repo:** this folder, `WTF Publishing/Micro Farm`. Its own repo, its own Clerk app, its own Neon database. Developed on localhost until a domain is registered.
+- **Repo:** this folder, `WTF Publishing/Ember OS/Micro Farm`. Its own repo, its own Clerk app, its own Neon database. Developed on localhost until a domain is registered.
 - **Source:** everything in Muse comes over: the `(muse)` route groups, `_engine`, `_lib`, `_data`, `_components`, `_state`, the `muse` schema and its 37 migrations, the 59 tests, the `muse:*` scripts, `docs/`, and the ledger package, now `src/ledger`. Nothing else from Comptable.
 - **Vocabulary:** a full swap, §3. Code, schema, copy, tests, docs, seeds.
 - **No CompTable connection.** The HR contract, signed notices and transport are dropped. Staffing is an internal module (§6, People).
 - **Scheduler ↔ Staffing.** The production scheduler reads the internal staff roster and schedule and reports coverage against the plan's labor demand on the Staffing page.
-- **Coaching and bodywork live outside MicroFarm** (Feed The Wolf, the AxiomDelta Coaching Engine, and whatever books in-person sessions). MicroFarm holds a subscriber's nutrition targets, nothing more about them.
+- **Coaching and bodywork live outside Cotyledon** (Feed The Wolf, the AxiomDelta Coaching Engine, and whatever books in-person sessions). Cotyledon holds a subscriber's nutrition targets, nothing more about them.
 - **Multi-tenant:** every farm is a workspace. Built in from the port, not retrofitted.
 - **Subscriptions:** a first-class module: weekly, every-two-weeks and monthly cadences, each distribution billed through Stripe as it is handed over.
 - **Documents replace, they do not log** (CLAUDE.md §1).
-- **The practice's phases:** home-based microgreens for individuals now; massage school Oct/Nov 2026 to a Texas LMT license Apr/May 2027; massage therapy from summer 2027, still from the house; a commercial facility only when the center is operating well. Only the production facility is in MicroFarm's scope.
+- **The practice's phases:** home-based microgreens for individuals now; massage school Oct/Nov 2026 to a Texas LMT license Apr/May 2027; massage therapy from summer 2027, still from the house; a commercial facility only when the center is operating well. Only the production facility is in Cotyledon's scope.
 
 ## 3. Vocabulary swap (the only authority)
 
-| Muse | MicroFarm | Note |
+| Muse | Cotyledon | Note |
 |---|---|---|
-| Muse Kitchen · Impact OS, Muse, the OS | MicroFarm | Origin may be cited in docs only |
+| Muse Kitchen, Muse, the OS | Cotyledon | Origin may be cited in docs only |
 | kitchen, commissary | farm, grow room | |
 | recipe | grow plan | One per variety, or a blend of varieties |
 | recipe code | crop code | |
@@ -215,14 +216,14 @@ Everything runs from Rob's house until Axiom Delta Wellness Center is operating 
 
 **Summer 2027.** Massage therapy begins as Rob's in-person practice, from the house. Bodywork clients, microgreens subscribers and Feed The Wolf subscribers are one client base.
 
-**Later, undated.** A commercial facility with the production room in back and treatment, movement, retail and reception in front, when the center is operating well. Vallecito's layout math (10x30 ft ≈ 360 flats on 18 racks) is the sizing reference. MicroFarm plans and runs the production room; the front of house is the other products.
+**Later, undated.** A commercial facility with the production room in back and treatment, movement, retail and reception in front, when the center is operating well. Vallecito's layout math (10x30 ft ≈ 360 flats on 18 racks) is the sizing reference. Cotyledon plans and runs the production room; the front of house is the other products.
 
 **Regulatory, to research before sprouts ship:** FSMA Produce Safety Rule and its small-farm exemptions; sprouts Subpart M (seed treatment, spent irrigation water testing, records); Texas and Travis County rules for raw uncut produce sold direct from a home; Austin home-occupation rules for a grow room and, later, for a massage practice at the house.
 
 ## 11. Open items
 
-- Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
+- The domain for the software. The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the Subpart M check.
 - Whether the Sales Portal and Prospects stay in the first release or wait for Phase 6.
-- One client across three products: how a bodywork client, microgreens subscriber and Feed The Wolf subscriber are recognized as the same person (shared Clerk identity, shared email, or a wellness-center client record that the products reference). Not a MicroFarm build item until the products need to share it.
+- One client across three products: how a bodywork client, microgreens subscriber and Feed The Wolf subscriber are recognized as the same person (shared Clerk identity, shared email, or a wellness-center client record that the products reference). Not a Cotyledon build item until the products need to share it.

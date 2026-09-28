@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the access guards fail closed, and roles come from the farm's organization.
+ * Cotyledon — the access guards fail closed, and roles come from the farm's organization.
  *
  * A workspace is a Clerk organization (outline §7). `org:admin` is an admin, any member is an
  * operator, the platform admins are admins in every organization they belong to, and no

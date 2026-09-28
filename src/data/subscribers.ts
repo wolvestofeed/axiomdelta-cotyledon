@@ -1,5 +1,5 @@
 /**
- * MicroFarm — subscribers and pickup points: the document shapes, and the seed.
+ * Cotyledon — subscribers and pickup points: the document shapes, and the seed.
  *
  * Demand is what each pickup point's subscriptions carry on their distribution dates, the farm
  * open. The seed is the Plan's (`planSeedSubscribers`, also the engine default when no subscriber

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the sowing record on the grow model (outline §4 Sowing). Pure.
+ * Cotyledon — the sowing record on the grow model (outline §4 Sowing). Pure.
  *
  * A sowing is one grow plan sown on one day: its trays, the grow unit they sit on, one lot per
  * variety, the stage records the control points ask for (seed treatment, the spent-water test on

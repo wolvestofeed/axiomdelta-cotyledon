@@ -11,7 +11,7 @@ import { FrontDoorLandscape } from '@/components/FrontDoorLandscape';
  */
 
 export const metadata: Metadata = {
-  title: 'MicroFarm',
+  title: 'Cotyledon',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };

@@ -5,7 +5,7 @@ import { farmWorkspaces, type FarmWorkspaceRow } from '@/db';
 import { rootDb, workspaceScope, type Db } from '@/lib/db';
 
 /**
- * MicroFarm — the workspace scope (outline §7).
+ * Cotyledon — the workspace scope (outline §7).
  *
  * A workspace is a farm, and a farm is one Clerk organization. The signed-in person's active
  * organization names the workspace. Every entry point runs inside `withWorkspace()`: it opens

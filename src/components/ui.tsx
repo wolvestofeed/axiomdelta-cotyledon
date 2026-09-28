@@ -100,8 +100,8 @@ export function PreviewBanner({ children }: { children?: React.ReactNode }) {
 }
 
 // ── Page header ─────────────────────────────────────────────────────────
-/** The company brand and the product name, as they run on the footer and on documents (invoices, exports) — never on a page header. */
-export const BRAND_LINE = 'MicroFarm';
+/** The application and its platform, as they run on the footer and on documents (invoices, exports) — never on a page header. */
+export const BRAND_LINE = 'Cotyledon, powered by Ember OS';
 
 export function BrandLine() {
   return <div className="farm-brandline">{BRAND_LINE}</div>;

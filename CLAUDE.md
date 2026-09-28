@@ -1,6 +1,6 @@
-# CLAUDE.md — MicroFarm
+# CLAUDE.md — Cotyledon
 
-**MicroFarm** (working title) is the microgreens and sprouts production operating system of **Axiom Delta Wellness Center**, Robert Bogatin's (Joshin's) one business operation. It is ported from his Muse Kitchen · Impact OS and re-vocabularied for growing. Tenant zero is the wellness center's own production facility, which starts in Rob's South Austin home. Other microgreens farmers subscribe to the software.
+**Cotyledon** is the microgreens and sprouts production operating system of **Axiom Delta Wellness Center**, Robert Bogatin's (Joshin's) one business operation, and an application of **Ember OS**, his platform brand. It is ported from his Muse Kitchen, the commissary kitchen application of Ember OS, and re-vocabularied for growing. Tenant zero is the wellness center's own production facility, which starts in Rob's South Austin home. Other microgreens farmers subscribe to the software.
 
 The outline of record is [`docs/outline.md`](docs/outline.md). This file governs how work is done.
 
@@ -18,13 +18,14 @@ When a decision, a plan, a rule or a figure changes, **delete the old version an
 | Wolves To Feed | The marketing website. Presents Rob's whole coaching practice. |
 | Feed The Wolf | Rob's own digital coaching platform: ancient wisdom and his collection of work in a library, delivered as an online digital sequencing platform. |
 | AxiomDelta Coaching Engine | The product other coaches license and subscribe to for their own businesses. Those coaches are Rob's clients. |
-| MicroFarm | This repo. The production OS for the microgreens and sprouts facility, and a product other farmers subscribe to. |
+| Ember OS | The platform brand. Each application on it keeps its own mark and is endorsed "powered by Ember OS": Muse Kitchen for the commissary kitchen, Cotyledon for the farm. |
+| Cotyledon | This repo. The production OS for the microgreens and sprouts facility, and a product other farmers subscribe to. Powered by Ember OS. |
 
-MicroFarm's scope is the facility: grow plans, sowings, grow units, inventory, produce safety, suppliers, sustainability, staffing, subscribers and their flat plans and nutrition targets, orders, distribution, and the books of the facility. Bodywork bookings, coaching sessions, the library and sequencing live in the other products. Nothing about a client's sessions or health beyond their nutrition targets for their flats is held here.
+Cotyledon's scope is the facility: grow plans, sowings, grow units, inventory, produce safety, suppliers, sustainability, staffing, subscribers and their flat plans and nutrition targets, orders, distribution, and the books of the facility. Bodywork bookings, coaching sessions, the library and sequencing live in the other products. Nothing about a client's sessions or health beyond their nutrition targets for their flats is held here.
 
 - Multi-tenant: every farm is a workspace. The wellness center's facility is one workspace, never a special case in code.
 - No connection to CompTable. No webhooks, no contract, no shared database. Staffing, wages and pay periods are an internal module.
-- Nothing from the Muse Kitchen source client carries over: no names, no recipe codes, no seed data, no ERRA mark. Muse Kitchen and Impact OS are Rob's names and may be cited as the origin.
+- Nothing from the Muse Kitchen source client carries over: no names, no recipe codes, no seed data, no ERRA mark. Muse Kitchen is Rob's name and may be cited as the origin.
 
 ## 3. Vocabulary
 

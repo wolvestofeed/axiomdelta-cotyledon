@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the scenario resolver over a library of grow plans: every library plan is carried,
+ * Cotyledon — the scenario resolver over a library of grow plans: every library plan is carried,
  * the first In Service is the reference, and a line edit keyed by plan code applies to that plan
  * only. The library conversions themselves are in `farm-grow-plans.test.ts`.
  */

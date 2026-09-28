@@ -1,5 +1,5 @@
 /**
- * MicroFarm — financial rollups, re-exported for existing importers.
+ * Cotyledon — financial rollups, re-exported for existing importers.
  *
  * The production-day ledger that lived here was retired in Roadmap N6 (slice 2):
  * production posts day by day on the Plan ledger (`plan-ledger.ts`) and from sowing

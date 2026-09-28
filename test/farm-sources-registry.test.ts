@@ -1,5 +1,5 @@
 /**
- * MicroFarm — every cited source is on the Sources page.
+ * Cotyledon — every cited source is on the Sources page.
  *
  * The rule in docs/farm/CLAUDE.md §5: a source of data the platform cites publicly is
  * registered in `farm.sources`, through the factor library or the reference register.

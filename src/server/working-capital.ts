@@ -19,7 +19,7 @@ import type { InvoiceDoc, SubscriberPaymentDoc, SupplierBillDoc, SupplierPayment
 import type { StaffDoc, PunchDoc, PunchKind, ClosedPayrollPeriodDoc } from '@/engine/payroll';
 
 /**
- * MicroFarm — working capital and time clock, read layer
+ * Cotyledon — working capital and time clock, read layer
  * (server-only, Roadmap Phase K). Rows become the engine's document shapes
  * here and nowhere else. Dates come back as ISO strings; cents stay cents.
  */

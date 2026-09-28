@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the time clock and payroll, engine-side (Roadmap K5, O1).
+ * Cotyledon — the time clock and payroll, engine-side (Roadmap K5, O1).
  *
  * Pure: no database, no ledger import. Staff clock in, start and end a break,
  * and clock out on the floor. Punches become shifts; shifts become hours by work

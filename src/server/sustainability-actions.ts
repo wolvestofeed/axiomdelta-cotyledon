@@ -9,7 +9,7 @@ import type { FarmScenarioConfig } from '@/engine/scenario';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the sustainability volume on the selected ledger (Roadmap N6 slice 4).
+ * Cotyledon — the sustainability volume on the selected ledger (Roadmap N6 slice 4).
  * Plan runs the working copy's own timeline, unsaved edits included, over its first
  * year; Actual reads the recorded documents over the reporting year, a calendar year.
  * Nothing is written.

@@ -1,6 +1,6 @@
 # BUILD PLAN — the portals
 
-MicroFarm is an administrative workspace with a portal for every stakeholder, so the farm owns the
+Cotyledon is an administrative workspace with a portal for every stakeholder, so the farm owns the
 communication with each of them. Each portal is its own shell with its own address: a person is sent the
 link for their role, signs in, and lands on their portal's home page. Nothing in an external portal links
 into the OS.
@@ -14,7 +14,7 @@ Status lives in [`../roadmap.md`](../roadmap.md) (Phase P); this file owns the p
    | Surface | Who | Sign-in | Address |
    |---|---|---|---|
    | Front door | everyone | the one sign-in | `/farm` |
-   | MicroFarm | admins, and operators by the role matrix | internal | `/farm/dashboard` |
+   | Cotyledon | admins, and operators by the role matrix | internal | `/farm/dashboard` |
    | Floor | farm operators (production and harvest) | internal | `/farm/grow-room` |
    | Sales | sales staff | internal, with the time clock | `/farm/sales-portal` |
    | Subscriber | corporate, restaurant and special-events clients | external | `/farm/subscriber-portal` |
@@ -22,7 +22,7 @@ Status lives in [`../roadmap.md`](../roadmap.md) (Phase P); this file owns the p
    | Parent | parents | external | `/farm/parent-portal` |
 
 2. **The UI surface first.** The portals are shown to people now; wiring follows. Nothing is gated
-   beyond the staff sign-in while they are developed: MicroFarm staff see each external portal as it
+   beyond the staff sign-in while they are developed: the farm's staff see each external portal as it
    will look.
 3. **Accounts.**
    - Suppliers: the link is set by an admin (an invitation from the supplier's record); suppliers sign in
@@ -47,9 +47,8 @@ Status lives in [`../roadmap.md`](../roadmap.md) (Phase P); this file owns the p
    The Dashboard is "Admin Dashboard" for admins and "Dashboard" for operators.
 9. **The front door's look.** The whole page is the logo mark's landscape: its sky (`#0E6B4E`) with the
    three soil bands across the page at the mark's heights, each with a gentle wave
-   (`_components/FrontDoorLandscape.tsx`). The brand is stacked as in the OS header: the mark, FARM FARM
-   in the logo's dark green, IMPACT OS in copper; then "Welcome to the operating system built specifically for
-   regenerative, scratch farms" and a "Login" button.
+   (`src/components/FrontDoorLandscape.tsx`). The brand is the stacked lockup, Cotyledon powered by Ember OS on
+   its deep forest tile; then "The operating system for microgreens and sprouts production" and a "Login" button.
 
 ## 2. Phases
 

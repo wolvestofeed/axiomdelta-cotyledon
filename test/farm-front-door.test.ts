@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the front door (Roadmap P7): `/farm` is the welcome page, the Dashboard lives at
+ * Cotyledon — the front door (Roadmap P7): `/farm` is the welcome page, the Dashboard lives at
  * `/farm/dashboard`, and the router sends each person by the list their email is on.
  */
 
@@ -40,7 +40,7 @@ describe('landingFor', () => {
 describe('routes', () => {
   it('serves /farm from the front-door group and the Dashboard at /farm/dashboard', () => {
     expect(existsSync(join(ROOT, 'farm', 'page.tsx'))).toBe(false);
-    expect(read('(front)', 'farm', 'page.tsx')).toContain('Welcome to the operating system built specifically for regenerative, scratch farms');
+    expect(read('(front)', 'farm', 'page.tsx')).toContain('The operating system for microgreens and sprouts production');
     expect(read('(front)', 'farm', 'page.tsx')).toMatch(/>\s*Login\s*</);
     expect(existsSync(join(ROOT, 'farm', 'dashboard', 'page.tsx'))).toBe(true);
   });

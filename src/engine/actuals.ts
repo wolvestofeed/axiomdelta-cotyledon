@@ -1,5 +1,5 @@
 /**
- * MicroFarm — actuals: the recorded facts, engine-side.
+ * Cotyledon — actuals: the recorded facts, engine-side.
  *
  * Ledger-free. These are the document shapes the `farm.sowing_records`,
  * `farm.receipts`, `farm.distributions` and `farm.period_bills` tables hold, the

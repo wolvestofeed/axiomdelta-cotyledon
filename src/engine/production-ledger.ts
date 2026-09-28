@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the production sowing as double-entry, at actual cost.
+ * Cotyledon — the production sowing as double-entry, at actual cost.
  *
  * Server-side only: it imports the `@/ledger` barrel. This module replaces the
  * four-entry production-day sketch with the chain a facility actually runs, and

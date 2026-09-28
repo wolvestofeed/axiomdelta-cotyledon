@@ -4,8 +4,8 @@ import { devBypass } from '@/server/dev-bypass';
 import '@/app/globals.css';
 
 export const metadata: Metadata = {
-  title: 'MicroFarm',
-  description: 'MicroFarm — the production operating system for microgreens and sprouts.',
+  title: 'Cotyledon',
+  description: 'Cotyledon, powered by Ember OS: the production operating system for microgreens and sprouts.',
 };
 
 /** The bare HTML shell. The route groups own their own chrome. Under the local development bypass Clerk is not mounted. */

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — orders and subscription cycles, engine-side.
+ * Cotyledon — orders and subscription cycles, engine-side.
  *
  * Ledger-free, database-free. The order book for a date range is the union of
  * two things:

@@ -13,7 +13,7 @@ import { listGrowPlans } from '@/server/grow-plans';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the Nutrients & Supplements library, writes. SUPER ADMIN ONLY.
+ * Cotyledon — the Nutrients & Supplements library, writes. SUPER ADMIN ONLY.
  *
  * A figure typed here is STATED, its note naming what was typed; a figure left alone keeps its
  * tag. A price is typed as what was paid for a container and its size in gallons, and stored as

@@ -433,7 +433,7 @@ edits included. Built in four slices, each reviewed before the next.
       tallies the plan's subscribers; a subscriber is new in the month of its first order; the plan's annual
       energy and water spread by the units it makes each month.
 - [x] Subscriber RATING ratings (migration 0073): status, stars and date on `farm.subscribers`, set by a super
-      admin on Subscribers (`setSubscriberRating`). MicroFarm assigns RATING ratings.
+      admin on Subscribers (`setSubscriberRating`). The farm assigns RATING ratings.
 - [x] The plan of record's history. Setting the plan of record posts `set_plan_of_record` to the trail with
       the config as applied (`_engine/plan-of-record.ts`, dated on the farm clock) and a copy of the
       master records and flat plans as they stand (`loadDefinitions`, `listSubscriptionCycles`). Plan v Actual posts

@@ -11,7 +11,7 @@ import { getScenarioView } from '@/server/scenarios';
 import { loadStandards } from '@/server/standards';
 
 /**
- * MicroFarm — approving a standard version (Roadmap J5), shared by the Grow plans page and the
+ * Cotyledon — approving a standard version (Roadmap J5), shared by the Grow plans page and the
  * approval of a time study. The snapshot is the grow plan's labor standard, its variable overhead
  * per tray and the fixed overhead absorption rate, as resolved on the PLAN OF RECORD — not an open
  * forecast — frozen with an effective date. An effective date

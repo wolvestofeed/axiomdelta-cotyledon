@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the equipment library (Roadmap N1).
+ * Cotyledon — the equipment library (Roadmap N1).
  */
 
 import { readFileSync } from 'node:fs';

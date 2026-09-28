@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the timeline primitives' arithmetic (scheduler build plan §5.1). Pure.
+ * Cotyledon — the timeline primitives' arithmetic (scheduler build plan §5.1). Pure.
  *
  * A time scale maps minutes from midnight onto a track, and lane packing puts
  * blocks that overlap on separate rows so nothing is drawn on top of anything

@@ -15,7 +15,7 @@ import { withWorkspace } from '@/server/workspace';
  */
 
 export const metadata: Metadata = {
-  title: 'MicroFarm — Sales',
+  title: 'Cotyledon — Sales',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };
@@ -40,7 +40,7 @@ async function SalesLayoutInner({ children }: { children: React.ReactNode }) {
       <PortalShell portal="Sales" links={[]} who={access.email ?? 'signed in'}>
         <div className="farm-card max-w-136!">
           <div className="farm-card-title">Sales access</div>
-          <p className="farm-fs-md farm-c-soft leading-[1.5]">The Sales portal is for MicroFarm staff. Access is granted per named person.</p>
+          <p className="farm-fs-md farm-c-soft leading-[1.5]">The Sales portal is for the farm&rsquo;s staff. Access is granted per named person.</p>
         </div>
       </PortalShell>
     );

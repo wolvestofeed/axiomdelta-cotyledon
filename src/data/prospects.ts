@@ -1,5 +1,5 @@
 /**
- * MicroFarm — prospective-subscriber prospect dataset (typed loader).
+ * Cotyledon — prospective-subscriber prospect dataset (typed loader).
  *
  * Imports the generated JSON compilation (see scripts/generate-farm-prospects.py).
  * SERVER-SIDE use only — filtering happens server-side so the browser receives

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the Plan ledger (Roadmap N5, operating-model-roadmap §2.2).
+ * Cotyledon — the Plan ledger (Roadmap N5, operating-model-roadmap §2.2).
  *
  * Server-side only (posts through `@/ledger`). A forecast's timeline
  * (`simulateForecast`) is posted through the SAME posting functions as the

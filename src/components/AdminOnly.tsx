@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the notice an operator sees in place of an admin-only page
+ * Cotyledon — the notice an operator sees in place of an admin-only page
  * (Roadmap O5). The page returns it before loading anything, so none of the
  * page's data is read or sent to an operator's browser.
  */

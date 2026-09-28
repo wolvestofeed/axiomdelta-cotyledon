@@ -1,5 +1,5 @@
 /**
- * MicroFarm — facility design constants (Roadmap Phase Q, facility-design-roadmap.md).
+ * Cotyledon — facility design constants (Roadmap Phase Q, facility-design-roadmap.md).
  *
  * The equipment list is the input; the square footage is the output. Nothing
  * here is a facility size. What lives here is:
@@ -300,7 +300,7 @@ export const DESIGN_ROOMS: readonly DesignRoom[] = [
       'Phase 1 packs after growing, so product is exposed after the kill step and the room is high risk. The Phase 2 pump fill station bags direct from the sprouting rack, sealed before blackout, and on that flow the room is not a high-risk zone.',
     ],
     risk: [
-      'Whether MicroFarm is audited against BRCGS, SQF or FSSC 22000 decides whether the segregation is a requirement or prudent practice. Unanswered; it changes the envelope cost more than any other item.',
+      'Whether the farm is audited against BRCGS, SQF or FSSC 22000 decides whether the segregation is a requirement or prudent practice. Unanswered; it changes the envelope cost more than any other item.',
       'If the Phase 2 pump fill station arrives early the room\'s justification weakens considerably; the room would be built for a Phase 1 flow that Phase 2 equipment removes.',
       'No published pascal figure for the positive-pressure differential and no published sizing rule for a blackout packaging room; the area is derived from the equipment, not from a benchmark.',
       'BRCGS Appendix 2 zone definitions are paywalled; the high-risk classification is built from secondary sources and needs one copy of the Standard before it is quoted to an auditor.',
@@ -319,7 +319,7 @@ export const APPROVED_CONFIGURATION: readonly { item: string; value: string; why
 
 /** The decisions the block plan needs (§10.6), carried on the plan so none is lost. */
 export const OPEN_DECISIONS: readonly { question: string; consequence: string }[] = [
-  { question: 'Is MicroFarm audited against BRCGS, SQF or FSSC 22000?', consequence: 'If yes, the packaging room\'s floor-to-ceiling segregation, filtered positive-pressure air and gowning sequence are requirements, not choices. This single answer changes the envelope cost more than any other item.' },
+  { question: 'Is the farm audited against BRCGS, SQF or FSSC 22000?', consequence: 'If yes, the packaging room\'s floor-to-ceiling segregation, filtered positive-pressure air and gowning sequence are requirements, not choices. This single answer changes the envelope cost more than any other item.' },
   { question: 'Raw protein prep: a separate area or time separation?', consequence: 'Food Code 3-302.11 permits either. A separate area costs floor; a time-separation SOP costs schedule and depends on the scheduler placing it. The prep zone is modelled as one zone.' },
   { question: 'The 34°F holding room.', consequence: 'Without it the shelf life is 7 days, not 30. Documented above as a potential room.' },
   { question: 'Does the Phase 2 pump fill station change the packaging room\'s classification?', consequence: 'Sealed before blackout removes the post-lethality exposure; decide the station\'s timing before committing capital to the room.' },

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — entity links (pure).
+ * Cotyledon — entity links (pure).
  *
  * One record referring to another is the same operation everywhere in the
  * platform: search a directory that stays server-side, resolve the hit to a

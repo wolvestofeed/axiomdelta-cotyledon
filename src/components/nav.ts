@@ -1,5 +1,5 @@
 /**
- * MicroFarm — module navigation.
+ * Cotyledon — module navigation.
  *
  * Single source of truth for the sidebar and the Platform Map. `status`
  * describes honestly how built each module is:

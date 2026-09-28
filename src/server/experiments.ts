@@ -6,7 +6,7 @@ import { experimentsOnShelves, type ExperimentDoc } from '@/engine/experiments';
 import type { SowingRecordDoc } from '@/engine/actuals';
 import type { GrowPlanDef } from '@/data/grow-plan';
 
-/** MicroFarm — experiments in R&D, read layer (server-only). */
+/** Cotyledon — experiments in R&D, read layer (server-only). */
 
 const iso = (d: string | Date): string => (typeof d === 'string' ? d : d.toISOString().slice(0, 10));
 

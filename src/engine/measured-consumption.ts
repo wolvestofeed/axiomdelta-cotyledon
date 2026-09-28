@@ -1,5 +1,5 @@
 /**
- * MicroFarm — what the approved time studies measured, beside what the plan carried before them.
+ * Cotyledon — what the approved time studies measured, beside what the plan carried before them.
  * Pure. Actuals reads it: for each grow plan with an approved study, the labor minutes per tray,
  * the water per tray over the cycle and per watering by method, and each supplement's ml per tray,
  * measured (the tray-weighted average of the approved studies that recorded it) against the figure

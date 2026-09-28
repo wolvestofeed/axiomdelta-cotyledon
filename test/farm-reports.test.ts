@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the Reports library (Roadmap Phase E): the catalog covers every
+ * Cotyledon — the Reports library (Roadmap Phase E): the catalog covers every
  * section of the main menu, admin-only reports are held from operators, and the
  * pure filter, sort and most-recently-viewed helpers behave.
  */

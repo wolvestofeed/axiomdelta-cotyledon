@@ -20,7 +20,7 @@ import { listLoans, listFixedCostLines, listLeasehold } from '@/server/finance';
 import { listTimeStudies } from '@/server/time-studies';
 
 /**
- * MicroFarm — scenario read layer (server-only).
+ * Cotyledon — scenario read layer (server-only).
  *
  * Three things, and the vocabulary is deliberate:
  *

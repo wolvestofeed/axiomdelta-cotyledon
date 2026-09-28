@@ -3,7 +3,7 @@ import { FARM_TAB_ICONS } from '@/assets/tab-icons';
 import Link from 'next/link';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
-import logo from '@/assets/farm-icon-512.png';
+import logo from '@/assets/cotyledon-header.png';
 import '@/components/farm.css';
 import { farmFontVars } from '@/components/fonts';
 import { getFarmAccess } from '@/server/access';
@@ -19,7 +19,7 @@ import { withWorkspace } from '@/server/workspace';
  */
 
 export const metadata: Metadata = {
-  title: 'MicroFarm — Grow Room',
+  title: 'Cotyledon — Grow Room',
   robots: { index: false, follow: false },
   icons: FARM_TAB_ICONS,
 };
@@ -38,7 +38,7 @@ async function FloorLayoutInner({ children }: { children: React.ReactNode }) {
       <div className={`farm-root ${farmFontVars}`}>
         <div className="max-w-136 my-[12vh]! mx-auto! py-0 px-6">
           <div className="farm-brand-name farm-c-ink">
-            MicroFarm
+            Cotyledon
           </div>
           <div className="farm-card mt-5!">
             <div className="farm-card-title">Floor access</div>
@@ -56,12 +56,8 @@ async function FloorLayoutInner({ children }: { children: React.ReactNode }) {
     <div className={`farm-root ${farmFontVars}`}>
       <div className="farm-floor-shell farm-floor">
         <div className="farm-floor-top">
-          <span className="farm-floor-brand" aria-label="MicroFarm">
-            <Image src={logo} alt="" className="farm-brand-icon" priority sizes="4rem" />
-            <span>
-              <span className="farm-brand-wordmark">MicroFarm</span>
-              <span className="farm-brand-tagline">MicroFarm</span>
-            </span>
+          <span className="farm-floor-brand">
+            <Image src={logo} alt="Cotyledon, powered by Ember OS" className="farm-floor-logo" priority sizes="10rem" />
           </span>
           <span className="farm-brand-sub">Grow Room</span>
           <span className="farm-kpi-sub ml-auto!">

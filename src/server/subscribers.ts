@@ -9,7 +9,7 @@ import { isCadence, type FlatPlanLine, type SubscriptionDef } from '@/data/subsc
 import type { FarmSubscriptionRow } from '@/db';
 
 /**
- * MicroFarm — subscribers read layer (server-only).
+ * Cotyledon — subscribers read layer (server-only).
  *
  * On first read of an empty table the Plan seed is inserted, `source = 'seed'` (`seed-writes.ts`):
  * the nineteen Forecast Subscribers on weekly subscriptions and Rob's own tray. The insert runs

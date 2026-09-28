@@ -1,5 +1,5 @@
 /**
- * MicroFarm — capital expenditure schedule: the seed of the equipment
+ * Cotyledon — capital expenditure schedule: the seed of the equipment
  * library (`farm.equipment`, Roadmap N1), which is the source from first read.
  *
  * Two settings. HOME is the home grow room: Vallecito's starter rack as bought (DATED) and the

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — carbon and resource accounting engine.
+ * Cotyledon — carbon and resource accounting engine.
  *
  * Pure, deterministic functions. Mirrors the financial ledger: an ACTIVITY
  * record (a quantity of something, from a document) times a PINNED FACTOR

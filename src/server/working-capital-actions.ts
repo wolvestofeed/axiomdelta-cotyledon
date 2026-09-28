@@ -36,7 +36,7 @@ import { isSubscriberPaymentTerms, isPaymentTerms } from '@/data/working-capital
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — working capital, writes (Roadmap Phase K).
+ * Cotyledon — working capital, writes (Roadmap Phase K).
  *
  * Invoices, bills and payments are recorded by super admins and operators
  * — `requireFarmOperator`, which super admins pass. The

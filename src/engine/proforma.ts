@@ -1,5 +1,5 @@
 /**
- * MicroFarm — capital, financing and the fixed-cost base, re-exported.
+ * Cotyledon — capital, financing and the fixed-cost base, re-exported.
  *
  * Ledger-FREE by design so client pages (Capital & Financing, Unit Economics) can
  * import it. The annual pro-forma P&L that lived here was retired in Roadmap N6

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — subscriptions (outline §4 Subscriber). A subscription is a subscriber's standing
+ * Cotyledon — subscriptions (outline §4 Subscriber). A subscription is a subscriber's standing
  * order at one of their pickup points: a cadence, the first distribution date, an optional last
  * one, and the flat plan each distribution carries. The flat plan is kept as dated versions, so a
  * change takes effect from the next distribution not yet sown and earlier distributions keep what

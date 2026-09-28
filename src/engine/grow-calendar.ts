@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow calendar: sowings on grow units across days (outline §4 stage schedule,
+ * Cotyledon — the grow calendar: sowings on grow units across days (outline §4 stage schedule,
  * §5 rules 1 and 8). Pure.
  *
  * A tray is sown on its sow date and sits on its grow unit for the plan's cycle days: sow,

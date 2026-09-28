@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the variety library, the science library and the inputs catalog agree
+ * Cotyledon — the variety library, the science library and the inputs catalog agree
  * (outline §4). Every stated benefit cites a registered row, every figure carries a tag,
  * and the stage schedule arithmetic holds.
  */

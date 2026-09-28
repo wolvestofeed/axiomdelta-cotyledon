@@ -67,7 +67,7 @@ export async function buildEvidencePack(asOf: string, kind: LedgerKind): Promise
   const sources = await listSources();
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MicroFarm';
+  wb.creator = 'Cotyledon';
   wb.created = new Date();
 
   sheet(wb, 'README', ['Item', 'Value'], [
@@ -138,7 +138,7 @@ export async function buildEvidencePack(asOf: string, kind: LedgerKind): Promise
   const zip = new JSZip();
   zip.file('evidence-pack.xlsx', xlsx);
   zip.file('README.md', [
-    '# MicroFarm — greenhouse-gas inventory evidence pack',
+    '# Cotyledon — greenhouse-gas inventory evidence pack',
     '',
     `Prepared ${asOf}. ${periodText}. Plan of record: ${active?.label ?? 'plan-data defaults'}. Factor fingerprint ${inv.fingerprint}.`,
     '',

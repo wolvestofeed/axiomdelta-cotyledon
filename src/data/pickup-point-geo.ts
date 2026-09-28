@@ -1,5 +1,5 @@
 /**
- * MicroFarm — coarse coordinates for the illustrative distribution pickup points.
+ * Cotyledon — coarse coordinates for the illustrative distribution pickup points.
  *
  * The pickup points in `seed-invented.ts` are invented and carry only a county. For
  * distance arithmetic they are placed at their county's centroid, taken from

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — what a grow plan buys. Pure.
+ * Cotyledon — what a grow plan buys. Pure.
  *
  * A plan's purchase lines are its grow lines as bought for one tray: a seed line in pounds of its
  * variety at the price per pound, a medium or nutrient line in the unit its cost card counts, and

@@ -4,7 +4,7 @@ import { farmStaff } from '@/db';
 import { db } from '@/lib/db';
 
 /**
- * MicroFarm — a sign-in matched to the staff register (Roadmap O5).
+ * Cotyledon — a sign-in matched to the staff register (Roadmap O5).
  *
  * An active person on the register whose email is the signed-in user's primary
  * email holds the operator role and sees their own record. Emails are stored

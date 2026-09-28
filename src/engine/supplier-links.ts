@@ -1,5 +1,5 @@
 /**
- * MicroFarm — input → supplier links (pure).
+ * Cotyledon — input → supplier links (pure).
  *
  * A lean supplier record is what the browser is allowed to hold: enough to
  * name the operation, show its certification and rating, and place it on a

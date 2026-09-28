@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the space engine (Roadmap Phase Q, facility-design-roadmap.md §3–§8). Pure.
+ * Cotyledon — the space engine (Roadmap Phase Q, facility-design-roadmap.md §3–§8). Pure.
  *
  * Five layers, each a stated operation on the one above, so any figure traces
  * to a spec sheet or a cited standard:

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the dashboard's top row: averages over every active grow plan.
+ * Cotyledon — the dashboard's top row: averages over every active grow plan.
  */
 
 import { describe, it, expect } from 'vitest';

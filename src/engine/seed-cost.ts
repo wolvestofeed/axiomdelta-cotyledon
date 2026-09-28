@@ -1,5 +1,5 @@
 /**
- * MicroFarm — what seed, media and nutrients were paid, from their receipts. Pure.
+ * Cotyledon — what seed, media and nutrients were paid, from their receipts. Pure.
  *
  * An input is received under what its line buys (`purchaseName`): a seed line by the pound under
  * its variety's name, a medium by the gallon or the mat, a nutrient by the ml. A rejected line is

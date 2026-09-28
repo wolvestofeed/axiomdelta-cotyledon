@@ -4,7 +4,7 @@ import { farmPostingLog, type DbHandle } from '@/db';
 import { GENESIS_HASH, postingHash, type PostingAction } from '@/engine/periods';
 
 /**
- * MicroFarm — appending to the posting trail (Roadmap J4).
+ * Cotyledon — appending to the posting trail (Roadmap J4).
  *
  * Called inside the same transaction as the record it describes, so a record
  * and its trail entry commit together or not at all. An advisory transaction

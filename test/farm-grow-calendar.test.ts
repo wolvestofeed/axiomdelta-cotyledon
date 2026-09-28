@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow calendar (outline §4 stage schedule, §5 rules 1 and 8): sow dates back-planned
+ * Cotyledon — the grow calendar (outline §4 stage schedule, §5 rules 1 and 8): sow dates back-planned
  * from distribution days, sowings placed on grow units for their cycle days, the day read by stage.
  */
 

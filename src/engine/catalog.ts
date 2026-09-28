@@ -1,5 +1,5 @@
 /**
- * MicroFarm — supplier catalogs and purchase orders (pure).
+ * Cotyledon — supplier catalogs and purchase orders (pure).
  *
  * Three jobs, none of which touch a database or a dataset:
  *   1. Seasonality — is a catalog line available on a given date, given a window

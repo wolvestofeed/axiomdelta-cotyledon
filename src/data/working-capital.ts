@@ -1,5 +1,5 @@
 /**
- * MicroFarm — working capital reference data.
+ * Cotyledon — working capital reference data.
  *
  * Payment terms, the opening position and the payroll calendar. Every figure is tagged; nothing
  * here has been stated for the farm, so the opening position and the payroll calendar are

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the facility design scenario (facility-design roadmap, step Q4b).
+ * Cotyledon — the facility design scenario (facility-design roadmap, step Q4b).
  *
  * Sets the plan of record's shelf life to 7 days: the current operational limit
  * under Food Code 3-502.12(D)(c) on the Phase 1 equipment as listed. Nothing else changes. The potential rooms on the Design and

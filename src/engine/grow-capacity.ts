@@ -1,5 +1,5 @@
 /**
- * MicroFarm — capacity in trays and cycle days (outline §5 rules 1 and 8). Pure.
+ * Cotyledon — capacity in trays and cycle days (outline §5 rules 1 and 8). Pure.
  *
  * A grow unit is an equipment row that carries shelves: a rack, a sprouting rack, a jar stand. It
  * takes a number of trays of a format (the format's trays per 48-inch shelf, scaled to the shelf

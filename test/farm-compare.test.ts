@@ -1,5 +1,5 @@
 /**
- * MicroFarm — two placed days side by side (scheduler build plan W5, §5.3).
+ * Cotyledon — two placed days side by side (scheduler build plan W5, §5.3).
  */
 
 import { describe, it, expect } from 'vitest';

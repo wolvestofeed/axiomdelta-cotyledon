@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the facility conformance register (facility-design-roadmap.md §4, §10).
+ * Cotyledon — the facility conformance register (facility-design-roadmap.md §4, §10).
  *
  * Every item is marked by what it is: CODE (a section can be cited and an
  * inspector can enforce it), SCHEME (a certification standard, binding only if

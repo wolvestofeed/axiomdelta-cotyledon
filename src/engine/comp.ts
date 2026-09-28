@@ -1,5 +1,5 @@
 /**
- * MicroFarm — loaded labor as the liabilities it accrues.
+ * Cotyledon — loaded labor as the liabilities it accrues.
  *
  * Pure and ledger-free. Staffing holds the roster, wages, burden and benefits
  * (Roadmap O1); what stays here is the split of loaded labor into the four

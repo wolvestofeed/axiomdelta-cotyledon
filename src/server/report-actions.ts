@@ -6,7 +6,7 @@ import { noteViewed, parseRecent, reportDef, RECENT_REPORTS_COOKIE } from '@/eng
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the reader's most recently viewed reports (Roadmap Phase E). A
+ * Cotyledon — the reader's most recently viewed reports (Roadmap Phase E). A
  * cookie, like the ledger selector: it follows the person, not the workspace,
  * and holds at most five report ids, most recent first. Nothing else is stored.
  */

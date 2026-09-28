@@ -15,7 +15,7 @@ import { cadenceDates, flatPlanOn, startProblem } from '@/engine/subscriptions';
 import { firstUnsown, skipRefusal, sowDateOf, startRefusal, withFlatPlan, type SowingRules } from '@/engine/subscription-cutoffs';
 
 /**
- * MicroFarm — subscriptions, writes. SUPER ADMIN until the Subscriber Portal links a subscriber's
+ * Cotyledon — subscriptions, writes. SUPER ADMIN until the Subscriber Portal links a subscriber's
  * own account. Every rule that touches a distribution reads its sow date: a subscription starts on
  * a first distribution that can still be sown for, a distribution is skipped before its sow date,
  * a pause starts at the first distribution not yet sown, and a flat plan change takes effect from

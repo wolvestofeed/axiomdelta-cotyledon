@@ -6,7 +6,7 @@ import { parseLayout, type FacilityLayout } from '@/engine/facility-layout';
 import type { BuildPhase } from '@/engine/facility';
 
 /**
- * MicroFarm — the floor layouts, read layer (Roadmap Q6). A drawing per
+ * Cotyledon — the floor layouts, read layer (Roadmap Q6). A drawing per
  * scenario key and build phase; the latest version of each is what the page
  * shows. `scenarioKey` is the scenario id the page renders, or 'plan-data'
  * when no plan of record is set.

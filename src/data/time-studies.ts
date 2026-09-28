@@ -1,5 +1,5 @@
 /**
- * MicroFarm — time studies: shapes and the seed (Roadmap O2).
+ * Cotyledon — time studies: shapes and the seed (Roadmap O2).
  *
  * A time study times one grow plan's tasks: the task, the station, how many
  * people, the elapsed and labor minutes, whether the minutes are fixed or scale

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — statements by period from a posted journal (Roadmap N5 / N6).
+ * Cotyledon — statements by period from a posted journal (Roadmap N5 / N6).
  *
  * Server-side only (reads through `@/ledger`). One builder for both ledgers:
  * the Plan ledger over a forecast's window and the Actual ledger over the

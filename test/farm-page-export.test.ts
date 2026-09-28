@@ -1,5 +1,5 @@
 /**
- * MicroFarm — a module page exported as it stands (Roadmap Phase E follow-up):
+ * Cotyledon — a module page exported as it stands (Roadmap Phase E follow-up):
  * the body a page posts is bounded and validated, sheet names obey Excel, and
  * the workbook holds the page's figures and tables as rendered.
  */

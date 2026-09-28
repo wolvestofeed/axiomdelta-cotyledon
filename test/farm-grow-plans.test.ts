@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow plan (outline §4) and the costing and capacity it carries (outline §5
+ * Cotyledon — the grow plan (outline §4) and the costing and capacity it carries (outline §5
  * rules 1 and 2). The seed is one plan per variety built from the variety records; every line
  * kind costs; the sowing is what one grow unit takes in trays; the library round-trips the plan
  * and projects it for the engine modules Phase 2 has not yet moved.

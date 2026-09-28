@@ -8,7 +8,7 @@ import { withSeedLock, insertPackages } from '@/server/seed-writes';
 import { leanSuppliersById } from '@/server/supplier-links';
 
 /**
- * MicroFarm — packaging library read layer (server-only).
+ * Cotyledon — packaging library read layer (server-only).
  *
  * On first read of an empty table the packages the per-unit placeholder names
  * are inserted, `source = 'seed'`, under an advisory lock. Returns the library,

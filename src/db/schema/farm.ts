@@ -19,7 +19,7 @@ import {
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 /**
- * MicroFarm — the isolated `farm` Postgres schema.
+ * Cotyledon — the isolated `farm` Postgres schema.
  *
  * Deliberately separate from Staffing's `public` schema (docs/farm/CLAUDE.md
  * §8). This is the first `pgSchema` in the repo; Drizzle qualifies every query

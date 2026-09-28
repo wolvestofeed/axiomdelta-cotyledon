@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the stage schedule (outline §4, glossary tier 3).
+ * Cotyledon — the stage schedule (outline §4, glossary tier 3).
  *
  * The process of a grow plan: soak → sow and weight → germination → blackout → light →
  * harvest window → packed. Each stage carries its watering method, its labor basis and,

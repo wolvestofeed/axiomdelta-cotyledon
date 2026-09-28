@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the forecast timeline (Roadmap N4b, operating-model-roadmap §2.2).
+ * Cotyledon — the forecast timeline (Roadmap N4b, operating-model-roadmap §2.2).
  *
  * Ledger-free, database-free, deterministic. A forecast is a dated timeline
  * from its start date: one year by default, expandable to two or three on the

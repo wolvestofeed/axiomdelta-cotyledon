@@ -12,7 +12,7 @@ import { listEquipment } from '@/server/equipment';
 import { withSeedLock, insertTimeStudy } from '@/server/seed-writes';
 
 /**
- * MicroFarm — time studies, read layer (server-only, Roadmap O2).
+ * Cotyledon — time studies, read layer (server-only, Roadmap O2).
  *
  * On read, every library grow plan with no study at all is seeded with one
  * ESTIMATED study, `source = 'seed'`, under an advisory lock and idempotent

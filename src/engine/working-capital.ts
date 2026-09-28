@@ -1,5 +1,5 @@
 /**
- * MicroFarm — working capital, engine-side (Roadmap Phase K).
+ * Cotyledon — working capital, engine-side (Roadmap Phase K).
  *
  * Pure: no database, no ledger import. Payment terms and due dates, invoice
  * numbers, the loan amortisation schedule and the current unit of

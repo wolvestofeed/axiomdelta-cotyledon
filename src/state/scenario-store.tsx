@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MicroFarm — shared scenario store (M1).
+ * Cotyledon — shared scenario store (M1).
  *
  * One client-side context holds the WORKING DRAFT overlay for the whole
  * platform. Every interactive page reads `resolved` (defaults + draft) and writes

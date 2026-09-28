@@ -3,7 +3,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { devBypass, devIdentity } from '@/server/dev-bypass';
 
 /**
- * MicroFarm — who is signed in, read in one place.
+ * Cotyledon — who is signed in, read in one place.
  *
  * Clerk's session, or under the local development bypass (`dev-bypass.ts`) a fixed admin of the
  * local workspace. `workspace.ts`, `access.ts` and the front door read this and nothing else reads

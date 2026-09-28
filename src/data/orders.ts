@@ -1,5 +1,5 @@
 /**
- * MicroFarm — orders: the document shape.
+ * Cotyledon — orders: the document shape.
  *
  * An order is a date, subscriber, pickup point, grow plan, units and a status. A forecast order
  * derived from a subscription's distribution is DERIVED and never stored; the engine computes it

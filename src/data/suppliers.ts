@@ -1,5 +1,5 @@
 /**
- * MicroFarm — compiled supplier dataset (typed loader).
+ * Cotyledon — compiled supplier dataset (typed loader).
  *
  * Imports the generated, attributed JSON compilation (see
  * scripts/generate-farm-suppliers.ts). SERVER-SIDE / test use only — the JSON

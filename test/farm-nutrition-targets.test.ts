@@ -1,5 +1,5 @@
 /**
- * MicroFarm — nutrition targets (outline §4): the catalog is the variety records, a flat is scored
+ * Cotyledon — nutrition targets (outline §4): the catalog is the variety records, a flat is scored
  * as facts, every benefit shown cites a registered row.
  */
 

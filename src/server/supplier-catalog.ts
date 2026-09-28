@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import type { CatalogLine, CatalogPrice, CatalogStatus } from '@/engine/catalog';
 
 /**
- * MicroFarm — supplier catalog and purchase-order reads (server-only).
+ * Cotyledon — supplier catalog and purchase-order reads (server-only).
  *
  * Catalog lines and purchase orders are operator data, not a public compilation,
  * so unlike the supplier directory they live in `farm.*` and are read per

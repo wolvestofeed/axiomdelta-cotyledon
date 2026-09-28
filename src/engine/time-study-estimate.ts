@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the ESTIMATED time study for a grow plan (Roadmap O2 follow-on). Pure.
+ * Cotyledon — the ESTIMATED time study for a grow plan (Roadmap O2 follow-on). Pure.
  *
  * Every plan in the library is seeded with an estimated study so it has a labor standard before
  * any sowing is timed. The estimate is Vallecito's 2023 tray study (DATED), labelled Estimated, and

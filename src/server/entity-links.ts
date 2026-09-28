@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import type { EntityKind } from '@/engine/entity-links';
 
 /**
- * MicroFarm — recorded links read layer (server-only).
+ * Cotyledon — recorded links read layer (server-only).
  *
  * These are the links that are facts of record, not forecast inputs (see
  * `_engine/entity-links.ts` for the rule and 0046 for the table). Reads are

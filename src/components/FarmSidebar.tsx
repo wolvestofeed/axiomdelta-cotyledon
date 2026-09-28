@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import logo from '@/assets/farm-icon-512.png';
+import logo from '@/assets/cotyledon-stacked.png';
 import { usePathname } from 'next/navigation';
 import { EXTERNAL_SECTIONS, MODULES, modulesFor, sectionsOf } from '@/components/nav';
 
@@ -86,10 +86,8 @@ export function FarmSidebar({ isAdmin, userName, userEmail }: { isAdmin: boolean
   return (
     <aside className="farm-sidebar">
       <div className="farm-brand">
-        <Link href="/farm/dashboard" aria-label="MicroFarm — Dashboard">
-          <Image src={logo} alt="" className="farm-brand-icon" priority sizes="12rem" />
-          <span className="farm-brand-wordmark">MicroFarm</span>
-          <span className="farm-brand-tagline">MicroFarm</span>
+        <Link href="/farm/dashboard" aria-label="Cotyledon — Dashboard">
+          <Image src={logo} alt="Cotyledon, powered by Ember OS" className="farm-brand-logo" priority sizes="12rem" />
         </Link>
       </div>
 

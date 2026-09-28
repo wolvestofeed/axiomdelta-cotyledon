@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the standard cost of a unit, per grow plan (Roadmap N3). Pure.
+ * Cotyledon — the standard cost of a unit, per grow plan (Roadmap N3). Pure.
  *
  * The cost of a unit is food + labor + packaging (operating-model-roadmap §3.5).
  * Before N3 two of the three were not the grow plan's own:

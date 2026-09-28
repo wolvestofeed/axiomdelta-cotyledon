@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import logo from '@/assets/farm-icon-512.png';
+import logo from '@/assets/cotyledon-header.png';
 import { farmFontVars } from '@/components/fonts';
 import { BRAND_LINE } from '@/components/ui';
 
@@ -27,12 +27,8 @@ export function PortalShell({
     <div className={`farm-root ${farmFontVars}`}>
       <div className="farm-floor-shell">
         <div className="farm-floor-top">
-          <span className="farm-floor-brand" aria-label="MicroFarm">
-            <Image src={logo} alt="" className="farm-brand-icon" priority sizes="4rem" />
-            <span>
-              <span className="farm-brand-wordmark">MicroFarm</span>
-              <span className="farm-brand-tagline">MicroFarm</span>
-            </span>
+          <span className="farm-floor-brand">
+            <Image src={logo} alt="Cotyledon, powered by Ember OS" className="farm-floor-logo" priority sizes="10rem" />
           </span>
           <span className="farm-brand-sub">{portal}</span>
           <nav className="farm-kpi-sub inline-flex! gap-[0.9rem]! flex-wrap!" aria-label={portal}>
@@ -54,7 +50,7 @@ export function PortalShell({
 export function ReviewPolicy() {
   return (
     <div role="note" className="border-b border-b-[color:var(--farm-line)] bg-[color:var(--farm-surface-2)] py-[0.55rem] px-5 farm-fs-sm farm-c-soft">
-      New accounts, orders and supplier submissions are reviewed by MicroFarm staff before they are committed to production. Please call the farm for faster service.
+      New accounts, orders and supplier submissions are reviewed by the farm&rsquo;s staff before they are committed to production. Please call the farm for faster service.
     </div>
   );
 }

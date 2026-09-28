@@ -1,6 +1,6 @@
 # Science Library — the source register
 
-Every benefit MicroFarm states about a variety traces to a row here. This file is the register the Sources module is seeded from in Phase 2; the glossary ([`glossary.md`](glossary.md)) cites rows by number. Nothing is stated to a subscriber without a citation, and a citation that is a company page or a blog is marked as such and never carries a clinical claim.
+Every benefit Cotyledon states about a variety traces to a row here. This file is the register the Sources module is seeded from in Phase 2; the glossary ([`glossary.md`](glossary.md)) cites rows by number. Nothing is stated to a subscriber without a citation, and a citation that is a company page or a blog is marked as such and never carries a clinical claim.
 
 Four source documents, all Rob's compilations, Sept 2026:
 
@@ -322,4 +322,4 @@ What the grow plan editor shows beside the light and medium lines. Each response
 - Human trial results may be stated as human results, with the population and duration. Animal and cell results are stated as such, never as what the flat will do for the person.
 - Grade C rows never carry a claim on their own. Grade S rows carry the supplier's nutrient and flavor statements, not clinical outcomes.
 - Dosing is not stated. The trials used extracts and powders at set grams per day; a flat is not a dose.
-- MicroFarm surfaces the evidence and the math. It does not counsel. No "recommend", "should", "best", "optimal", "consider" (CLAUDE.md §5).
+- Cotyledon surfaces the evidence and the math. It does not counsel. No "recommend", "should", "best", "optimal", "consider" (CLAUDE.md §5).

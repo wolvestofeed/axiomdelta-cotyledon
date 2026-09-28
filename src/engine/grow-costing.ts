@@ -1,5 +1,5 @@
 /**
- * MicroFarm — costing a grow plan on its four line kinds (outline §5 rule 2). Pure.
+ * Cotyledon — costing a grow plan on its four line kinds (outline §5 rule 2). Pure.
  *
  * Every dollar of one tray comes from the plan's lines against tagged reference data:
  *

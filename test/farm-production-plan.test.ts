@@ -1,5 +1,5 @@
 /**
- * MicroFarm — production planning on the grow model: requirements from the order book, finished
+ * Cotyledon — production planning on the grow model: requirements from the order book, finished
  * goods from the records, a production day, the horizon and a single run, on the seed grow plans.
  */
 

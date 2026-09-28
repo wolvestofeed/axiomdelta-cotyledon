@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the packaging library's shapes and seed (Roadmap N1).
+ * Cotyledon — the packaging library's shapes and seed (Roadmap N1).
  *
  * Packaging is what a unit leaves the farm in — containers, lids, labels,
  * liners — each a unit cost on the unit. The packaging EQUIPMENT (tray sealer,

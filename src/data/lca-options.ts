@@ -1,5 +1,5 @@
 /**
- * MicroFarm — curated LCA basis options per input.
+ * Cotyledon — curated LCA basis options per input.
  *
  * The REFERENCE basis for every input is the study mean (Poore & Nemecek)
  * and is never edited. The SELECTED basis is the operator's choice among the

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — reset the placeholder seed.
+ * Cotyledon — reset the placeholder seed.
  *
  * Deletes every `source = 'seed'` subscriber (pickup points, subscriptions and orders on them
  * cascade), inserts any seed grow plan missing from the library, brings grow plans still

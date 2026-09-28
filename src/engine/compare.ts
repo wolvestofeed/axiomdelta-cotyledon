@@ -1,5 +1,5 @@
 /**
- * MicroFarm — two placed days side by side (scheduler build plan §5.3). Pure.
+ * Cotyledon — two placed days side by side (scheduler build plan §5.3). Pure.
  *
  * The point of the module: run the same day under two scenarios and say what
  * changed. Every row is a fact off `schedule()` — nothing here re-derives a

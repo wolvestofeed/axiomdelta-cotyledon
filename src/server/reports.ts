@@ -53,7 +53,7 @@ import { lcaOptions as curatedOptions } from '@/data/lca-options';
 import { CATALOG_STATUS_LABEL } from '@/engine/catalog';
 
 /**
- * MicroFarm — the Reports library, assembled (Roadmap Phase E). Server-only.
+ * Cotyledon — the Reports library, assembled (Roadmap Phase E). Server-only.
  *
  * One read of the shared documents, then every report in the catalog built
  * from them with the same engine functions the module pages call. Nothing is

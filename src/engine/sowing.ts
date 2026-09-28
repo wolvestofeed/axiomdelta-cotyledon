@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the sowing execution record.
+ * Cotyledon — the sowing execution record.
  *
  * This is the ISA-95 / IEC 62264 Level 3 "production performance" object: what a
  * sowing ACTUALLY did, as against the Level 4 production schedule that asked for

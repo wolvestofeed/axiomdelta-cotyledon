@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the sowing record on the grow model (outline §4 Sowing): the prefill at standard,
+ * Cotyledon — the sowing record on the grow model (outline §4 Sowing): the prefill at standard,
  * the lot per variety, the mass balance, and the control points as recorded, a gap or failed.
  */
 

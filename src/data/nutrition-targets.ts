@@ -1,5 +1,5 @@
 /**
- * MicroFarm — nutrition targets (outline §4). The named targets a subscriber can set, and the
+ * Cotyledon — nutrition targets (outline §4). The named targets a subscriber can set, and the
  * varieties that carry each.
  *
  * Nothing here is authored: the catalog is the union of the nutrients and compounds named on the

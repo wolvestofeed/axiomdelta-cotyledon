@@ -1,5 +1,5 @@
 /**
- * MicroFarm — loans and fixed-cost lines: the document shapes, and the seed.
+ * Cotyledon — loans and fixed-cost lines: the document shapes, and the seed.
  *
  * These were two constant blocks in `capex.ts` — `financeParams` (one equipment
  * loan and one leasehold loan, their principals derived from the capex totals)

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the timeline primitives' arithmetic (scheduler build plan §5.1, W2).
+ * Cotyledon — the timeline primitives' arithmetic (scheduler build plan §5.1, W2).
  */
 
 import { describe, it, expect } from 'vitest';

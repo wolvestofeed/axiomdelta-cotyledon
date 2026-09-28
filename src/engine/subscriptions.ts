@@ -1,5 +1,5 @@
 /**
- * MicroFarm — a subscription's distributions (outline §4 Subscriber). Pure.
+ * Cotyledon — a subscription's distributions (outline §4 Subscriber). Pure.
  *
  * Weekly and every-two-weeks subscriptions fall every seven or fourteen days from the first
  * distribution. A monthly one falls on the same weekday of the same week of each month as the

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — what an input costs, and where that figure came from (pure).
+ * Cotyledon — what an input costs, and where that figure came from (pure).
  *
  * Decision 7: the supplier
  * catalog item's price is the source when one is on file; the grow plan line's own

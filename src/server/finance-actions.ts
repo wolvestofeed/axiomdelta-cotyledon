@@ -11,7 +11,7 @@ import { uniqueEquipmentKey } from '@/engine/equipment';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — loans and fixed-cost lines, writes. SUPER ADMIN ONLY.
+ * Cotyledon — loans and fixed-cost lines, writes. SUPER ADMIN ONLY.
  *
  * Both are shared definitions (Roadmap N1), so these actions change the library
  * every forecast reads. A what-if that should not follow the workspace belongs

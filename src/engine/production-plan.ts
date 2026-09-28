@@ -1,5 +1,5 @@
 /**
- * MicroFarm — production planning in three levels, engine-side.
+ * Cotyledon — production planning in three levels, engine-side.
  *
  * Ledger-free, database-free. Roadmap Phase H4.
  *

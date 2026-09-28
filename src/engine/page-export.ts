@@ -1,5 +1,5 @@
 /**
- * MicroFarm — a module page exported as it stands (Roadmap Phase E follow-up).
+ * Cotyledon — a module page exported as it stands (Roadmap Phase E follow-up).
  * Pure, client-safe.
  *
  * The Reports library carries summary rows and a bounded detail; the full detail

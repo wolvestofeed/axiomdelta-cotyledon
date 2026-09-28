@@ -10,7 +10,7 @@ import { FACILITY_ZONES } from '@/data/facility-design';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the floor layout, writes (Roadmap Q6). SUPER ADMIN ONLY.
+ * Cotyledon — the floor layout, writes (Roadmap Q6). SUPER ADMIN ONLY.
  *
  * A save inserts the next version for the scenario key and build phase;
  * nothing is overwritten. The drawing is a definition of the facility, not a

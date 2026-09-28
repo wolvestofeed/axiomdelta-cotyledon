@@ -19,7 +19,7 @@ import type {
 import type { SowingIssue, VarietyLot } from '@/engine/sowing';
 
 /**
- * MicroFarm — actuals read layer (server-only).
+ * Cotyledon — actuals read layer (server-only).
  *
  * Rows become the engine's document shapes here and nowhere else. Dates come
  * back as ISO strings; cents stay cents. The working-capital documents and the

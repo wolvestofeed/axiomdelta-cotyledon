@@ -4,7 +4,7 @@ import { farmStaff, farmTrainingDocs, farmTrainingAssignments } from '@/db';
 import { db } from '@/lib/db';
 
 /**
- * MicroFarm — onboarding: what happens when a person joins.
+ * Cotyledon — onboarding: what happens when a person joins.
  *
  * ONE entry point, deliberately: an admin adding a person on Staffing calls
  * `onStaffJoined`, and so will any future path, so the two cannot drift.

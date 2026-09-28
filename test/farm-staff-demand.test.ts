@@ -1,5 +1,5 @@
 /**
- * MicroFarm — production staff demand (Roadmap O3), on the sowing and harvest streams.
+ * Cotyledon — production staff demand (Roadmap O3), on the sowing and harvest streams.
  */
 
 import { describe, it, expect } from 'vitest';

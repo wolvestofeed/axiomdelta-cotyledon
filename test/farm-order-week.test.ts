@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the dashboard's Production card: the week of orders from today.
+ * Cotyledon — the dashboard's Production card: the week of orders from today.
  */
 
 import { describe, it, expect } from 'vitest';

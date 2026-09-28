@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the schedule policy: the settings the scheduler places a day
+ * Cotyledon — the schedule policy: the settings the scheduler places a day
  * under (scheduler build plan §0 and §3.5). Every one is a scenario input
  * (`schedulePolicy` overlay section); nothing in the scheduler is a constant.
  */

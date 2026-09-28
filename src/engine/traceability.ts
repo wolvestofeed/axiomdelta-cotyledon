@@ -1,5 +1,5 @@
 /**
- * MicroFarm — FSMA 204 traceability, emitted by the consumption journal.
+ * Cotyledon — FSMA 204 traceability, emitted by the consumption journal.
  *
  * 21 CFR Part 1 subpart S treats a grow facility as a TRANSFORMATION
  * critical tracking event: the traceability lot codes and quantities of every

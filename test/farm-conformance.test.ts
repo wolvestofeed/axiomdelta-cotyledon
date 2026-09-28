@@ -1,5 +1,5 @@
 /**
- * MicroFarm — conformance (Roadmap N10). One test per rule the operating model
+ * Cotyledon — conformance (Roadmap N10). One test per rule the operating model
  * must keep once N2–N9 are in:
  *
  *   C1  a grow plan's cost per unit is identical on Unit Economics, Grow plans, Production

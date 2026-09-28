@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MicroFarm — the timeline primitives (scheduler build plan §5.1).
+ * Cotyledon — the timeline primitives (scheduler build plan §5.1).
  *
  * A grid with a sticky lane column and a scrolling track, blocks placed on a
  * time scale, precedence arrows drawn over them, and a crew load strip. No

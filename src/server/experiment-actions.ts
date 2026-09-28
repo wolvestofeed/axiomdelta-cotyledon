@@ -14,7 +14,7 @@ import { promotePlan } from '@/engine/experiments';
 import { growPlanToRows } from '@/engine/grow-plan-library';
 
 /**
- * MicroFarm — experiments in R&D, writes. An operator starts an experiment: a title, a grow plan
+ * Cotyledon — experiments in R&D, writes. An operator starts an experiment: a title, a grow plan
  * not in service, a sow date and whole trays. It closes through the grow form, whose sowing record
  * names it. An experiment no record names can be removed by a super admin; a closed one cannot. A
  * super admin moves a plan to in service.

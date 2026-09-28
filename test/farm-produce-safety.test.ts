@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the stage control points: which a plan records, and the spent-water verdict.
+ * Cotyledon — the stage control points: which a plan records, and the spent-water verdict.
  */
 
 import { describe, it, expect } from 'vitest';

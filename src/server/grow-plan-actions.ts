@@ -14,7 +14,7 @@ import { listNutrients } from '@/server/nutrients';
 import { listMedia } from '@/server/media';
 
 /**
- * MicroFarm — grow plan library writes. SUPER ADMIN ONLY.
+ * Cotyledon — grow plan library writes. SUPER ADMIN ONLY.
  *
  * A library plan is the standard a scenario's edits are measured against, so it is written here,
  * not through the forecast overlay. Saving bumps the version; the lines are replaced whole (a plan

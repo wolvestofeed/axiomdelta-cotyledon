@@ -1,5 +1,5 @@
 /**
- * MicroFarm — growing media, nutrient solutions, light fixtures and light regimes (outline §4).
+ * Cotyledon — growing media, nutrient solutions, light fixtures and light regimes (outline §4).
  *
  * The three non-seed line kinds of a grow plan. A medium is costed per tray, a nutrient per
  * gallon of water at a concentration, and light per tray per day of the light stage. Seed is

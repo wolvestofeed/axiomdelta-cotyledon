@@ -1,5 +1,5 @@
 /**
- * MicroFarm — training documents and who has completed which (pure).
+ * Cotyledon — training documents and who has completed which (pure).
  *
  * A training document is a FAMILY with numbered versions. The file is replaced
  * from time to time and carries technical content, so a version is never

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the role matrix (Roadmap O5): admin and operator.
+ * Cotyledon — the role matrix (Roadmap O5): admin and operator.
  *
  * Operators get no company financials: the Financials & Accounting entries are
  * removed from their navigation and every one of those pages is gated on the

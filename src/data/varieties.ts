@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the variety library (outline §4). The master record and the cost basis.
+ * Cotyledon — the variety library (outline §4). The master record and the cost basis.
  *
  * A variety carries its seed source and provenance, its price per pound (the rolling cost from
  * receipts replaces this seed figure once receipts exist), its seeding density per tray

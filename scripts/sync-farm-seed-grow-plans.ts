@@ -1,5 +1,5 @@
 /**
- * MicroFarm — sync the seed grow plans alone.
+ * Cotyledon — sync the seed grow plans alone.
  *
  * Inserts any seed grow plan missing from the library and brings every grow plan still
  * `source = 'seed'` (header and lines) in line with the code seed, version bumped.

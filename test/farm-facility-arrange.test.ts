@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the generated arrangement (Roadmap Q6): a flow-order plan from
+ * Cotyledon — the generated arrangement (Roadmap Q6): a flow-order plan from
  * the register and the derived areas that the layout checks then verify.
  */
 

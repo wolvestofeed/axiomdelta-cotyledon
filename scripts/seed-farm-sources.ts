@@ -1,5 +1,5 @@
 /**
- * MicroFarm — sources registry seed.
+ * Cotyledon — sources registry seed.
  *
  * Registers, idempotently:
  *   1. Stored documents from the git-ignored research folder (large files that

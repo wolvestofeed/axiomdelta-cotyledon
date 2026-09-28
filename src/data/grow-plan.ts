@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow plan (outline §4). How a variety, or a blend, is grown.
+ * Cotyledon — the grow plan (outline §4). How a variety, or a blend, is grown.
  *
  * A plan names its tray format and carries lines of four kinds, every one of which feeds the
  * costing formula (`_engine/grow-costing.ts`):

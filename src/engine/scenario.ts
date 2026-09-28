@@ -1,5 +1,5 @@
 /**
- * MicroFarm — scenario overlay + resolver.
+ * Cotyledon — scenario overlay + resolver.
  *
  * A scenario is `plan-data defaults + a thin overlay of edited values`
  * (`FarmScenarioConfig`) — the same base-plus-overlay pattern Staffing uses for

@@ -13,7 +13,7 @@ import { LEDGER_COOKIE, isLedgerKind, type LedgerBookView, type LedgerJournalVie
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — the ledger selector and the books behind it (Roadmap N6).
+ * Cotyledon — the ledger selector and the books behind it (Roadmap N6).
  *
  * Plan posts the working copy the browser sends — unsaved edits included
  * — through the forecast timeline and the Plan ledger.

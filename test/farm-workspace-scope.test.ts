@@ -1,5 +1,5 @@
 /**
- * MicroFarm — every entry point runs in the workspace scope (outline §7).
+ * Cotyledon — every entry point runs in the workspace scope (outline §7).
  *
  * `db` throws outside a scope, so an unwrapped entry point fails loudly at runtime. This
  * test fails it earlier: every server page and layout, every route handler, and every

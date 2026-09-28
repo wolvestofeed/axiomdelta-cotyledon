@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the process route per grow plan (scheduler build plan §0, W0 step 3). Pure.
+ * Cotyledon — the process route per grow plan (scheduler build plan §0, W0 step 3). Pure.
  *
  * A route is derived, never authored beside the study. Its steps are the sowing and harvest lines
  * of the plan's labor standard — the approved studies averaged, or the estimate that stands in — in study

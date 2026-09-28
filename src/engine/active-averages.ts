@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the dashboard's top row: averages over every ACTIVE grow plan
+ * Cotyledon — the dashboard's top row: averages over every ACTIVE grow plan
  *. Pure.
  *
  * Each In Service grow plan is costed on its own sowing — one unit of each Phase 1 grow unit —

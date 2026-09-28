@@ -10,7 +10,7 @@ import type { GrowPlanDef } from '@/data/grow-plan';
 import { growPlanToRows } from '@/engine/grow-plan-library';
 
 /**
- * MicroFarm — the placeholder seed, written once.
+ * Cotyledon — the placeholder seed, written once.
  *
  * One writer for the read layers (`server/subscribers.ts`, `server/grow-plans.ts`) and the
  * reset script (`pnpm farm:reseed`), so the rows the database starts with come from one

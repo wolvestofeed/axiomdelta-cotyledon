@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the vocabulary guard (outline §3).
+ * Cotyledon — the vocabulary guard (outline §3).
  *
  * No kitchen word survives the swap anywhere in the app, the schema, the migration,
  * the scripts or the docs. The words are the ones CLAUDE.md §3 names, plus the rest of

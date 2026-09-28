@@ -1,5 +1,5 @@
 /**
- * MicroFarm — home / facility location.
+ * Cotyledon — home / facility location.
  *
  * PLACEHOLDER PIN. The exact facility address is still to be confirmed. Per
  * the operator: "just south of Lady Bird Lake, right at the separation of
@@ -10,7 +10,7 @@
  * `approximate` to false. This is the single source of truth for the home pin.
  */
 export const FARM_HOME = {
-  name: 'MicroFarm',
+  name: 'Home grow room',
   address: 'South Austin — just south of Lady Bird Lake (exact address TBD)',
   lat: 30.2516,
   lng: -97.7492,

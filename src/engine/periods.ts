@@ -1,5 +1,5 @@
 /**
- * MicroFarm — fiscal periods, the production calendar and the
+ * Cotyledon — fiscal periods, the production calendar and the
  * posting trail (Roadmap J1, J3, J4). Pure: no database, no React.
  *
  * Periods are calendar months and the fiscal year is the calendar year

@@ -12,7 +12,7 @@ import { withWorkspace } from '@/server/workspace';
 import { approveStandardVersion, standardRefusal } from '@/server/standard-approval';
 
 /**
- * MicroFarm — time studies, writes. SUPER ADMIN ONLY (Roadmap O2).
+ * Cotyledon — time studies, writes. SUPER ADMIN ONLY (Roadmap O2).
  * Recording a study (always OBSERVED: a date, an observer and a quality result, the
  * task lines, and the water and supplements applied to the sowing studied; the estimates
  * are seeded, never typed), approving it — an entry on the posting trail that puts it in

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the blends in R&D (`docs/roadmaps/phase-2-growing-domain.md` part 12).
+ * Cotyledon — the blends in R&D (`docs/roadmaps/phase-2-growing-domain.md` part 12).
  *
  * A blend is one grow plan with two or more seed lines (`grow-plan.ts`), developed through
  * experiments before it goes in service. These are the blends Rob chose from his two blend

@@ -11,7 +11,7 @@ import { activeVersion, planPublish } from '@/engine/training';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — training documents, writes.
+ * Cotyledon — training documents, writes.
  *
  * Publishing is SUPER ADMIN ONLY. Completing is the signed-in person's own
  * act: an operator marks their own assignment read and can mark no one else's,

@@ -1,5 +1,5 @@
 /**
- * MicroFarm — source-of-truth reference data.
+ * Cotyledon — source-of-truth reference data.
  *
  * Every figure here traces to the facility operating model. Source-company
  * identifiers are scrubbed: the grow plan code is AMK-E-001, and no company,

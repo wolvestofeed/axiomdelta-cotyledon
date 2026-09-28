@@ -9,7 +9,7 @@ import { listEquipment } from '@/server/equipment';
 import { listTimeStudies } from '@/server/time-studies';
 
 /**
- * MicroFarm — the Time Study Sheet (Roadmap O2 follow-on): the printable
+ * Cotyledon — the Time Study Sheet (Roadmap O2 follow-on): the printable
  * instrument for timing a sowing of any grow plan in the library, downloaded from
  * Labor. One block per grow plan, its task scaffold off its own served components
  * (`timeStudyScaffold`) — the same scaffold the estimated study was built on —
@@ -34,12 +34,12 @@ export async function buildTimeStudySheet(asOf: string, firstGrowPlanCode: strin
   const ordered = [...growPlans].sort((a, b) => (a.code === firstGrowPlanCode ? -1 : b.code === firstGrowPlanCode ? 1 : 0));
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MicroFarm';
+  wb.creator = 'Cotyledon';
   wb.created = new Date();
 
   const readme = wb.addWorksheet('Read Me');
   const lines: [string, string][] = [
-    ['MicroFarm — Time Study Sheet', `Prepared ${asOf}. ${growPlans.length} grow plans in the library.`],
+    ['Cotyledon — Time Study Sheet', `Prepared ${asOf}. ${growPlans.length} grow plans in the library.`],
     ['', ''],
     ['What this is', 'The instrument for timing a grow plan. One block per plan, its tasks on three streams from Vallecito\'s 2023 tray study. The sowing stream is the sow day: supplies in, seed received and sorted, the prep station, trays prepped, trays sown. The daily stream is every day a tray is on its grow unit: the watering its stage takes, nutrient preparation under the lights, inspection and sanitization. The harvest stream is the distribution day: the harvest station prepped, the trays packed and labelled at the harvest check, the station cleaned. End-of-day closedown is not on a study.'],
     ['Streams', 'Sowing lines are timed against the trays sown. Daily lines are timed on one day against the trays on the shelves that day. Harvest lines are timed on a distribution day against the trays shipped that day. Write the trays beside each stream\'s lines.'],

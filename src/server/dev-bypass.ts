@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the local development switch that takes Clerk off the door.
+ * Cotyledon — the local development switch that takes Clerk off the door.
  *
  * `FARM_DEV_BYPASS_AUTH=1` in `.env.local` signs every request in as the local admin of
  * one local workspace: no Clerk sign-in, no organization picker, no keys needed. It is read only

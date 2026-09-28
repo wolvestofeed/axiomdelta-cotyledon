@@ -10,7 +10,7 @@ import { isSourceKind } from '@/engine/sources';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — sources registry write actions. SUPER ADMIN ONLY.
+ * Cotyledon — sources registry write actions. SUPER ADMIN ONLY.
  *
  *   updateSourceMeta — edit title, kind, authors, publisher, year, citation,
  *                      URL, licence note, status and notes. Never touches the

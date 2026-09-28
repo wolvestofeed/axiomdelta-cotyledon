@@ -12,7 +12,7 @@ import { uniqueEquipmentKey } from '@/engine/equipment';
 import { withWorkspace } from '@/server/workspace';
 
 /**
- * MicroFarm — equipment library, writes. SUPER ADMIN ONLY.
+ * Cotyledon — equipment library, writes. SUPER ADMIN ONLY.
  *
  * The equipment list is a shared definition (Roadmap N1): quantity, unit cost,
  * status, build-out phase and service date. An edited seed row becomes

@@ -24,7 +24,7 @@ export function PortalSignUp({ base }: { base: string }) {
 
 /**
  * The front door's one sign-in (Roadmap P7). Clerk's own footer is hidden; the page carries the "Create account"
- * link to the front door's sign-up, so a new person never leaves the MicroFarm pages.
+ * link to the front door's sign-up, so a new person never leaves the Cotyledon pages.
  */
 export function FrontDoorSignIn() {
   return (

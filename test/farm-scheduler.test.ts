@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the scheduler (scheduler build plan W1): a golden day, the flips,
+ * Cotyledon — the scheduler (scheduler build plan W1): a golden day, the flips,
  * the priority rules, constrained crews and the reconciliation to staff demand.
  */
 

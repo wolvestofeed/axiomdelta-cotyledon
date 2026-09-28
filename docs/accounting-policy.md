@@ -1,4 +1,4 @@
-# MicroFarm — inventory & cost accounting policy
+# Cotyledon — inventory & cost accounting policy
 
 The authority behind every number the platform posts. Co-versioned with
 `_engine/production-ledger.ts`, `_engine/index.ts` and `_data/coa-farm.ts`: if a rule

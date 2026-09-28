@@ -6,7 +6,7 @@ import { buildReportLibrary } from '@/server/reports';
 import { REPORT_THEME_LABELS, REPORT_WORLD_LABELS, type ReportData, type ReportDef, type ReportTable } from '@/engine/reports';
 
 /**
- * MicroFarm — a report package as a workbook (Roadmap Phase E). Follows the
+ * Cotyledon — a report package as a workbook (Roadmap Phase E). Follows the
  * evidence-pack pattern (exceljs): one Read Me sheet naming the basis of every
  * report in the file, then one sheet per report holding its summary rows, a
  * blank row, and its detail rows. The rows are the library's own — nothing is
@@ -49,7 +49,7 @@ export async function buildReportWorkbook(access: FarmAccess, pick: { section?: 
   if (chosen.length === 0) return null;
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'MicroFarm';
+  wb.creator = 'Cotyledon';
   wb.created = new Date();
 
   const readme = wb.addWorksheet('Read Me');

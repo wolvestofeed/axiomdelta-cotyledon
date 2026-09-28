@@ -1,5 +1,5 @@
 /**
- * Public types for the ledger — MicroFarm's double-entry sub-ledger.
+ * Public types for the ledger — Cotyledon's double-entry sub-ledger.
  *
  * The ledger is NOT a books-of-record system. This ledger ingests
  * actuals (CSV exports from QuickBooks / Xero / generic GLs in Phase

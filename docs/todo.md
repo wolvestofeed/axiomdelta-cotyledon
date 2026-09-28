@@ -4,10 +4,9 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0022` are applied and `0023` is written and waits for `pnpm db:migrate`, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`.
-- Six retired files need `git rm`, which a session cannot run: `src/data/subscription-cycles.ts`, `src/engine/services.ts`, `src/engine/flat-plans.ts`, `src/engine/participation.ts`, `src/components/FlatPlanForm.tsx`, `test/support/service-subscribers.ts`. Nothing imports them; typecheck fails only in them.
+- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0023` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`.
 - The opening position and the payroll calendar (`src/data/working-capital.ts`): $200,000 opening equity, no loan, biweekly pay periods paid the Friday after, all PLACEHOLDER until you state them. The shrink allowance (3% of seed, medium and nutrient) and the end-of-day closedown (one person, 30 minutes) likewise.
-- Brand name and domain for the software (working title MicroFarm). The facility trades as Axiom Delta Wellness Center.
+- The domain for the software. The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.
 - The variety records carry PLACEHOLDER harvest weights until closed sowings observe them; if Vallecito harvest weights exist anywhere, they replace the placeholders as DATED.
@@ -38,4 +37,4 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Across the products
 
-- One client across bodywork, microgreens and Feed The Wolf: shared Clerk identity, shared email, or a wellness-center client record the products reference. Not a MicroFarm build item until the products need to share it.
+- One client across bodywork, microgreens and Feed The Wolf: shared Clerk identity, shared email, or a wellness-center client record the products reference. Not a Cotyledon build item until the products need to share it.

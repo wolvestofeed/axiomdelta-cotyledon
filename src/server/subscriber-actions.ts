@@ -13,7 +13,7 @@ import { TARGET_BY_KEY } from '@/data/nutrition-targets';
 const knownTargets = (keys: readonly string[]): string[] => [...new Set(keys)].filter((k) => k in TARGET_BY_KEY);
 
 /**
- * MicroFarm — subscribers and pickup points, writes. SUPER ADMIN ONLY.
+ * Cotyledon — subscribers and pickup points, writes. SUPER ADMIN ONLY.
  *
  * A subscriber and its pickup points are facts of record: the contract, the price and the places
  * served. Its subscriptions are written by `subscription-actions.ts`. A forecast's edits live on

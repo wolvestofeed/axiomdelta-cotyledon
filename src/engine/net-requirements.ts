@@ -1,5 +1,5 @@
 /**
- * MicroFarm — purchase orders from net requirements (Roadmap H5).
+ * Cotyledon — purchase orders from net requirements (Roadmap H5).
  *
  * Ledger-free, database-free.
  *

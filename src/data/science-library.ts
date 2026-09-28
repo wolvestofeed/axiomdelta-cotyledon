@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the science library as data (`docs/science-library.md` is the register of record).
+ * Cotyledon — the science library as data (`docs/science-library.md` is the register of record).
  *
  * One register keyed by URL. Rows 1–56 are the works cited by the nutritional research review
  * (document A) in its own order; rows 57–60 are the program's other sources; rows 61 onward are

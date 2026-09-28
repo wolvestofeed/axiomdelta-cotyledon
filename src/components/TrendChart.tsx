@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 
 /**
- * MicroFarm — a single-series trend line over dated points.
+ * Cotyledon — a single-series trend line over dated points.
  *
  * One series, one axis, so no legend: the card title names what is plotted.
  * 2px line, 8px markers with a 2px surface ring, hairline recessive grid, the

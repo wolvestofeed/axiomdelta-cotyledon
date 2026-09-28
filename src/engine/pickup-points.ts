@@ -1,5 +1,5 @@
 /**
- * MicroFarm — distribution pickup points, resolved (pure, client-safe).
+ * Cotyledon — distribution pickup points, resolved (pure, client-safe).
  *
  * A seed pickup point is a name, a type, a county and a forecast. Linking it to a prospect
  * in the prospect directory turns it into a record with a real geocode, so the

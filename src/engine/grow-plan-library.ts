@@ -1,5 +1,5 @@
 /**
- * MicroFarm — the grow plan library, engine-side.
+ * Cotyledon — the grow plan library, engine-side.
  *
  * Ledger-free, database-free. Conversions between a library row pair (`farm.grow_plans` +
  * `farm.grow_plan_lines`) and the grow plan the engine reads, and the next code under a variety.

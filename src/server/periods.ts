@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 import { periodOf } from '@/engine/actuals';
 import { postingRefusal, type CalendarClosure, type ClosureKind, type FiscalPeriod, type PostingAction, type PostingEntry } from '@/engine/periods';
 
-/** MicroFarm — periods, calendar and posting-trail read layer (server-only). */
+/** Cotyledon — periods, calendar and posting-trail read layer (server-only). */
 
 const iso = (d: string | Date | null): string | null => (d === null ? null : typeof d === 'string' ? d : d.toISOString());
 const isoDay = (d: string | Date): string => (typeof d === 'string' ? d : d.toISOString().slice(0, 10));
