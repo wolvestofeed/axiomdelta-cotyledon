@@ -300,7 +300,8 @@ export interface RouteCompletion {
  * not yet on an invoice — for one subscriber or for all. Ghost-farm distributions
  * are paid at order and are never invoiced.
  */
-export function routeCompletion(distributions: readonly DistributionDoc[], date: string, subscriberId: string | null = null): RouteCompletion {
+/** Distributions of a date to add to invoices, by subscriber and month; the owner's own trays (`ownUseIds`) are never invoiced. */
+export function routeCompletion(distributions: readonly DistributionDoc[], date: string, subscriberId: string | null = null, ownUseIds: ReadonlySet<string> = new Set()): RouteCompletion {
   const groups = new Map<string, RouteCompletionGroup>();
   const skipped: RouteCompletion['skipped'] = [];
   for (const d of distributions) {
@@ -308,6 +309,7 @@ export function routeCompletion(distributions: readonly DistributionDoc[], date:
     if (subscriberId !== null && d.subscriberId !== subscriberId) continue;
     if (d.invoiceId) continue;
     if (!INVOICED_CHANNELS.includes(d.phase)) continue;
+    if (d.subscriberId && ownUseIds.has(d.subscriberId)) continue;
     if (!d.subscriberId) {
       skipped.push({ distributionId: d.id, reason: 'The distribution record names no subscriber, so no invoice can carry it.' });
       continue;

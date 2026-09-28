@@ -254,6 +254,7 @@ export async function insertSubscribers(db: SeedDb, subscribers: readonly Subscr
         contractStart: c.contractStart,
         contractEnd: c.contractEnd,
         prospectId: c.prospectId,
+        ownUse: c.ownUse === true,
         notes: c.notes,
         source: 'seed',
       })

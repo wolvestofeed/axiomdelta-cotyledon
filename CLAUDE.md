@@ -32,7 +32,7 @@ The Muse vocabulary is replaced in full: code identifiers, table and column name
 
 ## 4. Engine rules
 
-The engine invariants are stated in `docs/outline.md` §5. In short: the batch is a sowing and is derived from grow-unit capacity, never typed; the sowing is the costing basis; labor is fixed per sowing plus variable per unit on two streams; whole sowings only; every dollar is computed from tagged reference data; only the harvest record posts journals; capacity is a property of the grow room, labor a requirement of the plan.
+The engine invariants are stated in `docs/outline.md` §5. In short: the batch is a sowing, the whole trays its orders need, one flat the least; the sowing is the costing basis; labor is fixed per sowing plus variable per unit on two streams; whole trays only; every dollar is computed from tagged reference data; only the harvest record posts journals; capacity is a property of the grow room, labor a requirement of the plan.
 
 Every figure carries a provenance tag: `SOURCED`, `STATED`, `PLACEHOLDER`, `DERIVED`, `UNCONFIRMED`, `DATED`. A placeholder looks different from a quoted figure on every surface. Every cited source is registered on the Sources page before it is cited.
 

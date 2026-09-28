@@ -335,7 +335,7 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
       paidAtOrder += 1;
       continue;
     }
-    if (!INVOICED_CHANNELS.includes(d.phase) || !d.subscriberId) continue;
+    if (!INVOICED_CHANNELS.includes(d.phase) || !d.subscriberId || subscriberById.get(d.subscriberId)?.ownUse === true) continue;
     const key = `${d.subscriberId}|${periodOf(d.distributedOn)}`;
     const arr = groups.get(key) ?? [];
     arr.push(d);

@@ -1260,6 +1260,9 @@ export const farmSubscribers = farmSchema.table(
     /** 'due_on_receipt' | 'net_15' | 'net_30'; null = not set, no default (0057). */
     // @classification: Internal
     paymentTerms: text('payment_terms'),
+    /** Own use (0022): the owner's own trays; a distribution goes to Owner Draws at cost, with no revenue or invoice. */
+    // @classification: Internal
+    ownUse: boolean('own_use').notNull().default(false),
     // @classification: Internal
     notes: text('notes'),
     /** Named nutrition targets (0007): keys from src/data/nutrition-targets.ts. */

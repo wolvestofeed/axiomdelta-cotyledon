@@ -45,6 +45,8 @@ const SubscriberInput = z.object({
   notes: z.string().max(2000).nullable().default(null),
   /** Keys from the nutrition target catalog; unknown keys are dropped. */
   nutritionTargets: z.array(z.string().max(60)).max(50).default([]),
+  /** The owner's own trays: distributions to Owner Draws at cost, no revenue or invoice. */
+  ownUse: z.boolean().default(false),
 });
 
 export async function createSubscriber(...args: Parameters<typeof createSubscriberInner>): ReturnType<typeof createSubscriberInner> {

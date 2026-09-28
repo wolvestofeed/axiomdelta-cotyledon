@@ -38,7 +38,7 @@ async function FloorPageInner() {
   const experiments = await listExperiments();
   const today = new Date().toISOString().slice(0, 10);
   // Today's routes waiting to be added to invoices (Roadmap K1), by subscriber.
-  const route = routeCompletion(actuals.distributions, today);
+  const route = routeCompletion(actuals.distributions, today, null, new Set(inputs.subscribers.filter((c) => c.ownUse).map((c) => c.id)));
   const subscriberName = new Map(inputs.subscribers.map((c) => [c.id, c.name]));
 
   return (

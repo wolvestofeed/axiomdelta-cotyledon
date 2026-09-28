@@ -52,6 +52,8 @@ export const ACC_FIXED_ASSETS = '1700';
 export const ACC_LONG_TERM_DEBT = '2900';
 /** Owners' equity contributed (shared chart). */
 export const ACC_OWNER_CONTRIBUTIONS = '3100';
+/** Owner Draws (shared chart): what the owner takes out, his own trays among it, at cost. */
+export const ACC_OWNER_DRAWS = '3200';
 /** Production labor on the time clock that no sowing record charged (Roadmap K5). */
 export const ACC_UNASSIGNED_PRODUCTION_LABOR = '5170';
 /** Budgeted manufacturing overhead accrued at month end and settled by the bills (Roadmap J2). */

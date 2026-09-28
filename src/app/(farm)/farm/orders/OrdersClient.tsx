@@ -334,7 +334,7 @@ export function OrdersClient({
                       <td>{o.pickupPointName}<div className="farm-c-faint farm-fs-2xs">{o.serviceName ?? (o.subscriptionId ? `${cadenceOf.get(o.subscriptionId) ?? 'Subscription'} subscription` : 'no service named')}{o.distributionPickupPointId ? ` · distribution pickup point ${o.distributionPickupPointId}` : ''}</div></td>
                       <td>{o.growPlanCode}<div className="farm-c-faint farm-fs-2xs">{o.growPlanName}</div></td>
                       <td className="num">{num(Math.round(o.units))}</td>
-                      <td className="num">{money(fromCents(o.pricePerUnitCents))}<div className="farm-c-faint farm-fs-2xs">{o.priceBasis === 'order' ? 'on the order' : o.priceBasis === 'contract' ? 'contracted' : 'channel default'}</div></td>
+                      <td className="num">{money(fromCents(o.pricePerUnitCents))}<div className="farm-c-faint farm-fs-2xs">{o.priceBasis === 'own-use' ? 'own use, not sold' : o.priceBasis === 'order' ? 'on the order' : o.priceBasis === 'contract' ? 'contracted' : 'channel default'}</div></td>
                       <td>{statusCell(o)}</td>
                       <td className="num">
                         {(canEditOrders || canRecordHere) && (

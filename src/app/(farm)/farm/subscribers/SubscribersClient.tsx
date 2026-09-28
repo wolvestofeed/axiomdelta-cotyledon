@@ -62,12 +62,12 @@ type Mode = 'record' | 'forecast';
 
 interface SubscriberForm {
   name: string; kind: SubscriberKind; channel: number; status: SubscriberStatus;
-  pricePerUnit: number | ''; paymentTerms: SubscriberPaymentTerms | ''; contractStart: string; contractEnd: string; notes: string; nutritionTargets: string[];
+  pricePerUnit: number | ''; paymentTerms: SubscriberPaymentTerms | ''; contractStart: string; contractEnd: string; notes: string; nutritionTargets: string[]; ownUse: boolean;
 }
 interface PickupPointForm { name: string; pickupPointId: string; trayFormats: string[]; enrollment: number | ''; status: SubscriberPickupPointStatus; notes: string }
 interface ServiceForm { name: string; weekdays: number[]; status: 'active' | 'inactive'; notes: string }
 
-const emptySubscriber = (channel: number): SubscriberForm => ({ name: '', kind: channel === 1 ? 'district' : channel === 2 ? 'company' : 'marketplace', channel, status: 'prospect', pricePerUnit: '', paymentTerms: '', contractStart: '', contractEnd: '', notes: '', nutritionTargets: [] });
+const emptySubscriber = (channel: number): SubscriberForm => ({ name: '', kind: channel === 1 ? 'district' : channel === 2 ? 'company' : 'marketplace', channel, status: 'prospect', pricePerUnit: '', paymentTerms: '', contractStart: '', contractEnd: '', notes: '', nutritionTargets: [], ownUse: false });
 const emptyPickupPoint = (): PickupPointForm => ({ name: '', pickupPointId: '', trayFormats: [], enrollment: '', status: 'active', notes: '' });
 const weekdayText = (w: readonly number[]) => (w.length ? [...w].sort().map((d) => WEEKDAY_LABELS[d]).join(' ') : 'no weekday');
 
@@ -140,11 +140,11 @@ export function SubscribersClient({
 
   // ── Record forms ──────────────────────────────────────────────────────────
   const openEditSubscriber = (c: SubscriberDef) =>
-    setSubscriberForm({ mode: 'edit', id: c.id, form: { name: c.name, kind: c.kind, channel: c.channel, status: c.status, pricePerUnit: c.pricePerUnitCents === null ? '' : c.pricePerUnitCents / 100, paymentTerms: c.paymentTerms ?? '', contractStart: c.contractStart ?? '', contractEnd: c.contractEnd ?? '', notes: c.notes ?? '', nutritionTargets: [...(c.nutritionTargets ?? [])] } });
+    setSubscriberForm({ mode: 'edit', id: c.id, form: { name: c.name, kind: c.kind, channel: c.channel, status: c.status, pricePerUnit: c.pricePerUnitCents === null ? '' : c.pricePerUnitCents / 100, paymentTerms: c.paymentTerms ?? '', contractStart: c.contractStart ?? '', contractEnd: c.contractEnd ?? '', notes: c.notes ?? '', nutritionTargets: [...(c.nutritionTargets ?? [])], ownUse: c.ownUse === true } });
   function submitSubscriber() {
     if (!subscriberForm) return;
     const f = subscriberForm.form;
-    const payload = { name: f.name, kind: f.kind, channel: f.channel, status: f.status, pricePerUnitCents: f.pricePerUnit === '' ? null : Math.round(f.pricePerUnit * 100), paymentTerms: f.paymentTerms || null, contractStart: f.contractStart || null, contractEnd: f.contractEnd || null, prospectId: null, notes: f.notes || null, nutritionTargets: f.nutritionTargets };
+    const payload = { name: f.name, kind: f.kind, channel: f.channel, status: f.status, pricePerUnitCents: f.pricePerUnit === '' ? null : Math.round(f.pricePerUnit * 100), paymentTerms: f.paymentTerms || null, contractStart: f.contractStart || null, contractEnd: f.contractEnd || null, prospectId: null, notes: f.notes || null, nutritionTargets: f.nutritionTargets, ownUse: f.ownUse };
     run(() => (subscriberForm.mode === 'edit' ? updateSubscriber({ ...payload, id: subscriberForm.id }) : createSubscriber(payload)), `Saved ${f.name}.`);
   }
   function submitPickupPoint() {
@@ -565,7 +565,7 @@ export function SubscribersClient({
                       <span className="font-semibold">{c.name}</span>
                       <span className="farm-kpi-sub ml-[0.6rem]!">
                         {SUBSCRIBER_KIND_LABELS[c.kind]} · {SUBSCRIBER_STATUS_LABELS[c.status]} ·{' '}
-                        {c.pricePerUnitCents === null ? `channel price ${money(ch.price)}` : `${money(c.pricePerUnitCents / 100)} contracted`}
+                        {c.ownUse ? 'own use: to Owner Draws at cost, not sold' : c.pricePerUnitCents === null ? `channel price ${money(ch.price)}` : `${money(c.pricePerUnitCents / 100)} contracted`}
                         {' · '}{c.paymentTerms ? PAYMENT_TERMS_LABELS[c.paymentTerms] : 'no payment terms on file'}
                         {c.contractStart ? ` · ${c.contractStart}${c.contractEnd ? ` to ${c.contractEnd}` : ''}` : ''}
                       </span>
@@ -645,6 +645,9 @@ export function SubscribersClient({
               <select className="farm-select" value={subscriberForm.form.status} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, status: e.target.value as SubscriberStatus } })}>
                 {(Object.keys(SUBSCRIBER_STATUS_LABELS) as SubscriberStatus[]).map((k) => <option key={k} value={k}>{SUBSCRIBER_STATUS_LABELS[k]}</option>)}
               </select>
+            </label>
+            <label className="farm-kpi-sub inline-flex! gap-[0.3rem]! items-center!" title="The owner's own trays: they flow through production and leave finished goods at cost to Owner Draws, with no revenue and no invoice.">
+              <input type="checkbox" checked={subscriberForm.form.ownUse} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, ownUse: e.target.checked } })} />Own use: to Owner Draws at cost
             </label>
             <label className="farm-kpi-sub">Price / unit $ (blank = channel)<br /><input className="farm-input w-26!" type="number" min={0} step={0.01} value={subscriberForm.form.pricePerUnit} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, pricePerUnit: e.target.value === '' ? '' : Number(e.target.value) } })} /></label>
             <label className="farm-kpi-sub">Payment terms<br />

@@ -51,7 +51,7 @@ import {
   ACC_FIXED_ASSETS,
   ACC_LONG_TERM_DEBT,
   ACC_OWNER_CONTRIBUTIONS,
-  ACC_UNASSIGNED_PRODUCTION_LABOR,
+  ACC_UNASSIGNED_PRODUCTION_LABOR, ACC_OWNER_DRAWS, ACC_FINISHED_GOODS
 } from '@/data/coa-farm';
 import { PAID_AT_ORDER_CHANNELS } from '@/data/working-capital';
 import { absorbOverhead, type OverheadAbsorption } from '@/engine';
@@ -476,6 +476,8 @@ export function postActuals(
     let unitsDistributed = 0;
     let billedCents = 0;
     let paidAtOrderCents = 0;
+    // The owner's own trays: finished goods to Owner Draws at cost, no revenue, receivable, distribution expense or invoice.
+    const ownUse = new Set(inputs.subscribers.filter((c) => c.ownUse === true).map((c) => c.id));
     // In date order, so the earlier distribution takes the older finished goods.
     for (const d of [...p.distributions].sort((x, y) => x.distributedOn.localeCompare(y.distributedOn))) {
       const revenueCents = Math.round(d.units * d.pricePerUnitCents);
@@ -512,6 +514,17 @@ export function postActuals(
         notes.push(`Distribution ${short(d.id)} on ${d.distributedOn}: ${+left.toFixed(3)} units beyond the finished goods on hand${code !== null ? ` for ${code}` : ''}, costed at ${basis}; finished goods is negative by ${usd(beyond.materials + beyond.labor + beyond.overhead)}.`);
       }
       const cogsMemo = `${d.units.toLocaleString()} units${drawn.length > 0 ? `, first in, first out from ${drawn.join(', ')}` : ''}`;
+      if (d.subscriberId && ownUse.has(d.subscriberId)) {
+        const atCost = cogs.materials + cogs.labor + cogs.overhead;
+        unitsDistributed += d.units;
+        entries.push(
+          entryCents(`DLV-${short(d.id)}`, d.distributedOn, `Own use: ${d.units.toLocaleString()} units to the owner${d.pickupPointName ? ` — ${d.pickupPointName}` : ''}`, [
+            { account: ACC_OWNER_DRAWS, cents: atCost, memo: `The owner's own trays at cost, ${cogsMemo}` },
+            { account: ACC_FINISHED_GOODS, cents: -atCost, memo: 'Finished goods relieved' },
+          ]),
+        );
+        continue;
+      }
       const distributionCents = Math.round(d.units * distributionPerUnitCents);
       const commissionCents = d.phase === 3 ? Math.round(revenueCents * CHANNEL_COMMISSION_PHASE3) : 0;
       const paidAtOrder = PAID_AT_ORDER_CHANNELS.includes(d.phase);

@@ -75,7 +75,8 @@ export function cycleGrowPlanOn(cycle: SubscriptionCycleDef, date: string): stri
 // ── The order book ──────────────────────────────────────────────────────────
 
 export type OrderBasis = 'derived' | 'record';
-export type PriceBasis = 'order' | 'contract' | 'channel';
+/** Where an order's price comes from; own use is priced at nothing, since it is not sold. */
+export type PriceBasis = 'order' | 'contract' | 'channel' | 'own-use';
 
 export interface BookOrder {
   /** `${date}|${subscriberPickupPointId}|${subscriberServiceId}|${growPlanCode}` — the identity a stored row replaces. */
@@ -131,7 +132,8 @@ export interface OrderBookInput {
   closures?: readonly DateRange[];
 }
 
-function priceFor(order: number | null, contract: number | null, channelDefault: number | undefined): { cents: number; basis: PriceBasis } {
+function priceFor(order: number | null, contract: number | null, channelDefault: number | undefined, ownUse = false): { cents: number; basis: PriceBasis } {
+  if (ownUse) return { cents: 0, basis: 'own-use' };
   if (order !== null) return { cents: order, basis: 'order' };
   if (contract !== null) return { cents: contract, basis: 'contract' };
   return { cents: channelDefault ?? 0, basis: 'channel' };
@@ -201,7 +203,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
     for (const sub of c.subscriptions ?? []) {
       const pp = c.pickupPoints.find((p) => p.id === sub.subscriberPickupPointId);
       if (!pp || pp.status === 'inactive' || !served.has(pp.id)) continue;
-      const price = priceFor(null, c.pricePerUnitCents, input.channelPriceCents[c.channel]);
+      const price = priceFor(null, c.pricePerUnitCents, input.channelPriceCents[c.channel], c.ownUse === true);
       for (const d of subscriptionDistributions(sub, input.from, input.to, input.closures)) {
         if (!d.carried) continue;
         for (const line of d.lines) {
@@ -244,7 +246,7 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
   for (const o of input.orders) {
     if (o.orderDate < input.from || o.orderDate > input.to) continue;
     const hit = pickupPointIndex.get(o.subscriberPickupPointId);
-    const price = priceFor(o.pricePerUnitCents, hit?.subscriber.pricePerUnitCents ?? null, input.channelPriceCents[o.channel]);
+    const price = priceFor(o.pricePerUnitCents, hit?.subscriber.pricePerUnitCents ?? null, input.channelPriceCents[o.channel], hit?.subscriber.ownUse === true);
     const key = orderKey(o.orderDate, o.subscriberPickupPointId, o.growPlanCode, o.subscriberServiceId ?? o.subscriptionId);
     byKey.set(key, {
       key,

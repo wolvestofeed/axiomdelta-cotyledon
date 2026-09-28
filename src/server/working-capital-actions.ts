@@ -165,7 +165,8 @@ async function completeRouteInner(input: unknown): Promise<Result<{ invoices: nu
   if (locked) return { ok: false, error: locked };
 
   const bundle = await loadActuals();
-  const plan = routeCompletion(bundle.distributions, d.date, d.subscriberId);
+  const ownUse = await db.select({ id: farmSubscribers.id }).from(farmSubscribers).where(eq(farmSubscribers.ownUse, true));
+  const plan = routeCompletion(bundle.distributions, d.date, d.subscriberId, new Set(ownUse.map((r) => r.id)));
   if (plan.groups.length === 0) {
     return { ok: false, error: plan.skipped.length ? plan.skipped.map((s) => s.reason).join(' ') : `No distribution on ${d.date} is waiting to be invoiced.` };
   }

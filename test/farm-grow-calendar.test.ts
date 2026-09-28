@@ -289,7 +289,7 @@ describe('a sowing is the orders\' trays, sown so its cycle ends on the distribu
     expect([1, 2, 3, 4, 5]).toContain(new Date(`${jar}T00:00:00Z`).getUTCDay());
   });
 
-  it('the Plan\'s nineteen weekly trays each place on the seed racks every week', () => {
+  it('the Plan\'s twenty weekly trays, Rob\'s own among them, each place on the seed racks every week', () => {
     const R = resolveScenarioInputs();
     const reqs = Array.from({ length: 6 }, (_, w) => new Date(Date.UTC(2026, 9, 17 + 7 * w)).toISOString().slice(0, 10)).flatMap((date) =>
       R.subscribers.flatMap((c) => c.subscriptions!.map((s) => ({ distributionDate: date, growPlanCode: s.flatPlan[0]!.lines[0]!.growPlanCode, baseUnits: 1 }))),
@@ -297,6 +297,7 @@ describe('a sowing is the orders\' trays, sown so its cycle ends on the distribu
     const merged = [...reqs.reduce((m, r) => m.set(`${r.distributionDate}|${r.growPlanCode}`, { ...r, baseUnits: (m.get(`${r.distributionDate}|${r.growPlanCode}`)?.baseUnits ?? 0) + 1 }), new Map<string, typeof reqs[number]>()).values()];
     const cal = planGrowCalendar({ from: '2026-10-01', to: '2026-12-31', requirements: merged, growPlans: R.growPlans, units: growUnitsFrom(equipmentSeed) });
     expect(cal.findings.filter((f) => f.kind !== 'sow-before-window')).toEqual([]);
-    expect(cal.sowings.reduce((t, s) => t + s.trays, 0)).toBe(19 * 6);
+    expect(R.subscribers).toHaveLength(20);
+    expect(cal.sowings.reduce((t, s) => t + s.trays, 0)).toBe(20 * 6);
   });
 });

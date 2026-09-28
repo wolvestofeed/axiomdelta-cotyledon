@@ -105,6 +105,12 @@ export interface SubscriberDef {
   source: 'seed' | 'user_built';
   /** Named nutrition targets (outline §4): keys from `nutrition-targets.ts`. Absent = none named. */
   nutritionTargets?: string[];
+  /**
+   * Own use (0022): the owner taking trays for his own consumption. Its orders flow through
+   * production like any other; a distribution to it leaves finished goods at cost to Owner Draws,
+   * with no revenue, no receivable and no invoice. Absent = false.
+   */
+  ownUse?: boolean;
   /** The subscriber's subscriptions (0019): standing orders on a cadence at their pickup points. */
   subscriptions?: import('@/data/subscriptions').SubscriptionDef[];
   pickupPoints: SubscriberPickupPointDef[];
@@ -116,18 +122,64 @@ export interface SubscriberDef {
  */
 export const PLAN_FIRST_PICKUP = '2026-10-17';
 
-/** The Plan's test subscribers: with Rob's own tray, 20 trays a week. */
+/** The Plan's test subscribers; with Rob's own tray, 20 trays a week. */
 export const PLAN_SUBSCRIBERS = 19;
 
 /** The in-service tray plans, taken in turn across the Plan's subscribers; the sprouts grow in jars. */
 export const PLAN_ROTATION: readonly string[] = ['BROC-01', 'RAD-01', 'SUN-01', 'PEA-01', 'FEN-01', 'BOR-01', 'AMA-01', 'CAB-01', 'CHIA-01'];
 
 /**
+ * Rob's own trays: a real subscriber, on Actual and in the Plan, taking one 1020 flat weekly at the
+ * Saturday pickup. Own use: its trays flow through production like any other and leave finished
+ * goods at cost to Owner Draws, never sold. The variety is the rotation's next; Rob changes it,
+ * skips or pauses on Subscribers.
+ */
+export function ownUseSubscriber(): SubscriberDef {
+  const id = 'CUST-OWN-USE';
+  const pickupPoint = 'CS-OWN-USE';
+  return {
+    id,
+    name: 'Own use (Rob)',
+    kind: 'other',
+    channel: 1,
+    status: 'contracted',
+    ownUse: true,
+    pricePerUnitCents: null,
+    paymentTerms: null,
+    contractStart: null,
+    contractEnd: null,
+    prospectId: null,
+    notes: "Rob's own trays for his own consumption: to Owner Draws at cost, with no revenue and no invoice.",
+    source: 'seed',
+    pickupPoints: [{ id: pickupPoint, pickupPointId: null, name: 'Saturday pickup at the house', trayFormats: [], serviceDaysPerYear: 0, enrollment: null, participationRate: null, expectedUnitsPerDay: null, status: 'active', notes: null, services: [], calendar: [] }],
+    subscriptions: [
+      {
+        id: 'SUB-OWN-USE',
+        subscriberId: id,
+        subscriberPickupPointId: pickupPoint,
+        cadence: 'weekly',
+        startDate: PLAN_FIRST_PICKUP,
+        endDate: null,
+        flatPlan: [{ from: PLAN_FIRST_PICKUP, lines: [{ growPlanCode: PLAN_ROTATION[PLAN_SUBSCRIBERS % PLAN_ROTATION.length]!, units: 1 }] }],
+        skips: [],
+        pausedFrom: null,
+        notes: null,
+      },
+    ],
+  };
+}
+
+/**
  * The Plan's subscribers: nineteen Forecast Subscribers, in the Plan only and never on Actual, each
- * taking one 1020 flat weekly at the Saturday pickup at the house, the plans taken in turn. Invented
- * test data, labelled so. The farm has no customer and no revenue on record; Actual starts empty.
+ * taking one 1020 flat weekly at the Saturday pickup at the house, the plans taken in turn (invented
+ * test data, labelled so), and Rob's own tray (`ownUseSubscriber`): twenty trays a week. The farm has
+ * no customer and no revenue on record; on Actual only Rob's own tray is ordered.
  */
 export function planSeedSubscribers(): SubscriberDef[] {
+  return [...testPlanSubscribers(), ownUseSubscriber()];
+}
+
+function testPlanSubscribers(): SubscriberDef[] {
   return Array.from({ length: PLAN_SUBSCRIBERS }, (_, i): SubscriberDef => {
     const n = String(i + 1).padStart(2, '0');
     const id = `CUST-PLAN-${n}`;
