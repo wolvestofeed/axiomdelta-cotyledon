@@ -5,7 +5,7 @@ import { KG_PER_LB } from '@/engine/carbon';
 
 const sup = (id: string, extra: Partial<LeanSupplier> = {}): LeanSupplier => ({
   id, name: `Supplier ${id}`, location: 'Travis County, TX', certified: false, certScope: '', prospectReady: false,
-  lat: null, lng: null, geoSource: null, rating: { status: 'not_rated' }, ...extra,
+  lat: null, lng: null, geoSource: null, ...extra,
 });
 
 describe('farm supplier links — spend coverage', () => {
@@ -14,13 +14,12 @@ describe('farm supplier links — spend coverage', () => {
     { name: 'Beans', extendedCost: 300 },
     { name: 'Salt', extendedCost: 100 },
   ];
-  it('shares of spend linked, certified, and rated', () => {
-    const c = spendCoverage(po, { Beef: 'a', Beans: 'b' }, { a: sup('a', { certified: true, rating: { status: 'rated', stars: 3 } }), b: sup('b') });
+  it('shares of spend linked and certified', () => {
+    const c = spendCoverage(po, { Beef: 'a', Beans: 'b' }, { a: sup('a', { certified: true }), b: sup('b') });
     expect(c.totalSpend).toBe(1000);
     expect(c.linesLinked).toBe(2);
     expect(c.linkedShare).toBeCloseTo(0.9, 9);
     expect(c.certifiedShare).toBeCloseTo(0.6, 9);
-    expect(c.ratedShare).toBeCloseTo(0.6, 9);
   });
   it('a link to an unknown supplier id counts as unlinked', () => {
     const c = spendCoverage(po, { Beef: 'zzz' }, {});

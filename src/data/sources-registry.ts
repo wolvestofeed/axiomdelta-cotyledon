@@ -7,7 +7,7 @@
  * is the register for the sources that are not in the factor library
  * (`emission-factors.ts` seeds its own rows); `pnpm farm:sources` writes it to
  * `farm.sources`, and `test/farm-sources-registry.test.ts` fails the build when
- * a URL cited in `_data/` or `_engine/` is missing from both.
+ * a URL cited in `src/data/` or `src/engine/` is missing from both.
  *
  * Kind follows the Sources page's vocabulary. `year` is the edition or data
  * year where one is stated; null where the source is a living page.
@@ -44,10 +44,7 @@ const BASE_REFERENCE_SOURCES: readonly ReferenceSource[] = [
   { key: 'tx:tda-farm-fresh', kind: 'dataset', title: 'Texas Department of Agriculture — Farm Fresh Network', publisher: 'Texas Department of Agriculture', year: 2026, citation: 'Farm Fresh Network directory, Austin-metro extract as of 2026-09-10', sourceUrl: 'https://experience.arcgis.com/experience/c8f3e664cb3b40a59f399ac6f35f6009', usedFor: 'Supplier directory: the prospect-ready flag on producers.' },
 
   // ── Federal — USDA ────────────────────────────────────────────────────
-  { key: 'usda:7-cfr-210', kind: 'regulation', title: '7 CFR Part 210 — National Prospect Unit Program', publisher: 'USDA Food and Nutrition Service', year: 2024, citation: '7 CFR 210.10(c) nutrient profile, 210.10(a)(3) production records, 210.9(b)(17) retention; component quantities unchanged by the 2024 final rule, 89 FR 31962', sourceUrl: 'https://www.ecfr.gov/current/title-7/subtitle-B/chapter-II/subchapter-A/part-210', usedFor: 'Nutrition: the packed unit is solved to the tray format\'s nutrition contribution.' },
-  { key: 'usda:ams-beef-retail', kind: 'dataset', title: 'AMS National Retail Report — Beef', publisher: 'USDA Agricultural Marketing Service', year: 2026, citation: 'Grass-fed 80–89% lean, Q2 2026 retail average', sourceUrl: 'https://www.ams.usda.gov/market-news/retail', usedFor: 'The beef price reference against the direct-from-ranch target.' },
   { key: 'usda:organic-integrity', kind: 'dataset', title: 'USDA Organic INTEGRITY Database', publisher: 'USDA Agricultural Marketing Service', year: 2026, citation: 'Certified operations, TX / CO / NM / LA, as of 2026-09-10', sourceUrl: 'https://organic.ams.usda.gov/integrity/', usedFor: 'Supplier directory: certification, certifier, scope and products.' },
-  { key: 'usoe:design-criteria-1973', kind: 'other', title: 'Design Criteria: Prospect Food Service Facilities', publisher: 'U.S. Office of Education', year: 1973, citation: 'USOE, 1973 (dated)', sourceUrl: null, usedFor: 'Facility space standards: cold-storage front clearance and the per-unit cross-check.' },
 
   // ── Federal — FDA ─────────────────────────────────────────────────────
   { key: 'fda:food-code-2017', kind: 'regulation', title: 'FDA Food Code 2017 and Supplement', publisher: 'U.S. Food and Drug Administration', year: 2017, citation: 'FDA Food Code 2017 with the 2019 Supplement, as adopted by 25 TAC §228.1; §3-501.14 two-stage cooling (control-point-2), §3-502.11/12 reduced-oxygen packaging, §3-501.16, and the facility sections cited on the conformance register', sourceUrl: 'https://www.fda.gov/food/fda-food-code/food-code-2017', usedFor: 'control-point-2 cooling limits, the seven-day shelf life, and the facility conformance register.' },
@@ -71,12 +68,9 @@ const BASE_REFERENCE_SOURCES: readonly ReferenceSource[] = [
   { key: 'codex:cxc-1-1969', kind: 'regulation', title: 'Codex Alimentarius CXC 1-1969 — General Principles of Food Hygiene', publisher: 'FAO / WHO Codex Alimentarius', year: 2020, citation: 'CXC 1-1969 §9.1.2, §9.2.1', sourceUrl: 'https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/en/', usedFor: 'One-directional flow and drainage direction on the floor layout.' },
   { key: 'brcgs:produce-safety', kind: 'other', title: 'BRCGS Global Standard Produce Safety', publisher: 'BRCGS', year: null, citation: 'Clauses 4.8.4, 4.12, 4.12.3, 7.2.2, 8.4, 8.6; Appendix 2 zone definitions (paywalled; cited through secondary sources)', sourceUrl: 'https://www.brcgs.com/our-standards/produce-safety/', usedFor: 'Handwash at production entry, gowning route, waste routing, high-risk zoning.' },
   { key: 'icc:imc-ibc', kind: 'regulation', title: 'International Mechanical Code and International Building Code, Austin-adopted editions', publisher: 'International Code Council', year: null, citation: 'IMC §507.4.1, §507.2.6, §506.3.6, Table 507.2.8; IBC §1018.2.2, Table 1020.3, §1005.3, §1208.2; with NFPA 96 §4.2 / Ch. 5 and UL 710', sourceUrl: 'https://codes.iccsafe.org/', usedFor: 'Hood overhang, grease-duct clearances, egress aisles, corridors, occupant capacity, ceiling height.' },
-  { key: 'ecff:recommendations', kind: 'other', title: 'ECFF Recommendations for the Production of Prepacked Blackout Food', publisher: 'European Blackout Food Federation', year: 2006, citation: 'ECFF Recommendations §2.2.2, §2.2.4', sourceUrl: 'https://www.ecff.net/', usedFor: 'The 12°C production-area benchmark and the gowning sequence.' },
   { key: 'gs1:general-specifications', kind: 'other', title: 'GS1 General Specifications — Application Identifier (10)', publisher: 'GS1', year: null, citation: 'GS1 General Specifications, AI (10) sowing or lot number', sourceUrl: 'https://www.gs1.org/standards/barcodes-epcrfid-id-keys/gs1-general-specifications', usedFor: 'The lot code carrier on every component.' },
 
   // ── Academic and design guidance ──────────────────────────────────────
-  { key: 'ucb:dining-design-guidelines', kind: 'other', title: 'UC Berkeley University Health Services Dining Design Guidelines — Space Requirements', publisher: 'University of California, Berkeley', year: null, citation: 'Dining Design Guidelines, space requirements appendix', sourceUrl: null, usedFor: 'The aisle in every zone circulation factor of the space engine.' },
-  { key: 'fer:cart-clearance', kind: 'other', title: 'Foodservice Equipment Reports — cart clearance', publisher: 'Foodservice Equipment Reports', year: null, citation: 'Carts need roughly 40 in', sourceUrl: 'https://www.fermag.com/', usedFor: 'Harvest marshalling lane width.' },
 ];
 
 /** The register: the platform's reference sources plus every row of the science library. */

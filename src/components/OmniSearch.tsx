@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { RatingPill } from '@/components/MarkRating';
 import {
   ENTITY_KIND_PLURAL,
   LINK_SURFACES,
@@ -132,7 +131,6 @@ export function OmniSearch() {
                       </div>
                       <div className="farm-omni-sub">
                         {r.subtitle}
-                        {r.rating ? <> · <RatingPill rating={r.rating} /></> : null}
                         {r.pills.map((p) => (
                           <span key={p.label}> · {p.label}</span>
                         ))}

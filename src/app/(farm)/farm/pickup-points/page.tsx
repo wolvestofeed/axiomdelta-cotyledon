@@ -55,7 +55,7 @@ export default function PickupPointsPage() {
       />
 
       <PreviewBanner>
-        Unlinked pickupPoints are invented seed placed at their county centroid. Linking a pickupPoint to a prospect
+        Unlinked pickup points are invented seed placed at their county centroid. Linking a pickup point to a prospect
         replaces the placeholder placement with the prospect&apos;s geocode. Shipments and per-shipment
         temperature records land with the schema.
       </PreviewBanner>
@@ -139,7 +139,7 @@ export default function PickupPointsPage() {
         </div>
         <p className="farm-kpi-sub mt-2">
           The prospect directory is the <Link className="farm-link" href="/farm/sales">Sales</Link> prospect
-          list, so a distribution pickupPoint and a prospect are the same record seen from two sides. Placement feeds
+          list, so a distribution pickup point and a prospect are the same record seen from two sides. Placement feeds
           the outbound legs on{' '}
           <Link className="farm-link" href="/farm/sustainability/logistics">Logistics</Link>; the link and
           the forecast are part of the forecast and are saved with it.

@@ -36,7 +36,6 @@ function side(): PvaSideInput {
     waterGal: 5000,
     shrinkAllowance: 0.05,
     growPlans: R.growPlans,
-    suppliers: [{ id: 'S1', rating: { status: 'rated', stars: 1 } }],
   };
 }
 
@@ -68,8 +67,7 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
     expect(sumMeasures([withStatement, withStatement]).cogsLaborCents).toBe(600);
   });
 
-  it('tallies supplier ratings by stars and carries the sustainability quantities', () => {
-    expect(m.suppliersByStars).toEqual({ 1: 1, 2: 0, 3: 0 });
+  it('carries the sustainability quantities', () => {
     expect(m.electricityKwh).toBe(1200);
     expect(m.waterGal).toBe(5000);
     // No input is mapped to a food product until Phase 5.
@@ -77,11 +75,9 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
     expect(m.food.onNamedSupplierKg).toBe(0);
   });
 
-  it('a quarter sums flows and reads ratings at its last month', () => {
-    const later = { ...m, suppliersByStars: { 1: 2, 2: 0, 3: 0 } as const };
-    const q = sumMeasures([m, emptyMeasures(), later]);
+  it('a quarter sums flows', () => {
+    const q = sumMeasures([m, emptyMeasures(), m]);
     expect(q.units).toBe(600);
-    expect(q.suppliersByStars).toEqual({ 1: 2, 2: 0, 3: 0 });
   });
 
   it('breaks units, revenue, input cost and orders down by subscriber, input cost following the units', () => {

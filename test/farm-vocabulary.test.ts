@@ -23,7 +23,7 @@ const EXT = /\.(ts|tsx|sql|md|css|json|py|mjs|html|example)$/;
 
 const WORDS = [
   'muse', 'recipe', 'recipes', 'portion', 'portions', 'meal', 'meals', 'cook', 'cooked', 'cooking', 'chill', 'chilled', 'chiller',
-  'kettle', 'cabinet', 'skillet', 'combi', 'plated', 'kitchen', 'commissary', 'school', 'schools', 'lunch', 'catering',
+  'kettle', 'cabinet', 'skillet', 'combi', 'plated', 'kitchen', 'commissary', 'school', 'schools', 'lunch', 'catering', 'parent', 'parents',
   'erra', 'comptable',
 ];
 const RX = new RegExp(`(?<![A-Za-z0-9])(${WORDS.join('|')})(?![a-z0-9])`, 'gi');
@@ -48,6 +48,13 @@ const ALLOWED = new Set([
   'docs/roadmaps/phase-5-facility-and-sustainability.md', // the phase roadmaps name what each phase replaced
   'docs/roadmaps/phase-6-software-as-a-product.md', // the phase roadmaps name what each phase replaced
   'docs/todo.md', // names the origin
+  // The Muse-era topic build plans, reference until each is re-based or deleted (todo.md)
+  'docs/roadmaps/operating-model-roadmap.md',
+  'docs/roadmaps/page-headers-roadmap.md',
+  'docs/roadmaps/people-roadmap.md',
+  'docs/roadmaps/portals-roadmap.md',
+  'docs/roadmaps/portfolio-publication-roadmap.md',
+  'docs/roadmaps/tabbed-layout-roadmap.md',
 ]);
 
 /** Words that are also ordinary English in the codebase and are allowed in these exact phrases. */

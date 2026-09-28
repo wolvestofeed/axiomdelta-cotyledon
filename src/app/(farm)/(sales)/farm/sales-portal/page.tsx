@@ -63,7 +63,7 @@ async function SalesPortalPageInner() {
       )}
 
       <div className="grid gap-3 farm-autofit-10">
-        <Kpi value={num(pipe.total)} label="Prospect prospects" sub="In the CRM directory" />
+        <Kpi value={num(pipe.total)} label="Prospects" sub="In the CRM directory" />
         {PROSPECT_STATUSES.map((s) => (
           <Kpi key={s} value={num(pipe.byStatus[s] ?? 0)} label={s} />
         ))}

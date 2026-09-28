@@ -9,7 +9,6 @@ import SupplierDirectory from '@/components/SupplierDirectory';
 import { nextRunNet } from '@/server/next-run';
 import { FARM_HOME } from '@/data/farm-location';
 import type { ClientSupplier, GrowPlanMatchView } from '@/engine/geo';
-import { supplierRatings, ratingFor } from '@/data/mark';
 import { withWorkspace } from '@/server/workspace';
 
 const DISPLAY_CAP = 80;
@@ -61,7 +60,6 @@ async function SuppliersPageInner({ searchParams }: { searchParams: SP }) {
   // never the full compiled dataset.
   const clientProducers: ClientSupplier[] = shown.map((o) => ({
     id: o.id,
-    rating: ratingFor(supplierRatings, o.id),
     name: o.name,
     website: o.website,
     meta: `${o.source}${o.certifier ? ` · ${o.certifier}` : ''}${o.types.length ? ` · ${o.types.join(', ')}` : ''}`,

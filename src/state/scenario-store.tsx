@@ -118,7 +118,7 @@ export interface ScenarioStore {
   setDocumentLink: (key: string, sourceId: string | undefined) => void;
   /** Edit one distribution pickup point's links and overrides (keyed by pickup point id). */
   setPickupPoint: (pickupPointId: string, fn: (draft: PickupPointOverlay) => void) => void;
-  /** Edit one prospect's links (keyed by prospect prospect id). */
+  /** Edit one prospect's links (keyed by prospect id). */
   setSales: (prospectId: string, fn: (draft: SalesOverlay) => void) => void;
   /** Edit what the forecast is built from (Roadmap N4a); empty entries are pruned. */
   setForecast: (fn: (draft: ForecastOverlay) => void) => void;

@@ -599,7 +599,7 @@ function ModelPanel({
           <p className="farm-kpi-sub mt-0!">
             No line of the open forecast names this operation. A line is linked on{' '}
             <Link className="farm-link" href="/farm/grow-plans">Grow plans</Link>, and the link drives the
-            certification and rating shown on Procurement and the inbound ton-miles on Logistics.
+            certification shown on Procurement and the inbound ton-miles on Logistics.
           </p>
         ) : (
           <>
@@ -629,7 +629,7 @@ function ModelPanel({
             </ul>
             <p className="farm-kpi-sub mt-2">
               A fact of record: the lot was received from this operation in every scenario. The forward
-              half of the trace — the pickupPoints each lot reached — is on{' '}
+              half of the trace — the pickup points each lot reached — is on{' '}
               <Link className="farm-link" href="/farm/produce-safety">Produce Safety</Link>.
             </p>
           </>

@@ -333,6 +333,6 @@ export const WHAT_MOVES_THE_NUMBER: readonly string[] = [
   'Actual selected models: twenty rows are SOURCED against a representative model, not a purchase order.',
   'The walk-in manufacturer\'s sizing convention: nominal, exterior and interior clear differ by up to 8 in per dimension, and the two Phase 1 boxes alone are 31% of the Phase 1 production floor.',
   'The Peak Single Units figure and whether the day dispatches as one wave: dry food storage is the one line that moves with it.',
-  'The Phase 2 and Phase 3 volumes, both 0 units a day in the plan data; real corporate and ghost-farm volumes grow storage, warewash and the dock.',
+  'The Phase 2 and Phase 3 volumes, both 0 units a day in the plan data; real restaurant and retail volumes grow storage, warewash and the dock.',
   'Austin Public Health plan review and the adopted IBC and IMC editions; the Austin Building Criteria Manual Section 2 (Food Establishments) and City Code Chapter 10-3 Article 4 (Central Preparation Facilities), whose text could not be retrieved and is the highest-priority gap before plan review.',
 ];

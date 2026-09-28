@@ -4,8 +4,6 @@ import { useMemo } from 'react';
 import { PageHeader, Card, Kpi, StatusBadge } from '@/components/ui';
 import { Cite } from '@/components/Cite';
 import { SectionSave } from '@/components/SectionSave';
-import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
-import { inputRatings, ratingFor } from '@/data/mark';
 import { foodFactorSource } from '@/data/emission-factors';
 import { BOUNDARY_LABEL, lcaOptions as curatedOptions, type LcaOption } from '@/data/lca-options';
 import { growPlanFoodFootprintDual } from '@/engine/carbon';
@@ -81,7 +79,7 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
           <table className="farm-table">
             <thead>
               <tr>
-                <th>Input</th><th>{ratingHeader()}</th><th>Supplier</th><th className="num">Mass</th>
+                <th>Input</th><th>Supplier</th><th className="num">Mass</th>
                 <th className="num">Reference basis</th><th className="num">kg CO2e</th>
                 <th>Selected basis</th><th className="num">kg CO2e</th><th className="num">Gap</th>
               </tr>
@@ -97,7 +95,6 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
                       {l.name}
                       {l.category === null ? <div className="farm-fs-xs farm-c-faint">{l.excludedReason}</div> : null}
                     </td>
-                    <td><RatingPill rating={ratingFor(inputRatings, l.name)} /></td>
                     <td>{l.category === null ? '—' : <SupplierPicker input={l.name} linked={links[l.name] ? linked[links[l.name]] ?? null : null} canEdit={isSuperAdmin} onLink={(id) => setLink(l.name, id)} />}</td>
                     <td className="num">{l.category ? `${(l.massKgPerUnit * 1000).toFixed(0)} g` : '—'}</td>
                     <td className="num">
@@ -152,7 +149,6 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
             </tbody>
           </table>
         </div>
-        <RatingLegend />
         <p className="farm-kpi-sub mt-2">
           Reference factors are per kg at retail, losses included, from <Cite p={foodFactorSource} label={foodFactorSource.source.split(',')[0]} />. A cited figure at a narrower boundary is shown raw and aligned to retail; the aligned figure adds the study’s own post-slaughter stages for that product and applies its loss ratio, and is tagged derived. The basis selection and the supplier link are part of the forecast: saved with it; a super admin can set a forecast as the plan of record. A linked supplier’s own figure appears in the selector once it is recorded under Supplier LCA data.
         </p>

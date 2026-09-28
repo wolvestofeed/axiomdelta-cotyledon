@@ -16,7 +16,6 @@ import type { EnergyActivity } from '@/engine/scenario';
 import type { MixFoodFootprint, SustainabilityBasis } from '@/engine/sustainability-basis';
 import { expiredMassKg, mixShrinkKg } from '@/engine/sustainability-basis';
 import { distributionRevenueCents } from '@/engine/working-capital';
-import type { MarkRating } from '@/data/mark';
 
 export interface PvaOrder {
   orderDate: string;
@@ -45,8 +44,6 @@ export interface PvaSideInput {
   waterGal: number;
   shrinkAllowance: number;
   growPlans: readonly GrowPlanDef[];
-  /** The suppliers on this side's receipts in the month, with their ratings. */
-  suppliers: readonly { id: string; rating: MarkRating }[];
 }
 
 export interface PvaMeasures {
@@ -73,18 +70,11 @@ export interface PvaMeasures {
   emissionsKg: { total: number; scope1: number; scope2: number; scope3: number };
   /** Purchased-food emissions (reference basis): all, on inputs received from a named supplier, and on a supplier's own figure. */
   food: { referenceKg: number; onNamedSupplierKg: number; onSupplierDataKg: number };
-  suppliersByStars: Record<1 | 2 | 3, number>;
 }
 
 const cents = (dollars: number) => Math.round(dollars * 100);
 const cogsOf = (side: PvaSideInput, code: string) => side.statement?.costOfGoodsSold.find((r) => r.code === code)?.cents ?? 0;
 const inMonth = (d: string, period: string) => d.slice(0, 7) === period;
-
-function byStars(list: readonly { rating: MarkRating }[]): Record<1 | 2 | 3, number> {
-  const out: Record<1 | 2 | 3, number> = { 1: 0, 2: 0, 3: 0 };
-  for (const x of list) if (x.rating.status === 'rated') out[x.rating.stars] += 1;
-  return out;
-}
 
 export function pvaMeasures(side: PvaSideInput): PvaMeasures {
   const namedSupplierInputs = new Set(side.receipts.flatMap((r) => (r.supplierId ? r.lines.filter((l) => l.condition !== 'rejected').map((l) => l.input) : [])));
@@ -117,11 +107,10 @@ export function pvaMeasures(side: PvaSideInput): PvaMeasures {
       onNamedSupplierKg: side.food.byInput.filter((i) => namedSupplierInputs.has(i.name)).reduce((t, i) => t + i.referenceKg, 0),
       onSupplierDataKg: side.food.byInput.filter((i) => i.selectedKind === 'supplier').reduce((t, i) => t + i.referenceKg, 0),
     },
-    suppliersByStars: byStars(side.suppliers),
   };
 }
 
-/** Sum months; ratings are a count at the last month's end, not a sum. */
+/** Sum months. */
 export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
   const z = emptyMeasures();
   if (months.length === 0) return z;
@@ -131,8 +120,6 @@ export function sumMeasures(months: readonly PvaMeasures[]): PvaMeasures {
     for (const k of ['total', 'scope1', 'scope2', 'scope3'] as const) z.emissionsKg[k] += m.emissionsKg[k];
     for (const k of ['referenceKg', 'onNamedSupplierKg', 'onSupplierDataKg'] as const) z.food[k] += m.food[k];
   }
-  const last = months[months.length - 1];
-  z.suppliersByStars = { ...last.suppliersByStars };
   return z;
 }
 
@@ -142,7 +129,6 @@ export function emptyMeasures(): PvaMeasures {
     wasteKg: 0, waterGal: 0, electricityKwh: 0, naturalGasTherms: 0, fuelGal: 0,
     emissionsKg: { total: 0, scope1: 0, scope2: 0, scope3: 0 },
     food: { referenceKg: 0, onNamedSupplierKg: 0, onSupplierDataKg: 0 },
-    suppliersByStars: { 1: 0, 2: 0, 3: 0 },
   };
 }
 

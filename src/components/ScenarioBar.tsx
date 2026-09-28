@@ -153,7 +153,6 @@ export function ScenarioBar({
               >
                 {k === 'plan' ? 'Plan' : 'Actual'}
               </button>
-              {ledger.kind === k && <WhiskMark />}
             </span>
           ))}
         </span>
@@ -256,28 +255,5 @@ export function ScenarioBar({
         </div>
       )}
     </div>
-  );
-}
-
-/** A whisk outline in copper under the selected ledger mode: copper means selected (Robert asked for the icon). */
-function WhiskMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 32 12"
-      width="26"
-      height="10"
-      fill="none"
-      stroke="var(--farm-accent)"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="absolute! top-[100%]! left-[50%]! [transform:translate(-50%,3px)]! pointer-events-none!"
-    >
-      <path d="M2 6h9" strokeWidth="2.2" />
-      <path d="M11 6C17 0.5 30 1 30 6C30 11 17 11.5 11 6Z" />
-      <path d="M11 6C17 3 26.5 3.2 26.5 6C26.5 8.8 17 9 11 6Z" />
-      <path d="M11 6H30" />
-    </svg>
   );
 }

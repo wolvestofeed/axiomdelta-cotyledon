@@ -15,7 +15,7 @@ async function PackagingPageInner() {
     <>
       <PageHeader
         title="Packaging"
-        purpose="Keep the library of packages units leave the farm in, with costs."
+        purpose="Keep the library of the packaging a tray leaves the farm in, with costs."
         functions={['Packaging library', 'Cost on file', 'Grow plans with packages']}
         connects={[
           { href: '/farm/grow-plans', dir: 'to' },

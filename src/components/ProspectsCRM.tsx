@@ -332,7 +332,7 @@ function LinksPanel({ prospect }: { prospect: ClientProspect }) {
         onLink={setPickupPoint}
       />
       <p className="farm-kpi-sub mt-2">
-        The distribution pickupPoint carries the service window and the outbound leg. A pickupPoint linked to this
+        The distribution pickup point carries the service window and the outbound leg. A pickup point linked to this
         prospect on Pickup Points &amp; Routes is the same record seen from the other side.
       </p>
 

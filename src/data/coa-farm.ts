@@ -1,12 +1,10 @@
 /**
- * Cotyledon — manufacturing extension to the Staffing chart of accounts.
+ * Cotyledon — manufacturing extension to the ledger's chart of accounts.
  *
- * Staffing's `DEFAULT_HOSPITALITY_COA` is a restaurant chart: one inventory
- * account, no work in process, no variance accounts. A facility running
- * grow is a manufacturer — product sits in work in process for days
- * carrying absorbed labor and overhead — so Farm extends that chart rather than
- * editing it. The shared chart is untouched; every other Staffing surface keeps
- * the accounts it has.
+ * The ledger's `DEFAULT_HOSPITALITY_COA` (`src/ledger`) is a restaurant chart: one inventory
+ * account, no work in process, no variance accounts. A facility growing trays is a
+ * manufacturer — product sits in work in process for its cycle carrying absorbed labor
+ * and overhead — so Cotyledon extends that chart rather than editing it.
  *
  * Codes are chosen to slot into the existing numbering without collision.
  */
@@ -32,7 +30,7 @@ export const ACC_OH_CONTROL = '5180';
 export const ACC_OH_APPLIED = '5190';
 export const ACC_VAR_OH_APPLIED = '5195';
 export const ACC_ABNORMAL_SPOILAGE = '5910';
-/** Selling expense: the marketplace's cut on ghost-farm / retail orders. */
+/** Selling expense: the marketplace's cut on retail and wholesale orders. */
 export const ACC_MARKETPLACE_COMMISSION = '7910';
 /** Research and Development: an experiment's sowing at its full cost, packed or lost (ASC 730-10-25-1). */
 export const ACC_RESEARCH_DEVELOPMENT = '7920';
@@ -44,7 +42,7 @@ export const ACC_ACCRUED_PAYROLL_TAXES = '2120';
 export const ACC_ACCRUED_WORKERS_COMP = '2130';
 /** The burden over the statutory rates, accrued as benefits (shared chart). */
 export const ACC_ACCRUED_BENEFITS = '2140';
-/** Card-processor clearing: ghost-farm orders paid at the time of ordering, not yet deposited (shared chart). */
+/** Card-processor clearing: retail and wholesale orders paid at the time of ordering, not yet deposited. */
 export const ACC_PROCESSOR_CLEARING = '1200';
 export const ACC_CASH = '1010';
 export const ACC_SEED = '2010';
@@ -181,7 +179,7 @@ export const FARM_MANUFACTURING_ACCOUNTS: Account[] = [
     name: 'Marketplace Commissions',
     type: 'expense',
     description:
-      'Commission retained by a third-party marketplace on ghost-farm / retail orders, deducted from the remittance. A selling cost, never inventoriable (ASC 330-10-30-8).',
+      'Commission retained by a third-party marketplace on retail and wholesale orders, deducted from the remittance. A selling cost, never inventoriable (ASC 330-10-30-8).',
   },
   {
     code: ACC_RESEARCH_DEVELOPMENT,

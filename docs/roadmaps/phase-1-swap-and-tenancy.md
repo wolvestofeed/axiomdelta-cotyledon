@@ -15,7 +15,7 @@ The kitchen vocabulary replaced in full (1a, commit `e5f34af`), then one Clerk o
 
 - [x] `farm.workspaces`, one row per Clerk organization, provisioned on first sign-in
 - [x] `workspace_id` on all 51 tables, defaulted from the transaction setting, indexed; row-level security forced on every table; keys that were global made per workspace (migration `0002`)
-- [x] Roles from the organization: `org:admin` is admin, any member is operator, platform admins named in `_lib/access.ts` are admins everywhere; the email allowlists gone
+- [x] Roles from the organization: `org:admin` is admin, any member is operator, platform admins named in `src/server/access.ts` are admins everywhere; the email allowlists gone
 - [x] `withWorkspace()` around every page, layout, route handler and server action (87 entry points); `db` throws outside a scope; `test/farm-workspace-scope.test.ts` fails on an unwrapped entry point
 - [x] Scripts scoped through `FARM_WORKSPACE`; the front door shows Clerk's organization picker with no org active
 

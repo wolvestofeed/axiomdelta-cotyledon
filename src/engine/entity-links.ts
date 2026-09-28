@@ -17,7 +17,6 @@
  * Nothing here imports a dataset, so it is safe in client components.
  */
 
-import type { MarkRating } from '@/data/mark';
 
 // ── The kinds and the lean record ───────────────────────────────────────────
 
@@ -94,8 +93,6 @@ export interface LeanEntity {
   lat: number | null;
   lng: number | null;
   geoSource: string | null;
-  /** Suppliers carry the certification mark's rating; other kinds do not. */
-  rating?: MarkRating;
 }
 
 // ── Reference encoding (`kind:id`) ──────────────────────────────────────────

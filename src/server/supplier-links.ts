@@ -1,6 +1,5 @@
 import 'server-only';
 import { supplierOperations, type SupplierOperation } from '@/data/suppliers';
-import { supplierRatings, ratingFor } from '@/data/mark';
 import { queryOperations } from '@/engine/suppliers';
 import type { LeanSupplier } from '@/engine/supplier-links';
 
@@ -28,7 +27,6 @@ export function toLean(o: SupplierOperation): LeanSupplier {
     lat: o.lat ?? null,
     lng: o.lng ?? null,
     geoSource: o.geoSource ?? null,
-    rating: ratingFor(supplierRatings, o.id),
   };
 }
 

@@ -6,7 +6,6 @@ import { getFarmAccess } from '@/server/access';
 import { AdminOnlyNotice } from '@/components/AdminOnly';
 import { buildPlanVsActual, type PvaMonth } from '@/server/plan-v-actual';
 import { servedCostPerUnitCents, sumMeasures, type PvaBreakdownRow, type PvaMeasures } from '@/engine/plan-v-actual';
-import { MARK } from '@/data/mark';
 import { getActiveScenario } from '@/server/scenarios';
 import { forecastStartOf } from '@/engine/demand';
 import { withWorkspace } from '@/server/workspace';
@@ -85,12 +84,6 @@ function rowsFor(p: PvaMeasures, a: PvaMeasures, r: PvaMeasures, cash: { plan: n
         { label: 'Scope 3', plan: p.emissionsKg.scope3, actual: a.emissionsKg.scope3, rolling: r.emissionsKg.scope3, fmt: t },
         { label: 'Scope 3 food on a named supplier', plan: share(p.food.onNamedSupplierKg, p.food.referenceKg), actual: share(a.food.onNamedSupplierKg, a.food.referenceKg), rolling: share(r.food.onNamedSupplierKg, r.food.referenceKg), fmt: (v) => pct(v, 0), note: 'Share of purchased-food emissions on inputs received from a named supplier. Definition to be confirmed.' },
         { label: 'Scope 3 food on supplier data', plan: share(p.food.onSupplierDataKg, p.food.referenceKg), actual: share(a.food.onSupplierDataKg, a.food.referenceKg), rolling: share(r.food.onSupplierDataKg, r.food.referenceKg), fmt: (v) => pct(v, 0), note: 'Share of purchased-food emissions whose selected basis is the supplier’s own figure. Definition to be confirmed.' },
-      ],
-    },
-    {
-      group: `Supplier ${MARK.label.toLowerCase()}s`,
-      rows: [
-        ...([3, 2, 1] as const).map((s): Row => ({ label: `Suppliers, ${s}-star`, plan: p.suppliersByStars[s], actual: a.suppliersByStars[s], rolling: r.suppliersByStars[s], fmt: (v) => num(v), level: true, note: s === 3 ? 'Suppliers on the period’s receipts.' : undefined })),
       ],
     },
   ];
@@ -291,7 +284,7 @@ async function PlanVsActualPageInner({ searchParams }: { searchParams: Promise<{
         </div>
         <p className="farm-kpi-sub mt-2">
           The rolling forecast is budget-based: the records through {report.asOf}, and the plan of record set now ({report.rollingPlanLabel ?? 'plan defaults'}) as planned for the days after it; nothing is re-estimated, and the plan of record itself does not change. A month wholly before today is the records, a month wholly after it is the plan, and this month is both, split at today.
-          {' '}Difference is actual less plan. A supplier with no rating on file is not counted. {report.trailEntries === 0 ? 'No change of the plan of record is on the trail yet, so every month reads the plan of record set now.' : `${report.trailEntries} change${report.trailEntries === 1 ? '' : 's'} of the plan of record on the trail.`}
+          {' '}Difference is actual less plan. {report.trailEntries === 0 ? 'No change of the plan of record is on the trail yet, so every month reads the plan of record set now.' : `${report.trailEntries} change${report.trailEntries === 1 ? '' : 's'} of the plan of record on the trail.`}
         </p>
       </Card>
 

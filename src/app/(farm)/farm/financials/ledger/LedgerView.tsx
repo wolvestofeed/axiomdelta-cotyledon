@@ -32,8 +32,8 @@ const subscribeHash = (cb: () => void) => {
  *
  * Tabbed (Phase T): the status, the period picker and the KPI strip stay above
  * the bar; one panel holds the open tab. The open tab is the URL hash, so it is
- * linkable and survives a refresh. The one journal read stays here in the
- * parent: the KPI strip, the trial balance and the journal all read it.
+ * linkable and survives a refresh. The one journal read stays here, in this
+ * component: the KPI strip, the trial balance and the journal all read it.
  */
 export function LedgerView({ canEdit }: { canEdit: boolean }) {
   const { book, error, pending } = useLedgerBook();

@@ -8,10 +8,7 @@
  */
 
 /** Lean supplier record sent to the client (map + directory table). */
-import type { MarkRating } from '@/data/mark';
-
 export interface ClientSupplier {
-  rating: MarkRating;
   id: string;
   name: string;
   website: string;

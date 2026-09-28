@@ -26,7 +26,7 @@ export interface CrewShift {
   headcount: Tagged;
   /** Resource or step ids this crew is qualified for; empty = any. Consumed by the scheduler. */
   canStaff?: string[];
-  dayPattern: 'weekday' | 'termday' | 'all' | string[];
+  dayPattern: 'weekday' | 'all' | string[];
   /** What the crew is drawn around — display text, not a constraint. */
   focus?: string;
 }

@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { Card } from '@/components/ui';
-import { MARK } from '@/data/mark';
 
-/** The three things a supplier submits. Not connected yet: the fields are laid out, nothing is sent. */
+/** The two things a supplier submits. Not connected yet: the fields are laid out, nothing is sent. */
 export function SupplierPortalForms({ suppliers }: { suppliers: { id: string; name: string }[] }) {
   const [supplierId, setSupplierId] = useState(suppliers[0]?.id ?? '');
   const notConnected = <p className="farm-kpi-sub mt-2">Not connected yet: nothing is sent or stored from this form.</p>;
@@ -45,17 +44,6 @@ export function SupplierPortalForms({ suppliers }: { suppliers: { id: string; na
             <label className="farm-kpi-sub">Certifications and notes<br /><textarea className="farm-input w-full!" rows={2} /></label>
             <button type="button" className="farm-btn primary" disabled>Submit item</button>
           </div>
-          {notConnected}
-        </Card>
-
-        <Card title={`${MARK.label} rating assessment`}>
-          <div className="grid gap-[0.6rem]">
-            <label className="farm-kpi-sub">Operation or products assessed<br /><input className="farm-input w-full!" /></label>
-            <label className="farm-kpi-sub">Supporting documents<br /><input type="file" className="farm-input" multiple disabled /></label>
-            <label className="farm-kpi-sub">Notes<br /><textarea className="farm-input w-full!" rows={3} /></label>
-            <button type="button" className="farm-btn primary" disabled>Submit assessment</button>
-          </div>
-          <p className="farm-kpi-sub mt-2">{MARK.scope} Ratings are assigned by the farm.</p>
           {notConnected}
         </Card>
       </div>

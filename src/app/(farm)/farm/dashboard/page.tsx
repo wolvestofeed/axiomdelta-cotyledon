@@ -251,7 +251,7 @@ async function AdminDashboard() {
     {
       section: 'Sales',
       stats: [
-        { label: 'Prospect prospects', value: num(pipe.total) },
+        { label: 'Prospects', value: num(pipe.total) },
         { label: 'Signed subscribers', value: num(pipe.byStatus['Signed - Active'] ?? 0) },
         { label: 'Subscribers on file', value: num(R.subscribers.filter((c) => c.status !== 'inactive').length) },
         { label: 'In talks', value: num(pipe.byStatus['In Talks'] ?? 0) },
@@ -417,7 +417,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
     {
       section: 'Sales',
       stats: [
-        { label: 'Prospect prospects', value: num(pipe.total) },
+        { label: 'Prospects', value: num(pipe.total) },
         { label: 'Signed subscribers', value: num(pipe.byStatus['Signed - Active'] ?? 0) },
         { label: 'In talks', value: num(pipe.byStatus['In Talks'] ?? 0) },
         { label: 'Subscribers on file', value: num(picture.R.subscribers.filter((c) => c.status !== 'inactive').length) },

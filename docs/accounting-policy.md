@@ -1,7 +1,7 @@
 # Cotyledon — inventory & cost accounting policy
 
 The authority behind every number the platform posts. Co-versioned with
-`_engine/production-ledger.ts`, `_engine/index.ts` and `_data/coa-farm.ts`: if a rule
+`src/engine/production-ledger.ts`, `src/engine/index.ts` and `src/data/coa-farm.ts`: if a rule
 here changes, the engine changes with it, and the reverse.
 
 Written for a reader who has to sign off on the books — a CPA, a lender or an
@@ -37,7 +37,7 @@ an article to its existing condition and location.
 | Element | Treatment |
 |---|---|
 | Purchased inputs | Seed, medium and nutrient at the price paid for the lot; freight-in and duties capitalise into the lot. Issued from raw materials to WIP-Sow at the cost of the lot drawn, on the quantity issued |
-| Packaging | Each plan's own picks from the packaging library at the library's cost (Roadmap N1, N9) — never a flat charge on every grow plan; received into its own inventory at the price paid and charged at the pack stage at the cost of the lot drawn |
+| Packaging | Each plan's own picks from the packaging library at the library's cost — never a flat charge on every grow plan; received into its own inventory at the price paid and charged at the pack stage at the cost of the lot drawn |
 | Direct labor | The sowing record's recorded hours × recorded loaded rate; with no crew recorded, the approved standard hours × standard loaded rate on the trays sown. Absorbed by stream: the sowing stream to WIP-Sow, the daily stream to WIP-Grow, the harvest stream to WIP-Pack, split by the plan's study |
 | Variable manufacturing overhead | The light a tray takes (to WIP-Grow), its tray wear and the sanitizer (to WIP-Sow), applied at their standard per tray on the trays sown and credited to 5195. None of them is bought into raw materials |
 | Fixed manufacturing overhead | Absorbed at a predetermined rate set on **normal capacity** (§4) |
@@ -64,11 +64,10 @@ cost divided into its units (`sowingCosting`).
 
 ## 3. The chart of accounts
 
-Staffing's `DEFAULT_HOSPITALITY_COA` is a restaurant chart with one inventory
+The ledger's `DEFAULT_HOSPITALITY_COA` (`src/ledger`) is a restaurant chart with one inventory
 account and no work in process. A facility growing trays is a manufacturer:
-trays sit in WIP for their cycle carrying absorbed labor and overhead. Farm
-**extends** that chart rather than editing it (`_data/coa-farm.ts`); every other
-Staffing surface keeps the accounts it has.
+trays sit in WIP for their cycle carrying absorbed labor and overhead. Cotyledon
+**extends** that chart rather than editing it (`src/data/coa-farm.ts`).
 
 | Code | Account | Why it exists |
 |---|---|---|
@@ -199,7 +198,7 @@ next run's requirement.
 The distinction decides inventory against expense, so it is a captured field, not a
 judgement made at close.
 
-Every scrap transaction carries a **disposition reason code** (`_engine/sowing.ts`).
+Every scrap transaction carries a **disposition reason code** (`src/engine/sowing.ts`).
 ISO 9001:2015 clause 8.7 (control of nonconforming outputs) is the record format;
 ISO 22400 draws the same line between planned and actual scrap.
 
@@ -332,26 +331,26 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Experiment | A sowing record that names an experiment in R&D (`experiment_id`). It posts the sowing chain above, drawing its lots, charging its labor and applying and absorbing overhead as any sowing does, so its cost is built the same way and the lot register and payroll stay whole. At pack its trays go from the pack stage straight to Research and Development (7920) at their cost, never into finished goods, so no distribution relieves them and they are no part of the cost per unit made; a loss at any stage goes to 7920 too rather than to Abnormal Spoilage (5910), and a loss after packing is already inside that charge: a failed experiment is the cost of the research (ASC 730-10-25-1). It ships nothing. A tray given away from it is not a distribution and is not revenue. 7920 sits among operating expenses on the statement of income. |
 | Receipt | Accepted lines: raw materials by lot at the price received, against goods received not invoiced (2015) at the same amount. A rejected line posts nothing. |
 | Supplier bill | Recorded only when it equals its receipts, line for line in quantity and value; it clears goods received not invoiced and credits the payable at the same amount (§16). |
-| Absorption | A sowing with no approved version in force absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); a version absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval (Roadmap N6). |
-| Distribution | A recorded distribution names its grow plan through the order it was recorded against (Roadmap N9). Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the cost per unit of the finished goods relieved, first in, first out by sowing within the grow plan the distribution names (else across every grow plan's finished goods), by element to 5011, 5012 and 5013; distribution expense; retail commission deducted from the remittance. Units beyond the finished goods on hand are costed at the grow plan's most recent sowing cost per unit, else its cost card, else zero; finished goods goes negative by that amount and the period's notes name the units. |
+| Absorption | A sowing with no approved version in force absorbs at the rate the same forecast's Plan ledger sets on its own production (§4, §17); a version absorbs at the rate it froze, which is the plan of record's Plan ledger rate at approval. |
+| Distribution | A recorded distribution names its grow plan through the order it was recorded against. Revenue by channel, to receivables for Subscriptions and Restaurants and to processor clearing (1200) for Retail and wholesale; cost of goods sold at the cost per unit of the finished goods relieved, first in, first out by sowing within the grow plan the distribution names (else across every grow plan's finished goods), by element to 5011, 5012 and 5013; distribution expense; retail commission deducted from the remittance. Units beyond the finished goods on hand are costed at the grow plan's most recent sowing cost per unit, else its cost card, else zero; finished goods goes negative by that amount and the period's notes name the units. |
 | Own use | A distribution to a subscriber marked own use: the owner's own trays leave finished goods at their cost, first in, first out as any distribution relieves them, to Owner Draws (3200). No revenue, no receivable, no cost of goods sold, no distribution expense and no invoice: goods the owner takes for his own consumption are a draw on his equity, not a sale. |
 | Subscriber / supplier payment | Cash against receivables / payables, applied to invoices / bills. |
 | Opening balance | Cash, the fit-out at cost, long-term debt and owners' equity as of its date. |
 | Payroll | At month end, loaded labor earned on the time clock less what the month's sowing records charged, to 5170 against the four payroll liabilities; on each pay date through today, the pay period's loaded labor paid in cash (§16). |
 | Period bill | Lease and utilities to Overhead Control; admin to G&A; other to the named account; payable until a paid-on date posts the payment. |
 | Month end | One twelfth of annual depreciation to Overhead Control; applied closed against incurred, the difference to the volume variance. |
-| Equity contribution | Cash against owners' equity (3100) (Roadmap N5). |
-| Capital purchase | Fixed assets (1700) at cost against cash (Roadmap N5). |
-| Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash (Roadmap N5). |
-| Marketplace deposit | Cash against processor clearing (1200) (Roadmap N5). |
+| Equity contribution | Cash against owners' equity (3100). |
+| Capital purchase | Fixed assets (1700) at cost against cash. |
+| Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash. |
+| Marketplace deposit | Cash against processor clearing (1200). |
 
 Each sowing is a layer of finished goods from its sow date, holding its units and its cost
 by element in cents; a distribution that takes a layer's last unit takes what the layer has
 left, so finished goods clears to the cent once everything made is distributed. Receivables and payables are not settled unless a payment record
 applies to them: the actuals position carries real working capital, and it opens
 from the opening balance record once one is recorded (§16). The forecast-month column
-on Actuals is the Plan ledger's own month for the same period (Roadmap N6). A shipment given no
-price posts no revenue and says so; there is no default price (Roadmap N9).
+on Actuals is the Plan ledger's own month for the same period. A shipment given no
+price posts no revenue and says so; there is no default price.
 
 ## 15. Periods, the lock and the posting trail
 
@@ -374,7 +373,7 @@ The production calendar is the service weekdays less dated closures (major
 holidays; the farm runs year-round). A closure takes its dates out of production and out of the
 derived forecast; orders already on file are unchanged.
 
-## 16. Working capital, invoicing and payroll (Roadmap Phase K)
+## 16. Working capital, invoicing and payroll
 
 ### Payment terms — the reference
 
@@ -440,8 +439,8 @@ posted.
 ### Payroll and the cut-off
 
 Loaded labor is owed as wages (2110), employer FICA, FUTA and SUTA (2120), workers' comp (2130) and
-benefits (2140). No pay is held in Farm (Roadmap O1): Staffing holds wages, burden and benefits,
-closes each pay period and sends its totals by account; the clock times go to Staffing. Time is
+benefits (2140). Pay is held in Staffing, the internal module (Phase 4): it holds wages, burden and benefits,
+closes each pay period and posts its totals by account; the clock times are its record. Time is
 kept on the internal time clock: clock in, start and end a break, clock out. A shift is clock-in to
 clock-out less breaks; a shift with no clock-out counts no hours; hours past 40 in a Monday–Sunday
 workweek are overtime (29 U.S.C. 207(a)(1)). Pay periods are biweekly, Monday through the second
@@ -453,14 +452,14 @@ the clock on dates no closed pay period covers accrue nothing and are noted. Eac
 is paid in cash on its pay date; no payroll run is recorded yet, so the pay date is taken as the
 payment through today. A sowing record charges its recorded crew hours at the recorded rate, and
 the approved labor standard at the plan's placeholder rate where no crew is recorded, until
-Staffing's loaded rates arrive. Pay periods paid after the forecast window ends stay accrued.
+the Staffing module's loaded rates arrive (Phase 4). Pay periods paid after the forecast window ends stay accrued.
 
 ### Opening balance
 
 The actuals carry one opening balance record: owners' equity, the fit-out at cost and the long-term
 debt, as of a date. Opening cash is equity plus debt less the fit-out.
 
-## 17. The Plan ledger (Roadmap N5)
+## 17. The Plan ledger
 
 A forecast's timeline (`simulateForecast`) posts through `postActuals` — the same functions as the
 actuals (§14) — so actual against plan is the same report run twice. Nothing is stored.

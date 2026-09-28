@@ -20,7 +20,6 @@ import Link from 'next/link';
 import PinMap from '@/components/PinMap';
 import { haversineMiles, type ClientSupplier, type GrowPlanMatchView } from '@/engine/geo';
 import { money, num } from '@/components/ui';
-import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
 import { useScenario } from '@/state/scenario-store';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
 import { supplierReverseLinks } from '@/engine/entity-links';
@@ -134,7 +133,7 @@ export default function SupplierDirectory({
             <table className="farm-table">
               <thead>
                 <tr>
-                  <th>Operation</th><th>{ratingHeader()}</th><th>Location</th><th>Certification</th><th>Prospect</th><th>Products</th>
+                  <th>Operation</th><th>Location</th><th>Certification</th><th>Prospect</th><th>Products</th>
                   <th className="num">Volume capacity</th><th>Wholesale readiness</th><th className="num">Pricing</th><th className="num">Lead time</th>
                   <th>Linked lines</th>
                 </tr>
@@ -158,7 +157,6 @@ export default function SupplierDirectory({
                         ) : null}
                       </div>
                     </td>
-                    <td><RatingPill rating={o.rating} /></td>
                     <td className="farm-c-soft">{o.location}</td>
                     <td>{o.certified ? <span className="farm-pill ok">{o.certScope || 'Certified'}</span> : <span className="farm-c-faint farm-fs-xs">—</span>}</td>
                     <td>{o.prospectReady ? <span className="farm-pill ok">{o.tdaType ?? 'prospect-ready'}</span> : <span className="farm-c-faint farm-fs-xs">—</span>}</td>
@@ -187,7 +185,6 @@ export default function SupplierDirectory({
           {capped && (
             <p className="farm-kpi-sub mt-2">Showing the first {num(displayCap)}. Narrow with region, scope, or product search above.</p>
           )}
-          <RatingLegend />
           <p className="farm-kpi-sub mt-2">
             An operation&apos;s name opens its record — contact, terms, the seasonal catalog imported from
             their price sheet, and the purchase orders raised against them. Volume capacity, wholesale
@@ -341,7 +338,7 @@ export default function SupplierDirectory({
               <table className="farm-table">
                 <thead>
                   <tr>
-                    <th>Operation</th><th>{ratingHeader()}</th><th>Location</th><th>Certification</th>
+                    <th>Operation</th><th>Location</th><th>Certification</th>
                     <th>Lines</th><th className="num">PO lines</th><th className="num">Cases</th><th className="num">Ordered spend</th>
                   </tr>
                 </thead>
@@ -357,7 +354,6 @@ export default function SupplierDirectory({
                             <span className="farm-c-faint farm-fs-xs">Not in the directory ({r.supplierId})</span>
                           )}
                         </td>
-                        <td>{lean ? <RatingPill rating={lean.rating} /> : '—'}</td>
                         <td className="farm-c-soft">{lean?.location ?? '—'}</td>
                         <td>
                           {lean?.certified ? (
@@ -394,7 +390,6 @@ export default function SupplierDirectory({
               </table>
             </div>
           )}
-          <RatingLegend />
           <p className="farm-kpi-sub mt-2">
             Cases and spend are the net requirement of the next production run ({nextRun.productionDate}, for distribution {nextRun.distributionDate}) from the order book on {nextRun.kind === 'plan' ? 'Plan, the saved open forecast' : 'Actual, netted against raw stock and open purchase orders'}. An
             operation linked to a line that run does not buy shows the link with no spend.

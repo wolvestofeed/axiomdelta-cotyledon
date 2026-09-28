@@ -76,7 +76,7 @@ export default function LogisticsPage() {
       />
 
       <SustainabilityWorldNote world={world}>
-        {unplacedUnits > 0 && <div className="mt-1">{num(unplacedUnits)} units went to a distribution pickupPoint not on the pickupPoint list: not in the outbound legs.</div>}
+        {unplacedUnits > 0 && <div className="mt-1">{num(unplacedUnits)} units went to a distribution pickup point not on the pickup point list: not in the outbound legs.</div>}
       </SustainabilityWorldNote>
 
       <PreviewBanner>

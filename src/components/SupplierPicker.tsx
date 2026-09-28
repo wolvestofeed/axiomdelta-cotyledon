@@ -7,7 +7,7 @@ import { EntityPicker } from '@/components/EntityPicker';
 /**
  * Link a line to a supplier from the compiled directory — the supplier-shaped
  * face of `EntityPicker`. Callers hold `LeanSupplier` (they need its coordinates
- * and rating for the logistics and coverage math); this adapts that record to the
+ * for the logistics and coverage math); this adapts that record to the
  * lean entity the shared control renders.
  */
 export function leanSupplierAsEntity(s: LeanSupplier): LeanEntity {
@@ -26,7 +26,6 @@ export function leanSupplierAsEntity(s: LeanSupplier): LeanEntity {
     lat: s.lat,
     lng: s.lng,
     geoSource: s.geoSource,
-    rating: s.rating,
   };
 }
 

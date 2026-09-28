@@ -268,7 +268,7 @@ export interface PickupPointOverlay {
 }
 
 /**
- * Per-prospect links from the Sales workspace, keyed by prospect prospect id. The
+ * Per-prospect links from the Sales workspace, keyed by prospect id. The
  * pickup point is where the prospect would be served from; the grow plans are what was
  * quoted, which is what makes the quote's input cost computable.
  */
@@ -437,7 +437,7 @@ export interface ResolvedInputs {
   closures: DateRange[];
   /** distribution-pickup-point links and overrides, keyed by pickup point id. */
   pickupPoints: Record<string, PickupPointOverlay>;
-  /** Prospect links, keyed by prospect prospect id. */
+  /** Prospect links, keyed by prospect id. */
   sales: Record<string, SalesOverlay>;
   /** The subscriber library (facts of record), before what-if edits. */
   subscribers: SubscriberDef[];

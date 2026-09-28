@@ -52,7 +52,6 @@ export function supplierToEntity(s: LeanSupplier): LeanEntity {
     lat: s.lat,
     lng: s.lng,
     geoSource: s.geoSource,
-    rating: s.rating,
   };
 }
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { RatingPill } from '@/components/MarkRating';
 import {
   ENTITY_KIND_LABEL,
   type EntityKind,
@@ -102,9 +101,8 @@ export function EntityPicker({
               {linked.subtitle ? (
                 <div className="farm-c-faint farm-fs-2xs">{linked.subtitle}</div>
               ) : null}
-              {linked.rating || linked.pills.length > 0 ? (
+              {linked.pills.length > 0 ? (
                 <div className="flex gap-[0.3rem] flex-wrap mt-[0.2rem]! items-center">
-                  {linked.rating ? <RatingPill rating={linked.rating} /> : null}
                   {linked.pills.map((p) => (
                     <span key={p.label} className={p.tone === 'ok' ? 'farm-pill ok' : 'farm-pill'}>
                       {p.label}

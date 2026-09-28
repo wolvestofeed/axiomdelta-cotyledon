@@ -29,7 +29,7 @@ export interface ResolvedPickupPoint {
   dailyForecastUnits: number;
   /** True when the forecast comes from a subscriber pickup point linked to this distribution pickup point. */
   forecastFromSubscriber: boolean;
-  /** The linked prospect prospect, when one is linked and resolvable. */
+  /** The linked prospect, when one is linked and resolvable. */
   prospectId: string | null;
   prospectName: string | null;
   placement: PickupPointPlacement;

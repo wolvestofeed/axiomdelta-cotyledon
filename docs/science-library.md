@@ -9,7 +9,7 @@ Four source documents, all Rob's compilations, Sept 2026:
 - **C** — *Clinical Research and Blend Optimization for Specific Microgreen Varieties* (`docs/Clinical Research and Blend Optimization for Specific Microgreen Varieties.docx`): five blends of the twelve varieties, and the clinical and phytochemical profiles of fenugreek, borage, amaranth, chia and wheat. Its 17 new works are rows 76–92; §1c maps its numbering.
 - **D** — *Comparative Analysis of Hemp Mats and Coco Coir: Sustainability, Hydroponics, and Agronomic Outcomes* (`docs/Comparative Analysis of Hemp Mats and Coco Coir_ Sustainability, Hydroponics, and Agronomic Outcomes.docx`): the hemp mat against coir in an Austin grow room. Its 11 new works are rows 93–103; §1d maps its numbering. Most of its agronomic statements cite commercial pages (grade C), which carry no claim; the hemp mat's specifications are its makers' published statements (grade S) and one study is primary (row 103).
 
-The register in code is `apps/web/src/app/(farm)/farm/_data/science-library.ts`; `rowFor('B', n)` resolves a document B superscript.
+The register in code is `src/data/science-library.ts`; `rowFor('B', n)` resolves a document B superscript.
 
 ## 1. Works cited
 

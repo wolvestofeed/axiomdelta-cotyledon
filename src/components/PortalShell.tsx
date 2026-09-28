@@ -19,7 +19,7 @@ export function PortalShell({
   links: { href: string; label: string }[];
   /** The signed-in line, top right. */
   who: React.ReactNode;
-  /** Suppliers, subscribers and parents: the review policy shows under the header. */
+  /** Suppliers and subscribers: the review policy shows under the header. */
   external?: boolean;
   children: React.ReactNode;
 }) {

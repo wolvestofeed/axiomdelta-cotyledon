@@ -951,13 +951,13 @@ const subscribersAndPipeline: Builder = (ctx) => {
   });
   byChannel.push(row(['All channels', ...statuses.map((s) => R.subscribers.filter((c) => c.status === s).length), R.subscribers.reduce((n, c) => n + c.pickupPoints.length, 0)], 'total'));
   const pipelineRows = Object.entries(pipe.byStatus).sort(([, a], [, b]) => b - a).map(([s, n]) => row([`Prospect pipeline — ${s}`, n, '', '', '']));
-  pipelineRows.push(row(['Prospect prospects in the directory', pipe.total, '', '', `${num(pipe.totalStudents)} headcount`], 'total'));
+  pipelineRows.push(row(['Prospects in the directory', pipe.total, '', '', `${num(pipe.totalStudents)} headcount`], 'total'));
   const detail = table([{ label: 'Subscriber' }, { label: 'Channel' }, { label: 'Status' }, { label: 'Pickup points', num: true }, { label: 'Payment terms' }, { label: 'Contract' }],
     [...R.subscribers].sort((a, b) => a.name.localeCompare(b.name)).map((c) => row([c.name, channelName(c.channel), SUBSCRIBER_STATUS_LABELS[c.status], c.pickupPoints.length, c.paymentTerms ?? 'None on file', c.contractStart ? `${c.contractStart} to ${c.contractEnd ?? 'open'}` : '—'], c.status === 'inactive' ? 'faint' : undefined)));
   return {
     summary: table([{ label: 'Channel or stage' }, { label: 'Contracted', num: true }, { label: 'Forecast subscriber', num: true }, { label: 'Prospect', num: true }, { label: 'Inactive', num: true }, { label: 'Pickup points', num: true }], [...byChannel, ...pipelineRows.map((r) => ({ ...r, cells: [r.cells[0], r.cells[1], '', '', '', r.cells[4]] }))]),
     detail,
-    basis: 'The subscriber library as facts of record, and the compiled prospect prospect directory. A subscriber with no payment terms is not invoiced.',
+    basis: 'The subscriber library as facts of record, and the compiled prospect directory. A subscriber with no payment terms is not invoiced.',
   };
 };
 

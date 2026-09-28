@@ -6,8 +6,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Card, Kpi, money, num, pct } from '@/components/ui';
 import { SectionSave } from '@/components/SectionSave';
-import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
-import { inputRatings, ratingFor } from '@/data/mark';
 import { spendCoverage } from '@/engine/supplier-links';
 import { SupplierPicker } from '@/components/SupplierPicker';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
@@ -153,7 +151,6 @@ export function ProcurementClient({
       <div className="grid gap-3 mt-3 farm-autofit-11">
         <Kpi value={`${cover.linesLinked} / ${cover.linesTotal}`} label="Next run lines linked to a supplier" sub={pct(cover.linkedShare, 0) + ' of spend'} />
         <Kpi value={pct(cover.certifiedShare, 0)} label="Spend with a certification on file" sub="USDA organic, linked lines" />
-        <Kpi value={pct(cover.ratedShare, 0)} label={`Spend with an ${ratingHeader()}`} sub="Rated suppliers, linked lines" />
       </div>
 
       <Card title="Issued purchase orders — receive on the order" className="mt-4">
@@ -204,7 +201,7 @@ export function ProcurementClient({
           <table className="farm-table">
             <thead>
               <tr>
-                <th>Input</th><th>{ratingHeader()}</th><th>Supplier</th><th className="num">Order price</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Next run gross</th><th className="num">Net</th><th className="num">Cases</th><th className="num">Net extended</th>
+                <th>Input</th><th>Supplier</th><th className="num">Order price</th><th className="num">On hand</th><th className="num">On order</th><th className="num">Next run gross</th><th className="num">Net</th><th className="num">Cases</th><th className="num">Net extended</th>
               </tr>
             </thead>
             <tbody>
@@ -214,7 +211,6 @@ export function ProcurementClient({
                 return (
                   <tr key={ing.name} className={`${ing.inService ? '' : 'farm-c-faint'}`}>
                     <td className="font-medium!">{ing.name}<div className="farm-c-faint farm-fs-2xs font-normal">{ing.growPlans} grow plan{ing.growPlans === 1 ? '' : 's'}{ing.inService ? '' : ' · not in service'}</div></td>
-                    <td><RatingPill rating={ratingFor(inputRatings, ing.name)} /></td>
                     <td>
                       <SupplierPicker input={ing.name} linked={links[ing.name] ? suppliers[links[ing.name]] ?? null : null} canEdit={canEdit && world.forecastEditing} onLink={(id) => setLink(ing.name, id)} />
                     </td>
@@ -236,11 +232,10 @@ export function ProcurementClient({
                   </tr>
                 );
               })}
-              <tr className="total"><td colSpan={9}>Next run, net to buy</td><td className="num">{money(net.netTotal)}</td></tr>
+              <tr className="total"><td colSpan={8}>Next run, net to buy</td><td className="num">{money(net.netTotal)}</td></tr>
             </tbody>
           </table>
         </div>
-        <RatingLegend />
         {Object.keys(stock.unmatchedIssues).length > 0 && (
           <p className="farm-kpi-sub mt-2 farm-c-placeholder">
             Issues on closed sowings with no receipt to draw from: {Object.entries(stock.unmatchedIssues).map(([k, v]) => `${num(v, 1)} ${k}`).join(', ')}. Stock is not assumed for them.

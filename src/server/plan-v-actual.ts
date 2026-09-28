@@ -21,7 +21,6 @@ import { planOfRecordAtMonthEnd, type PlanInForce } from '@/engine/plan-of-recor
 import { pvaBreakdown, pvaMeasures, type PvaBreakdownRow, type PvaMeasures, type PvaOrder, type PvaSideInput } from '@/engine/plan-v-actual';
 import type { FarmScenarioConfig, ResolvedInputs } from '@/engine/scenario';
 import { lcaOptions as curatedOptions } from '@/data/lca-options';
-import { ratingFor, supplierRatings } from '@/data/mark';
 
 /**
  * Cotyledon — Plan v Actual, assembled (Roadmap N7). Each month posts the plan of
@@ -156,7 +155,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
     const food = mixFoodFootprint({ basis, growPlans: inputs.growPlans, unitFactorByChannel: pf, selection: inputs.sustainability.inputBasis, options });
     const suppliers = leanSuppliersById(Object.values(inputs.sustainability.inputSupplier));
     const inventory = fullInventory(inputs, to, { basis, energy: input.energy, refrigerantService: input.refrigerantService }, suppliers, options);
-    const supplierIds = [...new Set(month.receipts.map((r) => r.supplierId).filter((x): x is string => Boolean(x)))];
     const sideInput: PvaSideInput = {
       period,
       sowings: paired.map((x) => x.doc),
@@ -173,7 +171,6 @@ export async function buildPlanVsActual(periods: readonly string[]): Promise<Pla
       waterGal: input.waterGal,
       shrinkAllowance: inputs.assumptions.yield.shrinkAllowance.value,
       growPlans: inputs.growPlans,
-      suppliers: supplierIds.map((id) => ({ id, rating: ratingFor(supplierRatings, id) })),
     };
     const r = pvaBreakdown(sideInput, 'growPlan');
     return {

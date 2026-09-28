@@ -67,7 +67,7 @@ async function SalesPageInner({ searchParams }: { searchParams: SP }) {
     <>
       <PageHeader
         title="CRM"
-        purpose="Work each prospect prospect from first contact to quote and scope of work."
+        purpose="Work each prospect from first contact to quote and scope of work."
         functions={['Directory', 'Map', 'Prospect workspace', 'Quote of service', 'Scope of work']}
         connects={[
           { href: '/farm/subscribers', dir: 'to' },

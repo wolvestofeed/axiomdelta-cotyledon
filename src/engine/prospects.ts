@@ -1,5 +1,5 @@
 /**
- * Cotyledon — prospect prospect query + pipeline stats (server-side).
+ * Cotyledon — prospect query + pipeline stats (server-side).
  *
  * Filters the seeded prospect list by segment / status / free-text search and
  * summarizes the sales pipeline. Read-only over the compiled dataset.

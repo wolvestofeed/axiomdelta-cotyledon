@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PageHeader, Card, Kpi, Notice, money, num } from '@/components/ui';
-import { RatingPill, RatingLegend, ratingHeader } from '@/components/MarkRating';
+import { PageHeader, Card, Kpi, money, num } from '@/components/ui';
 import { SupplierDetail } from '@/components/SupplierDetail';
-import { supplierRatings, ratingFor, MARK } from '@/data/mark';
 import { getSupplierOperation } from '@/server/supplier-links';
 import { listCatalog, listPurchaseOrdersForSupplier } from '@/server/supplier-catalog';
 import { listSources } from '@/server/sources';
@@ -22,9 +20,6 @@ export const dynamic = 'force-dynamic';
  * this page adds what a working relationship carries — the seasonal catalog we
  * import from their price sheet, the orders we have raised against them, and the
  * lines of our own model that point at them.
- *
- * The certification mark's rating sits in the heading, because on this platform
- * it is the operation's leading credential rather than a column.
  */
 export default async function SupplierDetailPage(props: Parameters<typeof SupplierDetailPageInner>[0]) {
   return withWorkspace(() => SupplierDetailPageInner(props));
@@ -48,7 +43,6 @@ async function SupplierDetailPageInner({
     getResolvedActiveInputs(),
   ]);
 
-  const rating = ratingFor(supplierRatings, id);
   const miles =
     op.lat != null && op.lng != null ? haversineMiles(FARM_HOME, { lat: op.lat, lng: op.lng }) : null;
 
@@ -90,14 +84,6 @@ async function SupplierDetailPageInner({
           { href: '/farm/procurement', dir: 'to' },
         ]}
         status="partial"
-        right={
-          <div className="flex flex-col items-end gap-[0.4rem]">
-            <span className="farm-kpi-label">{ratingHeader()}</span>
-            <span className="[transform:scale(1.35)] [transform-origin:right_center] inline-block">
-              <RatingPill rating={rating} />
-            </span>
-          </div>
-        }
       />
 
       <div className="flex gap-[0.4rem] flex-wrap -mt-3! mb-5!">
@@ -121,16 +107,6 @@ async function SupplierDetailPageInner({
         <Kpi value={num(orders.length)} label="Purchase orders raised" sub={`${openOrders.length} open`} />
         <Kpi value={money(orderedTotal / 100, 0)} label="Ordered to date" sub="Excludes cancelled" />
       </div>
-
-      {!op.certified && rating.status === 'not_rated' ? (
-        <div className="mt-4">
-          <Notice title="No credential on file">
-            This operation carries neither an organic certification in the compiled record nor an{' '}
-            {MARK.label} rating. Both are separate qualifications, and the absence of each is stated
-            rather than inferred.
-          </Notice>
-        </div>
-      ) : null}
 
       <SupplierDetail
         paymentTerms={inputs.supplierTerms[id] ?? null}
@@ -171,7 +147,6 @@ async function SupplierDetailPageInner({
         canEdit={access.isSuperAdmin}
       />
 
-      <RatingLegend />
       <p className="farm-kpi-sub mt-2">
         Certification and prospect-readiness come from the compiled public records (
         {op.source}, as of {op.dataAsOf.slice(0, 15)}); everything under Catalog, Terms and Purchase
