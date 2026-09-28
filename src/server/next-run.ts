@@ -9,7 +9,7 @@ import { getLedgerKind } from '@/server/ledgers';
 import { orderBook, isoAddDays, weekdayOf } from '@/engine/orders';
 import { planProductionDay, productionDateFor, requirementsFor } from '@/engine/production-plan';
 import { netRequirements, openOrders, rawStockOnHand, type NetLine } from '@/engine/net-requirements';
-import { resolveSubscriberPickupPoints } from '@/engine/demand';
+import { recordPickupPoints } from '@/engine/demand';
 
 const SERVICE_WEEKDAYS = [1, 2, 3, 4, 5];
 
@@ -28,7 +28,7 @@ export async function nextRunNet(today: string): Promise<{ kind: 'plan' | 'actua
   const productionDate = productionDateFor(distributionDate, SERVICE_WEEKDAYS, closures);
   const pf = Object.fromEntries(inputs.phaseProfiles.map((p) => [p.phase, p.unitFactor.value])) as Record<number, number>;
   const book = orderBook({
-    pickupPoints: isPlan ? inputs.demand.pickupPoints : resolveSubscriberPickupPoints(inputs.subscribers, {}, { closures }),
+    pickupPoints: isPlan ? inputs.demand.pickupPoints : recordPickupPoints(inputs.subscribers, { closures }),
     subscribers: inputs.subscribers,
     cycles,
     orders: isPlan ? [] : orders,

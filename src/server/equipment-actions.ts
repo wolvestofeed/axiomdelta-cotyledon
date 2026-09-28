@@ -47,6 +47,8 @@ const EquipmentPatch = z.object({
   fixtureKey: z.string().trim().max(60).nullable().optional(),
   /** A dark rack: it holds tray sowings only through germination and blackout. */
   darkStagesOnly: z.boolean().optional(),
+  /** Each shelf's lights, top to bottom: a fixture key or none, and how many; null = every shelf the fixture at its count. */
+  shelfLights: z.array(z.object({ fixtureKey: z.string().trim().max(60).nullable(), count: z.number().int('Whole lights').min(0).max(20) })).max(100).nullable().optional(),
   /** Pounds one unit takes in one run — the sowing this grow unit bounds; null on equipment a sowing does not pass through. */
   sowingCapacityLb: z.number().min(0, 'Sowing capacity cannot be negative').max(1_000_000).nullable().optional(),
   sowingCapacityBasis: z.enum(['estimated', 'stated', 'observed']).optional(),

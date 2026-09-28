@@ -1,5 +1,5 @@
 import { eq, inArray, ne, sql } from 'drizzle-orm';
-import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmGrowPlans, farmGrowPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle } from '@/db';
+import { farmSubscribers, farmSubscriberPickupPoints, farmSubscriberServices, farmServiceVolumePicks, farmPickupPointCalendarRanges, farmEquipment, farmFixedCostLines, farmLeaseholdLines, farmLoans, farmSubscriptionCycles, farmSubscriptionCycleDays, farmPackages, farmGrowPlans, farmGrowPlanLines, farmTimeStudies, farmTimeStudyLines, type DbHandle, farmSubscriptions } from '@/db';
 import type { EquipmentLine, LeaseholdLine } from '@/data/capex';
 import { seedLoans, type FixedCostLineDef, type LoanDef } from '@/data/finance';
 import type { PackageSeed } from '@/data/packaging';
@@ -59,6 +59,7 @@ export async function insertEquipment(db: SeedDb, lines: readonly EquipmentLine[
         shelfWidthIn: l.shelfWidthIn ?? null,
         fixtureKey: l.fixtureKey ?? null,
         darkStagesOnly: l.darkStagesOnly === true,
+        shelfLights: l.shelfLights ?? null,
         sowingCapacityLb: l.sowingCapacityLb ?? null,
         sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated',
         concurrentSowings: l.concurrentSowings ?? null,
@@ -279,6 +280,19 @@ export async function insertSubscribers(db: SeedDb, subscribers: readonly Subscr
       const pickupPointId = pickupPoint[0]?.id;
       if (!pickupPointId) continue;
       await insertPickupPointServices(db, pickupPointId, s);
+      for (const sub of (c.subscriptions ?? []).filter((x) => x.subscriberPickupPointId === s.id)) {
+        await db.insert(farmSubscriptions).values({
+          subscriberId: id,
+          subscriberPickupPointId: pickupPointId,
+          cadence: sub.cadence,
+          startDate: sub.startDate,
+          endDate: sub.endDate,
+          flatPlan: sub.flatPlan,
+          skips: sub.skips,
+          pausedFrom: sub.pausedFrom,
+          notes: sub.notes,
+        });
+      }
     }
   }
   return n;
@@ -329,10 +343,8 @@ export async function insertSubscriptionCycles(db: SeedDb, cycles: readonly Subs
 }
 
 /**
- * The database's subscriber seed (Roadmap N1): the one contracted subscriber at its
- * stated 125 units a day, and a prospect per channel carrying no volume. The
- * grow plan library is no longer read for it — seeded demand is what is
- * contracted, not what the grow units could hold.
+ * The database's subscriber seed: the Plan's nineteen Forecast Subscribers with their weekly
+ * subscriptions (`planSeedSubscribers`). Nothing on Actual: the farm has no customer on record.
  */
 export function dbSeedSubscribers(): SubscriberDef[] {
   return planSeedSubscribers();
@@ -401,7 +413,7 @@ export async function syncSetupSeed(db: SeedDb, equipment: readonly EquipmentLin
       .update(farmEquipment)
       .set({
         position, item: l.item, category: l.category, setting: l.setting, buildPhase: l.phase, status: l.status, inServiceDate: l.inServiceDate, newUsed: l.newUsed, qty: l.qty,
-        unitCostCents: Math.round(l.unitCostNew * 100), critical: l.critical, notes: l.note ?? null, shelves: l.shelves ?? null, shelfWidthIn: l.shelfWidthIn ?? null, fixtureKey: l.fixtureKey ?? null, darkStagesOnly: l.darkStagesOnly === true,
+        unitCostCents: Math.round(l.unitCostNew * 100), critical: l.critical, notes: l.note ?? null, shelves: l.shelves ?? null, shelfWidthIn: l.shelfWidthIn ?? null, fixtureKey: l.fixtureKey ?? null, darkStagesOnly: l.darkStagesOnly === true, shelfLights: l.shelfLights ?? null,
         sowingCapacityLb: l.sowingCapacityLb ?? null, sowingCapacityBasis: l.sowingCapacityBasis ?? 'estimated', concurrentSowings: l.concurrentSowings ?? null, changeoverMinutes: l.changeoverMinutes ?? null,
         attendedRun: l.attendedRun ?? null, mayRunUnattended: l.mayRunUnattended ?? null, resourceBasis: l.resourceBasis ?? 'estimated',
       })

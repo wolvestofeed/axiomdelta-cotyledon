@@ -6,7 +6,7 @@ import {
   phaseEconomics,
 } from '@/engine/financials';
 import { costPerUnit, costPerUnit as costPerUnitOf, deriveCapacity, laborForDay, normalCapacity, absorbOverhead } from '@/engine';
-import { assumptions as planAssumptions, assumptions, phases } from '@/data/plan-data';
+import { assumptions as planAssumptions, assumptions } from '@/data/plan-data';
 import { manufacturingOverheadBudget } from '@/engine/fixed-costs';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
@@ -59,7 +59,7 @@ describe('farm financials — amortising payments (PMT)', () => {
 describe('farm financials — capex rollup', () => {
   it('the seed is the home grow room: Vallecito\'s rack as bought, a second lit rack and two dark racks, no build-out', () => {
     const r = capexRollup();
-    const home = 1_058 + 650 + 2 * 200;
+    const home = 1_058 + 200 + 15 * 90 + 2 * 200;
     expect(r.equipmentAll).toBe(home);
     expect(r.equipmentPhase1).toBe(home);
     expect(r.equipmentPhase2Add).toBe(0);
@@ -75,7 +75,9 @@ describe('farm financials — capex rollup', () => {
 });
 
 describe('overhead absorption on normal capacity', () => {
-  const cap = normalCapacity(phases);
+  // Normal capacity is the resolved channels': the volume the subscribers' subscriptions carry.
+  const channels = resolveScenarioInputs().phases;
+  const cap = normalCapacity(channels);
   const budget = manufacturingOverheadBudget();
   const annualFixed = budget.annual;
 
@@ -111,7 +113,7 @@ describe('overhead absorption on normal capacity', () => {
   });
 
   it('at Phase 1 volume — the whole plan at Phase 1 operations — the budget absorbs in full; the downtime allowance is a small favourable variance', () => {
-    const phase1Units = phases[0].unitsPerDay * phases[0].operatingDays;
+    const phase1Units = channels[0]!.unitsPerDay * channels[0]!.operatingDays;
     const a = absorbOverhead(annualFixed, cap, phase1Units);
     expect(a.capacityUtilisation).toBeCloseTo(1 / (1 - assumptions.overhead.plannedMaintenanceDownRate.value), 6);
     expect(a.volumeVariance).toBeCloseTo(annualFixed * (1 - a.capacityUtilisation), 4);

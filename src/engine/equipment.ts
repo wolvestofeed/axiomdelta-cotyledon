@@ -117,6 +117,7 @@ export interface EquipmentRowShape {
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
   darkStagesOnly?: boolean | null;
+  shelfLights?: unknown;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: string | null;
   concurrentSowings?: number | null;
@@ -162,6 +163,7 @@ export function equipmentFromRow(r: EquipmentRowShape): EquipmentLine {
     shelfWidthIn: r.shelfWidthIn ?? null,
     fixtureKey: r.fixtureKey ?? null,
     darkStagesOnly: r.darkStagesOnly === true,
+    shelfLights: Array.isArray(r.shelfLights) ? (r.shelfLights as { fixtureKey: string | null; count: number }[]).filter((x) => typeof x === 'object' && x !== null && typeof x.count === 'number') : null,
     sowingCapacityLb: r.sowingCapacityLb ?? null,
     sowingCapacityBasis: isCapacityBasis(r.sowingCapacityBasis) ? r.sowingCapacityBasis : 'estimated',
     concurrentSowings: r.concurrentSowings ?? null,

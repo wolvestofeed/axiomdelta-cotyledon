@@ -29,7 +29,7 @@ import { isGrowSowing, sowingRecordChecks } from '@/engine/sowing-record';
 import { orderBook, isoAddDays, pickupPointActualVsForecast, type BookOrder } from '@/engine/orders';
 import { distributedConsumption, finishedGoodsOnHand, planHorizon, unitFactorFor, type HorizonPlan } from '@/engine/production-plan';
 import { rawStockOnHand, rawLotsByUseBy } from '@/engine/net-requirements';
-import { resolveSubscriberPickupPoints, forecastByDistributionPickupPoint } from '@/engine/demand';
+import { recordPickupPoints, forecastByDistributionPickupPoint } from '@/engine/demand';
 import { laborStandard, nextStudyDue, studiesForGrowPlan, summarizeStudy } from '@/engine/time-studies';
 import { activeGrowPlanAverages } from '@/engine/active-averages';
 import { staffDemand , traysOnShelf, cycleDaysByCode, stageDaysByCode } from '@/engine/staff-demand';
@@ -122,7 +122,7 @@ export async function buildReportLibrary(access: FarmAccess): Promise<ReportLibr
   const horizonFrom = today;
   const horizonTo = isoAddDays(today, 13);
   const book = orderBook({
-    pickupPoints: isPlan ? R.demand.pickupPoints : resolveSubscriberPickupPoints(R.subscribers, {}, { closures }),
+    pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
     cycles,
     orders: isPlan ? [] : orders,
@@ -911,7 +911,7 @@ const orderBookAccuracy: Builder = (ctx) => {
   const from = isoAddDays(today, -30);
   const to = isoAddDays(today, 14);
   const book: BookOrder[] = orderBook({
-    pickupPoints: isPlan ? R.demand.pickupPoints : resolveSubscriberPickupPoints(R.subscribers, {}, { closures }),
+    pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
     cycles,
     orders: isPlan ? [] : orders,

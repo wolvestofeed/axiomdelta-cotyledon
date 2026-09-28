@@ -5,7 +5,7 @@ import { loadActuals } from '@/server/actuals';
 import { listPurchaseOrders } from '@/server/supplier-catalog';
 import { loadCalendar } from '@/server/periods';
 import { routeCompletion } from '@/engine/working-capital';
-import { resolveSubscriberPickupPoints } from '@/engine/demand';
+import { recordPickupPoints } from '@/engine/demand';
 import { GrowRoomClient } from '@/app/(farm)/(grow-room)/farm/grow-room/GrowRoomClient';
 import { withWorkspace } from '@/server/workspace';
 import { listExperiments } from '@/server/experiments';
@@ -52,7 +52,7 @@ async function FloorPageInner() {
       inputs={{
         growPlans: inputs.growPlans,
         subscribers: inputs.subscribers,
-        pickupPoints: resolveSubscriberPickupPoints(inputs.subscribers, {}, { closures: inputs.closures }),
+        pickupPoints: recordPickupPoints(inputs.subscribers, { closures: inputs.closures }),
         capacityInputs: inputs.capacityInputs,
         assumptions: inputs.assumptions,
         growPlanAssumptions: inputs.growPlanAssumptions,

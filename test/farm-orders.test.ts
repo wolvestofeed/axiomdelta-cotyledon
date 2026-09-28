@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { growPlanSeed } from '@/data/grow-plans-seed';
 
 const seedGrowPlans = [...growPlanSeed];
-import { seedSubscribers, type SubscriberDef } from '@/data/subscribers';
+import type { SubscriberDef } from '@/data/subscribers';
+import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
 import { seedSubscriptionCycles, seedFlatPlans, mondayOf, type SubscriptionCycleDef, type OrderDef } from '@/data/subscription-cycles';
 import { flatPlanInForce, applyCycleToPlans, copyCycleToPlan, plansFromCycle } from '@/engine/flat-plans';
 import { resolveSubscriberPickupPoints } from '@/engine/demand';

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, num } from '@/components/ui';
 import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
-import { deriveGrowCapacity, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
+import { deriveGrowCapacity, lightsOn, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
 import { defaultGrowUnits } from '@/engine';
 import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
@@ -31,6 +31,17 @@ const hoursOf = (min: number) => Math.round((min / 60) * 100) / 100;
  * in trays of the plan's format; a second unit is a parallel stream; a tray holds its shelf for the
  * plan's cycle days, so the sustained ceiling is the trays across the units over the cycle.
  */
+/** A unit's lights, shelf by shelf, grouped: "5 shelves × 2 Mars Hydro VG80". */
+function lightsText(u: GrowUnit): string {
+  if (u.darkOnly) return 'dark rack';
+  const groups = new Map<string, number>();
+  for (const l of lightsOn(u)) {
+    const k = l.fixtureKey && l.count > 0 ? `${l.count} ${FIXTURE_BY_KEY[l.fixtureKey]?.name ?? l.fixtureKey}` : 'unlit';
+    groups.set(k, (groups.get(k) ?? 0) + 1);
+  }
+  return [...groups].map(([k, n]) => `${n} shelf${n === 1 ? '' : 'ves'} × ${k}`).join('; ') || 'unlit';
+}
+
 export default function CapacityPage() {
   const { resolved, config, setCapacity } = useScenario();
   const { growPlan: selected } = useSelectedGrowPlan();
@@ -67,8 +78,8 @@ export default function CapacityPage() {
                 { step: `${cap.binding.unit.item}: ${num(cap.binding.unit.shelfWidthIn)}-inch shelves × ${num(cap.binding.unit.shelves)} shelves`, value: `${num(traysPerShelf(plan.format, cap.binding.unit.shelfWidthIn))} × ${num(cap.binding.unit.shelves)} = ${num(cap.binding.traysPerUnit)} trays`, status: 'DERIVED' as StatusTag, note: 'Shelves and shelf width are open fields on Grow Units' },
                 { step: 'One unit takes the sowing = STANDARD SOWING', value: `${num(cap.sowingTrays)} trays`, status: 'DERIVED' as StatusTag, note: 'A second unit is a parallel stream the production plan places as its own sowing, never a larger sowing', total: true },
               ]
-            : [{ step: 'No grow unit takes this plan', value: '0 trays', status: 'DERIVED' as StatusTag, note: light ? `The light line asks for ${regime?.name ?? light.regimeKey}; no unit on the Phase 1 list carries a fixture that delivers it` : 'No unit on the Phase 1 list has shelves' }]),
-          { step: `Light line${light ? `: ${regime?.name ?? light.regimeKey}` : ': none'} against each unit's fixture`, value: `${num(cap.unitCount)} of ${num(units.reduce((t, u) => t + u.units, 0))} units take the plan`, status: 'DERIVED', note: light ? 'A unit takes the plan only when its fixture delivers the regime at the intensity asked (`fixtureDelivers`)' : 'A plan with no light line goes on any unit' },
+            : [{ step: 'No grow unit takes this plan', value: '0 trays', status: 'DERIVED' as StatusTag, note: light ? 'No lit unit on the Phase 1 list' : 'No unit on the Phase 1 list has shelves' }]),
+          { step: `Light line${light ? `: ${regime?.name ?? light.regimeKey}` : ': none'}`, value: `${num(cap.unitCount)} of ${num(units.reduce((t, u) => t + u.units, 0))} units take the plan`, status: 'DERIVED', note: light ? 'Any lit unit takes a plan under light; a dark rack holds only its dark stages' : 'A plan with no light line goes on any unit' },
           { step: 'Trays across the units that take the plan', value: `${num(cap.totalTrays)} trays`, status: 'DERIVED', note: 'Units counted; the shelves in use at once' },
           { step: `Cycle days on the shelf: sow ${days.sow}, germination ${days.germination}, blackout ${days.blackout}, light ${days.light}, harvest window ${days['harvest-window']}`, value: `${num(cap.cycleDays)} days`, status: 'DERIVED', note: `${num(cap.daysToHarvest)} days to the first harvest day; a live tray waits in its window` },
           ...(cap.darkTrays > 0 && cap.lightDays > 0
@@ -95,7 +106,7 @@ export default function CapacityPage() {
         howItWorks={
           <ul>
             <li>A sowing is what one grow unit takes in trays of the plan&rsquo;s format: trays per shelf times shelves.</li>
-            <li>A unit takes a plan only when its fixture delivers the plan&rsquo;s light line; a plan with no light line goes anywhere.</li>
+            <li>Any lit unit takes a plan under light, whatever lights its shelves carry; a plan with no light line goes anywhere. A dark rack holds a sowing&rsquo;s dark stages only.</li>
             <li>A tray holds its shelf for the plan&rsquo;s cycle days, so the sustained ceiling is the trays across the units over the cycle.</li>
             <li>Shelves, shelf width and fixture are open fields on Grow Units; the Grow Calendar places the actual sowings.</li>
           </ul>
@@ -152,9 +163,9 @@ export default function CapacityPage() {
                       <td className="num">{num(u.units)}</td>
                       <td className="num">{num(u.shelves)}</td>
                       <td className="num">{num(u.shelfWidthIn)}</td>
-                      <td>{u.fixtureKey ? FIXTURE_BY_KEY[u.fixtureKey]?.name ?? u.fixtureKey : 'unlit'}</td>
+                      <td>{lightsText(u)}</td>
                       {PLAN_FORMATS.map((f) => <td key={f.key} className="num">{num(traysPerUnit(u, f.key))}</td>)}
-                      <td>{unitTakesPlan(u, plan) ? 'yes' : light ? `no: ${u.fixtureKey ? 'fixture does not deliver the regime' : 'no fixture'}` : 'yes'}</td>
+                      <td>{unitTakesPlan(u, plan) ? 'yes' : u.darkOnly ? 'dark stages only' : 'no light on it'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -188,7 +199,7 @@ export default function CapacityPage() {
                 </tbody>
               </table>
             </div>
-            <p className="farm-kpi-sub mt-2">A plan that asks for a blue-heavy or far-red regime waits on the tunable fixture that is not yet bought; until then no unit takes it and its sowing is zero. A day serving several plans places their sowings on whichever unit has room for the whole cycle: the <Link className="farm-link" href="/farm/production-planning/grow-calendar">Grow Calendar</Link> places them and says when a sowing has no room.</p>
+            <p className="farm-kpi-sub mt-2">A day serving several plans places their sowings on whichever unit has room for the whole cycle: the <Link className="farm-link" href="/farm/production-planning/grow-calendar">Grow Calendar</Link> places them and says when a sowing has no room.</p>
           </Card>
         </>
       )}

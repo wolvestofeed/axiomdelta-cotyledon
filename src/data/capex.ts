@@ -76,6 +76,8 @@ export interface EquipmentLine extends ScheduleLine {
   shelves?: number | null;
   /** A dark rack: it holds tray sowings only through germination and blackout (0020). */
   darkStagesOnly?: boolean;
+  /** Each shelf's lights, top to bottom, where they differ from `fixtureKey` at its count a shelf (0021). */
+  shelfLights?: { fixtureKey: string | null; count: number }[] | null;
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
   /**
@@ -146,18 +148,18 @@ export const RESOURCE_SEED: Record<string, ResourceSeed> = {
 };
 
 /**
- * The grow room's Phase 1 list: Vallecito's starter rack as bought (DATED, Break-even sheet
- * 2023): a 6-tier 24x48 shelving unit with five lit growing tiers, five Mars Hydro VG80
- * fixtures, four clip fans and sixteen 1020 three-piece flat sets, $1,058 the rack. Rob's grow room
- * for 20 trays a week is two such lit racks and two dark racks of the same shelving: a week's trays
- * germinate stacked on a dark rack, spread over it in blackout, then fill a lit rack, so all four
- * hold trays at once. The sixth tier is the top of the unit and holds no tray. A jar stand for
- * sprouts is not on the list; jars sit on a rack shelf at the format's placeholder count.
+ * The grow room's Phase 1 list. Vallecito's starter rack as bought (DATED, Break-even sheet 2023):
+ * a 6-tier 24x48 shelving unit, five Mars Hydro VG80 fixtures, four clip fans and sixteen 1020
+ * three-piece flat sets, $1,058. Rob's grow room for 20 trays a week: two lit racks, each five
+ * growing shelves 24x48 and six feet tall with two Mars VG80 on each shelf, and two dark racks of
+ * the same shelving. A week's trays germinate stacked on a dark rack, spread over it in blackout,
+ * then fill a lit rack, so all four hold trays at once. A jar stand for sprouts is not on the list;
+ * jars sit on a rack shelf at the format's placeholder count.
  */
 const GROW_ROOM_SEED: readonly (ScheduleLine & { shelves?: number; shelfWidthIn?: number; fixtureKey?: string; darkStagesOnly?: boolean })[] = [
-  { item: 'Grow rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 2, unitCostNew: 200, critical: true, note: 'Vallecito 2023, $200 each; the second is to buy. Five lit growing tiers; four 1020 flats a shelf. Two lit racks hold a week of 20 trays under light and the overlap into the next.', shelves: 5, shelfWidthIn: 48, fixtureKey: 'mars-hydro-vg80' },
+  { item: 'Grow rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 2, unitCostNew: 200, critical: true, note: 'Vallecito 2023, $200 each; the second is to buy. Five growing shelves 24x48, six feet tall; four 1020 flats a shelf under two Mars VG80. Each shelf\'s lights can be set on Grow Units. Two lit racks hold a week of 20 trays under light and the overlap into the next.', shelves: 5, shelfWidthIn: 48, fixtureKey: 'mars-hydro-vg80' },
   { item: 'Dark rack, 6-tier 24x48 wire shelving', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 2, unitCostNew: 200, critical: true, note: 'The germination and blackout racks, curtained: five tiers of four 1020 flats each. A week of 20 trays germinates stacked five high on about one shelf, then spreads over a whole rack in blackout. Priced at the lit rack\'s Vallecito $200 until a receipt.', shelves: 5, shelfWidthIn: 48, darkStagesOnly: true },
-  { item: 'LED grow light, Mars Hydro VG80', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 10, unitCostNew: 90, critical: true, note: 'Vallecito 2023, $450 for five; one a tier; five more for the second lit rack.' },
+  { item: 'LED grow light, Mars Hydro VG80', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 20, unitCostNew: 90, critical: true, note: 'Vallecito 2023, $450 for five. Two on each of the five shelves of the two lit racks.' },
   { item: 'Clip fan, 6 in', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 4, unitCostNew: 50, critical: false, note: 'Vallecito 2023, $200 for four.' },
   { item: '1020 three-piece flat set', category: 'Grow room', setting: 'home', phase: 1, newUsed: 'New', qty: 16, unitCostNew: 13, critical: false, note: 'Vallecito 2023, $208 for sixteen: base, mesh and blackout top.' },
 ];

@@ -9,7 +9,7 @@ import { VARIETIES, VARIETY_BY_KEY, seedCostPer1020 } from '@/data/varieties';
 import { SCIENCE_SOURCES, SCIENCE_SOURCE_BY_ROW, SCIENCE_CLAIMS, DOCUMENT_ROWS, rowFor, claimsForVariety } from '@/data/science-library';
 import { REFERENCE_SOURCES, registeredUrls } from '@/data/sources-registry';
 import { GLOSSARY, GLOSSARY_BY_KEY } from '@/data/glossary';
-import { GROWING_MEDIA, NUTRIENT_SOLUTIONS, LIGHT_FIXTURES, LIGHT_REGIMES, REGIME_BY_KEY, MEDIUM_BY_KEY, dailyLightIntegral, fixtureDelivers, lightCostPerTrayDay } from '@/data/inputs-catalog';
+import { GROWING_MEDIA, NUTRIENT_SOLUTIONS, LIGHT_FIXTURES, LIGHT_REGIMES, REGIME_BY_KEY, MEDIUM_BY_KEY, dailyLightIntegral, lightCostPerTrayDay } from '@/data/inputs-catalog';
 import { TRAY_FORMATS, TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
 import { STAGES, cycleDays, daysToHarvest, wateringsOverCycle } from '@/data/stage-schedule';
 
@@ -127,14 +127,15 @@ describe('inputs catalog', () => {
     for (const n of NUTRIENT_SOLUTIONS) if (n.elicits) for (const r of n.elicits.rows) expect(SCIENCE_SOURCE_BY_ROW[r]).toBeDefined();
   });
 
-  it('DLI and fixture matching follow the regime', () => {
+  it('fixtures are the ones Rob runs, counted a shelf: two Mars VG80, three Barrina T5; light cost is the shelf\'s lights over its four flats', () => {
     expect(dailyLightIntegral(180, 24)).toBeCloseTo(15.55, 1);
     const vg80 = LIGHT_FIXTURES.find((f) => f.key === 'mars-hydro-vg80')!;
-    const tunable = LIGHT_FIXTURES.find((f) => f.key === 'tunable-rb-fr')!;
-    expect(fixtureDelivers(vg80, REGIME_BY_KEY.balanced)).toBe(true);
-    expect(fixtureDelivers(vg80, REGIME_BY_KEY['nutrition-forward'])).toBe(false);
-    expect(fixtureDelivers(vg80, REGIME_BY_KEY['biofortify-far-red'])).toBe(false);
-    expect(fixtureDelivers(tunable, REGIME_BY_KEY['biofortify-far-red'])).toBe(true);
+    const barrina = LIGHT_FIXTURES.find((f) => f.key === 'barrina-t5-6000k')!;
+    expect(LIGHT_FIXTURES.map((f) => [f.key, f.perShelf.value])).toEqual([['mars-hydro-vg80', 2], ['barrina-t5-6000k', 3]]);
+    // Energy scales with the lights on the shelf.
+    const one = lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250, 0.13, 1);
+    expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250, 0.13, 2)).toBeCloseTo(2 * one, 9);
+    expect(lightCostPerTrayDay(barrina, REGIME_BY_KEY.balanced)).toBeGreaterThan(0);
     // A dimmed target costs less energy than full power.
     expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 60)).toBeLessThan(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced, 250));
     expect(lightCostPerTrayDay(vg80, REGIME_BY_KEY.balanced)).toBeGreaterThan(0);

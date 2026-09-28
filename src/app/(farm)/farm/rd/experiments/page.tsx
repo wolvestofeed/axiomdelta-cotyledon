@@ -30,6 +30,7 @@ async function ExperimentsPageInner() {
   const standards = actuals.standards ?? [];
   const sowingCountByDate = actuals.sowings.reduce<Record<string, number>>((m, b) => ({ ...m, [b.productionDate]: (m[b.productionDate] ?? 0) + 1 }), {});
   const planOf = (code: string) => library.find((p) => p.code === code);
+  // The lit units a plan's light days can go on.
   const takenBy = (code: string) => {
     const plan = planOf(code);
     return plan ? growUnits.filter((u) => unitTakesPlan(u, plan)).map((u) => u.item) : [];
@@ -73,7 +74,7 @@ async function ExperimentsPageInner() {
         howItWorks={
           <ul>
             <li>An experiment is a titled run of a plan not in service: the plan, a sow date and whole trays.</li>
-            <li>From its sow date it holds its trays on the grow units for the plan&rsquo;s cycle, placed as any sowing is, on a unit whose fixture delivers the plan&rsquo;s light line; production planning, the Grow Calendar and the Grow Room see the room it takes.</li>
+            <li>From its sow date it holds its trays on the grow units for the plan&rsquo;s cycle, placed as any sowing is, on a lit unit with its dark days on a dark rack; production planning, the Grow Calendar and the Grow Room see the room it takes.</li>
             <li>It closes through the grow form here, one lot per variety with each variety&rsquo;s harvest weighed sorted from the trays; the sowing record names the experiment.</li>
             <li>A variety&rsquo;s yield in one experiment is its packed grams over the trays packed. Across the plan&rsquo;s closed experiments it is read as the mean, the lowest and highest and the standard deviation, beside the figure the plan is costed at.</li>
             <li>An experiment&rsquo;s time study is recorded on Time Studies against its plan.</li>

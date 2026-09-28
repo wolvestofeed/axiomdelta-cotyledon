@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { seedSubscribers } from '@/data/subscribers';
+import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
 import { simulateForecast } from '@/engine/forecast-timeline';
 import { postPlanLedger, depreciationForMonth } from '@/engine/plan-ledger';
 

@@ -210,14 +210,14 @@ export interface PhaseRow {
    */
 }
 
-// Phase 1 operations: all planned volume is Subscriptions.
-// Restaurants and the retail and wholesale stay defined as channels — their
-// prices, units and menus — with no planned volume until they are booked.
+// Phase 1 operations: all planned volume is Subscriptions, from the subscribers' subscriptions.
+// Restaurants and the retail and wholesale stay defined as channels, with no planned volume until
+// they are booked. No channel carries a volume of its own: the resolver sums the subscribers'.
 export const phases: readonly PhaseRow[] = [
-  // Prices per 1020 flat: Vallecito's $20 subscription and $25 retail (DATED, 2023); the restaurant price is a PLACEHOLDER until quoted.
-  { phase: 1, market: 'Subscriptions', character: 'Bi-weekly and monthly flats, pickup or route', pricePerUnit: 20, unitsPerDay: 1000, operatingDays: 180 },
-  { phase: 2, market: 'Restaurants', character: 'Weekly cut and live trays, year-round', pricePerUnit: 15, unitsPerDay: 0, operatingDays: 250 },
-  { phase: 3, market: 'Retail and wholesale', character: 'Retail corner and wholesale accounts', pricePerUnit: 25, unitsPerDay: 0, operatingDays: 333 },
+  // Prices per 1020 flat: $30 on Subscriptions, stated by Rob; Restaurants and Retail and wholesale at $30, a PLACEHOLDER until quoted.
+  { phase: 1, market: 'Subscriptions', character: 'Weekly, every-two-weeks and monthly flats, Saturday pickup at the house', pricePerUnit: 30, unitsPerDay: 0, operatingDays: 0 },
+  { phase: 2, market: 'Restaurants', character: 'Weekly cut and live trays, year-round', pricePerUnit: 30, unitsPerDay: 0, operatingDays: 0 },
+  { phase: 3, market: 'Retail and wholesale', character: 'Retail corner and wholesale accounts', pricePerUnit: 30, unitsPerDay: 0, operatingDays: 0 },
 ];
 
 // Per-phase cost & unit profile. Same grow plan across all three phases for

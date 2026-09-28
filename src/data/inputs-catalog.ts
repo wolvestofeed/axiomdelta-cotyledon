@@ -195,8 +195,8 @@ export interface LightFixtureDef {
   name: string;
   /** Watts per fixture. */
   watts: Tagged;
-  /** 1020 trays under one fixture at once. */
-  traysPerFixture: Tagged;
+  /** Fixtures on one 48-inch shelf of four 1020 flats, as the shelf is lit by default. */
+  perShelf: Tagged;
   /** PPFD at tray height at the hanging height used, from the fixture's map. */
   ppfdAtTray: Tagged;
   /** What the fixture can deliver: ratio range, far-red, UV-C. */
@@ -210,35 +210,24 @@ export const LIGHT_FIXTURES: readonly LightFixtureDef[] = [
   {
     key: 'mars-hydro-vg80',
     name: 'Mars Hydro VG80 full-spectrum',
-    watts: tagged(80, 'STATED', 'W', 'Vallecito time study: 80 W at 120 V; two per shelf on the double-lit shelf'),
-    traysPerFixture: tagged(2, 'STATED', 'trays', 'Vallecito lighting amortization: 2 flats under one fixture'),
+    watts: tagged(80, 'STATED', 'W', 'Vallecito time study: 80 W at 120 V'),
+    perShelf: tagged(2, 'STATED', 'per shelf', 'Rob: two 4-foot Mars lights on each shelf of a lit rack'),
     ppfdAtTray: tagged(250, 'DATED', 'µmol/m²/s', 'Mars Hydro VG80 PPFD map, 2023, center reading at the hanging height used; the map is in the Vallecito admin folder'),
     delivers: { rbRatioMin: 3, rbRatioMax: 5, farRed: false, uvc: false },
     fixtureCost: tagged(42.5, 'DATED', '$', 'Vallecito: $85 per pair'),
     fixtureLifeHours: tagged(50000, 'SOURCED', 'h', 'Manufacturer rated life'),
-    note: 'The fixture Vallecito grew everything under. A fixed white spectrum: its ratio is what it is, so a regime that asks for blue-heavy or far-red cannot be placed on it.',
+    note: 'The fixture Vallecito grew under and Rob grows under now, two on each shelf. A fixed white spectrum.',
   },
   {
     key: 'barrina-t5-6000k',
     name: 'Barrina T5 LED 20 W, 6000 K',
-    watts: tagged(40, 'STATED', 'W', 'Two 20 W tubes per shelf'),
-    traysPerFixture: tagged(2, 'PLACEHOLDER', 'trays', ''),
+    watts: tagged(20, 'PLACEHOLDER', 'W', 'One tube, 20 W by the fixture name; Rob to confirm the wattage'),
+    perShelf: tagged(3, 'STATED', 'per shelf', 'Rob: three Barrina on a shelf, lower wattage than the Mars'),
     ppfdAtTray: tagged(120, 'PLACEHOLDER', 'µmol/m²/s', 'No map on file'),
     delivers: { rbRatioMin: 2, rbRatioMax: 3, farRed: false, uvc: false },
     fixtureCost: tagged(45 / 6, 'DATED', '$', 'Vallecito: 6-pack $45'),
     fixtureLifeHours: tagged(50000, 'PLACEHOLDER', 'h', ''),
-    note: 'Cool-white shop tube on sprout and germination shelves.',
-  },
-  {
-    key: 'tunable-rb-fr',
-    name: 'Tunable red-blue with far-red channel',
-    watts: tagged(60, 'PLACEHOLDER', 'W', ''),
-    traysPerFixture: tagged(2, 'PLACEHOLDER', 'trays', ''),
-    ppfdAtTray: tagged(300, 'PLACEHOLDER', 'µmol/m²/s', 'At full power; dimmable to the regime\'s target'),
-    delivers: { rbRatioMin: 0.33, rbRatioMax: 9, farRed: true, uvc: false },
-    fixtureCost: tagged(120, 'PLACEHOLDER', '$', 'No fixture chosen yet'),
-    fixtureLifeHours: tagged(50000, 'PLACEHOLDER', 'h', ''),
-    note: 'The fixture the nutrition-forward and biofortify regimes need. Not yet purchased.',
+    note: 'Cool-white T5 tube, three to a shelf.',
   },
 ];
 
@@ -334,27 +323,22 @@ export function dailyLightIntegral(ppfd: number, hours: number): number {
   return (ppfd * hours * 3600) / 1_000_000;
 }
 
-/** Can this fixture deliver this regime? Ratio in range, far-red and UV-C present when asked, intensity reachable. */
-export function fixtureDelivers(fixture: LightFixtureDef, regime: LightRegimeDef, ppfdTarget: number = regime.ppfdTarget.value): boolean {
-  const r = regime.rbRatio.value;
-  if (r !== null && (r < fixture.delivers.rbRatioMin || r > fixture.delivers.rbRatioMax)) return false;
-  if (regime.farRedShare.value > 0 && !fixture.delivers.farRed) return false;
-  if (regime.uvcMinutes.value > 0 && !fixture.delivers.uvc) return false;
-  return fixture.ppfdAtTray.value >= ppfdTarget;
-}
+
+/** 1020 flats on a 48-inch shelf: what a shelf's lights are shared across. */
+export const TRAYS_PER_SHELF_1020 = 4;
 
 /**
- * Energy and fixture cost of one 1020 tray for one day under a regime on a fixture: watts
- * scaled to the target intensity where the fixture dims, times hours, times the rate, over
- * the trays it lights, plus the fixture's amortized cost.
+ * Energy and fixture cost of one 1020 tray for one day under a regime: the shelf's fixtures, at
+ * their count on a shelf, watts scaled to the target intensity where they dim, times hours, times
+ * the rate, shared across the four 1020 flats on the shelf, plus the fixtures' amortized cost.
  */
-export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegimeDef, ppfdTarget: number = regime.ppfdTarget.value, ratePerKwh: number = ENERGY_RATE_PER_KWH.value): number {
+export function lightCostPerTrayDay(fixture: LightFixtureDef, regime: LightRegimeDef, ppfdTarget: number = regime.ppfdTarget.value, ratePerKwh: number = ENERGY_RATE_PER_KWH.value, perShelf: number = fixture.perShelf.value): number {
   const dim = Math.min(1, ppfdTarget / fixture.ppfdAtTray.value);
   const hours = regime.photoperiodHours.value;
-  const kwhPerFixtureDay = (fixture.watts.value * dim / 1000) * hours;
-  const energy = (kwhPerFixtureDay * ratePerKwh) / fixture.traysPerFixture.value;
+  const kwhPerShelfDay = ((fixture.watts.value * perShelf * dim) / 1000) * hours;
+  const energy = (kwhPerShelfDay * ratePerKwh) / TRAYS_PER_SHELF_1020;
   const fixtureDaysOfLife = fixture.fixtureLifeHours.value / hours;
-  const amortized = fixture.fixtureCost.value / fixtureDaysOfLife / fixture.traysPerFixture.value;
+  const amortized = (fixture.fixtureCost.value * perShelf) / fixtureDaysOfLife / TRAYS_PER_SHELF_1020;
   return energy + amortized;
 }
 

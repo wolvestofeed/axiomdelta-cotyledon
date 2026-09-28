@@ -4,10 +4,9 @@
  * Deletes every `source = 'seed'` subscriber (pickup points and orders on them cascade)
  * and subscription cycle, inserts any seed grow plan missing from the library, brings
  * grow plans still `source = 'seed'` (header and lines) in line with the code seed, then
- * re-inserts the Plan seed subscribers (the contracted prospect at its stated 125
- * units per service, prospects at zero), the saved student and adult menus, and
- * a flat plan for every subscriber without one (Roadmap N4a). User-built rows are
- * untouched.
+ * re-inserts the Plan seed subscribers (nineteen Forecast Subscribers, each on a weekly
+ * subscription of one 1020 flat at the Saturday pickup), the saved cycles, and a flat plan for
+ * every subscriber without one (Roadmap N4a). User-built rows are untouched.
  *
  * Run:  DATABASE_URL=postgres://... pnpm farm:reseed
  */
@@ -54,8 +53,8 @@ async function main(): Promise<void> {
     const plans = await withSeedLock(db, 'cycles', (tx) => insertMissingFlatPlans(tx));
     console.log(`seeded ${subscribers} subscriber(s), ${cycles} subscription cycle(s), ${plans} flat plan(s); library has ${library.length} grow plan(s)`);
     for (const c of dbSeedSubscribers()) {
-      const units = c.pickupPoints.flatMap((x) => x.services).reduce((s, sv) => s + (sv.picks.at(-1)?.units ?? 0), 0);
-      console.log(`  ${c.name} (${c.status}): ${units} units per service over ${c.pickupPoints.length} pickup point(s)`);
+      const subs = (c.subscriptions ?? []).map((x) => `${x.cadence} from ${x.startDate}: ${x.flatPlan.at(-1)?.lines.map((l) => `${l.units} × ${l.growPlanCode}`).join(', ')}`);
+      console.log(`  ${c.name} (${c.status}): ${subs.join('; ') || 'no subscription'}`);
     }
   } finally {
     await handle.close();

@@ -26,7 +26,7 @@ import {
 } from '@/data/grow-plan';
 import { growPlanSeed, GROW_PLAN_SEED_CODES } from '@/data/grow-plans-seed';
 import { GRAMS_PER_LB, costGrowPlan, defaultGrowCostContext, fixtureFor, costPlan, costContextFor } from '@/engine/grow-costing';
-import { deriveGrowCapacity, growUnitsFrom, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
+import { deriveGrowCapacity, growUnitsFrom, lightsOn, traysPerShelf, traysPerUnit, unitTakesPlan } from '@/engine/grow-capacity';
 import { growPlanToRows, rowsToLibraryPlan, rowsToGrowPlan, SEED_GROW_PLANS } from '@/engine/grow-plan-library';
 import { costPlanPerUnit, deriveCapacity, canopyMassPerUnit, packedUnitOz, sowingCosting, costPerUnit } from '@/engine';
 import { equipmentSeed } from '@/data/capex';
@@ -198,10 +198,9 @@ describe('costing on the four line kinds', () => {
     expect(priced.lines[0]!.status).toBe('STATED');
   });
 
-  it('the fixture a plan is costed on is the first that delivers its regime, else the first fixture', () => {
-    expect(fixtureFor(broccoli())).toBe(LIGHT_FIXTURES.find((f) => f.key === 'mars-hydro-vg80') ?? LIGHT_FIXTURES[0]);
-    // Nutrition-forward blue asks for a blue-heavy ratio the fixed white fixture cannot give: the tunable fixture.
-    expect(fixtureFor(byCode('RAD-01')).key).toBe('tunable-rb-fr');
+  it('every plan is costed on the Mars VG80 the lit racks carry, whatever regime it asks for', () => {
+    expect(fixtureFor(broccoli()).key).toBe('mars-hydro-vg80');
+    expect(fixtureFor(byCode('RAD-01')).key).toBe('mars-hydro-vg80');
     expect(fixtureFor(mung())).toBe(LIGHT_FIXTURES[0]);
   });
 });
@@ -236,17 +235,23 @@ describe('capacity in trays and cycle days', () => {
     expect(two.totalTrays).toBe(40);
   });
 
-  it('a plan is placed only on a unit whose fixture delivers its light line; a jar plan goes anywhere', () => {
+  it('any lit unit takes a plan under light, whatever regime it asks for; an unlit unit takes only a plan with no light line', () => {
     const rack = units[0]!;
-    expect(unitTakesPlan(rack, broccoli())).toBe(true);
-    expect(unitTakesPlan(rack, byCode('RAD-01'))).toBe(false);
+    for (const p of growPlanSeed.filter((x) => x.lines.some((l) => l.kind === 'light'))) expect(unitTakesPlan(rack, p), p.code).toBe(true);
+    expect(deriveGrowCapacity(byCode('RAD-01'), units).sowingTrays).toBe(20);
     expect(unitTakesPlan({ ...rack, fixtureKey: null }, broccoli())).toBe(false);
     expect(unitTakesPlan({ ...rack, fixtureKey: null }, mung())).toBe(true);
-    expect(unitTakesPlan({ ...rack, fixtureKey: 'tunable-rb-fr' }, byCode('RAD-01'))).toBe(true);
-    const none = deriveGrowCapacity(byCode('RAD-01'), units);
-    expect(none.sowingTrays).toBe(0);
-    expect(none.binding).toBeNull();
-    expect(FIXTURE_BY_KEY['tunable-rb-fr']).toBeDefined();
+    expect(FIXTURE_BY_KEY['tunable-rb-fr']).toBeUndefined();
+  });
+
+  it('lights are set shelf by shelf: two Mars VG80 a shelf by default, and a rack can carry different lights on different shelves', () => {
+    const rack = units[0]!;
+    expect(lightsOn(rack)).toEqual(Array.from({ length: 5 }, () => ({ fixtureKey: 'mars-hydro-vg80', count: 2 })));
+    const mixed = { ...rack, shelfLights: [{ fixtureKey: 'mars-hydro-vg80', count: 2 }, { fixtureKey: 'barrina-t5-6000k', count: 3 }, { fixtureKey: null, count: 0 }, { fixtureKey: 'mars-hydro-vg80', count: 2 }, { fixtureKey: 'barrina-t5-6000k', count: 3 }] };
+    expect(lightsOn(mixed).map((s) => s.count)).toEqual([2, 3, 0, 2, 3]);
+    expect(unitTakesPlan(mixed, broccoli())).toBe(true);
+    expect(unitTakesPlan({ ...rack, fixtureKey: null, shelfLights: [{ fixtureKey: null, count: 0 }] }, broccoli())).toBe(false);
+    expect(lightsOn({ ...rack, darkOnly: true }).every((s) => s.fixtureKey === null)).toBe(true);
   });
 });
 

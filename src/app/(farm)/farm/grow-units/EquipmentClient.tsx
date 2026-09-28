@@ -8,7 +8,7 @@ import { InlineNumber } from '@/components/InlineCells';
 import { SOWING_CAPACITY_BASIS_LABELS, EQUIPMENT_CATEGORIES, EQUIPMENT_SETTING_LABELS, RESOURCE_SEED, type SowingCapacityBasis, type EquipmentCategory, type EquipmentSetting, type EquipmentStatus } from '@/data/capex';
 import { EQUIPMENT_STATUSES, EQUIPMENT_STATUS_LABELS, countsTowardCapital, equipmentLibraryOrder, filterEquipment } from '@/engine/equipment';
 import { extendedCost } from '@/engine/fixed-costs';
-import { traysPerUnit } from '@/engine/grow-capacity';
+import { lightsOn, traysPerUnit, type ShelfLight } from '@/engine/grow-capacity';
 import { LIGHT_FIXTURES } from '@/data/inputs-catalog';
 import { useScenario } from '@/state/scenario-store';
 import { useOperationsWorld } from '@/state/ledger';
@@ -25,6 +25,7 @@ interface EquipmentPatch {
   shelfWidthIn?: number | null;
   fixtureKey?: string | null;
   darkStagesOnly?: boolean;
+  shelfLights?: ShelfLight[] | null;
   sowingCapacityLb?: number | null;
   sowingCapacityBasis?: SowingCapacityBasis;
   concurrentSowings?: number | null;
@@ -80,6 +81,8 @@ export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; settin
   const rows = useMemo(() => equipmentLibraryOrder(filterEquipment(lines, shown)), [lines, shown]);
   // One category open at a time; all collapsed by default.
   const [open, setOpen] = useState<EquipmentCategory | null>(null);
+  // The row whose lights are open shelf by shelf.
+  const [byShelf, setByShelf] = useState<string | null>(null);
   const groups = useMemo(
     () =>
       EQUIPMENT_CATEGORIES.map((category) => ({ category, rows: rows.filter((r) => r.category === category) })).filter((g) => g.rows.length > 0),
@@ -279,11 +282,36 @@ export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; settin
                       <InlineNumber value={e.shelfWidthIn ?? null} step={12} nullable disabled={!rowEditable || !e.shelves} label={`${e.item} shelf width in inches`} onCommit={(n) => save(e.id, { shelfWidthIn: n === null || n <= 0 ? null : n })} />
                     </td>
                     <td>
-                      <select className="farm-input farm-cell-control w-40!" value={e.darkStagesOnly ? DARK : e.fixtureKey ?? ''} disabled={!rowEditable || !e.shelves} aria-label={`${e.item} fixture`} onChange={(ev) => save(e.id, ev.target.value === DARK ? { fixtureKey: null, darkStagesOnly: true } : { fixtureKey: ev.target.value || null, darkStagesOnly: false })}>
+                      <select className="farm-input farm-cell-control w-40!" value={e.darkStagesOnly ? DARK : e.fixtureKey ?? ''} disabled={!rowEditable || !e.shelves} aria-label={`${e.item} fixture`} onChange={(ev) => save(e.id, ev.target.value === DARK ? { fixtureKey: null, darkStagesOnly: true, shelfLights: null } : { fixtureKey: ev.target.value || null, darkStagesOnly: false, shelfLights: null })}>
                         <option value="">Unlit, whole cycle</option>
                         <option value={DARK}>Dark rack: germination and blackout</option>
                         {LIGHT_FIXTURES.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
                       </select>
+                      {e.shelves && !e.darkStagesOnly && (e.fixtureKey || e.shelfLights?.length) ? (() => {
+                        const lights = lightsOn({ shelves: e.shelves, fixtureKey: e.fixtureKey ?? null, shelfLights: e.shelfLights ?? null, darkOnly: false });
+                        const setShelf = (i: number, next: ShelfLight) => save(e.id, { shelfLights: lights.map((l, j) => (j === i ? next : l)) });
+                        return (
+                          <div className="farm-fs-xs farm-c-faint mt-[0.2rem]!">
+                            {e.shelfLights?.length ? 'Set shelf by shelf' : `${lights[0]?.count ?? 0} a shelf`}
+                            {' · '}<button type="button" className="farm-link" onClick={() => setByShelf((k) => (k === e.id ? null : e.id ?? null))}>{byShelf === e.id ? 'Close' : 'By shelf'}</button>
+                            {byShelf === e.id && (
+                              <div className="flex flex-col gap-[0.2rem] mt-[0.2rem]!">
+                                {lights.map((l, i) => (
+                                  <div key={i} className="flex gap-[0.3rem] items-center">
+                                    <span>Shelf {i + 1}</span>
+                                    <select className="farm-input farm-cell-control w-36!" value={l.fixtureKey ?? ''} disabled={!rowEditable} aria-label={`${e.item} shelf ${i + 1} fixture`} onChange={(ev) => { const f = LIGHT_FIXTURES.find((x) => x.key === ev.target.value); setShelf(i, { fixtureKey: f?.key ?? null, count: f ? f.perShelf.value : 0 }); }}>
+                                      <option value="">Unlit</option>
+                                      {LIGHT_FIXTURES.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
+                                    </select>
+                                    <InlineNumber value={l.count} step={1} disabled={!rowEditable || !l.fixtureKey} label={`${e.item} shelf ${i + 1} light count`} onCommit={(n) => n !== null && setShelf(i, { ...l, count: Math.max(0, Math.round(n)) })} />
+                                  </div>
+                                ))}
+                                {e.shelfLights?.length ? <button type="button" className="farm-link text-left" disabled={!rowEditable} onClick={() => save(e.id, { shelfLights: null })}>Every shelf the same</button> : null}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : null}
                     </td>
                     <td className="num">{e.shelves ? num(traysPerUnit({ key: e.key, item: e.item, shelves: e.shelves, shelfWidthIn: e.shelfWidthIn ?? 48, fixtureKey: e.fixtureKey ?? null, units: e.qty }, 'flat-1020')) : '—'}</td>
                     <td className="num">

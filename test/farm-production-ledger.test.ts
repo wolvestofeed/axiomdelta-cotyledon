@@ -34,7 +34,8 @@ const growPlan = R0.growPlan;
 const card = costPlan(growPlan);
 const trays = deriveCapacity(growPlan, R0.capacityInputs).sowingSize;
 const shrink = assumptions.yield.shrinkAllowance.value;
-const nc = normalCapacity(phases);
+// Normal capacity is the resolved channels': the volume the subscribers' subscriptions carry.
+const nc = normalCapacity(R0.phases);
 // The absorption base is MANUFACTURING overhead only — lease, utilities and
 // depreciation of the fit-out — never admin or debt service.
 const annualFixed = manufacturingOverheadBudget().annual;
@@ -320,7 +321,7 @@ describe('spoilage, overhead and fixed labor', () => {
   });
 
   it('never posts the ANNUAL volume variance on a single sowing', () => {
-    const phase1 = phases[0].unitsPerDay * phases[0].operatingDays;
+    const phase1 = R0.phases[0]!.unitsPerDay * R0.phases[0]!.operatingDays;
     const led = ledgerFor(sowingAtStandard(), phase1);
     expect(led.balanced).toBe(true);
     expect(led.entries.some((e) => e.id.endsWith('OHVOL'))).toBe(false);

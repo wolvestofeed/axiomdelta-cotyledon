@@ -6,7 +6,7 @@ import { useScenario } from '@/state/scenario-store';
 import { loadLedgerBook, loadLedgerJournal, setLedgerKind } from '@/server/ledger-actions';
 import { periodsOf, type Granularity, type LedgerBookView, type LedgerJournalView, type LedgerKind } from '@/engine/ledger-view';
 import type { StatementPeriod } from '@/engine/ledger-statements';
-import { resolveSubscriberPickupPoints } from '@/engine/demand';
+import { recordPickupPoints as pickupPointsOnRecord } from '@/engine/demand';
 import { loadSustainabilityBasis } from '@/server/sustainability-actions';
 import type { SustainabilityBasis } from '@/engine/sustainability-basis';
 import type { SustainabilityRecords } from '@/engine/sustainability-records';
@@ -152,7 +152,7 @@ export function useOperationsWorld<R extends { orders?: readonly unknown[]; sowi
   const { kind } = useLedger();
   const { resolved } = useScenario();
   const isPlan = kind === 'plan';
-  const recordPickupPoints = useMemo(() => resolveSubscriberPickupPoints(resolved.subscribers, {}, { closures: resolved.closures }), [resolved.subscribers, resolved.closures]);
+  const recordPickupPoints = useMemo(() => pickupPointsOnRecord(resolved.subscribers, { closures: resolved.closures }), [resolved.subscribers, resolved.closures]);
   const world = useMemo(() => {
     const empty = <T,>(v: T | undefined): T | undefined => (v === undefined ? undefined : ([] as unknown as T));
     const pick = <K extends keyof R>(k: K): R[K] => (isPlan ? (empty(recorded[k]) as R[K]) : recorded[k]);

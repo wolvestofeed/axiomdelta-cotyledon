@@ -472,7 +472,7 @@ export function ProductionPlanningClient({
               </div>
             )}
             <p className="farm-kpi-sub mt-2">
-              A sowing goes on a grow unit whose fixture delivers the plan&rsquo;s light line and which has room on every day of the cycle, largest unit first; a sowing no unit holds is the shortfall above, never squeezed onto a shelf. A sowing dated today is in the <Link className="farm-link" href="/farm/grow-room">Grow Room</Link>&rsquo;s Sow queue, where it is closed with the grow form; the harvest window is when its trays are distributed.
+              A sowing goes on a lit unit that has room on every day of the cycle, its dark days on a dark rack where one has room, largest unit first; a sowing no unit holds is the shortfall above, never squeezed onto a shelf. A sowing dated today is in the <Link className="farm-link" href="/farm/grow-room">Grow Room</Link>&rsquo;s Sow queue, where it is closed with the grow form; the harvest window is when its trays are distributed.
             </p>
           </Card>
 

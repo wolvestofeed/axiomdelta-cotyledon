@@ -11,6 +11,7 @@ import type { OrderDef } from '@/data/subscription-cycles';
 import { cadenceDates, flatPlanOn, startProblem, subscriptionDistributions, weekOfMonth } from '@/engine/subscriptions';
 import { firstUnsown, skipRefusal, sowDateOf, startRefusal, withFlatPlan } from '@/engine/subscription-cutoffs';
 import { orderBook, orderKey } from '@/engine/orders';
+import { recordPickupPoints, resolveSubscriberPickupPoints } from '@/engine/demand';
 
 const plans = [...growPlanSeed];
 const rules = { plans };
@@ -115,7 +116,7 @@ describe('the order book', () => {
   const base = seedSubscribers()[0]!;
   const pp = { ...base.pickupPoints[0]!, services: [] };
   const subscriber: SubscriberDef = { ...base, status: 'contracted', channel: 1, pricePerUnitCents: 2000, pickupPoints: [pp], subscriptions: [sub({ subscriberId: base.id, subscriberPickupPointId: pp.id, flatPlan: [{ from: '2026-10-10', lines: [...BROC, { growPlanCode: 'PEA-01', units: 1 }] }], skips: ['2026-10-24'] })] };
-  const input = { pickupPoints: [], subscribers: [subscriber], cycles: [], orders: [] as OrderDef[], from: '2026-10-01', to: '2026-11-15', channelPriceCents: { 1: 2000, 2: 1500, 3: 2500 } };
+  const input = { pickupPoints: resolveSubscriberPickupPoints([subscriber]), subscribers: [subscriber], cycles: [], orders: [] as OrderDef[], from: '2026-10-01', to: '2026-11-15', channelPriceCents: { 1: 2000, 2: 1500, 3: 2500 } };
 
   it('derives one forecast order per flat plan line on every distribution carried, at the subscriber\'s price', () => {
     const book = orderBook(input);
@@ -139,5 +140,11 @@ describe('the order book', () => {
 
   it('an inactive subscriber carries no subscription', () => {
     expect(orderBook({ ...input, subscribers: [{ ...subscriber, status: 'inactive' }] })).toEqual([]);
+  });
+
+  it('a Forecast Subscriber\'s subscription is in the Plan and never on Actual', () => {
+    const planOnly: SubscriberDef = { ...subscriber, status: 'forecast' };
+    expect(orderBook({ ...input, subscribers: [planOnly], pickupPoints: resolveSubscriberPickupPoints([planOnly]) })).toHaveLength(4);
+    expect(orderBook({ ...input, subscribers: [planOnly], pickupPoints: recordPickupPoints([planOnly]) })).toEqual([]);
   });
 });

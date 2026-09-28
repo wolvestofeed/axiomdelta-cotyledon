@@ -19,14 +19,14 @@ import { resolveScenarioInputs } from '@/engine/scenario';
 const withEquipment = (lines: EquipmentLine[]) => capexRollup(resolveScenarioInputs({}, undefined, undefined, undefined, undefined, lines));
 const home = equipmentSeed.filter((e) => e.setting === 'home');
 /** The home grow room's capital: Vallecito's rack as bought, a second lit rack with its lights, and the dark rack. */
-const HOME = 1_058 + 650 + 2 * 200;
+const HOME = 1_058 + 200 + 15 * 90 + 2 * 200;
 const commercial = equipmentSeed.filter((e) => e.setting === 'commercial');
 
 describe('farm equipment — the seed', () => {
   it('carries the home grow room in capital and no commercial row until a forecast selects it', () => {
     const r = capexRollup();
     // Vallecito's starter rack as bought ($1,058: rack $200, five lights $450, four fans $200, sixteen flat sets $208),
-    // a second lit rack with its five lights ($650) and two dark racks ($400).
+    // a second lit rack ($200), fifteen more Mars VG80 for two on each of the ten lit shelves ($1,350) and two dark racks ($400).
     expect(r.equipmentAll).toBe(HOME);
     expect(r.equipmentPhase1).toBe(HOME);
     expect(r.equipmentPhase2Add).toBe(0);

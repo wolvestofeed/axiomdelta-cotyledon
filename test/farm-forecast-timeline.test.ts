@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { seedSubscribers } from '@/data/subscribers';
+import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
 import { simulateForecast, horizonEnd } from '@/engine/forecast-timeline';
 import { isBlackoutRack } from '@/engine/equipment';
 
-// The suite runs the longest option: a forecast expanded to three years.
-const inputs = resolveScenarioInputs({ forecast: { horizonYears: 3 } });
+// The suite runs on the service model's test subscribers, whose test term is 2027, and the longest
+// option: a forecast expanded to three years.
 const subscribers = seedSubscribers();
+const resolve = (config: Parameters<typeof resolveScenarioInputs>[0] = {}) => resolveScenarioInputs(config, undefined, subscribers);
+const inputs = resolve({ forecast: { horizonYears: 3 } });
 const seedGrowPlans = inputs.growPlans;
 const saved = seedSubscriptionCycles(seedGrowPlans, '2026-09-14');
 const cycles = [...saved, ...seedFlatPlans(subscribers, saved)];
@@ -18,15 +20,15 @@ const elapsedMs = performance.now() - started;
 
 describe('the timeline length: one year by default, two or three on the forecast', () => {
   it('runs one year from the start unless the forecast expands it', () => {
-    const one = simulateForecast({ inputs: resolveScenarioInputs(), cycles });
+    const one = simulateForecast({ inputs: resolve(), cycles });
     expect([one.from, one.to, one.horizonYears, one.years.length]).toEqual(['2027-01-01', '2027-12-31', 1, 1]);
-    const two = simulateForecast({ inputs: resolveScenarioInputs({ forecast: { horizonYears: 2, startDate: '2027-07-01' } }), cycles });
+    const two = simulateForecast({ inputs: resolve({ forecast: { horizonYears: 2, startDate: '2027-07-01' } }), cycles });
     expect([two.from, two.to, two.years.length]).toEqual(['2027-07-01', '2029-06-30', 2]);
-    expect(resolveScenarioInputs({ forecast: { horizonYears: 7 as never } }).forecast.horizonYears).toBe(1);
+    expect(resolve({ forecast: { horizonYears: 7 as never } }).forecast.horizonYears).toBe(1);
   });
 
   it('the first year of a three-year timeline is the one-year timeline', () => {
-    const one = simulateForecast({ inputs: resolveScenarioInputs(), cycles });
+    const one = simulateForecast({ inputs: resolve(), cycles });
     expect(one.years[0]).toEqual(t.years[0]);
     expect(one.documents.sowings).toEqual(t.documents.sowings.filter((b) => b.productionDate <= one.to));
   });
@@ -112,7 +114,7 @@ describe('the forecast timeline (Roadmap N4b)', () => {
   it('fixed-cost lines bill each month they are in force; loans draw and repay inside the window', () => {
     // The seed's lines are at zero until stated, so they bill nothing; a stated line bills every month.
     expect(t.documents.bills).toEqual([]);
-    const stated = simulateForecast({ inputs: resolveScenarioInputs({ capex: { fixedCostLines: { 'home-admin': { householdAmountCents: 60_00 } } } }), cycles });
+    const stated = simulateForecast({ inputs: resolve({ capex: { fixedCostLines: { 'home-admin': { householdAmountCents: 60_00 } } } }), cycles });
     expect(new Set(stated.documents.bills.map((b) => b.period)).size).toBe(12);
     for (const l of inputs.loans.filter((x) => x.principalCents > 0)) {
       expect(t.documents.loanDraws.some((d) => d.loanKey === l.key)).toBe(true);
@@ -129,7 +131,7 @@ describe('the forecast timeline (Roadmap N4b)', () => {
 describe('the forecast reads no rack', () => {
   it('dating the blackout racks later leaves every sowing where it was, and every plan has a grow unit', () => {
     expect(t.gaps.find((g) => g.kind === 'no_grow_unit')).toBeUndefined();
-    const late = resolveScenarioInputs({ forecast: { horizonYears: 3, equipment: Object.fromEntries(inputs.datedEquipment.filter((l) => isBlackoutRack(l.item) && l.phase === 1).map((l) => [l.key, { inServiceDate: '2027-02-01' }])) } });
+    const late = resolve({ forecast: { horizonYears: 3, equipment: Object.fromEntries(inputs.datedEquipment.filter((l) => isBlackoutRack(l.item) && l.phase === 1).map((l) => [l.key, { inServiceDate: '2027-02-01' }])) } });
     const t3 = simulateForecast({ inputs: late, cycles });
     expect(t3.horizon.totals.producedBase).toBe(t.horizon.totals.producedBase);
     expect(t3.horizon.totals.sowings).toBe(t.horizon.totals.sowings);

@@ -1,16 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { phases } from '@/data/plan-data';
-import { seedSubscribers, apportion, planSeedSubscribers, CURRENT_PROSPECT_UNITS_PER_DAY, type SubscriberDef } from '@/data/subscribers';
+import { PLAN_FIRST_PICKUP, PLAN_ROTATION, PLAN_SUBSCRIBERS, planSeedSubscribers, seedSubscribers as appSeed, type SubscriberDef } from '@/data/subscribers';
 import { dbSeedSubscribers } from '@/server/seed-writes';
 import { pickupPoints } from '@/data/seed-invented';
 import { datesBetween } from '@/engine/orders';
-import { channelDemand, forecastByDistributionPickupPoint, resolveSubscriberPickupPoints } from '@/engine/demand';
+import { channelDemand, forecastByDistributionPickupPoint, recordPickupPoints, resolveSubscriberPickupPoints } from '@/engine/demand';
+import { growPlanSeed } from '@/data/grow-plans-seed';
+import { equipmentSeed } from '@/data/capex';
+import { growUnitsFrom, unitTakesPlan } from '@/engine/grow-capacity';
+import { apportion, serviceSubscribers as seedSubscribers, serviceSubscribersWithContracted, CURRENT_PROSPECT_UNITS_PER_DAY, SERVICE_CHANNELS } from './support/service-subscribers';
 import { normalizePicks, serviceOver, pickupPointTakesUnitsOn, volumeOn, yearEndFrom } from '@/engine/services';
 import { datedEquipment, equipmentInServiceOn } from '@/engine/equipment';
 import type { EquipmentLine } from '@/data/capex';
 import { resolveScenarioInputs } from '@/engine/scenario';
 
-describe('subscribers — the seed reproduces the channel constants exactly', () => {
+describe('the service model\'s test subscribers reproduce their channel volumes exactly', () => {
   it('apportions whole units by largest remainder', () => {
     expect(apportion(1000, [320, 180, 150])).toEqual([492, 277, 231]);
     expect(apportion(10, [1, 1, 1])).toEqual([4, 3, 3]);
@@ -19,7 +23,7 @@ describe('subscribers — the seed reproduces the channel constants exactly', ()
 
   it('seeds one placeholder subscriber per channel with pickup points that sum to the constant', () => {
     const d = channelDemand(seedSubscribers());
-    for (const p of phases) {
+    for (const p of SERVICE_CHANNELS) {
       expect(d.byChannel[p.phase].unitsPerDay).toBe(p.unitsPerDay);
       // units-weighted service days: a channel with no planned volume (Phase 1 operations: prospects only) derives none.
       expect(d.byChannel[p.phase].operatingDays).toBeCloseTo(p.unitsPerDay > 0 ? p.operatingDays : 0, 9);
@@ -123,11 +127,13 @@ describe('equipment in service on a date in a forecast (Roadmap N4a, decision 20
 });
 
 describe('the resolver derives the channel volumes from subscribers', () => {
-  it('phases carry the pickup-point-derived units per day', () => {
+  it('phases carry the pickup-point-derived units per day: the Plan\'s 19 trays each Saturday', () => {
     const r = resolveScenarioInputs();
-    expect(r.phases[0].unitsPerDay).toBe(1000);
-    expect(r.phases[1].operatingDays).toBeCloseTo(0, 9); // no corporate volume planned, so no service days derive
-    expect(r.subscribers).toHaveLength(3);
+    const saturdays2027 = datesBetween('2027-01-01', '2027-12-31').filter((x) => new Date(`${x}T00:00:00Z`).getUTCDay() === 6).length;
+    expect(r.phases[0].unitsPerDay).toBe(PLAN_SUBSCRIBERS);
+    expect(r.phases[0].operatingDays).toBeCloseTo(saturdays2027, 9);
+    expect(r.phases[1].operatingDays).toBeCloseTo(0, 9);
+    expect(r.subscribers).toHaveLength(PLAN_SUBSCRIBERS);
   });
 
   it('a forecast service overlay flows through to the P&L basis; the retired subscriberPickupPoints overlay is ignored', () => {
@@ -142,7 +148,7 @@ describe('the resolver derives the channel volumes from subscribers', () => {
 
   it('a legacy unitsPerDay override on a phase is ignored — demand comes from pickup points', () => {
     const r = resolveScenarioInputs({ phases: { 1: { unitsPerDay: 5 } } });
-    expect(r.phases[0].unitsPerDay).toBe(1000);
+    expect(r.phases[0].unitsPerDay).toBe(PLAN_SUBSCRIBERS);
   });
 });
 
@@ -175,8 +181,8 @@ describe('participation — a sales figure from confirmed and distributed orders
   });
 });
 
-describe('the Plan seed: one contracted subscriber, prospects carrying no volume', () => {
-  it('the engine default reproduces the operating model constants and neutral test names', () => {
+describe('the service model\'s fixture: one contracted subscriber, prospects carrying no volume', () => {
+  it('names neutral test subscribers and pickup points', () => {
     const c = seedSubscribers();
     expect(c.map((x) => x.name)).toEqual(['Test Subscriber #1', 'Test Subscriber #2', 'Test Subscriber #3']);
     expect(c.every((x) => x.status === 'prospect')).toBe(true);
@@ -185,39 +191,58 @@ describe('the Plan seed: one contracted subscriber, prospects carrying no volume
     expect(c[2].pickupPoints[0].name).toBe('Test Pickup point 5');
   });
 
-  it('the database seeds the contracted subscriber at its stated 125 units a day and every prospect at zero', () => {
-    const plan = planSeedSubscribers();
-    expect(CURRENT_PROSPECT_UNITS_PER_DAY).toBe(125);
-    const contracted = plan.filter((c) => c.status === 'contracted');
-    expect(contracted).toHaveLength(1);
-    expect(contracted[0].channel).toBe(1);
-    expect(contracted[0].pickupPoints.flatMap((x) => x.services).map((sv) => sv.picks.at(-1)?.units)).toEqual([125]);
-    // The prospect's term dates are not on file: the pickup point carries no calendar rather than an invented one.
-    expect(contracted[0].pickupPoints.every((x) => x.calendar.length === 0)).toBe(true);
-    expect(contracted[0].notes).toContain('125');
-    // The name was never given, and the row says so rather than carrying one.
-    expect(contracted[0].name).toContain('not on file');
-    expect(contracted[0].pricePerUnitCents).toBeNull();
-    expect(contracted[0].paymentTerms).toBeNull();
-    for (const c of plan.filter((x) => x.status === 'prospect')) {
-      expect(c.pickupPoints.flatMap((x) => x.services).every((sv) => sv.picks.every((pk) => pk.units === 0))).toBe(true);
-    }
-    expect(plan.every((c) => c.source === 'seed')).toBe(true);
-    expect(dbSeedSubscribers()).toEqual(plan);
-  });
-
-  it('demand splits contracted from planned, and the Plan seed is contracted only', () => {
-    const d = channelDemand(planSeedSubscribers());
-    expect(d.byChannel[1].unitsPerDay).toBe(125);
-    expect(d.byChannel[1].contractedUnitsPerDay).toBe(125);
+  it('demand splits contracted from planned', () => {
+    const d = channelDemand(serviceSubscribersWithContracted());
+    expect(d.byChannel[1].unitsPerDay).toBe(CURRENT_PROSPECT_UNITS_PER_DAY);
+    expect(d.byChannel[1].contractedUnitsPerDay).toBe(CURRENT_PROSPECT_UNITS_PER_DAY);
     expect(d.byChannel[1].contractedSubscribers).toBe(1);
-    // No term on file: every Monday-to-Friday of the forecast year from 2027-01-01, the pick carried forward.
     const weekdays2027 = datesBetween('2027-01-01', '2027-12-31').filter((x) => { const w = new Date(`${x}T00:00:00Z`).getUTCDay(); return w >= 1 && w <= 5; }).length;
-    expect(d.totalAnnualUnits).toBe(125 * weekdays2027);
+    expect(d.totalAnnualUnits).toBe(CURRENT_PROSPECT_UNITS_PER_DAY * weekdays2027);
     expect(d.contractedAnnualUnits).toBe(d.totalAnnualUnits);
-    // The engine default is all prospects: every unit in it is planned volume.
     const e = channelDemand(seedSubscribers());
     expect(e.contractedAnnualUnits).toBe(0);
-    expect(e.byChannel[1].contractedUnitsPerDay).toBe(0);
+  });
+});
+
+describe('the Plan seed: nineteen Forecast Subscribers, one 1020 flat weekly at the Saturday pickup', () => {
+  const plan = planSeedSubscribers();
+  const lit = growUnitsFrom(equipmentSeed).find((u) => !u.darkOnly)!;
+
+  it('is the database seed and the engine default; nothing is contracted, so Actual starts empty', () => {
+    expect(dbSeedSubscribers()).toEqual(plan);
+    expect(appSeed()).toEqual(plan);
+    expect(plan).toHaveLength(PLAN_SUBSCRIBERS);
+    expect(plan.every((c) => c.status === 'forecast' && c.channel === 1 && c.source === 'seed' && /Invented test data/.test(c.notes ?? ''))).toBe(true);
+    expect(recordPickupPoints(plan)).toEqual([]);
+    expect(channelDemand(plan).contractedAnnualUnits).toBe(0);
+  });
+
+  it('each takes one tray weekly from the first Saturday pickup, of a plan in service that the lit racks grow', () => {
+    expect(new Date(`${PLAN_FIRST_PICKUP}T00:00:00Z`).getUTCDay()).toBe(6);
+    for (const c of plan) {
+      expect(c.pickupPoints.map((p) => p.services.length)).toEqual([0]);
+      const [sub] = c.subscriptions!;
+      expect(sub).toMatchObject({ cadence: 'weekly', startDate: PLAN_FIRST_PICKUP, subscriberPickupPointId: c.pickupPoints[0]!.id, endDate: null });
+      expect(sub!.flatPlan).toHaveLength(1);
+      expect(sub!.flatPlan[0]!.lines).toHaveLength(1);
+      expect(sub!.flatPlan[0]!.lines[0]!.units).toBe(1);
+    }
+    const codes = plan.map((c) => c.subscriptions![0]!.flatPlan[0]!.lines[0]!.growPlanCode);
+    expect(new Set(codes)).toEqual(new Set(PLAN_ROTATION));
+    for (const code of PLAN_ROTATION) {
+      const p = growPlanSeed.find((x) => x.code === code)!;
+      expect(p.status, code).toBe('in_service');
+      expect(p.channels, code).toContain(1);
+      expect(unitTakesPlan(lit, p), code).toBe(true);
+    }
+  });
+
+  it('carries 19 trays each Saturday of the forecast year, at $30 a flat', () => {
+    const d = channelDemand(plan).byChannel[1];
+    const saturdays2027 = datesBetween('2027-01-01', '2027-12-31').filter((x) => new Date(`${x}T00:00:00Z`).getUTCDay() === 6).length;
+    expect(d.unitsPerDay).toBe(PLAN_SUBSCRIBERS);
+    expect(d.annualUnits).toBe(PLAN_SUBSCRIBERS * saturdays2027);
+    expect(phases.map((p) => p.pricePerUnit)).toEqual([30, 30, 30]);
+    expect(phases.every((p) => p.unitsPerDay === 0 && p.operatingDays === 0)).toBe(true);
   });
 });

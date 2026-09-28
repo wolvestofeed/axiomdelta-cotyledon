@@ -28,7 +28,7 @@ import { laborMinutesPerUnit } from '@/engine/unit-cost';
 import { estimatedTimeStudy } from '@/engine/time-study-estimate';
 import { activeGrowPlanAverages } from '@/engine/active-averages';
 import { seedSubscriptionCycles, seedFlatPlans } from '@/data/subscription-cycles';
-import { seedSubscribers } from '@/data/subscribers';
+import { serviceSubscribers as seedSubscribers } from './support/service-subscribers';
 import { simulateForecast } from '@/engine/forecast-timeline';
 import { postPlanLedger } from '@/engine/plan-ledger';
 

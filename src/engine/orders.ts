@@ -193,12 +193,14 @@ export function orderBook(input: OrderBookInput): BookOrder[] {
     }
   }
 
-  // Derived forecast orders from subscriptions: every distribution the cadence carries, one per flat plan line.
+  // Derived forecast orders from subscriptions: every distribution the cadence carries, one per flat plan
+  // line, at a pickup point the world serves (`pickupPoints`: on Actual, never a Forecast Subscriber's).
+  const served = new Set(input.pickupPoints.map((p) => p.id));
   for (const c of input.subscribers) {
     if (c.status === 'inactive') continue;
     for (const sub of c.subscriptions ?? []) {
       const pp = c.pickupPoints.find((p) => p.id === sub.subscriberPickupPointId);
-      if (!pp || pp.status === 'inactive') continue;
+      if (!pp || pp.status === 'inactive' || !served.has(pp.id)) continue;
       const price = priceFor(null, c.pricePerUnitCents, input.channelPriceCents[c.channel]);
       for (const d of subscriptionDistributions(sub, input.from, input.to, input.closures)) {
         if (!d.carried) continue;

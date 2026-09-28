@@ -5,8 +5,8 @@
  * A tray is sown on its sow date and sits on its grow unit for the plan's cycle days: sow,
  * germination, blackout, light, harvest window. The sow date for a distribution date is the
  * distribution date less the plan's days to harvest, moved back to the latest production day
- * inside the harvest window. A sowing is placed on a unit whose fixture delivers the plan's light
- * line and which has room for the sowing's trays on every day of the cycle; a sowing no unit can
+ * inside the harvest window. A sowing is placed on a lit unit (its dark days on a dark rack where one
+ * has room) that has room for the sowing's trays on every day of the cycle; a sowing no unit can
  * hold is reported, never squeezed. Each day then reads what is on the shelves by stage, what is
  * sown, what is in its harvest window, and the waterings the daily stream owes.
  */

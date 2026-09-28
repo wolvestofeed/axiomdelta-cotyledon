@@ -485,7 +485,7 @@ export function resolveScenarioInputs(
   config: FarmScenarioConfig = {},
   /** The grow plan library. Omitted = the seed grow plans (tests, engine defaults). */
   library: readonly GrowPlanDef[] = seedGrowPlans,
-  /** The subscriber library. Omitted = the seed placeholders built from the channel constants. */
+  /** The subscriber library. Omitted = the Plan's subscribers (`seedSubscribers`). */
   subscribers: readonly SubscriberDef[] = seedSubscribers(),
   /** Farm closures from the production calendar (Roadmap J1). Omitted = none entered. */
   closures: readonly DateRange[] = [],

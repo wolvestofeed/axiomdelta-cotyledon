@@ -17,7 +17,7 @@ export interface ExperimentRow {
   window: { harvestFrom: string; harvestTo: string } | null;
   status: ExperimentStatus;
   statusLabel: string;
-  /** The grow units whose fixture delivers the plan's light line. */
+  /** The lit grow units the plan's light days can go on. */
   units: string[];
   record: { sowingId: string; traysSown: number; traysPacked: number } | null;
   /** Present while the experiment is open: the plan and the grow form's prefill at its standard. */
@@ -99,7 +99,7 @@ export function ExperimentsClient({
             <label className="farm-kpi-sub block mt-2">Note<br /><textarea className="farm-input w-full!" rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></label>
             {chosen && (
               <p className="farm-kpi-sub mt-2">
-                {chosen.units.length ? `Grow units whose fixture delivers ${chosen.code}'s light line: ${chosen.units.join(', ')}.` : `No grow unit's fixture delivers ${chosen.code}'s light line: the experiment will show no room on the Grow Calendar until a unit that does is on Grow Units or the plan's light line changes.`}
+                {chosen.units.length ? `Lit grow units ${chosen.code} can go on: ${chosen.units.join(', ')}.` : 'No lit grow unit is on Grow Units: an experiment has no room until one is.'}
               </p>
             )}
           </>
@@ -123,7 +123,7 @@ export function ExperimentsClient({
                     <td>{r.experiment.sowDate}</td>
                     <td className="num">{num(r.experiment.trays)}</td>
                     <td>{r.window ? `${r.window.harvestFrom} to ${r.window.harvestTo}` : '—'}</td>
-                    <td>{r.statusLabel}{r.status !== 'closed' && r.units.length === 0 ? <div className="farm-kpi-sub farm-c-accent">no grow unit delivers its light</div> : null}</td>
+                    <td>{r.statusLabel}{r.status !== 'closed' && r.units.length === 0 ? <div className="farm-kpi-sub farm-c-accent">no lit grow unit on file</div> : null}</td>
                     <td>{r.record ? `${r.record.sowingId}: ${num(r.record.traysPacked)} of ${num(r.record.traysSown)} trays packed` : '—'}</td>
                     <td className="whitespace-nowrap">
                       {r.prefill && r.status !== 'planned' && (

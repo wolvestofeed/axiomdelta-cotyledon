@@ -82,9 +82,9 @@ describe('the shelf ledger', () => {
     expect(after.placed).toBe(true);
   });
 
-  it('a plan no unit lights is never placed; two units of the kind hold two sowings', () => {
-    const rad = lib.find((r) => r.code === 'RAD-01')!;
-    expect(new ShelfLedger(units).place(rad, '2027-03-01', 20).placed).toBe(false);
+  it('a plan under light is never placed on an unlit unit; two units of the kind hold two sowings', () => {
+    expect(new ShelfLedger([{ ...units[0]!, fixtureKey: null }]).place(broc, '2027-03-01', 20).placed).toBe(false);
+    expect(new ShelfLedger(units).place(lib.find((r) => r.code === 'RAD-01')!, '2027-03-01', 20).placed).toBe(true);
     const two = new ShelfLedger([{ ...units[0]!, units: 2 }]);
     expect(two.place(lib[0]!, '2027-03-01', 20).placed).toBe(true);
     expect(two.place(lib[0]!, '2027-03-01', 20).placed).toBe(true);
@@ -96,7 +96,10 @@ describe('the calendar from requirements', () => {
   it('back-plans each requirement, reads each day by stage and unit, and reports what has no room', () => {
     const cal = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', growPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-23', growPlanCode: 'BROC-01', baseUnits: 20 }, { distributionDate: '2027-03-22', growPlanCode: 'RAD-01', baseUnits: 4 }], growPlans: lib, units });
     expect(cal.sowings.filter((s) => s.placed)).toHaveLength(1);
-    expect(cal.findings.map((f) => f.kind).sort()).toEqual(['no-unit', 'over-capacity']);
+    // The rack is full with the first broccoli sowing: the second and the radish have no room.
+    expect(cal.findings.map((f) => f.kind).sort()).toEqual(['over-capacity', 'over-capacity']);
+    const unlit = planGrowCalendar({ from: '2027-03-01', to: '2027-03-31', requirements: [{ distributionDate: '2027-03-22', growPlanCode: 'RAD-01', baseUnits: 4 }], growPlans: lib, units: [{ ...units[0]!, fixtureKey: null }] });
+    expect(unlit.findings.map((f) => f.kind)).toEqual(['no-unit']);
     const sow = cal.sowings[0]!;
     const day = cal.days.find((d) => d.date === sow.sowDate)!;
     expect(day.sowingsStarted).toBe(1);

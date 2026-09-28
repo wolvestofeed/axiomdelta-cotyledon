@@ -30,7 +30,7 @@ import { prospectRecords } from '@/data/prospects';
 import { growPlanFoodFootprint } from '@/engine/carbon';
 import { dashboardToday } from '@/engine/dashboard-today';
 import { distributedConsumption, finishedGoodsOnHand } from '@/engine/production-plan';
-import { resolveSubscriberPickupPoints } from '@/engine/demand';
+import { recordPickupPoints } from '@/engine/demand';
 import { mixFoodFootprint } from '@/engine/sustainability-basis';
 import { getLedgerKind } from '@/server/ledgers';
 import { postSustainabilityBasis } from '@/server/sustainability';
@@ -88,7 +88,7 @@ async function loadOperatingPicture() {
   // Today: the next production day from the order book on the selected world.
   const worldOrders = isPlan ? [] : orders;
   const book = orderBook({
-    pickupPoints: isPlan ? R.demand.pickupPoints : resolveSubscriberPickupPoints(R.subscribers, {}, { closures }),
+    pickupPoints: isPlan ? R.demand.pickupPoints : recordPickupPoints(R.subscribers, { closures }),
     subscribers: R.subscribers,
     cycles,
     orders: worldOrders,

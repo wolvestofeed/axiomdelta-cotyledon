@@ -19,12 +19,13 @@
  * everything unedited follows the record (decision 16).
  */
 
-import type { SubscriberDef, SubscriberServiceDef, SubscriberPickupPointDef, SubscriberStatus } from '@/data/subscribers';
+import { recordsActuals, type SubscriberDef, type SubscriberServiceDef, type SubscriberPickupPointDef, type SubscriberStatus } from '@/data/subscribers';
 import type { SubscriptionCycleDef } from '@/data/subscription-cycles';
 import { FORECAST_FISCAL_YEAR } from '@/data/working-capital';
 import type { EquipmentDateOverlay } from '@/engine/equipment';
 import type { DateRange } from '@/engine/periods';
 import { calendarOnFile, serviceOver, yearEndFrom } from '@/engine/services';
+import { subscriptionDistributions } from '@/engine/subscriptions';
 
 /** @deprecated Roadmap N4a: the pickup-point-forecast what-if is replaced by `ForecastOverlay`. Ignored on read. */
 export interface SubscriberPickupPointOverlay {
@@ -66,7 +67,7 @@ export const forecastHorizonOf = (o: ForecastOverlay | undefined): ForecastHoriz
 export const defaultForecastStart = (): string => `${FORECAST_FISCAL_YEAR}-01-01`;
 export const forecastStartOf = (o: ForecastOverlay | undefined): string => o?.startDate ?? defaultForecastStart();
 
-export type ForecastBasis = 'services' | 'none';
+export type ForecastBasis = 'services' | 'subscriptions' | 'none';
 
 export interface ResolvedServiceForecast extends SubscriberServiceDef {
   /** True when the forecast edits this service. */
@@ -157,8 +158,17 @@ export function resolveSubscriberPickupPoints(
         const w = active ? serviceOver(merged, s.calendar ?? [], from, to, opts.closures) : { serviceDates: 0, units: 0 };
         return { ...merged, edited: o !== undefined && Object.keys(o).length > 0, serviceDates: w.serviceDates, annualUnits: w.units };
       });
-      const annualUnits = services.reduce((a, sv) => a + sv.annualUnits, 0);
-      const serviceDates = s.status === 'inactive' ? 0 : distinctServiceDates(services, s.calendar ?? [], from, to, opts.closures);
+      // A subscription at the pickup point adds the units of each distribution it carries in the window.
+      const carried = s.status === 'inactive'
+        ? []
+        : (c.subscriptions ?? [])
+            .filter((x) => x.subscriberPickupPointId === s.id)
+            .flatMap((x) => subscriptionDistributions(x, from, to, opts.closures).filter((d) => d.carried))
+            .map((d) => ({ date: d.date, units: d.lines.reduce((t, l) => t + l.units, 0) }));
+      const subscriptionUnits = carried.reduce((t, d) => t + d.units, 0);
+      const serviceUnits = services.reduce((a, sv) => a + sv.annualUnits, 0);
+      const annualUnits = serviceUnits + subscriptionUnits;
+      const serviceDates = (s.status === 'inactive' ? 0 : distinctServiceDates(services, s.calendar ?? [], from, to, opts.closures)) + new Set(carried.map((d) => d.date)).size;
       out.push({
         ...s,
         calendar: s.calendar ?? [],
@@ -170,7 +180,7 @@ export function resolveSubscriberPickupPoints(
         unitsPerDay: serviceDates > 0 ? annualUnits / serviceDates : 0,
         annualUnits,
         serviceDates,
-        basis: annualUnits > 0 ? 'services' : 'none',
+        basis: serviceUnits > 0 ? 'services' : subscriptionUnits > 0 ? 'subscriptions' : 'none',
         calendarOnFile: calendarOnFile(s.calendar ?? []),
         pricePerUnitCents: c.pricePerUnitCents,
         edited: services.some((sv) => sv.edited) || planOverride !== null,
@@ -232,6 +242,15 @@ export function channelDemand(
     contractedAnnualUnits: pickupPoints.filter((s) => s.subscriberStatus === 'contracted').reduce((a, s) => a + s.annualUnits, 0),
     window: { from, to: yearEndFrom(from) },
   };
+}
+
+/**
+ * The pickup points of the real farm, for Actual: the subscribers on record with no forecast edit,
+ * a Forecast Subscriber never among them. A subscription's orders are derived only at a pickup
+ * point on this list.
+ */
+export function recordPickupPoints(subscribers: readonly SubscriberDef[], opts: DemandOptions = {}): ResolvedPickupPointForecast[] {
+  return resolveSubscriberPickupPoints(subscribers.filter((c) => recordsActuals(c.status)), {}, opts);
 }
 
 /** distribution-pickup-point id → units per service date, for Pickup Points & Routes and Logistics. */

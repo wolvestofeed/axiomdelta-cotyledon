@@ -29,7 +29,6 @@ import {
   NUTRIENT_BY_KEY,
   REGIME_BY_KEY,
   SANITIZER_PER_TRAY,
-  fixtureDelivers,
   lightCostPerTrayDay,
   type GrowingMediumDef,
   type LightFixtureDef,
@@ -253,15 +252,9 @@ export function costGrowPlan(plan: GrowPlanDef, ctx: GrowCostContext = defaultGr
   };
 }
 
-/** The fixture a plan is costed on: the first in the library that can deliver the plan's regime, else the first fixture. */
-export function fixtureFor(plan: GrowPlanDef, fixtures: readonly LightFixtureDef[] = LIGHT_FIXTURES, regimes: Readonly<Record<string, LightRegimeDef>> = REGIME_BY_KEY): LightFixtureDef {
-  const light = plan.lines.find((l) => l.kind === 'light');
-  if (!light) return fixtures[0] ?? FIXTURE_BY_KEY['mars-hydro-vg80']!;
-  const regime = regimes[light.regimeKey];
-  const lead = leadVariety(plan);
-  const ppfd = light.ppfd?.value ?? lead?.light.ppfdRange?.max ?? regime?.ppfdTarget.value ?? 0;
-  const able = regime ? fixtures.find((f) => fixtureDelivers(f, regime, ppfd)) : undefined;
-  return able ?? fixtures[0]!;
+/** The fixture a plan is costed on: the lit racks' fixture, the first in the library (the Mars VG80), at its count a shelf. */
+export function fixtureFor(_plan: GrowPlanDef, fixtures: readonly LightFixtureDef[] = LIGHT_FIXTURES): LightFixtureDef {
+  return fixtures[0] ?? FIXTURE_BY_KEY['mars-hydro-vg80']!;
 }
 
 /**
