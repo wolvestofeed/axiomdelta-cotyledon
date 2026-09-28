@@ -84,16 +84,16 @@ describe('farm — planning loop', () => {
     sowingSize: 575,
     cyclesAvailable: 2,
   };
-  it('matches the single-day plan at the derived sowing', () => {
+  it('sows the whole trays the shortfall needs, split past what one unit takes, with nothing over', () => {
     const r = runPlanningLoop(base);
     expect(r.targetInventory).toBe(3250);
     expect(r.projectedInventory).toBe(2600);
     expect(r.shortfall).toBe(650);
     expect(r.sowingsToRun).toBe(2);
-    expect(r.unitsProduced).toBe(1150);
-    expect(r.closingInventory).toBe(3750);
-    expect(r.daysOfCover).toBeCloseTo(5.7692, 3);
-    expect(r.overproductionCarriedForward).toBe(500);
+    expect(r.unitsProduced).toBe(650);
+    expect(r.closingInventory).toBe(3250);
+    expect(r.daysOfCover).toBeCloseTo(5, 6);
+    expect(r.overproductionCarriedForward).toBe(0);
     expect(r.shelfLifeCheck).toBe('OK');
     expect(r.capacityCheck).toBe('OK');
   });

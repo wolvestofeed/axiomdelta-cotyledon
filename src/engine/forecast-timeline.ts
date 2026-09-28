@@ -12,7 +12,7 @@
  *
  *   orders          the order book: every service on every date it runs, the
  *                   subscriber's flat plan grow plan (`orderBook`)
- *   production      the rolling horizon — whole sowings net of stock, lines in
+ *   production      the rolling horizon — the trays ordered, net of stock, lines in
  *                   service on the date, shelf life (`planHorizon`)
  *   sowing records   each production day's runs at standard, labor at the
  *                   grow plan's own standard

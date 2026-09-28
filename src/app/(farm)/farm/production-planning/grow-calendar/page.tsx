@@ -32,7 +32,7 @@ async function GrowCalendarPageInner() {
         howItWorks={
           <ul>
             <li>Each order is back-planned to a sow date: the distribution date less the plan&rsquo;s days to harvest, on a production day inside the harvest window.</li>
-            <li>A sowing is what one grow unit takes in trays of the plan&rsquo;s format, placed on a lit unit, its dark days on a dark rack where one has room, and which has room on every day of the cycle.</li>
+            <li>A sowing is the whole trays its orders need, one flat the least, sown on the day its cycle ends on the distribution date; it is placed on a lit unit with room on every day of its light stages, its dark days on a dark rack where one has room.</li>
             <li>Each day reads the trays on each unit by stage, what is sown, what is in its harvest window, and the waterings the daily stream owes.</li>
             <li>A sowing no unit can hold is a finding, never squeezed onto a shelf.</li>
           </ul>

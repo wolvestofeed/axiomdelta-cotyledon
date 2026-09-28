@@ -86,14 +86,17 @@ describe('a production day', () => {
   const cap = deriveCapacity(broc, G.capacityInputs);
   const req = (code: string, baseUnits: number) => ({ growPlanCode: code, growPlanName: code, units: baseUnits, baseUnits, byChannel: [], orders: 1, inLibrary: true });
 
-  it('sizes whole sowings of what one grow unit takes, net of stock', () => {
+  it('sows the whole trays the orders need net of stock, split only past what one grow unit takes', () => {
     const day = planProductionDay({ productionDate: '2027-03-11', requirements: [req('BROC-01', 30)], onHand: { 'BROC-01': 5 }, growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions });
     const run = day.runs[0]!;
     expect(run.net).toBe(25);
     expect(run.sowingSize).toBe(cap.grow!.sowingTrays);
     expect(run.sowingsNeeded).toBe(Math.ceil(25 / cap.sowingSize));
-    expect(run.produced).toBe(run.sowingsScheduled * cap.sowingSize);
-    expect(run.closing).toBe(5 + run.produced - 30);
+    expect(run.produced).toBe(25);
+    expect(run.closing).toBe(0);
+    // A part tray is a whole one; one flat is the least a sowing is.
+    const one = planProductionDay({ productionDate: '2027-03-11', requirements: [req('BROC-01', 0.4)], onHand: {}, growPlans: G.growPlans, capacityInputs: G.capacityInputs, assumptions: G.assumptions }).runs[0]!;
+    expect([one.sowingsNeeded, one.produced]).toEqual([1, 1]);
     expect(day.cyclesAvailable).toBe(cap.grow!.unitCount);
     expect(day.purchase.total).toBeCloseTo(purchaseOrderForRun(run.produced, broc, shrink).total, 6);
   });
@@ -195,14 +198,14 @@ describe('the grow model', () => {
   const horizon = (book: BookOrder[], R = G, growUnits?: GrowUnit[]) =>
     planHorizon({ from: '2027-03-01', to: '2027-03-31', book, growPlans: R.growPlans, capacityInputs: R.capacityInputs, assumptions: R.assumptions, growPlanAssumptions: R.growPlanAssumptions, unitFactorByChannel: { 1: 1 }, openingLots: [], shelfLifeDays: 3, growUnits });
 
-  it('the run sizes whole sowings in trays of one grow unit and packs what it harvests', () => {
+  it('the run sows the trays ordered, split past what one grow unit takes, and packs what it harvests', () => {
     const broc = plan('BROC-01');
     const cap = deriveCapacity(broc, G.capacityInputs, 1);
     expect(cap.sowingSize).toBe(cap.grow!.sowingTrays);
     const run = singleGrowPlanRun({ growPlan: broc, units: cap.sowingSize + 10, unitFactor: 1, premiumFactor: 1, pricePerUnit: 20, commissionShare: 0, openingInventory: 0, capacityInputs: G.capacityInputs, assumptions: G.assumptions });
     expect(run.sowings).toBe(2);
-    expect(run.produced).toBe(2 * cap.grow!.sowingTrays);
-    expect(run.closing).toBe(run.produced - run.baseUnits);
+    expect(run.produced).toBe(cap.sowingSize + 10);
+    expect(run.closing).toBe(0);
     expect(run.cyclesAvailable).toBe(cap.grow!.unitCount);
     expect(run.harvestedLb).toBeCloseTo((run.produced * VARIETY_BY_KEY['broccoli']!.harvestGramsPer1020.value) / 453.59237, 6);
     expect(run.packedLb).toBeCloseTo(run.harvestedLb, 9);
@@ -260,10 +263,11 @@ describe('the grow model', () => {
     // On the shelves from the sow date to the harvest: no stock.
     expect(h.byDate.filter((r) => r.date < harvest).every((r) => r.closingStockBase === 0)).toBe(true);
     expect(h.distributionDays[0]).toMatchObject({ filledBase: 10, unfilledBase: 0 });
-    expect(h.byDate.find((r) => r.date === DIST)!.closingStockBase).toBe(10);
     // Seven days from the sow date the lot would have expired before the distribution; from the harvest
-    // it fills it, and the overshoot expires inside the window.
-    expect(h.totals.expiredBase).toBe(10);
+    // it fills it. The sowing is the ten trays ordered, so nothing is left over to expire.
+    expect(h.growCalendar!.sowings[0]!.trays).toBe(10);
+    expect(h.byDate.find((r) => r.date === DIST)!.closingStockBase).toBe(0);
+    expect(h.totals.expiredBase).toBe(0);
     expect(h.totals.closingStockBase).toBe(0);
   });
 

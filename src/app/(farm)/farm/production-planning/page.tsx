@@ -35,9 +35,9 @@ async function ProductionPlanningPageInner() {
         ]}
         howItWorks={
           <ul>
-            <li>A single run takes a grow plan, a quantity in trays and a channel through the sowing one grow unit takes, the seed-to-harvest chain, labor on the three streams, the purchase requirement and the economics.</li>
+            <li>A single run takes a grow plan, a quantity in trays and a channel through its sowings, the seed-to-harvest chain, labor on the three streams, the purchase requirement and the economics.</li>
             <li>A distribution day is every order on a date, each back-planned to its plan&rsquo;s sow date, exploded into trays and netted against finished goods on hand.</li>
-            <li>The shortfall is sized into whole sowings per plan, each placed where the racks have room for the whole cycle: its dark days on a dark rack, its light days on a lit rack.</li>
+            <li>The shortfall is sown as the whole trays each plan&rsquo;s orders need, one flat the least, split only past what one rack holds, each placed where the racks have room for the whole cycle: its dark days on a dark rack, its light days on a lit rack.</li>
             <li>A sowing dated today is closed in the Grow Room; closed records are listed here.</li>
             <li>The horizon rolls the order book through the shelves for a period, reads each day beside the stock, and feeds the channel allocation.</li>
           </ul>

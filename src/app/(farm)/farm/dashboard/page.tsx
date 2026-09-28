@@ -46,7 +46,7 @@ const DASHBOARD_PURPOSE = 'See today\'s plan, stock, capacity and anything that 
 const DASHBOARD_HOW = (
   <ul>
     <li>One facility produces grow units for Austin prospects.</li>
-    <li>Demand draws finished inventory, inventory triggers whole sowings, and the grow units set the ceiling.</li>
+    <li>Demand draws finished inventory, the orders&rsquo; trays are sown, and the grow units set the ceiling.</li>
     <li>Every tile traces to a module.</li>
   </ul>
 );
@@ -440,7 +440,7 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       />
 
       <div className="farm-hero">
-        <HeroStat value={num(plant.sowingSize)} label="Sowing — active-grow-plan average" sub={`Trays one grow unit takes; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
+        <HeroStat value={num(plant.sowingSize)} label="Most one unit takes — active-grow-plan average" sub={`Trays one grow unit holds; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
         <HeroStat value={coverText(day)} label="Days of cover" sub={`Finished stock over a distribution day's orders; ${picture.R.assumptions.inventory.blackoutShelfLife.value}-day shelf life`} />
         <HeroStat value={money(avgFood.inputCostPerUnit)} label="Input cost / unit" sub="Active-grow-plan average, at the plan's price" />

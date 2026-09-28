@@ -1,7 +1,7 @@
 /**
  * MicroFarm — the Dashboard's "today". The next
  * production day planned from the order book on the selected world, the way
- * Production Planning and Procurement plan one: whole sowings against the plant's
+ * Production Planning and Procurement plan one: the trays ordered against the plant's
  * cycles, netted against finished stock inside shelf life. Days of cover is the
  * finished stock at the end of that day over the base units a distribution day
  * orders in the window. It replaces the typed 650 units a day on one grow plan.

@@ -322,7 +322,7 @@ export function ProductionPlanningClient({
           {runGrow && (
             <div className="grid gap-3 mt-4 farm-autofit-11">
               <Kpi value={num(run.sowings)} label="Sowings (whole only)" sub={`${num(run.produced)} trays for ${num(run.baseUnits)} needed`} />
-              <Kpi value={`${num(runGrow.grow.sowingTrays)} trays`} label="Sowing — what one grow unit takes" sub={runGrow.grow.binding ? `one ${runGrow.grow.binding.unit.item.toLowerCase()}` : 'no grow unit takes this plan'} />
+              <Kpi value={`${num(runGrow.grow.sowingTrays)} trays`} label="Most one grow unit takes in a sowing" sub={runGrow.grow.binding ? `one ${runGrow.grow.binding.unit.item.toLowerCase()}` : 'no grow unit takes this plan'} />
               <Kpi value={<span>{num(run.sowings)} of {num(runGrow.grow.unitCount)} <CheckPill ok={run.sowings <= runGrow.grow.unitCount} okLabel="at once" overLabel="over" /></span>} label="Grow units the run takes" sub={run.sowings <= runGrow.grow.unitCount ? `each sowing holds its unit for the ${num(runGrow.grow.cycleDays)}-day cycle` : `${num(run.sowings - runGrow.grow.unitCount)} sowing${run.sowings - runGrow.grow.unitCount === 1 ? '' : 's'} past the units wait a ${num(runGrow.grow.cycleDays)}-day cycle`} />
               <Kpi value={`${num(Math.round(grams(run.harvestedLb)))} g`} label="Harvest for the run" sub={`${num(Math.round(grams(run.purchasedLb)))} g seed sown · ${num(runGrow.costing.harvestGramsPerTray, 0)} g a tray from the variety record`} />
               <Kpi value={money(run.inputCostPerUnit)} label="Input cost / tray" sub={`${money(run.laborPerUnit)} run labor / tray on the three streams`} />

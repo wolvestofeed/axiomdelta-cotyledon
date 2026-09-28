@@ -6,7 +6,7 @@
  * docs/farm/CLAUDE.md §2 are enforced in code:
  *   - sowing size is DERIVED from the binding constraint, never typed
  *   - labor is fixed-per-sowing + variable-per-unit, never a flat rate
- *   - production runs in whole sowings only
+ *   - production sows the whole trays its orders need, one flat the least
  */
 
 import { costPlan } from '@/engine/grow-costing';
@@ -16,7 +16,7 @@ import { VARIETY_BY_KEY } from '@/data/varieties';
 import { GRAMS_PER_OZ } from '@/data/tray-formats';
 import type { GrowLineCost } from '@/engine/grow-costing';
 import { equipmentSeed } from '@/data/capex';
-import { deriveGrowCapacity, growUnitsFrom, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
+import { deriveGrowCapacity, growUnitsFrom, sowingsFor, type GrowCapacity, type GrowUnit } from '@/engine/grow-capacity';
 type GrowPlan = GrowPlanDef;
 /**
  * The facility's capacity inputs. `growUnits` is the Phase 1 equipment list's grow units with
@@ -219,7 +219,7 @@ export function packedUnitOz(plan: GrowPlanDef, unitFactor = 1): PackedUnit {
 export interface CapacityProfile {
   canopyMassPerUnit: number;
   unitsPerCycleRaw: number;
-  /** DERIVED: the trays one grow unit takes of the plan's format; zero on a plan that is not a grow plan. */
+  /** DERIVED: the most trays one grow unit takes of the plan's format in a sowing; zero on a plan that is not a grow plan. */
   sowingSize: number;
   /** DERIVED: the grow units that take the plan — each can start one sowing a day. */
   cyclesPerDay: number;
@@ -238,8 +238,9 @@ export function deriveCapacity(
 }
 
 /**
- * A grow plan's capacity in the grow plan profile's shape (outline §5 rule 1): the sowing is the
- * trays one grow unit takes of the plan's format (`grow-capacity.ts`), never off mass. Each grow
+ * A grow plan's capacity in the grow plan profile's shape (outline §5 rule 1): the most one grow
+ * unit takes of the plan's format in a sowing (`grow-capacity.ts`), never off mass; a sowing itself
+ * is the trays its orders need. Each grow
  * unit that takes the plan can start one sowing a day, so the sowings a day are the units. The
  * sustained ceiling, trays across the units over the cycle, is on `grow`; the horizon's shelf
  * ledger holds each sowing for its cycle.
@@ -271,7 +272,8 @@ export interface PlanningResult {
   targetInventory: number;
   projectedInventory: number;
   shortfall: number;
-  sowingsToRun: number; // whole sowings only
+  /** Sowings of the whole trays the shortfall needs, split only past what one unit takes. */
+  sowingsToRun: number;
   unitsProduced: number;
   closingInventory: number;
   daysOfCover: number;
@@ -285,8 +287,10 @@ export function runPlanningLoop(input: PlanningInput): PlanningResult {
   const targetInventory = input.forecastUnits * input.daysOfCoverTarget;
   const projectedInventory = input.openingInventory - input.forecastUnits;
   const shortfall = Math.max(0, targetInventory - projectedInventory);
-  const sowingsToRun = Math.ceil(shortfall / input.sowingSize); // whole sowings only
-  const unitsProduced = sowingsToRun * input.sowingSize;
+  // The whole trays the shortfall needs, split only past what one unit takes.
+  const sowings = sowingsFor(shortfall, input.sowingSize);
+  const sowingsToRun = sowings.length;
+  const unitsProduced = sowings.reduce((t, n) => t + n, 0);
   const closingInventory = projectedInventory + unitsProduced;
   const daysOfCover = closingInventory / input.forecastUnits;
   const cyclesRequired = sowingsToRun; // one sowing is sized to one cycle by construction

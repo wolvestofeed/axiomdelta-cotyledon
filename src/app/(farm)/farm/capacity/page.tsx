@@ -27,8 +27,8 @@ const DEFAULTS = resolveScenarioInputs();
 const hoursOf = (min: number) => Math.round((min / 60) * 100) / 100;
 
 /**
- * Capacity (outline §5 rules 1 and 8): a property of the grow room. A sowing is what one grow unit takes
- * in trays of the plan's format; a second unit is a parallel stream; a tray holds its shelf for the
+ * Capacity (outline §5 rules 1 and 8): a property of the grow room. A grow unit holds its format's trays
+ * per shelf times its shelves; a sowing is the trays its orders need, split past that; a tray holds its shelf for the
  * plan's cycle days, so the sustained ceiling is the trays across the units over the cycle.
  */
 /** A unit's lights, shelf by shelf, grouped: "5 shelves × 2 Mars Hydro VG80". */
@@ -76,7 +76,7 @@ export default function CapacityPage() {
           ...(cap.binding
             ? [
                 { step: `${cap.binding.unit.item}: ${num(cap.binding.unit.shelfWidthIn)}-inch shelves × ${num(cap.binding.unit.shelves)} shelves`, value: `${num(traysPerShelf(plan.format, cap.binding.unit.shelfWidthIn))} × ${num(cap.binding.unit.shelves)} = ${num(cap.binding.traysPerUnit)} trays`, status: 'DERIVED' as StatusTag, note: 'Shelves and shelf width are open fields on Grow Units' },
-                { step: 'One unit takes the sowing = STANDARD SOWING', value: `${num(cap.sowingTrays)} trays`, status: 'DERIVED' as StatusTag, note: 'A second unit is a parallel stream the production plan places as its own sowing, never a larger sowing', total: true },
+                { step: 'The most one unit takes in one sowing', value: `${num(cap.sowingTrays)} trays`, status: 'DERIVED' as StatusTag, note: 'A sowing is the trays its orders need, one flat the least, split across units only past this', total: true },
               ]
             : [{ step: 'No grow unit takes this plan', value: '0 trays', status: 'DERIVED' as StatusTag, note: light ? 'No lit unit on the Phase 1 list' : 'No unit on the Phase 1 list has shelves' }]),
           { step: `Light line${light ? `: ${regime?.name ?? light.regimeKey}` : ': none'}`, value: `${num(cap.unitCount)} of ${num(units.reduce((t, u) => t + u.units, 0))} units take the plan`, status: 'DERIVED', note: light ? 'Any lit unit takes a plan under light; a dark rack holds only its dark stages' : 'A plan with no light line goes on any unit' },
@@ -96,7 +96,7 @@ export default function CapacityPage() {
     <>
       <PageHeader
         title="Capacity"
-        purpose="See what one grow unit takes as a sowing, and what the shelves sustain over the cycle."
+        purpose="See what each grow unit holds, and what the shelves sustain over the cycle."
         functions={['Constraint chain', 'Sustained ceiling', 'Grow units', 'Plans in the library', 'Operating day']}
         connects={[
           { href: '/farm/grow-units', dir: 'from' },
@@ -105,7 +105,7 @@ export default function CapacityPage() {
         ]}
         howItWorks={
           <ul>
-            <li>A sowing is what one grow unit takes in trays of the plan&rsquo;s format: trays per shelf times shelves.</li>
+            <li>A grow unit holds the format&rsquo;s trays per shelf times its shelves. A sowing is the trays its orders need, one flat the least, split across units only past what one holds.</li>
             <li>Any lit unit takes a plan under light, whatever lights its shelves carry; a plan with no light line goes anywhere. A dark rack holds a sowing&rsquo;s dark stages only.</li>
             <li>A tray holds its shelf for the plan&rsquo;s cycle days, so the sustained ceiling is the trays across the units over the cycle.</li>
             <li>Shelves, shelf width and fixture are open fields on Grow Units; the Grow Calendar places the actual sowings.</li>
@@ -124,7 +124,7 @@ export default function CapacityPage() {
       {plan && cap && format && (
         <>
           <div className="grid gap-3 farm-autofit-11">
-            <Kpi value={num(cap.sowingTrays)} label="Standard sowing" sub={cap.binding ? `${format.name}s on one ${cap.binding.unit.item.toLowerCase()}` : 'no unit takes this plan'} />
+            <Kpi value={num(cap.sowingTrays)} label="Most one unit takes" sub={cap.binding ? `${format.name}s on one ${cap.binding.unit.item.toLowerCase()}` : 'no unit takes this plan'} />
             <Kpi value={num(cap.unitCount)} label="Units that take it" sub={`of ${num(units.reduce((t, u) => t + u.units, 0))} grow units on the Phase 1 list`} />
             <Kpi value={num(cap.totalTrays)} label="Trays on the shelves at once" sub="across the units that take it" />
             <Kpi value={`${num(cap.cycleDays)} days`} label="Cycle on the shelf" sub={`${num(cap.daysToHarvest)} to the first harvest day`} />

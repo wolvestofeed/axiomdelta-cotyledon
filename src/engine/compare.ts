@@ -77,7 +77,7 @@ export function compareDays(
   const laborPerUnit = (m: typeof A) => (m.unitsPlaced > 0 ? (m.laborHours * 60) / m.unitsPlaced : 0);
 
   const rows: CompareRow[] = [
-    num('units', 'Trays sown', 'units', A.unitsPlaced, B.unitsPlaced, true, 'Whole sowings only; a sowing that does not fit is unplaced, never part-made.'),
+    num('units', 'Trays sown', 'units', A.unitsPlaced, B.unitsPlaced, true, 'The whole trays the orders need; a sowing that does not fit is unplaced, never part-made.'),
     num('sowings', 'Sowings placed', 'count', A.sowingsPlaced, B.sowingsPlaced, true),
     num('unplaced', 'Sowings unplaced', 'count', A.sowingsUnplaced, B.sowingsUnplaced, false),
     num('shipped', 'Trays harvested', 'units', A.unitsShipped, B.unitsShipped, true),

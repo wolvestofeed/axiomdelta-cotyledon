@@ -245,8 +245,8 @@ export function GrowCalendarClient({
               </table>
             </div>
             <p className="farm-kpi-sub mt-2">
-              The sow date is the distribution date less the plan&rsquo;s days to harvest, on a production day. A sowing is what one unit takes in trays of the format; it holds its shelf for
-              the whole cycle. The plan itself is on <Link className="farm-link" href="/farm/production-planning">Production Planning</Link>; the daily labor it owes is on{' '}
+              A tray is sown on the day its days to harvest end on the distribution date, weekends included; sprouts start on a production day. A sowing is the trays its orders need, one flat the least; it holds its
+              shelves for the whole cycle. The plan itself is on <Link className="farm-link" href="/farm/production-planning">Production Planning</Link>; the daily labor it owes is on{' '}
               <Link className="farm-link" href="/farm/schedule">Schedule</Link>.
             </p>
           </Card>

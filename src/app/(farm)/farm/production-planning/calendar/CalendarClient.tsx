@@ -235,7 +235,7 @@ export function CalendarClient({
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Production days make the next distribution date&rsquo;s orders in whole sowings; overshoot is stock while it is inside shelf life and waste the moment it is not. Findings are the
+          Production days sow the whole trays the next distribution date&rsquo;s orders need; stock on hand is used first, and stock past its shelf life is waste. Findings are the
           day&rsquo;s placement against the plant, the crews and the limits — the same run as the Day Schedule. The plan itself is on{' '}
           <Link className="farm-link" href="/farm/production-planning">Production Planning</Link>, and the lots on <Link className="farm-link" href="/farm/inventory">Inventory</Link>.
         </p>

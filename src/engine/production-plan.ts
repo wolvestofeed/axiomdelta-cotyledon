@@ -8,7 +8,7 @@
  *      requirement and the economics. The "forecast task".
  *   2. Distribution day — every order on a date, exploded across grow plans into base
  *      units, netted against finished goods on hand (sowing records inside
- *      shelf life, less what distributed orders drew), sized into whole sowings
+ *      shelf life, less what distributed orders drew), sown as the whole trays it needs
  *      per grow plan, each placed on a grow unit with room for its cycle, with one
  *      purchase requirement merged across grow plans.
  *   3. Horizon — the same over a date range, rolling: each order is sown on its
@@ -33,7 +33,7 @@ import type { TimeStudyDoc } from '@/data/time-studies';
 import type { CrewShift } from '@/data/crews';
 import type { RequirementLine } from '@/engine/catalog';
 import { defaultGrowUnits } from '@/engine';
-import type { GrowUnit } from '@/engine/grow-capacity';
+import { sowingsFor, type GrowUnit } from '@/engine/grow-capacity';
 import { ShelfLedger, calendarFromSowings, sowDateFor, stockDateFor, type GrowCalendar } from '@/engine/grow-calendar';
 import { isExperimentSowing } from '@/engine/actuals';
 
@@ -215,7 +215,7 @@ export function finishedGoodsOnHand(input: {
   return { lots, byGrowPlan, expiredByGrowPlan, unmatchedByGrowPlan };
 }
 
-// ── A production day: whole sowings per plan, each on a grow unit for its cycle ───
+// ── A production day: each plan's trays sown, placed on the grow units for its cycle ───
 
 export interface GrowPlanRunPlan {
   growPlanCode: string;
@@ -297,8 +297,9 @@ export function toRequirementLines(lines: readonly PurchaseOrderLine[]): Require
 }
 
 /**
- * Plan one production day. Requirements are in base units (trays); each plan's sowing is what
- * one grow unit takes of its format. Plans are taken in requirement order: each needed sowing
+ * Plan one production day. Requirements are in base units (trays); each plan's sowing is the whole
+ * trays it needs net of stock, one flat the least, split only past what one grow unit takes of its
+ * format (`sowingsFor`). Plans are taken in requirement order: each sowing
  * is placed on a grow unit with room for its whole cycle (`placeSowing`, the horizon's shelf
  * ledger), and a sowing no unit takes is a named shortfall. The placed sowings emit the day's
  * sowing-stream labor, and any proposed crews are checked against it.
@@ -341,12 +342,17 @@ export function planProductionDay(input: {
   for (const { req, growPlan, cap } of planned) {
     const onHand = input.onHand[req.growPlanCode] ?? 0;
     const net = Math.max(0, req.baseUnits - onHand);
-    const sowingsNeeded = cap.sowingSize > 0 ? Math.max(0, Math.ceil(net / cap.sowingSize - 1e-9)) : 0;
+    // One sowing of the whole trays the orders need, split only past what one unit takes.
+    const sowings = sowingsFor(net, cap.sowingSize);
+    const sowingsNeeded = sowings.length;
     let sowingsScheduled = 0;
-    for (let b = 0; b < sowingsNeeded; b++) {
-      if (input.placeSowing ? input.placeSowing(growPlan, input.productionDate, cap.sowingSize) : true) sowingsScheduled += 1;
+    let produced = 0;
+    for (const trays of sowings) {
+      if (input.placeSowing ? input.placeSowing(growPlan, input.productionDate, trays) : true) {
+        sowingsScheduled += 1;
+        produced += trays;
+      }
     }
-    const produced = sowingsScheduled * cap.sowingSize;
     const c = costPlanPerUnit(growPlan, shrink);
     const lb = (oz: number) => (oz * produced) / OZ_PER_LB;
     const labor = laborForDay(sowingsScheduled, produced, input.growPlanAssumptions?.[growPlan.code] ?? input.assumptions);
@@ -452,7 +458,7 @@ export interface HorizonProductionDay extends DayPlan {
 /** One date of the horizon: what was made, what shipped, what expired and what is left. */
 export interface HorizonDay {
   date: string;
-  /** Whole sowings harvested that day. */
+  /** Sowings harvested that day. */
   sowings: number;
   unitsProduced: number;
   cyclesUsed: number;
@@ -510,8 +516,8 @@ export interface HorizonPlan {
 
 /**
  * Roll the order book through production. Orders on a distribution date are made
- * on the last production weekday before it, netted against what is on hand
- * that morning; whole sowings overshoot into stock, stock expires past hold
+ * on their sow date, netted against what is on hand that morning, as the whole
+ * trays they need; stock expires past shelf
  * life, and a distribution date draws its orders from stock oldest first. Filled
  * units per channel follow the grow plan's filled share equally.
  */
@@ -781,8 +787,9 @@ export function singleGrowPlanRun(input: {
   const cap = deriveCapacity(input.growPlan, input.capacityInputs, 1);
   const baseUnits = input.units * input.unitFactor;
   const net = Math.max(0, baseUnits - input.openingInventory);
-  const sowings = cap.sowingSize > 0 ? Math.max(0, Math.ceil(net / cap.sowingSize - 1e-9)) : 0;
-  const produced = sowings * cap.sowingSize;
+  const chunks = sowingsFor(net, cap.sowingSize);
+  const sowings = chunks.length;
+  const produced = chunks.reduce((t, n) => t + n, 0);
   const c = costPlanPerUnit(input.growPlan, shrink);
   const lb = (oz: number) => (oz * produced) / OZ_PER_LB;
   const labor = laborForDay(sowings, produced, a);

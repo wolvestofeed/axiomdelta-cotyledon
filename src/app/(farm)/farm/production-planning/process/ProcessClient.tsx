@@ -123,7 +123,7 @@ export function ProcessClient({ studies, canEdit: canEditRole }: { studies: Time
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={num(route.steps.length)} label="Steps on the route" sub={`${num(route.steps.filter((s) => s.stream === 'sowing').length)} sowing · ${num(route.steps.filter((s) => s.stream === 'harvest').length)} harvest`} />
         <Kpi value={standard ? TIME_STUDY_BASIS_LABELS[standard.basis] : 'None'} label="Labor standard" sub={standard ? `Timed at a ${num(basis)}-${u.one} sowing` : 'No time study on file for this plan'} />
-        <Kpi value={`${num(derivedSowing)} ${u.many}`} label="Sowing" sub={basis === derivedSowing ? 'What one grow unit takes; the study is on it' : `What one grow unit takes; the study was timed at ${num(basis)}, per-${u.one} figures scale`} />
+        <Kpi value={`${num(derivedSowing)} ${u.many}`} label="Sowing" sub={basis === derivedSowing ? 'The most one grow unit takes; the study is on it' : `The most one grow unit takes; the study was timed at ${num(basis)}, per-${u.one} figures scale`} />
         {stageDays && <Kpi value={`${num(cycle)} days`} label="Cycle on the grow unit" sub={`${num(daysToHarvest(stageDays))} to harvest · ${num(stageDays['harvest-window'])}-day harvest window`} />}
         <Kpi value={num(route.steps.filter((s) => s.edited).length)} label="Steps edited here" sub={route.steps.some((s) => s.edited) ? 'This forecast differs from the derived route' : 'The route is as derived'} />
         <Kpi value={num(route.findings.length)} label="Findings" sub={route.findings.length ? 'Listed below; nothing is repaired' : 'Every step has an order'} />

@@ -3,9 +3,8 @@
  *
  * A grow unit is an equipment row that carries shelves: a rack, a sprouting rack, a jar stand. It
  * takes a number of trays of a format (the format's trays per 48-inch shelf, scaled to the shelf
- * width, times the shelves) and it carries a fixture. A sowing is what ONE grow unit takes of the
- * plan's format: a second unit is a parallel stream the production plan places as its own sowing,
- * never a larger sowing. A tray occupies its unit for the plan's cycle days, so the sustained
+ * width, times the shelves) and it carries its lights. A sowing is the whole trays its orders need,
+ * one flat the least (`sowingsFor`), split across units only past what one unit takes. A tray occupies its unit for the plan's cycle days, so the sustained
  * ceiling is the trays across every unit that can take the plan, over the cycle.
  *
  * A lit unit takes any plan; its lights are set shelf by shelf (`lightsOn`), each shelf a fixture and
@@ -47,6 +46,19 @@ export function growUnitsFrom(lines: readonly EquipmentLine[]): GrowUnit[] {
 /** Trays of a format on one shelf: the format's count per 48 inches, scaled to the shelf, floored. */
 export function traysPerShelf(format: TrayFormatKey, shelfWidthIn: number): number {
   return Math.floor(TRAY_FORMAT_BY_KEY[format].perShelf48in.value * (shelfWidthIn / 48));
+}
+
+/**
+ * The sowings for a need in trays: the whole trays the orders need (a part tray is a whole one, one
+ * flat the least), as one sowing, split only where it is more than one unit takes. Nothing is sown
+ * to fill a unit.
+ */
+export function sowingsFor(traysNeeded: number, perUnit: number): number[] {
+  const trays = Math.ceil(traysNeeded - 1e-9);
+  if (trays <= 0 || perUnit <= 0) return [];
+  const out: number[] = [];
+  for (let left = trays; left > 0; left -= perUnit) out.push(Math.min(left, perUnit));
+  return out;
 }
 
 /** Trays of a format ONE unit takes. */

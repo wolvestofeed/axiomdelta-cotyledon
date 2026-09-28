@@ -13,7 +13,8 @@
 
 import { planStageDays, planStages, type GrowPlanDef } from '@/data/grow-plan';
 import { cycleDays as cycleDaysOf, daysToHarvest as daysToHarvestOf, type StageKey, type WateringMethod } from '@/data/stage-schedule';
-import { darkDaysOf, darkPlacesPerTray, deriveGrowCapacity, traysPerUnit, unitHoldsDarkStages, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
+import { darkDaysOf, darkPlacesPerTray, deriveGrowCapacity, sowingsFor, traysPerUnit, unitHoldsDarkStages, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
+import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
 import { isoAddDays, weekdayOf } from '@/engine/orders';
 import { isClosed, type DateRange } from '@/engine/periods';
 
@@ -60,16 +61,18 @@ export function stageOn(plan: GrowPlanDef, sowDate: string, date: string): Stage
 const isProductionDay = (d: string, weekdays: readonly number[], closures?: readonly DateRange[]) => weekdays.includes(weekdayOf(d)) && !isClosed(d, closures);
 
 /**
- * The sow date that serves a distribution date: the distribution date less the plan's days to
- * harvest, or the latest production day before that inside the harvest window (a live tray waits
- * on the shelf). With no production day inside the window, the latest production day before it.
+ * The sow date that serves a distribution date. A tray is sown on the day its cycle ends on the
+ * distribution date: the distribution date less the plan's days to harvest, any day of the week, or
+ * the day before if the farm is closed. Sprouts in jars are started on a production day: the latest
+ * one on or before that date.
  */
 export function sowDateFor(plan: GrowPlanDef, distributionDate: string, weekdays: readonly number[] = [1, 2, 3, 4, 5], closures?: readonly DateRange[]): string {
   const days = planStageDays(plan);
   const latest = isoAddDays(distributionDate, -daysToHarvestOf(days));
+  const sowOn = TRAY_FORMAT_BY_KEY[plan.format].kind === 'sprout' ? weekdays : [0, 1, 2, 3, 4, 5, 6];
   let d = latest;
   for (let i = 0; i < 366; i += 1) {
-    if (isProductionDay(d, weekdays, closures)) return d;
+    if (isProductionDay(d, sowOn, closures)) return d;
     d = isoAddDays(d, -1);
   }
   return latest;
@@ -325,8 +328,8 @@ export interface CalendarRequirement {
 }
 
 /**
- * Back-plan requirements onto the shelves: each requirement's sowings on its sow date, whole
- * sowings of what one unit takes, placed oldest distribution date first.
+ * Back-plan requirements onto the shelves: each requirement's sowing on its sow date, the whole
+ * trays it needs, split only past what one unit takes, placed oldest distribution date first.
  */
 export function planGrowCalendar(input: { from: string; to: string; requirements: readonly CalendarRequirement[]; growPlans: readonly GrowPlanDef[]; units: readonly GrowUnit[]; weekdays?: readonly number[]; closures?: readonly DateRange[] }): GrowCalendar {
   const ledger = new ShelfLedger(input.units);
@@ -341,15 +344,14 @@ export function planGrowCalendar(input: { from: string; to: string; requirements
     }
     const cap = deriveGrowCapacity(growPlan, input.units);
     if (cap.sowingTrays <= 0) {
-      findings.push({ kind: 'no-unit', growPlanCode: r.growPlanCode, sowDate: null, detail: `${r.growPlanCode}: no grow unit takes this plan (its light line needs a fixture none carries, or no unit has shelves).` });
+      findings.push({ kind: 'no-unit', growPlanCode: r.growPlanCode, sowDate: null, detail: `${r.growPlanCode}: no grow unit takes this plan (no lit unit, or no unit has shelves).` });
       continue;
     }
     const sowDate = sowDateFor(growPlan, r.distributionDate, input.weekdays, input.closures);
     if (sowDate < input.from) findings.push({ kind: 'sow-before-window', growPlanCode: r.growPlanCode, sowDate, detail: `${r.growPlanCode} for ${r.distributionDate} sows on ${sowDate}, before the window starts.` });
-    const n = Math.ceil(r.baseUnits / cap.sowingTrays - 1e-9);
-    for (let i = 0; i < n; i += 1) {
-      const s = ledger.place(growPlan, sowDate, cap.sowingTrays, r.distributionDate);
-      if (!s.placed) findings.push({ kind: 'over-capacity', growPlanCode: r.growPlanCode, sowDate, detail: `${r.growPlanCode}: a sowing of ${cap.sowingTrays} trays on ${sowDate} has no room on any grow unit for its ${cap.cycleDays}-day cycle.` });
+    for (const trays of sowingsFor(r.baseUnits, cap.sowingTrays)) {
+      const s = ledger.place(growPlan, sowDate, trays, r.distributionDate);
+      if (!s.placed) findings.push({ kind: 'over-capacity', growPlanCode: r.growPlanCode, sowDate, detail: `${r.growPlanCode}: a sowing of ${trays} trays on ${sowDate} has no room on any grow unit for its ${cap.cycleDays}-day cycle.` });
     }
   }
   return calendarFromSowings({ from: input.from, to: input.to, sowings: ledger.sowings, growPlans: input.growPlans, units: input.units, findings });

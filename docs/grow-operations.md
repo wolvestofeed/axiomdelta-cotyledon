@@ -92,7 +92,7 @@ Watering is measured in fluid ounces; every other volume (media, nutrient streng
 
 ## 6. Placing a sowing
 
-- A sowing is what one grow unit takes of the plan's format: trays per 48-inch shelf (four 1020 flats, SOURCED) scaled to the shelf width, times the shelves. A plan with a light line goes on any lit unit, its dark days on a dark rack where one has room; a rack's lights are set shelf by shelf, each shelf a fixture and how many of it (two Mars VG80, three Barrina T5).
+- A sowing is the whole trays a plan's orders need, one flat the least, sown on the day its days to harvest end on the distribution day. A grow unit holds trays per 48-inch shelf (four 1020 flats, SOURCED) scaled to the shelf width, times the shelves; a sowing larger than that is split across units. A plan with a light line goes on any lit unit, its dark days on a dark rack where one has room; a rack's lights are set shelf by shelf, each shelf a fixture and how many of it (two Mars VG80, three Barrina T5).
 - The sow date for a distribution date is that date less the plan's days to harvest, moved back to a production day.
 - The grow calendar holds a sowing on its unit for every day of its cycle; a sowing no unit has room for is a shortfall, never squeezed onto a shelf.
 - A sowing's trays are stock from the first day of its harvest window, and shelf life counts from there.

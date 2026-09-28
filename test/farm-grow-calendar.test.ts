@@ -9,7 +9,7 @@ import { VARIETY_BY_KEY } from '@/data/varieties';
 import { cycleDays, daysToHarvest } from '@/data/stage-schedule';
 import { planStageDays } from '@/data/grow-plan';
 import { equipmentSeed } from '@/data/capex';
-import { deriveGrowCapacity, growUnitsFrom } from '@/engine/grow-capacity';
+import { deriveGrowCapacity, growUnitsFrom, sowingsFor } from '@/engine/grow-capacity';
 import { ShelfLedger, calendarFromSowings, daysFrom, leadDaysFor, planGrowCalendar, sowDateFor, stageOn } from '@/engine/grow-calendar';
 import { planHorizon } from '@/engine/production-plan';
 import { resolveScenarioInputs } from '@/engine/scenario';
@@ -267,5 +267,36 @@ describe('dark racks', () => {
       expect(ledger.traysOn(litKey, at(k)), `lit day ${k}`).toBeGreaterThan(0);
       expect(ledger.traysOn(darkKey, at(k)), `dark day ${k}`).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('a sowing is the orders\' trays, sown so its cycle ends on the distribution day', () => {
+  it('sows the whole trays ordered, one flat the least, split only past what one unit takes', () => {
+    expect(sowingsFor(3, 20)).toEqual([3]);
+    expect(sowingsFor(0.2, 20)).toEqual([1]);
+    expect(sowingsFor(45, 20)).toEqual([20, 20, 5]);
+    expect(sowingsFor(0, 20)).toEqual([]);
+  });
+
+  it('a tray is sown on the day its days to harvest end on the Saturday, weekends included; sprouts on a production day', () => {
+    const saturday = '2026-10-17';
+    for (const p of lib.filter((x) => x.format === 'flat-1020')) {
+      expect(daysFrom(sowDateFor(p, saturday), saturday), p.code).toBe(daysToHarvest(planStageDays(p)));
+    }
+    const bor = lib.find((x) => x.code === 'BOR-01')!;
+    expect(new Date(`${sowDateFor(bor, saturday)}T00:00:00Z`).getUTCDay()).toBe(0); // thirteen days before a Saturday is a Sunday
+    const jar = sowDateFor(mung, saturday);
+    expect([1, 2, 3, 4, 5]).toContain(new Date(`${jar}T00:00:00Z`).getUTCDay());
+  });
+
+  it('the Plan\'s nineteen weekly trays each place on the seed racks every week', () => {
+    const R = resolveScenarioInputs();
+    const reqs = Array.from({ length: 6 }, (_, w) => new Date(Date.UTC(2026, 9, 17 + 7 * w)).toISOString().slice(0, 10)).flatMap((date) =>
+      R.subscribers.flatMap((c) => c.subscriptions!.map((s) => ({ distributionDate: date, growPlanCode: s.flatPlan[0]!.lines[0]!.growPlanCode, baseUnits: 1 }))),
+    );
+    const merged = [...reqs.reduce((m, r) => m.set(`${r.distributionDate}|${r.growPlanCode}`, { ...r, baseUnits: (m.get(`${r.distributionDate}|${r.growPlanCode}`)?.baseUnits ?? 0) + 1 }), new Map<string, typeof reqs[number]>()).values()];
+    const cal = planGrowCalendar({ from: '2026-10-01', to: '2026-12-31', requirements: merged, growPlans: R.growPlans, units: growUnitsFrom(equipmentSeed) });
+    expect(cal.findings.filter((f) => f.kind !== 'sow-before-window')).toEqual([]);
+    expect(cal.sowings.reduce((t, s) => t + s.trays, 0)).toBe(19 * 6);
   });
 });
