@@ -4,8 +4,8 @@
  * Everything in this file is fictional. No real supplier, prospect, subscriber, or
  * person appears. Pickup points are named "Test Pickup point n" and are labelled as test data in the UI. Central Texas counties are real geography; the businesses are not.
  *
- * (The Suppliers page no longer uses invented data — it is driven by the real
- * compiled USDA INTEGRITY + TDA dataset in `suppliers-compiled.json`. Pickup points and
+ * (The Suppliers page uses no invented data: its records are the vendors Vallecito
+ * bought from, in `suppliers.ts`. Pickup points and
  * training courses below remain invented placeholders.)
  */
 

@@ -4,8 +4,7 @@
  * The rule in docs/farm/CLAUDE.md §5: a source of data the platform cites publicly is
  * registered in `farm.sources`, through the factor library or the reference register.
  * This test scans every URL in `src/data/*.ts` and `src/engine/*.ts` and fails when one is in
- * neither. Supplier and producer websites in the compiled directory are a directory
- * listing, not a source of data, and live in JSON, which is not scanned.
+ * neither. A supplier's website on its record is a directory listing, not a source of data.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -53,7 +52,7 @@ describe('farm sources — the register', () => {
 
   it('covers the jurisdictions the platform relies on', () => {
     const publishers = REFERENCE_SOURCES.map((s) => s.publisher).join(' | ');
-    for (const p of ['City of Austin', 'Austin Public Health', 'Texas Department of State Health Services', 'Texas Department of Agriculture', 'USDA', 'U.S. Food and Drug Administration', 'Financial Accounting Standards Board']) {
+    for (const p of ['City of Austin', 'Austin Public Health', 'Texas Department of State Health Services', 'U.S. Food and Drug Administration', 'Financial Accounting Standards Board']) {
       expect(publishers).toContain(p);
     }
   });

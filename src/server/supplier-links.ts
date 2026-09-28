@@ -1,42 +1,30 @@
 import 'server-only';
-import { supplierOperations, type SupplierOperation } from '@/data/suppliers';
-import { queryOperations } from '@/engine/suppliers';
+import { suppliers, supplierById, supplierLocation, type Supplier } from '@/data/suppliers';
+import { querySuppliers } from '@/engine/suppliers';
 import type { LeanSupplier } from '@/engine/supplier-links';
 
 /**
- * Server-only lookups over the compiled supplier directory, returning the lean
- * shape the browser may hold. Never hands out the full dataset.
+ * Server-only lookups over the suppliers on record, returning the lean shape the browser holds.
  */
 
-function certScope(o: SupplierOperation): string {
-  const s: string[] = [];
-  if (/^cert/i.test(o.scopes.crops)) s.push('Crops');
-  if (/^cert/i.test(o.scopes.livestock)) s.push('Livestock');
-  if (/^cert/i.test(o.scopes.handling)) s.push('Handling');
-  return s.join(', ');
-}
-
-export function toLean(o: SupplierOperation): LeanSupplier {
+export function toLean(s: Supplier): LeanSupplier {
   return {
-    id: o.id,
-    name: o.name,
-    location: [o.city, o.county ? `${o.county} County` : '', o.state].filter(Boolean).join(', '),
-    certified: o.certified,
-    certScope: certScope(o),
-    prospectReady: o.prospectReady,
-    lat: o.lat ?? null,
-    lng: o.lng ?? null,
-    geoSource: o.geoSource ?? null,
+    id: s.id,
+    name: s.name,
+    location: supplierLocation(s),
+    supplies: s.supplies,
+    brands: s.brands,
+    lat: s.lat,
+    lng: s.lng,
+    geoSource: s.geoSource,
   };
 }
-
-const byId = new Map(supplierOperations.map((o) => [o.id, o]));
 
 export function leanSuppliersById(ids: string[]): Record<string, LeanSupplier> {
   const out: Record<string, LeanSupplier> = {};
   for (const id of ids) {
-    const o = byId.get(id);
-    if (o) out[id] = toLean(o);
+    const s = supplierById(id);
+    if (s) out[id] = toLean(s);
   }
   return out;
 }
@@ -44,13 +32,10 @@ export function leanSuppliersById(ids: string[]): Record<string, LeanSupplier> {
 export function searchLeanSuppliers(q: string, limit = 25): LeanSupplier[] {
   const query = q.trim();
   if (query.length < 2) return [];
-  // Central Texas first, then the rest of the four states.
-  const central = queryOperations(supplierOperations, { region: 'central-tx', q: query });
-  const rest = queryOperations(supplierOperations, { region: 'all', q: query }).filter((o) => o.region !== 'central-tx');
-  return [...central, ...rest].slice(0, limit).map(toLean);
+  return querySuppliers(suppliers, { q: query }).slice(0, limit).map(toLean);
 }
 
-/** The full directory record for one operation — the detail page's source. */
-export function getSupplierOperation(id: string): SupplierOperation | null {
-  return byId.get(id) ?? null;
+/** The full record for one supplier — the detail page's source. */
+export function getSupplierOperation(id: string): Supplier | null {
+  return supplierById(id);
 }

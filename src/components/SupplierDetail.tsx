@@ -1,5 +1,7 @@
 'use client';
 
+import { SUPPLY_KIND_LABEL, type SupplyKind } from '@/data/suppliers';
+
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,32 +28,21 @@ import { PAYMENT_TERMS_LABELS, SUPPLIER_PAYMENT_TERMS, type PaymentTerms } from 
  * terms we agreed, the seasonal catalog we imported from their sheet, the orders
  * we raised, and the lines of our own model that point at them.
  *
- * Everything here except the compiled directory fields is operator data — the
- * page says which is which rather than presenting them as one uniform record.
+ * Everything here except the record's own fields is operator data — the page says which is
+ * which rather than presenting them as one uniform record.
  */
 
 interface SupplierView {
   id: string;
   name: string;
-  source: string;
-  certifier: string;
-  status: string;
-  scopes: { crops: string; livestock: string; wildCrops: string; handling: string };
-  products: { crops: string; livestock: string; handling: string };
-  city: string;
-  county: string;
-  state: string;
-  zip: string;
-  phone: string;
-  email: string;
+  supplies: SupplyKind[];
+  brands: string[];
+  bought: string;
+  carries: string | null;
+  tag: 'DATED' | 'STATED';
+  location: string;
   website: string;
-  acres: string;
-  types: string[];
-  prospectReady: boolean;
-  tdaType: string | null;
-  region: string;
-  dataAsOf: string;
-  geoSource: string | null;
+  geoSource: 'city' | null;
   volumeCapacity: string | null;
   wholesaleReadiness: string | null;
   pricing: string | null;
@@ -158,39 +149,26 @@ function TermsControl({ supplierId, supplierName, paymentTerms, canSetTerms }: {
 }
 
 function OverviewPanel({ supplier: s, paymentTerms, canSetTerms }: { supplier: SupplierView; paymentTerms: PaymentTerms | null; canSetTerms: boolean }) {
-  const tel = s.phone.replace(/[^0-9+]/g, '');
-  const pickupPoint = s.website ? `https://${s.website.replace(/^https?:\/\//, '')}` : '';
+  const site = s.website ? `https://${s.website.replace(/^https?:\/\//, '')}` : '';
 
   return (
     <div className="flex flex-wrap gap-6">
       <div className="flex-[1_1_20rem] min-w-68">
-        <div className="farm-card-title">Contact</div>
+        <div className="farm-card-title">The record</div>
         <Rows
           rows={[
-            ['Operation', s.name],
-            ['Phone', s.phone ? <a className="farm-link" href={`tel:${tel}`}>{s.phone}</a> : null],
-            ['Email', s.email ? <a className="farm-link" href={`mailto:${s.email}`}>{s.email}</a> : null],
-            ['Website', s.website ? <a className="farm-link" href={pickupPoint} target="_blank" rel="noopener noreferrer">{s.website}</a> : null],
-            ['Address', [s.city, s.county ? `${s.county} County` : '', s.state, s.zip].filter(Boolean).join(', ')],
+            ['Supplier', s.name],
+            ['Website', s.website ? <a className="farm-link" href={site} target="_blank" rel="noopener noreferrer">{s.website}</a> : null],
+            ['Location', s.location],
             ['Distance', s.milesFromFarm === null ? null : `${s.milesFromFarm.toFixed(0)} miles, straight line`],
-            ['Placement', s.geoSource === 'zip' ? 'ZIP-code centroid (town level)' : s.geoSource === 'county' ? 'County centroid' : 'No coordinates on file'],
+            ['Placement', s.geoSource === 'city' ? 'City centre, approximate' : 'No place: a marketplace or an online shop'],
+            ['Supplies', s.supplies.map((k) => SUPPLY_KIND_LABEL[k]).join(', ')],
+            ['Brands on record', s.brands.join(', ')],
+            ['What Vallecito bought', s.bought],
+            ['Carries', s.carries],
+            ['The record rests on', s.tag === 'DATED' ? 'A Vallecito purchase with its date (DATED)' : 'What Rob states (STATED)'],
           ]}
-        />
-
-        <div className="farm-card-title mt-[1.2rem]!">Certification — compiled record</div>
-        <Rows
-          rows={[
-            ['Record source', s.source],
-            ['Certifier', s.certifier],
-            ['Status', s.status],
-            ['Crops', s.scopes.crops],
-            ['Livestock', s.scopes.livestock],
-            ['Handling', s.scopes.handling],
-            ['Wild crops', s.scopes.wildCrops],
-            ['Prospect channel', s.prospectReady ? s.tdaType ?? 'TDA Farm Fresh' : null],
-            ['Acres', s.acres],
-            ['Data as of', s.dataAsOf.slice(0, 15)],
-          ]}
+          wrap
         />
       </div>
 
@@ -206,22 +184,8 @@ function OverviewPanel({ supplier: s, paymentTerms, canSetTerms }: { supplier: S
           ]}
         />
         <p className="farm-kpi-sub mt-2">
-          None of these four appear in any public directory. They come from conversations and are
-          entered per supplier once engaged; a dash means the conversation has not happened yet.
-        </p>
-
-        <div className="farm-card-title mt-[1.2rem]!">Products — as the record states them</div>
-        <Rows
-          rows={[
-            ['Crops', s.products.crops],
-            ['Livestock', s.products.livestock],
-            ['Handling', s.products.handling],
-          ]}
-          wrap
-        />
-        <p className="farm-kpi-sub mt-2">
-          This is the certifier&apos;s own product wording, not a price list. What they sell and on what
-          terms is the Catalog tab.
+          These four come from conversations and are entered per supplier once engaged; a dash means the
+          conversation has not happened yet. What the supplier sells and on what terms is the Catalog tab.
         </p>
       </div>
     </div>

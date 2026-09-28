@@ -1,11 +1,11 @@
 /**
  * Cotyledon — input → supplier links (pure).
  *
- * A lean supplier record is what the browser is allowed to hold: enough to
- * name the operation, show its certification, and place it on a
- * map. The full compiled directory stays server-side.
+ * A lean supplier record is what the browser holds: enough to name the supplier, say what it
+ * supplies and place it on a map.
  */
 
+import type { SupplyKind } from '@/data/suppliers';
 import type { LcaOption, LcaBoundary } from '@/data/lca-options';
 import type { FactorProvenance } from '@/data/emission-factors';
 import { haversineMiles } from '@/engine/geo';
@@ -16,12 +16,11 @@ export interface LeanSupplier {
   id: string;
   name: string;
   location: string;
-  certified: boolean;
-  certScope: string;
-  prospectReady: boolean;
+  supplies: SupplyKind[];
+  brands: string[];
   lat: number | null;
   lng: number | null;
-  geoSource: 'zip' | 'county' | null;
+  geoSource: 'city' | null;
 }
 
 // ── Spend coverage on the purchase order ────────────────────────────────────
@@ -29,14 +28,12 @@ export interface LeanSupplier {
 export interface SpendCoverage {
   totalSpend: number;
   linkedSpend: number;
-  certifiedSpend: number;
   linesTotal: number;
   linesLinked: number;
   linkedShare: number;
-  certifiedShare: number;
 }
 
-/** Share of purchase-order spend on lines linked to a supplier, and with a certification on file. */
+/** Share of purchase-order spend on lines linked to a supplier. */
 export function spendCoverage(
   poLines: { name: string; extendedCost: number }[],
   links: Record<string, string>,
@@ -44,7 +41,6 @@ export function spendCoverage(
 ): SpendCoverage {
   let total = 0;
   let linked = 0;
-  let certified = 0;
   let linesLinked = 0;
   for (const l of poLines) {
     total += l.extendedCost;
@@ -53,17 +49,14 @@ export function spendCoverage(
     if (!s) continue;
     linesLinked++;
     linked += l.extendedCost;
-    if (s.certified) certified += l.extendedCost;
   }
   const share = (n: number) => (total > 0 ? n / total : 0);
   return {
     totalSpend: total,
     linkedSpend: linked,
-    certifiedSpend: certified,
     linesTotal: poLines.length,
     linesLinked,
     linkedShare: share(linked),
-    certifiedShare: share(certified),
   };
 }
 

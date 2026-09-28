@@ -25,7 +25,7 @@ import { listLoans, listFixedCostLines, listLeasehold } from '@/server/finance';
 import { billBalances } from '@/engine/working-capital';
 import { CLOCK_STATE_LABELS, clockStateOf, hoursRun, payPeriodFor, type PayCalendar } from '@/engine/payroll';
 import { pipelineStats } from '@/engine/prospects';
-import { supplierDataset } from '@/data/suppliers';
+import { suppliers } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
 import { growPlanFoodFootprint } from '@/engine/carbon';
 import { dashboardToday } from '@/engine/dashboard-today';
@@ -212,7 +212,6 @@ async function AdminDashboard() {
   const onClockNow = activeStaff.filter((s) => clockStateOf(clockPunches.filter((p) => p.staffId === s.id)) !== 'out').length;
 
   // ── Supply / Distribution ───────────────────────────────────────────────
-  const sup = supplierDataset.counts;
   const pipe = pipelineStats(prospectRecords);
 
   const sections: SectionCardProps[] = [
@@ -230,12 +229,11 @@ async function AdminDashboard() {
     {
       section: 'Supply Chain',
       stats: [
-        { label: 'Producers in directory', value: num(sup.total) },
-        { label: 'Certified organic', value: num(sup.certified) },
-        { label: 'Central Texas', value: num(sup.centralTx) },
+        { label: 'Suppliers on record', value: num(suppliers.length) },
+        { label: 'Lines with a supplier', value: num(Object.keys(R.sustainability.inputSupplier ?? {}).length) },
         { label: 'Open purchase orders', value: money(openPoCents / 100, 0) },
       ],
-      note: 'Purchase orders drawn from units produced; suppliers from USDA INTEGRITY + TDA Farm Fresh.',
+      note: 'Purchase orders drawn from the trays sown; the suppliers are the vendors Vallecito bought from.',
     },
     sustainabilityCard(picture),
     {
@@ -374,7 +372,6 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
   const own = staffId ? await ownClock(staffId, picture.R.payCalendar) : null;
   const { pos, plant, day } = picture;
   const avgFood = activeGrowPlanAverages(picture.R.growPlans, picture.R.capacityInputs, picture.R.assumptions, [], picture.R.growPlanAssumptions);
-  const sup = supplierDataset.counts;
   const pipe = pipelineStats(prospectRecords);
 
   const sections: SectionCardProps[] = [
@@ -392,12 +389,11 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
     {
       section: 'Supply Chain',
       stats: [
-        { label: 'Producers in directory', value: num(sup.total) },
-        { label: 'Certified organic', value: num(sup.certified) },
-        { label: 'Central Texas', value: num(sup.centralTx) },
+        { label: 'Suppliers on record', value: num(suppliers.length) },
+        { label: 'Lines with a supplier', value: num(Object.keys(picture.R.sustainability.inputSupplier ?? {}).length) },
         { label: 'Purchase orders on file', value: num(pos.length) },
       ],
-      note: 'Purchase orders drawn from units produced; suppliers from USDA INTEGRITY + TDA Farm Fresh.',
+      note: 'Purchase orders drawn from the trays sown; the suppliers are the vendors Vallecito bought from.',
     },
     sustainabilityCard(picture),
     {

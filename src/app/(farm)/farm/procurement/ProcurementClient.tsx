@@ -150,7 +150,6 @@ export function ProcurementClient({
       </div>
       <div className="grid gap-3 mt-3 farm-autofit-11">
         <Kpi value={`${cover.linesLinked} / ${cover.linesTotal}`} label="Next run lines linked to a supplier" sub={pct(cover.linkedShare, 0) + ' of spend'} />
-        <Kpi value={pct(cover.certifiedShare, 0)} label="Spend with a certification on file" sub="USDA organic, linked lines" />
       </div>
 
       <Card title="Issued purchase orders — receive on the order" className="mt-4">

@@ -1,7 +1,7 @@
 import { formatNameOf } from '@/data/grow-plan';
+import { SUPPLY_KIND_LABEL } from '@/data/suppliers';
 import type { GrowPlanDef } from '@/data/grow-plan';
 import 'server-only';
-import { supplierOperations } from '@/data/suppliers';
 import { prospectRecords } from '@/data/prospects';
 import { listGrowPlans } from '@/server/grow-plans';
 import { listEquipment } from '@/server/equipment';
@@ -44,10 +44,7 @@ export function supplierToEntity(s: LeanSupplier): LeanEntity {
     id: s.id,
     name: s.name,
     subtitle: s.location,
-    pills: [
-      ...(s.certified ? [{ label: s.certScope || 'Certified', tone: 'ok' as const }] : []),
-      ...(s.prospectReady ? [{ label: 'prospect-ready', tone: 'ok' as const }] : []),
-    ],
+    pills: s.supplies.map((k) => ({ label: SUPPLY_KIND_LABEL[k], tone: 'plain' as const })),
     href: `/farm/suppliers/${s.id}`,
     lat: s.lat,
     lng: s.lng,

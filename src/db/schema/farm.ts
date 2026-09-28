@@ -249,7 +249,7 @@ export const farmSupplierLcaOptions = farmSchema.table(
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
-    /** Compiled directory operation id. */
+    /** The supplier's id in `src/data/suppliers.ts`. */
     // @classification: Internal
     supplierId: text('supplier_id').notNull(),
     // @classification: Internal
@@ -356,7 +356,7 @@ export const farmSupplierItems = farmSchema.table(
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
     // @classification: Internal
     id: uuid('id').primaryKey().defaultRandom(),
-    /** Compiled directory operation id. */
+    /** The supplier's id in `src/data/suppliers.ts`. */
     // @classification: Internal
     supplierId: text('supplier_id').notNull(),
     // @classification: Internal
@@ -721,7 +721,7 @@ export type FarmSupplierItemPriceInsert = typeof farmSupplierItemPrices.$inferIn
  * platform's "every dollar is computed" rule (docs/farm/CLAUDE.md §2 rule 4).
  *
  * `supplierName` is denormalised so an issued order still reads correctly if the
- * compiled directory is later refreshed.
+ * supplier record is later changed.
  */
 export const farmPurchaseOrders = farmSchema.table(
   'purchase_orders',
@@ -1379,7 +1379,7 @@ export type FarmOrderInsert = typeof farmOrders.$inferInsert;
 
 // ── Working capital and invoicing (0057, Roadmap Phase K) ───────────────────
 
-/** Payment terms per supplier. Suppliers are a compiled directory, not a table, so terms key on its id. */
+/** Payment terms per supplier. Suppliers are a typed record, not a table, so terms key on its id. */
 export const farmSupplierTerms = farmSchema.table('supplier_terms', {
   workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
   // @classification: Internal

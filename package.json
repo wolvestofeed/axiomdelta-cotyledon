@@ -16,8 +16,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "tsx scripts/migrate.ts",
-    "farm:suppliers": "tsx scripts/generate-farm-suppliers.ts",
-    "farm:supplier-geo": "tsx scripts/enrich-farm-supplier-geo.ts",
     "farm:input-factors": "python3 scripts/generate-farm-input-factors.py",
     "farm:sources": "tsx scripts/seed-farm-sources.ts",
     "farm:reseed": "tsx scripts/reseed-farm-placeholders.ts",

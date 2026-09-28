@@ -10,7 +10,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.
 - The variety records carry PLACEHOLDER harvest weights until closed sowings observe them; if Vallecito harvest weights exist anywhere, they replace the placeholders as DATED.
-- Supplier matching on Suppliers finds certified operations for a plan's lines by keywords, and the keywords on file are Phase 1-era (beef, beans, tortillas); a grow plan's seed, medium, nutrient and light lines have none, so every line matches nothing. Which words a seed or medium line should match on is yours to state.
+- The suppliers on record carry no nutrient supplier (FloraGrow, the kelp) and no seller for the Mother Earth coco bale of January 2024: the two are yours to name when you remember. On The Grow's shop address is not on record either.
 - The Restaurants and Retail and wholesale prices per 1020 flat are a $30 placeholder; Subscriptions is $30, stated.
 - The grow-room temperature and humidity band for the temperature-and-humidity control point: readings are recorded and none is judged until the produce safety plan states the band.
 - The labor rate is the $29.28/h placeholder loaded wage until Staffing's rates arrive; a live 1020 flat carries 21 minutes on the three streams from your 2023 study.
@@ -29,6 +29,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 - The first load of a page after a restart seeds every library on first read against a cold Neon branch and can take 20 to 35 seconds; later loads take a few seconds. Trim by seeding once at workspace creation instead of on each first read.
 - pg warns on every page that `client.query()` is called while a query is executing: the workspace transaction is one client and pages fire their reads in parallel on it. The queries still queue and complete; pg 9 drops the queueing. Serialize reads inside a scope (a promise chain on the scope's handle) before upgrading pg.
+- The dev server's heap grows across page loads until Next restarts it at its memory threshold and, after a run of dashboard loads, node fails at the 4 GB limit; each restart makes the next load a cold one. Profile what a dashboard request retains.
 - The forecast simulation is slower on the grow model: three years of the seed book take about 5.7 s (`simulateForecast`), where the posting takes under 100 ms. The shelf ledger places every sowing day by day across its cycle; the Plan ledger and Calendar pages run a year of it in the browser. Profile `ShelfLedger.place` and `calendarFromSowings` when a page feels slow.
 - Lint: three react-hooks errors carried from the source, `OmniSearch.tsx`, `ProspectsCRM.tsx`, `useLinkedEntities.ts`; fix when those files are touched.
 - Nested async server components rendered as JSX elements lose the workspace scope; only the dashboard does it today, by calling them as functions. Add a structural check if the pattern spreads.

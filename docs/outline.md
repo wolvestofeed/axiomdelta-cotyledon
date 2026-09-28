@@ -153,7 +153,7 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 | Financials (admin) | Unit Economics, P&L, Balance Sheet, Cash Flow, Ledger, Plan v Actual, Actuals, Receivables, Payables, Capital & Financing | port |
 | Inventory & Quality | Inventory (FIFO seed and medium lots, flats by sow date) | port |
 | | Produce Safety | swap (from Food Safety): Produce Safety Rule, sprouts Subpart M, lot traceability |
-| Supply Chain | Procurement, Suppliers | port; seed directory rebuilt for seed and media suppliers |
+| Supply Chain | Procurement, Suppliers | port; the suppliers are the vendors Vallecito bought from, each with what it supplies and the brands on record |
 | Sustainability | Inventory & Audit, Facility, Energy, Refrigerants, Equipment & Rebates, Inputs (Scope 3), Supplier LCA, Logistics, Waste, Water | port; emission factors gain microgreens rows; refrigerants stays for cold storage |
 | People | Staffing | new, replacing HR and the CompTable contract: roster, work roles, wages, punches, schedule, pay periods closed internally as totals by account |
 | | Schedule | port; reads the internal roster |

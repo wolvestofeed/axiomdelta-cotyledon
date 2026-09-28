@@ -1,11 +1,12 @@
 'use client';
 
 import type { LeanSupplier } from '@/engine/supplier-links';
+import { SUPPLY_KIND_LABEL } from '@/data/suppliers';
 import type { LeanEntity } from '@/engine/entity-links';
 import { EntityPicker } from '@/components/EntityPicker';
 
 /**
- * Link a line to a supplier from the compiled directory — the supplier-shaped
+ * Link a line to a supplier on record — the supplier-shaped
  * face of `EntityPicker`. Callers hold `LeanSupplier` (they need its coordinates
  * for the logistics and coverage math); this adapts that record to the
  * lean entity the shared control renders.
@@ -16,12 +17,7 @@ export function leanSupplierAsEntity(s: LeanSupplier): LeanEntity {
     id: s.id,
     name: s.name,
     subtitle: s.location,
-    pills: [
-      ...(s.certified
-        ? [{ label: s.certScope || 'Certified', tone: 'ok' as const }]
-        : [{ label: 'No certification on file', tone: 'plain' as const }]),
-      ...(s.prospectReady ? [{ label: 'prospect-ready', tone: 'ok' as const }] : []),
-    ],
+    pills: s.supplies.map((k) => ({ label: SUPPLY_KIND_LABEL[k], tone: 'plain' as const })),
     href: `/farm/suppliers/${s.id}`,
     lat: s.lat,
     lng: s.lng,

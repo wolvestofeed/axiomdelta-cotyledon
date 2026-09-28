@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader, Card, Kpi, money, num } from '@/components/ui';
 import { SupplierDetail } from '@/components/SupplierDetail';
 import { getSupplierOperation } from '@/server/supplier-links';
+import { SUPPLY_KIND_LABEL, supplierLocation } from '@/data/suppliers';
 import { listCatalog, listPurchaseOrdersForSupplier } from '@/server/supplier-catalog';
 import { listSources } from '@/server/sources';
 import { linksTo } from '@/server/entity-links';
@@ -16,10 +17,9 @@ import { withWorkspace } from '@/server/workspace';
 export const dynamic = 'force-dynamic';
 
 /**
- * One operation, in full. The directory row shows what a public record carries;
- * this page adds what a working relationship carries — the seasonal catalog we
- * import from their price sheet, the orders we have raised against them, and the
- * lines of our own model that point at them.
+ * One supplier, in full: what it supplies and what Vallecito bought, and what a working
+ * relationship carries — the catalog imported from its price sheet, the orders raised against
+ * it, and the lines of our own model that point at it.
  */
 export default async function SupplierDetailPage(props: Parameters<typeof SupplierDetailPageInner>[0]) {
   return withWorkspace(() => SupplierDetailPageInner(props));
@@ -66,19 +66,12 @@ async function SupplierDetailPageInner({
     .filter((o) => o.status !== 'cancelled')
     .reduce((s, o) => s + o.subtotalCents, 0);
 
-  const scopeList = [
-    /^cert/i.test(op.scopes.crops) ? 'Crops' : null,
-    /^cert/i.test(op.scopes.livestock) ? 'Livestock' : null,
-    /^cert/i.test(op.scopes.handling) ? 'Handling' : null,
-    /^cert/i.test(op.scopes.wildCrops) ? 'Wild crops' : null,
-  ].filter(Boolean) as string[];
-
   return (
     <>
       <PageHeader
         title={op.name}
-        purpose="Check this producer’s certification, catalog, prices in force and purchase orders."
-        lede={`${[op.city, op.county ? `${op.county} County` : '', op.state, op.zip].filter(Boolean).join(', ')}${miles !== null ? ` · ${miles < 100 ? miles.toFixed(1) : miles.toFixed(0)} miles from the farm, straight line` : ''}`}
+        purpose="Check what this supplier supplies, its catalog, prices in force and purchase orders."
+        lede={`${supplierLocation(op)}${miles !== null ? ` · ${miles < 100 ? miles.toFixed(1) : miles.toFixed(0)} miles from the farm, straight line` : ''}`}
         connects={[
           { href: '/farm/suppliers', dir: 'from' },
           { href: '/farm/procurement', dir: 'to' },
@@ -87,14 +80,11 @@ async function SupplierDetailPageInner({
       />
 
       <div className="flex gap-[0.4rem] flex-wrap -mt-3! mb-5!">
-        {op.certified ? (
-          <span className="farm-pill ok">{scopeList.length > 0 ? `Certified — ${scopeList.join(', ')}` : 'Certified organic'}</span>
-        ) : (
-          <span className="farm-pill">No certification on file</span>
-        )}
-        {op.prospectReady ? <span className="farm-pill ok">{op.tdaType ?? 'prospect-ready'}</span> : null}
-        {op.types.map((t) => (
-          <span key={t} className="farm-pill">{t}</span>
+        {op.supplies.map((k) => (
+          <span key={k} className="farm-pill ok">{SUPPLY_KIND_LABEL[k]}</span>
+        ))}
+        {op.brands.map((b) => (
+          <span key={b} className="farm-pill">{b}</span>
         ))}
         {sourcedLines.length > 0 ? (
           <span className="farm-pill ok">{sourcedLines.length} model line{sourcedLines.length === 1 ? '' : 's'} sourced here</span>
@@ -114,25 +104,14 @@ async function SupplierDetailPageInner({
         supplier={{
           id: op.id,
           name: op.name,
-          source: op.source,
-          certifier: op.certifier,
-          status: op.status,
-          scopes: op.scopes,
-          products: op.products,
-          city: op.city,
-          county: op.county,
-          state: op.state,
-          zip: op.zip,
-          phone: op.phone,
-          email: op.email,
+          supplies: op.supplies,
+          brands: op.brands,
+          bought: op.bought,
+          carries: op.carries ?? null,
+          tag: op.tag,
+          location: supplierLocation(op),
           website: op.website,
-          acres: op.acres,
-          types: op.types,
-          prospectReady: op.prospectReady,
-          tdaType: op.tdaType,
-          region: op.region,
-          dataAsOf: op.dataAsOf,
-          geoSource: op.geoSource ?? null,
+          geoSource: op.geoSource,
           volumeCapacity: op.volumeCapacity ?? null,
           wholesaleReadiness: op.wholesaleReadiness ?? null,
           pricing: op.pricing ?? null,
@@ -148,9 +127,8 @@ async function SupplierDetailPageInner({
       />
 
       <p className="farm-kpi-sub mt-2">
-        Certification and prospect-readiness come from the compiled public records (
-        {op.source}, as of {op.dataAsOf.slice(0, 15)}); everything under Catalog, Terms and Purchase
-        orders is operator data, entered or imported from what this operation sends us. Back to{' '}
+        What this supplier supplies and what was bought are the record; everything under Catalog, Terms and
+        Purchase orders is operator data, entered or imported from what the supplier sends. Back to{' '}
         <Link className="farm-link" href="/farm/suppliers">Suppliers</Link>.
       </p>
     </>

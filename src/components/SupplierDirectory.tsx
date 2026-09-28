@@ -2,23 +2,20 @@
 
 /**
  * Suppliers → directory section as a four-tab panel:
- *   • Directory — the table, with each operation's linked lines and a control to
+*   • Directory — the table, with each supplier's linked lines and a control to
  *     link one of the grow plan's lines to it.
- *   • Map — producer pins on an OpenStreetMap map, a home-address sidebar, and
- *     the straight-line distance to whichever producer is selected.
- *   • Match to grow plan — grow plan lines against certified-producer products.
- *   • Linked lines — the reverse view: every operation the model points at, the
- *     lines that name it, and what today's purchase order buys from it. Includes
- *     linked operations outside the current filter, hydrated by id.
- *
- * Receives only the already-filtered, capped `producers` set as props (never
- * the full compiled dataset), consistent with the page's server-side filtering.
+ *   • Map — supplier pins on an OpenStreetMap map, a home-address sidebar, and
+ *     the straight-line distance to whichever supplier is selected.
+ *   • Match to grow plan — grow plan lines against what each supplier supplies.
+ *   • Linked lines — the reverse view: every supplier the model points at, the
+ *     lines that name it, and what the next run buys from it.
  */
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import PinMap from '@/components/PinMap';
 import { haversineMiles, type ClientSupplier, type GrowPlanMatchView } from '@/engine/geo';
+import { SUPPLY_KIND_LABEL } from '@/data/suppliers';
 import { money, num } from '@/components/ui';
 import { useScenario } from '@/state/scenario-store';
 import { useLinkedSuppliers } from '@/components/useLinkedSuppliers';
@@ -34,13 +31,9 @@ interface Home {
 }
 
 interface Props {
-  producers: ClientSupplier[];
+  suppliers: ClientSupplier[];
   home: Home;
-  totalInView: number;
-  displayCap: number;
-  capped: boolean;
   growPlanMatches: GrowPlanMatchView[];
-  regionLabel: string;
   /** The next production run's net requirement on the selected world, and every active grow plan's inputs (Roadmap N9). */
   nextRun: { kind: 'plan' | 'actual'; distributionDate: string; productionDate: string; lines: { input: string; extendedCost: number; casesToOrder: number }[]; inputs: string[] };
 }
@@ -50,13 +43,9 @@ function fmtMiles(mi: number): string {
 }
 
 export default function SupplierDirectory({
-  producers,
+  suppliers: producers,
   home,
-  totalInView,
-  displayCap,
-  capped,
   growPlanMatches,
-  regionLabel,
   nextRun,
 }: Props) {
   const [tab, setTab] = useState<'directory' | 'map' | 'growPlan' | 'linked'>('directory');
@@ -118,7 +107,7 @@ export default function SupplierDirectory({
         </TabButton>
         {tab !== 'growPlan' && tab !== 'linked' && (
           <div className="ml-auto! farm-fs-xs font-medium text-[rgba(255,255,255,0.8)]">
-            Showing {num(producers.length)} of {num(totalInView)}
+            {num(producers.length)} supplier{producers.length === 1 ? '' : 's'}
           </div>
         )}
       </div>
@@ -133,7 +122,7 @@ export default function SupplierDirectory({
             <table className="farm-table">
               <thead>
                 <tr>
-                  <th>Operation</th><th>Location</th><th>Certification</th><th>Prospect</th><th>Products</th>
+                  <th>Supplier</th><th>Location</th><th>Supplies</th><th>Brands on record</th><th>What Vallecito bought</th><th>Carries</th>
                   <th className="num">Volume capacity</th><th>Wholesale readiness</th><th className="num">Pricing</th><th className="num">Lead time</th>
                   <th>Linked lines</th>
                 </tr>
@@ -146,23 +135,22 @@ export default function SupplierDirectory({
                         <Link className="farm-link" href={`/farm/suppliers/${o.id}`}>{o.name}</Link>
                       </div>
                       <div className="farm-c-faint farm-fs-xs">
-                        {o.meta}
+                        {o.tag}
                         {o.website ? (
                           <>
                             {' · '}
                             <a href={`https://${o.website.replace(/^https?:\/\//, '')}`} target="_blank" rel="noopener noreferrer" className="farm-c-faint underline!">
-                              their pickupPoint
+                              {o.website}
                             </a>
                           </>
                         ) : null}
                       </div>
                     </td>
                     <td className="farm-c-soft">{o.location}</td>
-                    <td>{o.certified ? <span className="farm-pill ok">{o.certScope || 'Certified'}</span> : <span className="farm-c-faint farm-fs-xs">—</span>}</td>
-                    <td>{o.prospectReady ? <span className="farm-pill ok">{o.tdaType ?? 'prospect-ready'}</span> : <span className="farm-c-faint farm-fs-xs">—</span>}</td>
-                    <td className="farm-c-soft max-w-80! farm-fs-xs">
-                      {o.products || (o.tdaType ? 'Product detail from TDA pull (follow-up)' : '')}
-                    </td>
+                    <td>{o.supplies.map((k) => <span key={k} className="farm-pill ok mr-[0.3rem]">{SUPPLY_KIND_LABEL[k]}</span>)}</td>
+                    <td className="farm-c-soft farm-fs-xs">{o.brands.join(', ')}</td>
+                    <td className="farm-c-soft max-w-80! farm-fs-xs">{o.bought}</td>
+                    <td className="farm-c-soft max-w-80! farm-fs-xs">{o.carries ?? '—'}</td>
                     <td className="num farm-c-faint farm-fs-xs">{o.volumeCapacity ?? '—'}</td>
                     <td className="farm-c-faint farm-fs-xs">{o.wholesaleReadiness ?? '—'}</td>
                     <td className="num farm-c-faint farm-fs-xs">{o.pricing ?? '—'}</td>
@@ -182,16 +170,12 @@ export default function SupplierDirectory({
               </tbody>
             </table>
           </div>
-          {capped && (
-            <p className="farm-kpi-sub mt-2">Showing the first {num(displayCap)}. Narrow with region, scope, or product search above.</p>
-          )}
           <p className="farm-kpi-sub mt-2">
-            An operation&apos;s name opens its record — contact, terms, the seasonal catalog imported from
-            their price sheet, and the purchase orders raised against them. Volume capacity, wholesale
-            readiness, pricing, and lead time are not in any public directory; they come from
-            conversations and are entered per supplier once engaged. Linking a line to an operation here
-            writes the same forecast link the GrowPlans, Procurement, and Inputs pages write; the
-            Linked lines tab is the same set read from the operation&apos;s side.
+            A supplier&apos;s name opens its record — terms, the catalog imported from its price sheet, and the
+            purchase orders raised against it. Volume capacity, wholesale readiness, pricing and lead time come
+            from conversations and are entered per supplier once engaged. Linking a line to a supplier here
+            writes the same forecast link the Grow plans, Procurement and Inputs pages write; the Linked lines
+            tab is the same set read from the supplier&apos;s side.
           </p>
         </>
       ) : tab === 'map' ? (
@@ -199,9 +183,9 @@ export default function SupplierDirectory({
           <div className="flex-[1_1_22rem] min-w-72">
             <PinMap pins={mappable} home={home} selectedId={selectedId} onSelect={setSelectedId} />
             <p className="farm-kpi-sub mt-2">
-              Pins are ZIP-code or county centroids (town level), not exact farm coordinates. Distance is
-              straight-line from the farm. Map data © OpenStreetMap contributors.
-              {unmappable > 0 ? ` ${num(unmappable)} producer${unmappable === 1 ? '' : 's'} in this view had no mappable location and ${unmappable === 1 ? 'is' : 'are'} not shown on the map.` : ''}
+              Pins are city centres, not exact addresses. Distance is straight-line from the farm. Map data ©
+              OpenStreetMap contributors.
+              {unmappable > 0 ? ` ${num(unmappable)} supplier${unmappable === 1 ? '' : 's'} in this view ${unmappable === 1 ? 'has' : 'have'} no place, a marketplace or an online shop, and ${unmappable === 1 ? 'is' : 'are'} not on the map.` : ''}
             </p>
           </div>
 
@@ -222,7 +206,7 @@ export default function SupplierDirectory({
             </div>
 
             <div className="border border-[color:var(--farm-line)] rounded-[0.5rem] py-[0.8rem] px-[0.9rem] bg-[color:var(--farm-surface-2)]">
-              <div className="farm-card-title mb-[0.4rem]!">Selected producer</div>
+              <div className="farm-card-title mb-[0.4rem]!">Selected supplier</div>
               {selected ? (
                 <>
                   <div className="flex items-center gap-2">
@@ -237,7 +221,7 @@ export default function SupplierDirectory({
                     </div>
                   )}
                   <div className="farm-c-faint farm-fs-xs mt-2!">
-                    Pin is a {selected.geoSource === 'zip' ? 'ZIP-code' : 'county'} centroid — distance is approximate.
+                    Pin is the city centre — distance is approximate.
                   </div>
                   <div className="mt-[0.7rem]!">
                     <Link className="farm-link font-semibold!" href={`/farm/suppliers/${selected.id}`}>
@@ -248,7 +232,7 @@ export default function SupplierDirectory({
                 </>
               ) : (
                 <div className="farm-c-faint farm-fs-sm">
-                  Select a producer pin on the map to see its straight-line distance from {home.name}.
+                  Select a supplier pin on the map to see its straight-line distance from {home.name}.
                 </div>
               )}
             </div>
@@ -282,21 +266,22 @@ export default function SupplierDirectory({
           {selectedGrowPlan ? (
             <>
               <p className="farm-kpi-sub mt-0! mb-[0.6rem]!">
-                {selectedGrowPlan.category} · GrowPlan {selectedGrowPlan.code} lines matched against
-                certified-producer products in {regionLabel}.
+                {selectedGrowPlan.category} · grow plan {selectedGrowPlan.code}: each line against the suppliers
+                that supply its kind.
               </p>
               <div className="farm-scroll-x">
                 <table className="farm-table">
                   <thead>
-                    <tr><th>Input line</th><th className="num">Matches</th><th>Example producers</th></tr>
+                    <tr><th>Line</th><th>Supplies</th><th className="num">Suppliers</th><th>On record</th></tr>
                   </thead>
                   <tbody>
                     {selectedGrowPlan.lines.map((m) => (
                       <tr key={m.input}>
                         <td className="font-medium!">{m.input}</td>
+                        <td className="farm-c-soft">{SUPPLY_KIND_LABEL[m.kind]}</td>
                         <td className={`num ${(m.count ? 'farm-c-ink' : 'farm-c-accent')}`}>{m.count}</td>
                         <td className="farm-c-soft">
-                          {m.examples.join(' · ') || 'No certified producer matched in this region'}
+                          {m.examples.join(' · ') || 'No supplier on record supplies this'}
                         </td>
                       </tr>
                     ))}
@@ -313,7 +298,7 @@ export default function SupplierDirectory({
           <div className="grid gap-3 farm-autofit-11">
             <div className="farm-card farm-lift">
               <div className="farm-kpi-value">{num(reverse.length)}</div>
-              <div className="farm-kpi-label">Operations the model points at</div>
+              <div className="farm-kpi-label">Suppliers the model points at</div>
               <div className="farm-kpi-sub">Across every grow plan line</div>
             </div>
             <div className="farm-card farm-lift">
@@ -330,15 +315,15 @@ export default function SupplierDirectory({
 
           {reverse.length === 0 ? (
             <p className="farm-kpi-sub mt-3">
-              No line is linked to an operation yet. Link one from the Directory tab, or from a line on
-              GrowPlans, Procurement, or Inputs.
+              No line is linked to a supplier yet. Link one from the Directory tab, or from a line on
+              Grow plans, Procurement, or Inputs.
             </p>
           ) : (
             <div className="farm-scroll-x mt-3">
               <table className="farm-table">
                 <thead>
                   <tr>
-                    <th>Operation</th><th>Location</th><th>Certification</th>
+                    <th>Supplier</th><th>Location</th><th>Supplies</th>
                     <th>Lines</th><th className="num">PO lines</th><th className="num">Cases</th><th className="num">Ordered spend</th>
                   </tr>
                 </thead>
@@ -355,13 +340,7 @@ export default function SupplierDirectory({
                           )}
                         </td>
                         <td className="farm-c-soft">{lean?.location ?? '—'}</td>
-                        <td>
-                          {lean?.certified ? (
-                            <span className="farm-pill ok">{lean.certScope || 'Certified'}</span>
-                          ) : (
-                            <span className="farm-c-faint farm-fs-xs">—</span>
-                          )}
-                        </td>
+                        <td>{lean ? lean.supplies.map((k) => <span key={k} className="farm-pill ok mr-[0.3rem]">{SUPPLY_KIND_LABEL[k]}</span>) : <span className="farm-c-faint farm-fs-xs">—</span>}</td>
                         <td className="farm-fs-xs">
                           {r.inputs.map((i) => (
                             <div key={i} className="flex items-center gap-[0.4rem]">
@@ -381,7 +360,7 @@ export default function SupplierDirectory({
                     );
                   })}
                   <tr className="total">
-                    <td colSpan={5}>Total across linked operations</td>
+                    <td colSpan={5}>Total across linked suppliers</td>
                     <td className="num">{reverse.reduce((t, r) => t + r.orderedLines, 0)}</td>
                     <td className="num">{reverse.reduce((t, r) => t + r.orderedCases, 0)}</td>
                     <td className="num">{money(reverse.reduce((t, r) => t + r.orderedSpend, 0))}</td>
@@ -392,7 +371,7 @@ export default function SupplierDirectory({
           )}
           <p className="farm-kpi-sub mt-2">
             Cases and spend are the net requirement of the next production run ({nextRun.productionDate}, for distribution {nextRun.distributionDate}) from the order book on {nextRun.kind === 'plan' ? 'Plan, the saved open forecast' : 'Actual, netted against raw stock and open purchase orders'}. An
-            operation linked to a line that run does not buy shows the link with no spend.
+            supplier linked to a line that run does not buy shows the link with no spend.
             Links are part of the forecast and are saved with it.
           </p>
         </>
@@ -402,9 +381,9 @@ export default function SupplierDirectory({
 }
 
 /**
- * An operation's linked grow plan lines, with the control to link another. The
+ * A supplier's linked grow plan lines, with the control to link another. The
  * select lists every line in the grow plan; choosing one points that line at this
- * operation, replacing whatever it pointed at before.
+ * supplier, replacing whatever it pointed at before.
  */
 function LinkedLinesCell({
   lines,
