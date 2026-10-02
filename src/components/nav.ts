@@ -74,7 +74,7 @@ export const MODULES: NavItem[] = [
   { label: 'Supplier LCA Data', href: '/farm/sustainability/supplier-lca', section: 'Sustainability', status: 'partial' },
   { label: 'Logistics', href: '/farm/sustainability/logistics', section: 'Sustainability', status: 'partial' },
   { label: 'Waste & End-of-Life', href: '/farm/sustainability/waste', section: 'Sustainability', status: 'live' },
-  { label: 'Water & Effluent', href: '/farm/sustainability/water', section: 'Sustainability', status: 'partial' },
+  { label: 'Water', href: '/farm/sustainability/water', section: 'Sustainability', status: 'partial' },
 
   { label: 'Staffing', href: '/farm/staffing', section: 'People', status: 'partial' },
   { label: 'Schedule', href: '/farm/schedule', section: 'People', status: 'live' },

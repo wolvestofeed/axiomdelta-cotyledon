@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, pct } from '@/components/ui';
 import { Cite } from '@/components/Cite';
-import { aimActRules, greenBlackoutCriteria, refrigerantGwpAR4 } from '@/data/emission-factors';
+import { aimActRules, refrigerantGwpAR4 } from '@/data/emission-factors';
 import { countsTowardCapital } from '@/engine/equipment';
 import { refrigerantInventory } from '@/engine/carbon';
 import { useScenario } from '@/state/scenario-store';
@@ -71,7 +71,7 @@ export default function RefrigerantsPage() {
       <PageHeader
         title="Refrigerants"
         purpose="Track each circuit's annual leak rate against the rule thresholds."
-        functions={['Circuit register', 'Service additions', 'Aggregate leak rate', 'Rule thresholds']}
+        functions={['Circuit register', 'Service additions', 'Rule thresholds']}
         connects={[
           { href: '/farm/sustainability/equipment', dir: 'from' },
           { href: '/farm/sustainability/inventory', dir: 'to' },
@@ -93,7 +93,6 @@ export default function RefrigerantsPage() {
       <div className="grid gap-3 farm-autofit-11">
         <Kpi value={inv.circuitsOnFile} label="Circuits on file" sub={`${unregistered.length} cold-chain line${unregistered.length === 1 ? '' : 's'} without refrigerant or charge`} />
         <Kpi value={`${(inv.totalCo2eKgInYear / 1000).toFixed(2)} t`} label={`Fugitive CO2e, ${asOf.slice(0, 4)}`} sub={world.isPlan ? 'A forecast carries no leaks' : 'AR4 basis, as the rule uses'} />
-        <Kpi value={inv.circuitsOnFile ? pct(inv.greenBlackout.aggregateLeakRate, 1) : '—'} label="Aggregate leak rate" sub={`GreenBlackout limit ${pct(greenBlackoutCriteria.maxAggregateLeakRate, 0)}`} />
         <Kpi value={inv.rows.filter((r) => r.findings.some((f) => f.status === 'triggered' && f.id !== 'aim-applicability')).length} label="Circuits with a triggered finding" />
         <Kpi value={inYear.length === 0 ? '—' : `${inYear.filter((r) => r.sourceId).length} / ${inYear.length}`} label="Service additions with a ticket linked" sub={world.isPlan ? 'Entered on Actual' : `The technician's document, ${year}`} />
       </div>
@@ -176,13 +175,11 @@ export default function RefrigerantsPage() {
               <tr><td className="font-medium!">Applicability</td><td className="num">≥ {aimActRules.applicabilityMinChargeLb} lb charge and GWP &gt; {aimActRules.applicabilityMinGwp}</td><td className="farm-c-soft">Per circuit</td></tr>
               <tr><td className="font-medium!">Commercial refrigeration trigger</td><td className="num">{pct(aimActRules.commercialRefrigerationTriggerRate, 0)} annualized</td><td className="farm-c-soft">Latest addition; {aimActRules.repairWindowDays}-day repair window</td></tr>
               <tr><td className="font-medium!">Chronic leak</td><td className="num">≥ {pct(aimActRules.chronicLeakShareOfCharge, 0)} of charge in a calendar year</td><td className="farm-c-soft">Report due 1 March following</td></tr>
-              <tr><td className="font-medium!">GreenBlackout aggregate</td><td className="num">≤ {pct(greenBlackoutCriteria.maxAggregateLeakRate, 0)}</td><td className="farm-c-soft">{inv.circuitsOnFile ? `${pct(inv.greenBlackout.aggregateLeakRate, 1)} across ${inv.circuitsOnFile} circuit(s)` : '—'}</td></tr>
-              <tr><td className="font-medium!">GreenBlackout new equipment</td><td className="num">GWP ≤ {greenBlackoutCriteria.maxGwpNewEquipment}</td><td className="farm-c-soft">{inv.greenBlackout.newEquipmentAboveGwp.length ? inv.greenBlackout.newEquipmentAboveGwp.map((x) => `${x.circuitId} (${x.refrigerant}, ${x.gwp})`).join('; ') : 'none installed this year above the limit'}</td></tr>
             </tbody>
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Leak-repair provisions: <Cite p={aimActRules.provenance} /> <StatusBadge status={aimActRules.provenance.status} title={aimActRules.provenance.note} />. GreenBlackout: <Cite p={greenBlackoutCriteria.provenance} /> <StatusBadge status={greenBlackoutCriteria.provenance.status} title={greenBlackoutCriteria.provenance.note} />. Refrigerants with a GWP on file: {Object.keys(refrigerantGwpAR4).join(', ')}.
+          Leak-repair provisions: <Cite p={aimActRules.provenance} /> <StatusBadge status={aimActRules.provenance.status} title={aimActRules.provenance.note} />. Refrigerants with a GWP on file: {Object.keys(refrigerantGwpAR4).join(', ')}.
         </p>
       </Card>
     </>

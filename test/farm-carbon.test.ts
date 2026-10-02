@@ -13,9 +13,6 @@ import {
   normalize,
   annualizedLeakRate,
   aimActFindings,
-  greenBlackoutCheck,
-  effluentSurcharge,
-  greaseTrapStatus,
   tonMiles,
   growPlanFoodFootprint,
   KG_PER_LB,
@@ -288,50 +285,6 @@ describe('farm carbon — AIM Act findings', () => {
     expect(chronic.computed.shareOfCharge).toBeCloseTo(80 / 60, 9);
     expect(chronic.computed.reportDue).toBe('2027-03-01');
   });
-  it('GreenBlackout: aggregate rate across circuits and new equipment above GWP 150', () => {
-    const g = greenBlackoutCheck(
-      [walkIn, { ...walkIn, id: 'wic-2', fullChargeLb: 40, serviceAdds: [] }],
-      '2026',
-    );
-    expect(g.aggregateLeakRate).toBeCloseTo(4 / 100, 9);
-    expect(g.aggregateStatus).toBe('within-limit');
-    expect(g.newEquipmentAboveGwp.map((x) => x.circuitId)).toEqual(['wic-1', 'wic-2']);
-  });
-});
-
-describe('farm carbon — Austin Water effluent surcharge', () => {
-  it('BOD branch: COD/BOD = 2 ≤ 2.25 → $1,005.89 on 0.5 MG', () => {
-    const s = effluentSurcharge({ volumeMillionGal: 0.5, bodMgL: 400, tssMgL: 300, codMgL: 800 });
-    expect(s.branch).toBe('BOD');
-    expect(s.chargeBod).toBeCloseTo(0.5 * 8.34 * 0.8211 * 200, 6);
-    expect(s.chargeTss).toBeCloseTo(0.5 * 8.34 * 0.77 * 100, 6);
-    expect(s.chargeCod).toBe(0);
-    expect(s.surcharge).toBeCloseTo(1005.8874, 3);
-    expect(s.citation.status).toBe('DATED');
-  });
-  it('COD branch: COD/BOD = 3 > 2.25 → $1,004.89 on 0.5 MG', () => {
-    const s = effluentSurcharge({ volumeMillionGal: 0.5, bodMgL: 300, tssMgL: 300, codMgL: 900 });
-    expect(s.branch).toBe('COD');
-    expect(s.chargeBod).toBe(0);
-    expect(s.chargeCod).toBeCloseTo(0.5 * 8.34 * 0.3644 * 450, 6);
-    expect(s.surcharge).toBeCloseTo(1004.8866, 3);
-  });
-  it('parameters under their limits are not charged; FOG is flagged separately', () => {
-    const s = effluentSurcharge({ volumeMillionGal: 1, bodMgL: 150, tssMgL: 150, codMgL: 300, fogMgL: 250 });
-    expect(s.surcharge).toBe(0);
-    expect(s.fogExceeded).toBe(true);
-    expect(effluentSurcharge({ volumeMillionGal: 1, bodMgL: 150, tssMgL: 150, codMgL: 300 }).fogExceeded).toBeNull();
-  });
-  it('grease trap: 90-day interval and 50% fill rule', () => {
-    const ok = greaseTrapStatus('2026-06-01', '2026-08-01', 0.3);
-    expect(ok.nextDueBy).toBe('2026-08-30');
-    expect(ok.daysUntilDue).toBe(29);
-    expect(ok.intervalExceeded).toBe(false);
-    expect(ok.fillTriggered).toBe(false);
-    const late = greaseTrapStatus('2026-06-01', '2026-09-15', 0.55);
-    expect(late.intervalExceeded).toBe(true);
-    expect(late.fillTriggered).toBe(true);
-  });
 });
 
 // ── S2: annual footprint, mass, waste, logistics ────────────────────────────
@@ -507,23 +460,15 @@ describe('farm carbon — refrigerant inventory from equipment attributes', () =
     expect(wi.co2eKgInYear).toBeCloseTo(4 * KG_PER_LB * 3922, 3);
     expect(bc.lbAddedInYear).toBe(0);
     expect(inv.totalCo2eKgInYear).toBeCloseTo(wi.co2eKgInYear, 9);
-    expect(inv.greenBlackout.aggregateLeakRate).toBeCloseTo(4 / 84, 9);
   });
 });
 
 describe('farm carbon — water projection', () => {
   it('needs both a sample and a billed volume, then annualizes ×12', () => {
-    expect(waterProjection(WATER_DEFAULTS, 367604, '2026-09-12').surchargeMonthly).toBeNull();
-    const p = waterProjection(
-      { ...WATER_DEFAULTS, meteredGalPerMonth: 60000, billedWastewaterMGalPerMonth: 0.5, bodMgL: 400, tssMgL: 300, codMgL: 800, greaseTrapLastPumpOut: '2026-08-01', greaseTrapFill: 0.3 },
-      367604,
-      '2026-09-12',
-    );
-    expect(p.surchargeMonthly!.surcharge).toBeCloseTo(1005.8874, 3);
-    expect(p.surchargeAnnual).toBeCloseTo(12070.649, 2);
+    expect(waterProjection(WATER_DEFAULTS, 367604).galPerUnit).toBeNull();
+    const p = waterProjection({ ...WATER_DEFAULTS, meteredGalPerMonth: 60000, billedWastewaterMGalPerMonth: 0.5 }, 367604);
     expect(p.annualMeteredGal).toBe(720000);
-    expect(p.galPerUnit).toBeCloseTo(720000 / 367604, 6);
-    expect(p.greaseTrap!.nextDueBy).toBe('2026-10-30');
-    expect(p.greaseTrap!.intervalExceeded).toBe(false);
+    expect(p.annualWastewaterMGal).toBeCloseTo(6, 9);
+    expect(p.galPerUnit).toBeCloseTo(720000 / 367604, 9);
   });
 });

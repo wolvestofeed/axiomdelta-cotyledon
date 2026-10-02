@@ -152,18 +152,10 @@ export interface EnergyActivity {
   renewableShare: number;
 }
 
-/** Monthly water and wastewater activity plus the latest sample. Zero until entered. */
+/** Monthly water and wastewater volumes. Zero until entered. */
 export interface WaterActivity {
   meteredGalPerMonth: number;
   billedWastewaterMGalPerMonth: number;
-  bodMgL: number;
-  tssMgL: number;
-  codMgL: number;
-  fogMgL: number;
-  /** ISO date of the last grease-trap pump-out; empty until entered. */
-  greaseTrapLastPumpOut: string;
-  /** Grease and solids as a fraction of the trap's wetted height, 0–1. */
-  greaseTrapFill: number;
 }
 
 export type EquipmentFuel = 'electric' | 'natural_gas' | 'propane' | 'none';
@@ -248,12 +240,6 @@ export const WASTE_DEFAULTS: WasteSettings = { compostShare: 0 };
 export const WATER_DEFAULTS: WaterActivity = {
   meteredGalPerMonth: 0,
   billedWastewaterMGalPerMonth: 0,
-  bodMgL: 0,
-  tssMgL: 0,
-  codMgL: 0,
-  fogMgL: 0,
-  greaseTrapLastPumpOut: '',
-  greaseTrapFill: 0,
 };
 
 /**

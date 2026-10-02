@@ -69,10 +69,6 @@ describe('farm sustainability records fold over the calendar year', () => {
     r('natural_gas_therms', '2026-02-28', 40),
     r('water_metered_gal', '2026-01-31', 10_000),
     r('water_metered_gal', '2026-02-28', 20_000),
-    r('bod_mg_l', '2026-01-15', 300),
-    r('bod_mg_l', '2026-06-15', 250),
-    r('bod_mg_l', '2027-01-15', 900),
-    r('grease_trap_pump_out', '2026-05-01', null),
   ];
 
   it('energy sums the year’s bills; renewable share is renewable kWh over kWh', () => {
@@ -86,9 +82,6 @@ describe('farm sustainability records fold over the calendar year', () => {
   it('water volumes are a month of the year’s bills; results read the latest by year end', () => {
     const w = waterFromReadings(readings, 2026);
     expect(w.meteredGalPerMonth).toBe(15_000);
-    expect(w.bodMgL).toBe(250);
-    expect(w.greaseTrapLastPumpOut).toBe('2026-05-01');
-    expect(w.codMgL).toBe(0);
   });
 
   it('service records become per-circuit additions in date order', () => {

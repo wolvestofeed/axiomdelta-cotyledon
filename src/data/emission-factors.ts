@@ -619,71 +619,6 @@ export const aimActRules = {
   } satisfies FactorProvenance,
 } as const;
 
-export const greenBlackoutCriteria = {
-  maxAggregateLeakRate: 0.15,
-  maxGwpNewEquipment: 150,
-  provenance: {
-    id: 'epa-greenchill:certification',
-    source: 'EPA GreenBlackout store certification criteria',
-    sourceUrl: 'https://www.epa.gov/greenchill',
-    version: 'as reported 2025',
-    effectiveFrom: '2025-01-01',
-    status: 'UNCONFIRMED',
-    note: 'Criteria cited through an industry report; verify on epa.gov/greenchill.',
-  } satisfies FactorProvenance,
-} as const;
-
-// ── Water and effluent (City of Austin pretreatment surcharge) ─────────────
-
-export const austinWaterEffluent = {
-  limits: {
-    bodMgL: 200,
-    tssMgL: 200,
-    codMgL: 450,
-    fogMgL: 200,
-  },
-  /** Branch selector: COD ≤ ratio × BOD uses the BOD formula, else the COD formula. */
-  codToBodRatioThreshold: 2.25,
-  /** lb per gallon of water. */
-  lbPerGallon: 8.34,
-  unitCharges: {
-    bodPerLb: 0.8211,
-    tssPerLb: 0.77,
-    codPerLb: 0.3644,
-  },
-  greaseTrap: {
-    maxIntervalDays: 90,
-    pumpOutFillFraction: 0.5,
-  },
-  provenance: {
-    limits: {
-      id: 'austin-water:pretreatment-limits',
-      source: 'Austin Water Pretreatment Surcharge Program; Austin City Code Chapter 15-10',
-      sourceUrl: 'https://www.austintexas.gov/water/pretreatment-surcharge-program',
-      version: 'as published',
-      effectiveFrom: '2025-01-01',
-      status: 'SOURCED',
-    } satisfies FactorProvenance,
-    unitCharges: {
-      id: 'austin-water:surcharge-unit-charges',
-      source: 'Austin Water Pretreatment Surcharge Program rate schedule',
-      sourceUrl: 'https://www.austintexas.gov/water/pretreatment-surcharge-program',
-      version: 'fiscal year not yet confirmed',
-      effectiveFrom: '2025-01-01',
-      status: 'DATED',
-      note: 'Confirm the current fiscal-year schedule.',
-    } satisfies FactorProvenance,
-    greaseTrap: {
-      id: 'austin-water:grease-trap',
-      source: 'Austin Water grease trap maintenance requirements',
-      sourceUrl: 'https://www.austintexas.gov/water/grease-trap-maintenance',
-      version: 'as published',
-      effectiveFrom: '2025-01-01',
-      status: 'SOURCED',
-    } satisfies FactorProvenance,
-  },
-} as const;
-
 // ── Utility rebates (Austin Energy commercial programme) ──────────────────
 
 export interface RebateLine {
@@ -692,14 +627,17 @@ export interface RebateLine {
   condition: string;
 }
 
-/** Inventory of published incentives, not a recommendation. Two readings are on file; this is the first. */
+/**
+ * Inventory of published incentives a grow facility's loads could meet, not a recommendation: lighting,
+ * the motors and drives of climate control and cold storage, and controls. Two readings of the
+ * programme page are on file; the ranges span both.
+ */
 export const austinEnergyRebates: { lines: RebateLine[]; bonus: string; provenance: FactorProvenance } = {
   lines: [
-    { category: 'Commercial farm appliances', rebate: 'Varies by unit; e.g. up to $1,525 conveyor dishwasher, $2,000 steam cooker', condition: 'ENERGY STAR certified (except pre-rinse spray valves)' },
+    { category: 'Lighting retrofits', rebate: '$420–$900 per kW saved', condition: 'The $900 tier for Small Business Bundle participants' },
     { category: 'Variable frequency drives', rebate: '$480–$625 per kW saved', condition: 'Motor loads on HVAC or exhaust' },
-    { category: 'EC motors', rebate: '$420–$550 per kW saved', condition: 'Walk-in evaporator fans, condensers' },
-    { category: 'Heat pump water heaters', rebate: '$800–$1,000 per unit', condition: 'Qualified high-efficiency models' },
-    { category: 'Energy recovery ventilators', rebate: '$420–$550 per kW saved', condition: 'Hood exhaust heat recovery' },
+    { category: 'EC motors', rebate: '$420–$550 per kW saved', condition: 'Ventilation and cooling retrofits; walk-in evaporator fans and condensers' },
+    { category: 'Smart thermostats', rebate: '$50 per device', condition: 'Qualifying commercial devices' },
   ],
   bonus: '+30% for locally owned small businesses, 501(c)(3) organisations and houses of worship on Tier 1 or Tier 2 rates',
   provenance: {
@@ -709,7 +647,7 @@ export const austinEnergyRebates: { lines: RebateLine[]; bonus: string; provenan
     version: 'programme year not yet confirmed',
     effectiveFrom: '2025-01-01',
     status: 'DATED',
-    note: 'A second reading gives single values at the top of these ranges and adds cooling towers, lighting and smart thermostats; confirm the current programme year.',
+    note: 'The commercial programme; the home grow room is on a residential rate and its programme is not yet read. Confirm the current programme year.',
   },
 };
 
@@ -736,9 +674,5 @@ export const factorRegistry: FactorProvenance[] = [
   foodFactorSource,
   ...inputFactors.map((f) => f.provenance),
   aimActRules.provenance,
-  greenBlackoutCriteria.provenance,
-  austinWaterEffluent.provenance.limits,
-  austinWaterEffluent.provenance.unitCharges,
-  austinWaterEffluent.provenance.greaseTrap,
   austinEnergyRebates.provenance,
 ];

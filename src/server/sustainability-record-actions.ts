@@ -44,7 +44,6 @@ const ReadingInput = z
   .superRefine((v, ctx) => {
     const m = READING_METRICS[v.metric as keyof typeof READING_METRICS];
     if (m.fold !== 'event' && v.quantity === null) ctx.addIssue({ code: 'custom', message: `${m.label} needs a quantity.` });
-    if (v.metric === 'grease_trap_fill' && v.quantity !== null && v.quantity > 1) ctx.addIssue({ code: 'custom', message: 'Grease-trap fill is a fraction from 0 to 1.' });
     if (v.periodStart && v.periodStart > v.readOn) ctx.addIssue({ code: 'custom', message: 'The bill period starts after it ends.' });
   });
 

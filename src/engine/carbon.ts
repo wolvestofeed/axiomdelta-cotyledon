@@ -7,8 +7,8 @@
  * the factor id and version, and the GWP basis used. Nothing derived is
  * stored; aggregation and normalization recompute from postings.
  *
- * Findings (AIM Act, GreenBlackout, Austin Water) cite the rule and the computed
- * quantity. They do not say what the operator should do.
+ * Findings (the AIM Act leak-repair rule) cite the rule and the computed quantity.
+ * They do not say what the operator should do.
  */
 
 import {
@@ -19,8 +19,6 @@ import {
   freightFactorSmartWay,
   warmFoodWaste,
   aimActRules,
-  greenBlackoutCriteria,
-  austinWaterEffluent,
   type FuelId,
   type BillUnit,
   type GwpBasis,
@@ -643,14 +641,14 @@ export function normalize(totalKg: number, n: Normalizers): NormalizedTotals {
   };
 }
 
-// ── Refrigerant circuits: leak rate, AIM Act and GreenBlackout findings ────────
+// ── Refrigerant circuits: leak rate and AIM Act findings ──────────────────────
 
 export interface RefrigerantCircuit {
   id: string;
   equipment: string;
   refrigerant: string;
   fullChargeLb: number;
-  /** Installed on or after this date counts as new equipment for GreenBlackout. */
+  /** Installation date, where the equipment attributes carry one. */
   installedOn?: string;
   /** Service events: refrigerant added, in lb, on a date. */
   serviceAdds: { date: string; lbAdded: number }[];
@@ -760,116 +758,6 @@ export function aimActFindings(circuit: RefrigerantCircuit, asOf: string): Findi
   return findings;
 }
 
-export interface GreenBlackoutCheck {
-  aggregateLeakRate: number;
-  aggregateStatus: FindingStatus;
-  newEquipmentAboveGwp: { circuitId: string; refrigerant: string; gwp: number }[];
-  citation: FactorProvenance;
-}
-
-/** Aggregate annualized leak rate across circuits for a calendar year, against GreenBlackout criteria. */
-export function greenBlackoutCheck(circuits: RefrigerantCircuit[], year: string): GreenBlackoutCheck {
-  const totalCharge = circuits.reduce((s, c) => s + c.fullChargeLb, 0);
-  const totalAdded = circuits.reduce(
-    (s, c) => s + c.serviceAdds.filter((a) => a.date.startsWith(year)).reduce((x, a) => x + a.lbAdded, 0),
-    0,
-  );
-  const rate = totalCharge > 0 ? totalAdded / totalCharge : 0;
-  const newAbove = circuits
-    .filter((c) => c.installedOn && c.installedOn.startsWith(year))
-    .map((c) => ({ circuitId: c.id, refrigerant: c.refrigerant, gwp: refrigerantGwpAR4[c.refrigerant]?.gwp ?? 0 }))
-    .filter((c) => c.gwp > greenBlackoutCriteria.maxGwpNewEquipment);
-  return {
-    aggregateLeakRate: rate,
-    aggregateStatus: rate > greenBlackoutCriteria.maxAggregateLeakRate ? 'triggered' : 'within-limit',
-    newEquipmentAboveGwp: newAbove,
-    citation: greenBlackoutCriteria.provenance,
-  };
-}
-
-// ── Water and effluent: Austin pretreatment surcharge ───────────────────────
-
-export interface EffluentSample {
-  /** Billed wastewater volume for the month, million gallons. */
-  volumeMillionGal: number;
-  bodMgL: number;
-  tssMgL: number;
-  codMgL: number;
-  fogMgL?: number;
-}
-
-export interface EffluentSurcharge {
-  branch: 'BOD' | 'COD';
-  codToBodRatio: number;
-  excessBodMgL: number;
-  excessTssMgL: number;
-  excessCodMgL: number;
-  chargeBod: number;
-  chargeTss: number;
-  chargeCod: number;
-  surcharge: number;
-  fogExceeded: boolean | null;
-  citation: FactorProvenance;
-}
-
-/**
- * Monthly surcharge per the City of Austin formulas:
- *   COD ≤ 2.25 × BOD:  S = V × 8.34 × [A(BOD − 200) + B(TSS − 200)]
- *   otherwise:         S = V × 8.34 × [C(COD − 450) + B(TSS − 200)]
- * Excess terms floor at zero: a parameter under its limit is not charged.
- */
-export function effluentSurcharge(s: EffluentSample): EffluentSurcharge {
-  const w = austinWaterEffluent;
-  const ratio = s.bodMgL > 0 ? s.codMgL / s.bodMgL : Infinity;
-  const branch: 'BOD' | 'COD' = ratio <= w.codToBodRatioThreshold ? 'BOD' : 'COD';
-  const excessBod = Math.max(0, s.bodMgL - w.limits.bodMgL);
-  const excessTss = Math.max(0, s.tssMgL - w.limits.tssMgL);
-  const excessCod = Math.max(0, s.codMgL - w.limits.codMgL);
-  const base = s.volumeMillionGal * w.lbPerGallon;
-  const chargeBod = branch === 'BOD' ? base * w.unitCharges.bodPerLb * excessBod : 0;
-  const chargeCod = branch === 'COD' ? base * w.unitCharges.codPerLb * excessCod : 0;
-  const chargeTss = base * w.unitCharges.tssPerLb * excessTss;
-  return {
-    branch,
-    codToBodRatio: ratio,
-    excessBodMgL: excessBod,
-    excessTssMgL: excessTss,
-    excessCodMgL: excessCod,
-    chargeBod,
-    chargeTss,
-    chargeCod,
-    surcharge: chargeBod + chargeTss + chargeCod,
-    fogExceeded: s.fogMgL === undefined ? null : s.fogMgL > w.limits.fogMgL,
-    citation: w.provenance.unitCharges,
-  };
-}
-
-export interface GreaseTrapStatus {
-  nextDueBy: string;
-  daysUntilDue: number;
-  intervalExceeded: boolean;
-  fillTriggered: boolean;
-  citation: FactorProvenance;
-}
-
-/** Pump-out status against the 90-day interval and the 50% wetted-height rule. */
-export function greaseTrapStatus(
-  lastPumpOut: string,
-  asOf: string,
-  fillFraction?: number,
-): GreaseTrapStatus {
-  const g = austinWaterEffluent.greaseTrap;
-  const due = new Date(Date.parse(lastPumpOut) + g.maxIntervalDays * 86_400_000).toISOString().slice(0, 10);
-  const daysUntil = daysBetween(asOf, due);
-  return {
-    nextDueBy: due,
-    daysUntilDue: daysUntil,
-    intervalExceeded: daysUntil < 0,
-    fillTriggered: fillFraction !== undefined && fillFraction >= g.pumpOutFillFraction,
-    citation: austinWaterEffluent.provenance.greaseTrap,
-  };
-}
-
 // ── S3: energy inventory from annual activity inputs ────────────────────────
 
 export interface EnergyInventory {
@@ -914,7 +802,6 @@ export interface CircuitRow {
 
 export interface RefrigerantInventory {
   rows: CircuitRow[];
-  greenBlackout: GreenBlackoutCheck;
   totalCo2eKgInYear: number;
   circuitsOnFile: number;
 }
@@ -958,39 +845,25 @@ export function refrigerantInventory(
   }
   return {
     rows,
-    greenBlackout: greenBlackoutCheck(rows.map((r) => r.circuit), year),
     totalCo2eKgInYear: rows.reduce((s, r) => s + r.co2eKgInYear, 0),
     circuitsOnFile: rows.length,
   };
 }
 
-// ── S3: water projection from monthly inputs ────────────────────────────────
+// ── Water: the year's volumes from the monthly inputs ────────────────────────
 
 export interface WaterProjection {
-  hasSample: boolean;
-  hasVolume: boolean;
-  surchargeMonthly: EffluentSurcharge | null;
-  surchargeAnnual: number;
   annualMeteredGal: number;
+  annualWastewaterMGal: number;
   galPerUnit: number | null;
-  greaseTrap: GreaseTrapStatus | null;
 }
 
-export function waterProjection(w: WaterActivity, annualUnits: number, asOf: string): WaterProjection {
-  const hasSample = w.bodMgL > 0 || w.tssMgL > 0 || w.codMgL > 0;
-  const hasVolume = w.billedWastewaterMGalPerMonth > 0;
-  const surcharge =
-    hasSample && hasVolume
-      ? effluentSurcharge({ volumeMillionGal: w.billedWastewaterMGalPerMonth, bodMgL: w.bodMgL, tssMgL: w.tssMgL, codMgL: w.codMgL, fogMgL: w.fogMgL > 0 ? w.fogMgL : undefined })
-      : null;
+/** Twelve months of the monthly volumes, and the metered water each unit distributed took. */
+export function waterProjection(w: WaterActivity, annualUnits: number): WaterProjection {
   const annualMetered = w.meteredGalPerMonth * 12;
   return {
-    hasSample,
-    hasVolume,
-    surchargeMonthly: surcharge,
-    surchargeAnnual: surcharge ? surcharge.surcharge * 12 : 0,
     annualMeteredGal: annualMetered,
+    annualWastewaterMGal: w.billedWastewaterMGalPerMonth * 12,
     galPerUnit: annualMetered > 0 && annualUnits > 0 ? annualMetered / annualUnits : null,
-    greaseTrap: w.greaseTrapLastPumpOut ? greaseTrapStatus(w.greaseTrapLastPumpOut, asOf, w.greaseTrapFill > 0 ? w.greaseTrapFill : undefined) : null,
   };
 }

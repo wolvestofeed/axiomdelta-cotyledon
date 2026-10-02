@@ -121,7 +121,7 @@ describe('farm entity links — evidence coverage', () => {
 
   it('document keys are stable strings per surface', () => {
     expect(docKey.energy('electricityKwh')).toBe('energy.electricityKwh');
-    expect(docKey.water('bodMgL')).toBe('water.bodMgL');
+    expect(docKey.water('meteredGalPerMonth')).toBe('water.meteredGalPerMonth');
     expect(docKey.equipmentSpec('Jar stand oven')).toBe('equipment.Jar stand oven.spec');
     expect(docKey.refrigerantService('Blackout rack', '2026-09-01')).toBe('refrigerant.Blackout rack.2026-09-01');
   });

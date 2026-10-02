@@ -52,7 +52,6 @@ describe('farm sources — factor library grouping', () => {
     const groups = groupFactorsBySource(factorRegistry);
     const by = (re: RegExp) => groups.find((g) => re.test(g.sourceUrl))!;
     expect(by(/ecfr\.gov/).kind).toBe('regulation');
-    expect(by(/austintexas\.gov/).kind).toBe('rate_schedule');
     expect(by(/doi\.org/).kind).toBe('study');
     expect(by(/summary_tables_rev2/).kind).toBe('dataset'); // eGRID2023 summary tables
     expect(by(/zhaw\.ch/).kind).toBe('study');
