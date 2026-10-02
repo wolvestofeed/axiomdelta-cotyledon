@@ -161,17 +161,17 @@ describe('farm carbon — Scope 1 fugitive refrigerants', () => {
 });
 
 describe('farm carbon — Scope 2 electricity, both methods', () => {
-  it('10,000 kWh on ERCT → 3,516.02 kg CO2e location-based', () => {
+  it('10,000 kWh on ERCT (eGRID2023 rev. 2) → 3,341.59 kg CO2e location-based', () => {
     const { location, market } = postElectricity(act('kwh-1', 3, 10000, 'kWh'));
-    expect(location.co2Kg).toBeCloseTo(7711 * KG_PER_LB, 6);
-    expect(location.co2eKg).toBeCloseTo(3516.018, 2);
+    expect(location.co2Kg).toBeCloseTo(7339 * KG_PER_LB, 6);
+    expect(location.co2eKg).toBeCloseTo(3341.588, 2);
     expect(location.scope2Method).toBe('location');
     expect(market.co2eKg).toBeCloseTo(location.co2eKg, 9);
   });
   it('market-based falls to zero with 100% renewable supply; location-based does not', () => {
     const { location, market } = postElectricity(act('kwh-2', 3, 10000, 'kWh'), { renewableShare: 1 });
     expect(market.co2eKg).toBe(0);
-    expect(location.co2eKg).toBeCloseTo(3516.018, 2);
+    expect(location.co2eKg).toBeCloseTo(3341.588, 2);
   });
   it('aggregates by scope with the chosen Scope 2 method, and reports the weakest factor', () => {
     const ng = postCombustion(act('ng', 1, 1000, 'therm'), 'naturalGas', 'therm');
@@ -179,10 +179,10 @@ describe('farm carbon — Scope 2 electricity, both methods', () => {
     const loc = aggregateByScope([ng, location, market], 'location');
     const mkt = aggregateByScope([ng, location, market], 'market');
     expect(loc.scope1Kg).toBeCloseTo(5311.45, 6);
-    expect(loc.scope2Kg).toBeCloseTo(3516.018, 2);
-    expect(mkt.scope2Kg).toBeCloseTo(1758.009, 2);
-    expect(loc.totalKg).toBeCloseTo(8827.468, 2);
-    expect(loc.weakestFactorStatus).toBe('UNCONFIRMED'); // eGRID year not pinned
+    expect(loc.scope2Kg).toBeCloseTo(3341.588, 2);
+    expect(mkt.scope2Kg).toBeCloseTo(1670.794, 2);
+    expect(loc.totalKg).toBeCloseTo(8653.038, 2);
+    expect(loc.weakestFactorStatus).toBe('SOURCED'); // the Hub and eGRID2023 are both read
   });
 });
 
@@ -192,14 +192,14 @@ describe('farm carbon — Scope 3 freight, waste, food', () => {
     expect(p.co2eKg).toBeCloseTo(161.8, 9);
     expect(p.scope).toBe(3);
   });
-  it('10 short tons: all landfill 6,800 kg; all compost −1,800 kg; delta 8,600 kg', () => {
-    expect(postWaste(act('w-1', 8, 10, 'short ton'), 'landfill').co2eKg).toBeCloseTo(6800, 6);
-    expect(postWaste(act('w-2', 8, 10, 'short ton'), 'compost').co2eKg).toBeCloseTo(-1800, 6);
+  it('10 short tons of food waste (WARM v15): all landfill 5,000 kg; all compost −1,200 kg; delta −6,200 kg', () => {
+    expect(postWaste(act('w-1', 8, 10, 'short ton'), 'landfill').co2eKg).toBeCloseTo(5000, 6);
+    expect(postWaste(act('w-2', 8, 10, 'short ton'), 'compost').co2eKg).toBeCloseTo(-1200, 6);
     const n = warmNet(10, 1);
-    expect(n.netKg).toBeCloseTo(-1800, 6);
-    expect(n.deltaVsAllLandfillKg).toBeCloseTo(-8600, 6);
+    expect(n.netKg).toBeCloseTo(-1200, 6);
+    expect(n.deltaVsAllLandfillKg).toBeCloseTo(-6200, 6);
     const half = warmNet(10, 0.5);
-    expect(half.netKg).toBeCloseTo(3400 - 900, 6);
+    expect(half.netKg).toBeCloseTo(2500 - 600, 6);
   });
   it('posts food emissions from a supplied factor table (fixture, not reference data)', () => {
     const fixture: FoodFactor[] = [
@@ -231,10 +231,10 @@ describe('farm carbon — Scope 3 freight, waste, food', () => {
 
 describe('farm carbon — normalizers and co2e', () => {
   it('normalizes per unit, per sq ft, per operating day', () => {
-    const n = normalize(3516.018, { units: 1000, sqFt: 5000, operatingDays: 20 });
-    expect(n.kgPerUnit).toBeCloseTo(3.516, 3);
-    expect(n.kgPerSqFt).toBeCloseTo(0.7032, 4);
-    expect(n.kgPerOperatingDay).toBeCloseTo(175.8, 2);
+    const n = normalize(3341.588, { units: 1000, sqFt: 5000, operatingDays: 20 });
+    expect(n.kgPerUnit).toBeCloseTo(3.3416, 3);
+    expect(n.kgPerSqFt).toBeCloseTo(0.6683, 4);
+    expect(n.kgPerOperatingDay).toBeCloseTo(167.08, 2);
     expect(normalize(1, {}).kgPerUnit).toBeUndefined();
   });
   it('co2e applies AR5 GWPs', () => {
@@ -265,7 +265,7 @@ describe('farm carbon — AIM Act findings', () => {
     expect(leak.computed.repairWindowEnds).toBe('2026-05-01');
     expect(chronic.status).toBe('within-limit');
     expect(chronic.computed.shareOfCharge).toBeCloseTo(4 / 60, 9);
-    for (const x of f) expect(x.citationStatus).toBe('UNCONFIRMED');
+    for (const x of f) expect(x.citationStatus).toBe('SOURCED'); // § 84.106 read in the eCFR
   });
   it('a 10 lb circuit is out of scope and produces only the applicability finding', () => {
     const f = aimActFindings({ ...walkIn, id: 'ri-1', fullChargeLb: 10 }, '2026-06-30');
@@ -466,11 +466,11 @@ describe('farm carbon — energy inventory from annual inputs', () => {
     expect(inv.postings).toHaveLength(0);
     expect(inv.location.totalKg).toBe(0);
   });
-  it('1,000 therms + 10,000 kWh at 50% renewable: scope 1 5,311.45; scope 2 3,516.0 location, 1,758.0 market', () => {
+  it('1,000 therms + 10,000 kWh at 50% renewable: scope 1 5,311.45; scope 2 3,341.6 location, 1,670.8 market', () => {
     const inv = energyInventory({ ...ENERGY_DEFAULTS, naturalGasTherms: 1000, electricityKwh: 10000, renewableShare: 0.5 });
     expect(inv.location.scope1Kg).toBeCloseTo(5311.45, 6);
-    expect(inv.location.scope2Kg).toBeCloseTo(3516.018, 2);
-    expect(inv.market.scope2Kg).toBeCloseTo(1758.009, 2);
+    expect(inv.location.scope2Kg).toBeCloseTo(3341.588, 2);
+    expect(inv.market.scope2Kg).toBeCloseTo(1670.794, 2);
     expect(inv.postings.map((p) => p.category).sort()).toEqual(['grid:ERCT', 'grid:ERCT', 'stationary:naturalGas']);
   });
   it('fleet fuel posts as mobile scope 1', () => {

@@ -98,13 +98,13 @@ describe('farm inventory — full inventory from the resolved model', () => {
       refrigerantService: { [walkIn]: [{ date: '2026-04-01', lbAdded: 4 }] },
     });
     expect(inv.lines.find((l) => l.category === 'combustion')!.kg).toBeCloseTo(5311.45, 3);
-    expect(inv.lines.find((l) => l.category === 'electricity-location')!.kg).toBeCloseTo(3516.018, 2);
-    expect(inv.lines.find((l) => l.category === 'electricity-market')!.kg).toBeCloseTo(1758.009, 2);
+    expect(inv.lines.find((l) => l.category === 'electricity-location')!.kg).toBeCloseTo(3341.588, 2);
+    expect(inv.lines.find((l) => l.category === 'electricity-market')!.kg).toBeCloseTo(1670.794, 2);
     expect(inv.lines.find((l) => l.category === 'fugitive')!.kg).toBeCloseTo(4 * 0.45359237 * 3922, 3);
     expect(inv.linesOnSelectedBasis).toBe(0);
     expect(inv.reference.location.scope1Kg).toBeCloseTo(5311.45 + 4 * 0.45359237 * 3922, 3);
-    expect(inv.reference.location.scope2Kg).toBeCloseTo(3516.018, 2);
-    expect(inv.reference.market.scope2Kg).toBeCloseTo(1758.009, 2);
+    expect(inv.reference.location.scope2Kg).toBeCloseTo(3341.588, 2);
+    expect(inv.reference.market.scope2Kg).toBeCloseTo(1670.794, 2);
     expect(inv.selected.location.totalKg - inv.reference.location.totalKg).toBeCloseTo(inv.foodGapKg, 3);
   });
 });

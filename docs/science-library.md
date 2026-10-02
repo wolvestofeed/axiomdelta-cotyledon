@@ -2,18 +2,19 @@
 
 Every benefit Cotyledon states about a variety traces to a row here. This file is the register the Sources module is seeded from in Phase 2; the glossary ([`glossary.md`](glossary.md)) cites rows by number. Nothing is stated to a subscriber without a citation, and a citation that is a company page or a blog is marked as such and never carries a clinical claim.
 
-Four source documents, all Rob's compilations, Sept 2026:
+Five source documents, all Rob's compilations, Sept and Oct 2026:
 
 - **A** — *The Clinical and Scientific Efficacy of Microgreens and Sprouts* (`docs/Microgreens Nutritional Research Data.docx`): what the compounds do in the body. Rows 1–56 are its works cited in its own order, so its inline superscripts map one for one.
 - **B** — *Optimal Agronomic Practices for Microgreens: Growth Media and Lighting Optimization* (`docs/Optimal Agronomic Practices for Microgreens_ Growth Media and Lighting Optimization.docx`; the file ending in 2 is the same text): how growing conditions change what is in the crop. It shares 44 works with A; its 15 new works are rows 61–75, and §1b maps its own numbering onto the register.
 - **C** — *Clinical Research and Blend Optimization for Specific Microgreen Varieties* (`docs/Clinical Research and Blend Optimization for Specific Microgreen Varieties.docx`): five blends of the twelve varieties, and the clinical and phytochemical profiles of fenugreek, borage, amaranth, chia and wheat. Its 17 new works are rows 76–92; §1c maps its numbering.
 - **D** — *Comparative Analysis of Hemp Mats and Coco Coir: Sustainability, Hydroponics, and Agronomic Outcomes* (`docs/Comparative Analysis of Hemp Mats and Coco Coir_ Sustainability, Hydroponics, and Agronomic Outcomes.docx`): the hemp mat against coir in an Austin grow room. Its 11 new works are rows 93–103; §1d maps its numbering. Most of its agronomic statements cite commercial pages (grade C), which carry no claim; the hemp mat's specifications are its makers' published statements (grade S) and one study is primary (row 103).
+- **E** — *Comprehensive Life Cycle Assessment and Phytonutrient Optimization in Controlled Environment Microgreen Agriculture* (`research/Microgreens LCA Data Research 100226.docx`): the life cycle frame for the sustainability module, the inventory hot spots of indoor microgreens, and candidate factors for seed, media, light and infrastructure. Its 67 new works are rows 104–170 and row 171 is the primary publisher behind a figure it cites through secondary pages; §1e maps its numbering. It describes an assumed operation in order to assess one; `roadmaps/phase-5-facility-and-sustainability.md` §1 lists each assumption against Cotyledon's record, and no statement about the facility is taken from it. Its method citations are mostly commercial pages and wikis (grade C); its studies are primary (grade P); its databases and declarations are grade D.
 
 The register in code is `src/data/science-library.ts`; `rowFor('B', n)` resolves a document B superscript.
 
 ## 1. Works cited
 
-Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial registry, **S** a supplier's published statement about its own seed or product: a seed supplier's variety summary or packaging (nutrient and flavor statements), a medium maker's product specification (no clinical claim either way), **C** commercial or advocacy page (context only, no clinical claim).
+Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial registry, **S** a supplier's published statement about its own seed or product: a seed supplier's variety summary or packaging (nutrient and flavor statements), a medium maker's product specification (no clinical claim either way), **D** a dataset, a declaration or an agency publication: a life cycle database's documentation, an Environmental Product Declaration, a government agency's page (a figure, never a clinical claim), **C** commercial or advocacy page (context only, no clinical claim).
 
 | # | Work | Grade | URL |
 |---|---|---|---|
@@ -120,6 +121,74 @@ Grade: **P** primary study or trial, **R** review or meta-analysis, **T** trial 
 | 101 | Hemp fiber mats, coco coir and nutrients (YouTube) | C | https://www.youtube.com/watch?v=FXBUp7J-mYo |
 | 102 | Hemp Grow Pads Vs Coco Coir Mats for Clean Indoor Microgreens — Indoor Leaf Grow | C | https://indoorleafgrow.com/hemp-grow-pads-vs-coco-coir-mats-for-clean-indoor-microgreens/ |
 | 103 | Hydroponic Fiber Mats Altered Shoot Growth and Mineral Nutrient Concentration of Microgreens | P | https://www.mdpi.com/2311-7524/10/12/1298/ |
+| 104 | Broccoli Microgreens Sulforaphane Benefits Explained — AquaGer Tech | C | https://aquagertech.com/blogs/microgreens/sulforaphane-broccoli-microgreens |
+| 105 | Life Cycle Assessment (LCA): Everything You Need to Know — Ecochain | C | https://ecochain.com/blog/life-cycle-assessment-lca-guide/ |
+| 106 | Life Cycle Assessment (LCA) — ecoinvent knowledge base, use cases | C | https://support.ecoinvent.org/ecoinvent-use-cases |
+| 107 | On Life Cycle Assessment to Quantify the Environmental Impact of Lighting Products — LED professional | C | https://www.led-professional.com/resources-1/articles/on-life-cycle-assessment-to-quantify-the-environmental-impact-of-lighting-products |
+| 108 | Life Cycle Assessment of a Prospective Technology for Building-Integrated Production of Broccoli Microgreens (Atmosphere 13(8):1317) | P | https://www.mdpi.com/2073-4433/13/8/1317 |
+| 109 | Environmental Life Cycle Assessment of GrowOff Modular Vertical Farming (thesis, DiVA) | P | https://diva-portal.org/smash/get/diva2:1750912/FULLTEXT01.pdf |
+| 110 | Life Cycle Assessment of Various Filtering Media for Greywater Treatment Using a Greenwall Filtration System | P | https://www.researchgate.net/publication/348746908_Life_Cycle_Assessment_of_Various_Filtering_Media_for_Greywater_Treatment_Using_Greenwall_Filtration_System |
+| 111 | Life-Cycle Assessment in the Polymeric Sector: A Comprehensive Review | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC7361975/ |
+| 112 | Eutrophication Potential — AgImpacts (MIT) | C | https://agimpacts.mit.edu/indicators/eutrophication-potential/ |
+| 113 | Eutrophication potential — Designing Buildings Wiki | C | https://www.designingbuildings.co.uk/wiki/Eutrophication_potential |
+| 114 | What is ecoinvent? Meet the LCI Database — Ecochain | C | https://ecochain.com/blog/what-is-ecoinvent/ |
+| 115 | Life Cycle Assessment (LCA): Conduct Studies with ecoinvent — ecoinvent.org | C | https://ecoinvent.org/life-cycle-assessment/ |
+| 116 | AGRIBALYSE documentation (EN): Link with ecoinvent and WFLDB | D | https://doc.agribalyse.fr/documentation-en/agribalyse-program/link-with-ecoinvent-and-wfldb |
+| 117 | AGRIBALYSE documentation (EN): Life Cycle Assessment Method | D | https://doc.agribalyse.fr/documentation-en/data-use/life-cycle-assessment-method |
+| 118 | Agribalyse — openLCA Nexus database page | D | https://nexus.openlca.org/database/Agribalyse |
+| 119 | LCA Commons — Ag Data Commons (USDA, Figshare) | D | https://agdatacommons.nal.usda.gov/articles/dataset/LCA_Commons/24660180 |
+| 120 | Federal LCA Commons — Life Cycle Assessment (USDA) | D | https://www.lcacommons.gov/ |
+| 121 | Agri-footprint 5.0, Part 2: Description of Data — SimaPro | D | https://simapro.com/wp-content/uploads/2020/10/Agri-Footprint-5.0-Part-2-Description-of-data.pdf |
+| 122 | Environmental Product Declaration — Ventilatieland (steel product, EPD sk22277) | D | https://www.ventilatieland.nl/static/uploads/pictures/original/other/sk22277_Environmental_product_declaration_EN.pdf |
+| 123 | Environmental Product Declaration — XL-BYGG (steel product) | D | https://www.xlbygg.se/media/attachments/806/00d/80600da6bcc48f432c478f9e2767727b.pdf |
+| 124 | Environmental Product Declaration — RSK Databasen (EPD 1061, 8824003) | D | https://www.rskdatabasen.se/infodocs/EPD/EPD_1061_8824003.pdf |
+| 125 | Top 5 Best Growing Mediums for Microgreens — Bootstrap Farmer | C | https://www.bootstrapfarmer.com/blogs/microgreens/microgreens-growing-media |
+| 126 | Torf und Torfersatzprodukte im Vergleich (Eymann et al., ZHAW 2015): peat and peat substitutes compared | P | https://www.zhaw.ch/storage/lsfm/institute-zentren/iunr/oekobilanzierung/eymann-2015-lca-torf.pdf |
+| 127 | Comparative climate change impacts of different strawberry production substrates | P | https://aspace.agrif.bg.ac.rs/bitstream/handle/123456789/7746/bitstream_29123.pdf?sequence=1&isAllowed=y |
+| 128 | Recent advances in organic agriculture: innovations, challenges and prospects | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC12827596/ |
+| 129 | Best Growing Media for Microgreens: Soil, Coco Coir and Mats — MP Seeds | C | https://mpseeds.eu/ultimate-guide-to-growing-media |
+| 130 | Natural Fiber-Polyolefin Composites, Mini-Review (Cellulose Chemistry and Technology 2014) | R | https://cellulosechemtechnol.ro/pdf/CCT7-8(2014)/p.599-611.pdf |
+| 131 | Bacterial-Retted Hemp Fiber/PLA Composites (Processes 13(4):1000) | P | https://www.mdpi.com/2227-9717/13/4/1000 |
+| 132 | Manufacturing and Properties of Jute Fiber-Reinforced Polymer Composites | R | https://pmc.ncbi.nlm.nih.gov/articles/PMC11901065/ |
+| 133 | A Comparative Life Cycle Assessment of a Composite Component (Chemical Engineering Transactions 32) | P | https://www.aidic.it/cet/13/32/288.pdf |
+| 134 | Bio-based materials as a robust solution for building renovation (Padey et al., 2022; ETH research collection) | P | https://www.research-collection.ethz.ch/bitstreams/1151ecb3-4e28-4f23-b0b9-5fbc375f44b6/download |
+| 135 | Bio-based materials as a robust solution for building renovation (HES-SO copy of row 134) | P | https://arodes.hes-so.ch/record/10059/files/Padey_2022_bio-based_materials_robust_solution_building_renovation.pdf |
+| 136 | Life Cycle Assessment of a modular LED luminaire and quantified environmental benefits (UPCommons) | P | https://upcommons.upc.edu/bitstreams/7a8f3095-d7c1-4f9f-affb-7484099d6e76/download |
+| 137 | Consumer Preference for Microgreens in the Presence of LED Lighting (HortScience 58(3)) | P | https://journals.ashs.org/view/journals/hortsci/58/3/article-p327.xml |
+| 138 | Life-Cycle Assessment of Energy and Environmental Impacts of LED Lighting Products (PNNL-21443) | P | https://www.pnnl.gov/main/publications/external/technical_reports/pnnl-21443.pdf |
+| 139 | Barrina 4 ft Plant Grow Lights 5000K 252 W T8 6-pack — Lowe's listing | C | https://www.lowes.com/pd/Barrina-4FT-Plant-Grow-Lights-5000K-Full-Spectrum-Daylight-White-252W-LED-T8-Grow-Light-Strips-6-Pack/8013252 |
+| 140 | Barrina LED Grow Lights Instruction Manual, Full Spectrum T8 (manuals.plus) | S | https://manuals.plus/asin/B0B76SJ5XF |
+| 141 | Barrina 4 ft T8 Plant Grow Light Review — letsallgrowcannabis | C | https://www.letsallgrowcannabis.com/picks/grow-lights/barrina-4ft-t8-plant-grow-light-review/ |
+| 142 | What Wattage LED Grow Light Do You Need for a 4x4 Grow Tent? — VIVOSUN | S | https://vivosun.com/growing_guide/right-led-wattage-for-4x4-grow-tent/ |
+| 143 | How Many Grow Lights Do You Need? — VIVOSUN | S | https://vivosun.com/growing_guide/how-many-grow-lights-do-i-need/ |
+| 144 | VIVOSUN 4-pack AeroLight 400 W LED Grow Light Review — VIVOSUN | S | https://vivosun.com/growing_guide/vivosun-aerolight-grow-light-review/ |
+| 145 | Grow Light Cost Calculator — Mars Hydro | S | https://www.mars-hydro.com/grow-light-cost-calculator |
+| 146 | Best LED Grow Lights 2026: Efficiency and PPE Compared — Trimleaf | C | https://trimleaf.com/blogs/guides/best-grow-lights |
+| 147 | Most Nutritious Microgreens: All 18 Varieties Ranked — AquaGer Tech | C | https://aquagertech.com/blogs/microgreens/microgreens-nutrition-comparison |
+| 148 | Effects of LED light treatments on the bioactive composition of microgreens (Frontiers in Plant Science) | P | https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2026.1834435/full |
+| 149 | LED Light Recipe, PPFD and Spectrum Requirements for Microgreens — CEA Union | C | https://ceaunion.com/blog/vertical-farming/led-light-recipe-ppfd-and-spectrum-requirements-for-microgreens |
+| 150 | Fish Fertilizer: Is it Worth Buying? — Garden Myths | C | https://www.gardenmyths.com/fish-fertilizer-worth-buying/comment-page-3/ |
+| 151 | Life cycle assessment of the LimoFish process (ChemRxiv preprint, 2022) | P | https://chemrxiv.org/doi/pdf/10.26434/chemrxiv-2022-6c3fd |
+| 152 | A Life Cycle and Environmental Cost Analysis of fish-based fertilizer in Denmark (ACS Agricultural Science & Technology) | P | https://pubs.acs.org/doi/10.1021/acsagscitech.5c01013 |
+| 153 | Liquid organic fertilizers in soilless cultivation: a systematic review (Frontiers in Sustainability) | R | https://www.frontiersin.org/journals/sustainability/articles/10.3389/frsus.2026.1775182/full |
+| 154 | Nutrients and Eutrophication — U.S. Geological Survey | D | https://www.usgs.gov/mission-areas/water-resources/science/nutrients-and-eutrophication |
+| 155 | Sources and Solutions: Agriculture — U.S. EPA nutrient pollution | D | https://www.epa.gov/nutrientpollution/sources-and-solutions-agriculture |
+| 156 | Eutrophication Potential — Space4Water Portal | C | https://www.space4water.org/water/eutrophication-potential |
+| 157 | Celebrating Our Roots: Legacy of Our Garden Members — National Garden Bureau | C | https://ngb.org/celebrating-members/ |
+| 158 | A review on global energy use patterns in major crop production systems (RSC) | R | https://pubs.rsc.org/va/article/1/5/662/794408/A-review-on-global-energy-use-patterns-in-major |
+| 159 | Energy consumption in agriculture increased in 2016, driven mainly by diesel and fertilizer use — USDA ERS | D | https://www.ers.usda.gov/data-products/charts-of-note/87964 |
+| 160 | Energy use efficiency in paddy cultivation in Punjab (Ecology Journal 2021) | P | https://www.ecologyjournal.in/assets/archives/2021/vol3issue1/3-1-90-473.pdf |
+| 161 | Estimation of energy flow and environmental impacts of quinoa cultivation | P | https://pmc.ncbi.nlm.nih.gov/articles/PMC7245589/ |
+| 162 | A Life Cycle Assessment of Organic and Chemical Fertilizers for Coffee Production (Sustainability 14(7):3912) | P | https://www.mdpi.com/2071-1050/14/7/3912 |
+| 163 | Mastering Organic Seed Production for Better Crops — LoginEKO | C | https://www.logineko.com/knowledge/mastering-organic-seed-production-for-better-crops/ |
+| 164 | A life cycle analysis (LCA) primer for the agricultural community (OSTI) | R | https://www.osti.gov/servlets/purl/1802622 |
+| 165 | Global database of GHG emissions related to feed crops (FAO) | D | https://openknowledge.fao.org/server/api/core/bitstreams/c3b15795-3030-41c4-986e-31a090aa2ab4/content |
+| 166 | openLCA — free, professional life cycle assessment software (openlca.org) | C | https://www.openlca.org/ |
+| 167 | Inter-process communication with openLCA: introduction (API documentation) | C | https://greendelta.github.io/openLCA-ApiDoc/ |
+| 168 | Features — openLCA.org | C | https://www.openlca.org/features/ |
+| 169 | Concept — openLCA.org | C | https://www.openlca.org/concept/ |
+| 170 | How to Calculate the PCF of My Vertical Farm in openLCA? — ask.openLCA | C | https://ask.openlca.org/8778/how-to-calculate-the-pcf-of-my-vertical-farm-in-openlca |
+| 171 | Handbook on Life Cycle Assessment, Part 2b: Operational annex, Table 4.3.11.1 generic eutrophication factors (Guinée et al., CML Leiden, 2001) | D | https://www.universiteitleiden.nl/binaries/content/assets/science/cml/publicaties_pdf/new-dutch-lca-guide/part2b.pdf |
 
 ### 1b. Document B's numbering
 
@@ -132,6 +201,10 @@ Document C's inline superscript *n* cites the register row in position *n* of th
 ### 1d. Document D's numbering
 
 Document D's inline superscript *n* cites the register row in position *n* of this list: 5, 61, 9, 65, 64, 53, 93, 2, 3, 11, 13, 10, 94, 95, 96, 97, 98, 99, 100, 101, 102, 68, 72, 70, 103, 23, 22, 26, 31, 34, 84, 86, 80, 83, 89, 85, 87, 88, 76, 77, 82, 78, 90, 79, 92.
+
+### 1e. Document E's numbering
+
+Document E's works cited, in its own order, map to these rows: 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 74, 125, 62, 126, 127, 128, 129, 130, 131, 94, 98, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170. Its inline superscripts do not always match its own list (its text cites 22 for figures that are in its work 5), so a claim taken from it names the work by title and the row is read from this list, not from the superscript. Two of its attributions do not hold when the works are read: the coir retting emissions and water figures it credits to its work 6 (row 109, an IVL summary report with no inventory and no mention of coir) are in no registered work, and its work 26 (row 127) carries no substrate figure. Row 171 is the program's own addition: the CML handbook annex behind the eutrophication equivalents its works 9 and 10 repeat.
 
 ## 2. Headline studies
 
@@ -264,6 +337,20 @@ Each claim as the report states it, the varieties it applies to, the kind of evi
 | Hemp holds up to 1,050% of its weight in water; mat density sets retention: 400 g/m² (0.3 cm) low, 600 g/m² (0.5 cm) medium, 1,300 g/m² (1.0 cm) high. | all | supplier | 94, 97 |
 | Bottom-watered, a hemp mat holds its water inside the fiber and keeps a drier surface than coir, which its maker ties to less damping-off and surface mold. | all | supplier | 94 |
 | Grown on hemp mats, basil and dill microgreens carried more potassium; jute mats gave the highest iron and manganese in some species. | basil, dill | primary | 103 |
+
+### Sustainability (document E)
+
+Life cycle figures. Each is the cited study's own system or material, never the facility's; the sustainability module shows them as comparison lines and reference bases with their boundary named (`roadmaps/phase-5-facility-and-sustainability.md` §3).
+
+| Claim | Varieties | Evidence | Rows |
+|---|---|---|---|
+| In a building-integrated broccoli microgreen system in Lisbon (LED tubes 14 hours a day, coconut-fibre substrate, the 2018 Portuguese grid), the cradle-to-gate footprint was 18.6 kg CO2e per kg delivered on campus and 22.2 off campus: electricity 54% on campus, of which LED lighting 4.39 and climate control 5.60 kg per kg; seed 4.04 kg per kg (22%); the substrate 2.06 kg per kg; the infrastructure 2.07 kg per kg, up to 11.3%. | broccoli | lca | 108 |
+| Sown at about 0.07 kg of seed per kg of fresh weight harvested, the seed's field production was the second-largest line of the cited microgreen system, close to the electricity for its lights. | all | lca | 108, 62 |
+| Per cubic metre of substrate component used once, with decomposition in use counted: peat 254 kg CO2e, green-waste compost 177, coir fibre 85, coir pith 41, bark compost 33, rice husks 29, wood fibre 10; 64% of peat's figure is its organic matter decomposing to CO2 in use. | all | lca | 126 |
+| Coir fibre carries less climate impact than peat but higher pollutant emissions to water, and the Swiss comparison does not rate it a suitable peat alternative on ecological criteria; coir pith scores better than coir fibre on every indicator. | all | lca | 126 |
+| Three EPD Hub declarations for fabricated coated-steel products put the cradle-to-gate (A1 to A3) global warming potential at 2.78 kg CO2e per kg for galvanized spiral duct and 3.15 to 3.62 for powder-coated storage hardware and enclosures; two declare a 50-year reference service life and one declares none. None is stainless steel and none is a steel-stock factor. | all | lca | 122, 123, 124 |
+| Over a 25,000-hour life, 93.5% of an LED lamp's global warming potential was the electricity it used; raw materials and manufacturing were 16.2 of 251 kg CO2e per 20 million lumen-hours for a 2012 lamp. For a 47 W linear LED luminaire over 70,000 hours, production was about 1% of the total. | all | lca | 142, 140 |
+| On the CML generic eutrophication factors, 1 kg of ammonia counts 0.35 kg phosphate-equivalent, nitrate 0.10, chemical oxygen demand 0.022, phosphate 1.0 and phosphorus 3.06. | all | lca | 171 |
 
 ### Light (document B)
 

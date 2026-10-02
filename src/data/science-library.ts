@@ -4,7 +4,8 @@
  * One register keyed by URL. Rows 1–56 are the works cited by the nutritional research review
  * (document A) in its own order; rows 57–60 are the program's other sources; rows 61 onward are
  * the works the agronomy review (document B) adds; rows 76–92 the clinical and blend review's
- * (document C) and rows 93–103 the hemp and coir review's (document D). `DOCUMENT_ROWS` maps each
+ * (document C), rows 93–103 the hemp and coir review's (document D) and rows 104–170 the microgreens
+ * LCA compilation's (document E, `research/`). `DOCUMENT_ROWS` maps each
  * document's inline superscript numbers to rows, so a claim taken from any of them cites the register.
  * Every row is registered on the Sources page through `sources-registry.ts`; a benefit stated
  * to a subscriber names its row (`varieties.ts`).
@@ -12,8 +13,8 @@
 
 import type { ReferenceSource } from '@/data/sources-registry';
 
-/** P primary study, R review or meta-analysis, T trial registry, S a supplier's statement about its own seed or product, C commercial page (context only). */
-export type SourceGrade = 'P' | 'R' | 'T' | 'S' | 'C';
+/** P primary study, R review or meta-analysis, T trial registry, S a supplier's statement about its own seed or product, D a dataset, a declaration or an agency publication (a database's documentation, an EPD, a government page), C commercial page (context only). */
+export type SourceGrade = 'P' | 'R' | 'T' | 'S' | 'D' | 'C';
 
 export interface ScienceSource {
   row: number;
@@ -133,6 +134,76 @@ export const SCIENCE_SOURCES: readonly ScienceSource[] = [
   { row: 101, title: 'Hemp fiber mats, coco coir and nutrients (YouTube)', grade: 'C', url: 'https://www.youtube.com/watch?v=FXBUp7J-mYo' },
   { row: 102, title: 'Hemp Grow Pads Vs Coco Coir Mats for Clean Indoor Microgreens — Indoor Leaf Grow', grade: 'C', url: 'https://indoorleafgrow.com/hemp-grow-pads-vs-coco-coir-mats-for-clean-indoor-microgreens/' },
   { row: 103, title: 'Hydroponic Fiber Mats Altered Shoot Growth and Mineral Nutrient Concentration of Microgreens', grade: 'P', url: 'https://www.mdpi.com/2311-7524/10/12/1298/' },
+  // ── Document E: Comprehensive Life Cycle Assessment and Phytonutrient Optimization in Controlled Environment Microgreen Agriculture (research/) ──
+  { row: 104, title: 'Broccoli Microgreens Sulforaphane Benefits Explained — AquaGer Tech', grade: 'C', url: 'https://aquagertech.com/blogs/microgreens/sulforaphane-broccoli-microgreens' },
+  { row: 105, title: 'Life Cycle Assessment (LCA): Everything You Need to Know — Ecochain', grade: 'C', url: 'https://ecochain.com/blog/life-cycle-assessment-lca-guide/' },
+  { row: 106, title: 'Life Cycle Assessment (LCA) — ecoinvent knowledge base, use cases', grade: 'C', url: 'https://support.ecoinvent.org/ecoinvent-use-cases' },
+  { row: 107, title: 'On Life Cycle Assessment to Quantify the Environmental Impact of Lighting Products — LED professional', grade: 'C', url: 'https://www.led-professional.com/resources-1/articles/on-life-cycle-assessment-to-quantify-the-environmental-impact-of-lighting-products' },
+  { row: 108, title: 'Life Cycle Assessment of a Prospective Technology for Building-Integrated Production of Broccoli Microgreens (Atmosphere 13(8):1317)', grade: 'P', url: 'https://www.mdpi.com/2073-4433/13/8/1317' },
+  { row: 109, title: 'Environmental Life Cycle Assessment of GrowOff Modular Vertical Farming (thesis, DiVA)', grade: 'P', url: 'https://diva-portal.org/smash/get/diva2:1750912/FULLTEXT01.pdf' },
+  { row: 110, title: 'Life Cycle Assessment of Various Filtering Media for Greywater Treatment Using a Greenwall Filtration System', grade: 'P', url: 'https://www.researchgate.net/publication/348746908_Life_Cycle_Assessment_of_Various_Filtering_Media_for_Greywater_Treatment_Using_Greenwall_Filtration_System' },
+  { row: 111, title: 'Life-Cycle Assessment in the Polymeric Sector: A Comprehensive Review', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7361975/' },
+  { row: 112, title: 'Eutrophication Potential — AgImpacts (MIT)', grade: 'C', url: 'https://agimpacts.mit.edu/indicators/eutrophication-potential/' },
+  { row: 113, title: 'Eutrophication potential — Designing Buildings Wiki', grade: 'C', url: 'https://www.designingbuildings.co.uk/wiki/Eutrophication_potential' },
+  { row: 114, title: 'What is ecoinvent? Meet the LCI Database — Ecochain', grade: 'C', url: 'https://ecochain.com/blog/what-is-ecoinvent/' },
+  { row: 115, title: 'Life Cycle Assessment (LCA): Conduct Studies with ecoinvent — ecoinvent.org', grade: 'C', url: 'https://ecoinvent.org/life-cycle-assessment/' },
+  { row: 116, title: 'AGRIBALYSE documentation (EN): Link with ecoinvent and WFLDB', grade: 'D', url: 'https://doc.agribalyse.fr/documentation-en/agribalyse-program/link-with-ecoinvent-and-wfldb' },
+  { row: 117, title: 'AGRIBALYSE documentation (EN): Life Cycle Assessment Method', grade: 'D', url: 'https://doc.agribalyse.fr/documentation-en/data-use/life-cycle-assessment-method' },
+  { row: 118, title: 'Agribalyse — openLCA Nexus database page', grade: 'D', url: 'https://nexus.openlca.org/database/Agribalyse' },
+  { row: 119, title: 'LCA Commons — Ag Data Commons (USDA, Figshare)', grade: 'D', url: 'https://agdatacommons.nal.usda.gov/articles/dataset/LCA_Commons/24660180' },
+  { row: 120, title: 'Federal LCA Commons — Life Cycle Assessment (USDA)', grade: 'D', url: 'https://www.lcacommons.gov/' },
+  { row: 121, title: 'Agri-footprint 5.0, Part 2: Description of Data — SimaPro', grade: 'D', url: 'https://simapro.com/wp-content/uploads/2020/10/Agri-Footprint-5.0-Part-2-Description-of-data.pdf' },
+  { row: 122, title: 'Environmental Product Declaration — Ventilatieland (steel product, EPD sk22277)', grade: 'D', url: 'https://www.ventilatieland.nl/static/uploads/pictures/original/other/sk22277_Environmental_product_declaration_EN.pdf' },
+  { row: 123, title: 'Environmental Product Declaration — XL-BYGG (steel product)', grade: 'D', url: 'https://www.xlbygg.se/media/attachments/806/00d/80600da6bcc48f432c478f9e2767727b.pdf' },
+  { row: 124, title: 'Environmental Product Declaration — RSK Databasen (EPD 1061, 8824003)', grade: 'D', url: 'https://www.rskdatabasen.se/infodocs/EPD/EPD_1061_8824003.pdf' },
+  { row: 125, title: 'Top 5 Best Growing Mediums for Microgreens — Bootstrap Farmer', grade: 'C', url: 'https://www.bootstrapfarmer.com/blogs/microgreens/microgreens-growing-media' },
+  { row: 126, title: 'Torf und Torfersatzprodukte im Vergleich (Eymann et al., ZHAW 2015): peat and peat substitutes compared', grade: 'P', url: 'https://www.zhaw.ch/storage/lsfm/institute-zentren/iunr/oekobilanzierung/eymann-2015-lca-torf.pdf' },
+  { row: 127, title: 'Comparative climate change impacts of different strawberry production substrates', grade: 'P', url: 'https://aspace.agrif.bg.ac.rs/bitstream/handle/123456789/7746/bitstream_29123.pdf?sequence=1&isAllowed=y' },
+  { row: 128, title: 'Recent advances in organic agriculture: innovations, challenges and prospects', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12827596/' },
+  { row: 129, title: 'Best Growing Media for Microgreens: Soil, Coco Coir and Mats — MP Seeds', grade: 'C', url: 'https://mpseeds.eu/ultimate-guide-to-growing-media' },
+  { row: 130, title: 'Natural Fiber-Polyolefin Composites, Mini-Review (Cellulose Chemistry and Technology 2014)', grade: 'R', url: 'https://cellulosechemtechnol.ro/pdf/CCT7-8(2014)/p.599-611.pdf' },
+  { row: 131, title: 'Bacterial-Retted Hemp Fiber/PLA Composites (Processes 13(4):1000)', grade: 'P', url: 'https://www.mdpi.com/2227-9717/13/4/1000' },
+  { row: 132, title: 'Manufacturing and Properties of Jute Fiber-Reinforced Polymer Composites', grade: 'R', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11901065/' },
+  { row: 133, title: 'A Comparative Life Cycle Assessment of a Composite Component (Chemical Engineering Transactions 32)', grade: 'P', url: 'https://www.aidic.it/cet/13/32/288.pdf' },
+  { row: 134, title: 'Bio-based materials as a robust solution for building renovation (Padey et al., 2022; ETH research collection)', grade: 'P', url: 'https://www.research-collection.ethz.ch/bitstreams/1151ecb3-4e28-4f23-b0b9-5fbc375f44b6/download' },
+  { row: 135, title: 'Bio-based materials as a robust solution for building renovation (HES-SO copy of row 134)', grade: 'P', url: 'https://arodes.hes-so.ch/record/10059/files/Padey_2022_bio-based_materials_robust_solution_building_renovation.pdf' },
+  { row: 136, title: 'Life Cycle Assessment of a modular LED luminaire and quantified environmental benefits (UPCommons)', grade: 'P', url: 'https://upcommons.upc.edu/bitstreams/7a8f3095-d7c1-4f9f-affb-7484099d6e76/download' },
+  { row: 137, title: 'Consumer Preference for Microgreens in the Presence of LED Lighting (HortScience 58(3))', grade: 'P', url: 'https://journals.ashs.org/view/journals/hortsci/58/3/article-p327.xml' },
+  { row: 138, title: 'Life-Cycle Assessment of Energy and Environmental Impacts of LED Lighting Products (PNNL-21443)', grade: 'P', url: 'https://www.pnnl.gov/main/publications/external/technical_reports/pnnl-21443.pdf' },
+  { row: 139, title: 'Barrina 4 ft Plant Grow Lights 5000K 252 W T8 6-pack — Lowe\'s listing', grade: 'C', url: 'https://www.lowes.com/pd/Barrina-4FT-Plant-Grow-Lights-5000K-Full-Spectrum-Daylight-White-252W-LED-T8-Grow-Light-Strips-6-Pack/8013252' },
+  { row: 140, title: 'Barrina LED Grow Lights Instruction Manual, Full Spectrum T8 (manuals.plus)', grade: 'S', url: 'https://manuals.plus/asin/B0B76SJ5XF' },
+  { row: 141, title: 'Barrina 4 ft T8 Plant Grow Light Review — letsallgrowcannabis', grade: 'C', url: 'https://www.letsallgrowcannabis.com/picks/grow-lights/barrina-4ft-t8-plant-grow-light-review/' },
+  { row: 142, title: 'What Wattage LED Grow Light Do You Need for a 4x4 Grow Tent? — VIVOSUN', grade: 'S', url: 'https://vivosun.com/growing_guide/right-led-wattage-for-4x4-grow-tent/' },
+  { row: 143, title: 'How Many Grow Lights Do You Need? — VIVOSUN', grade: 'S', url: 'https://vivosun.com/growing_guide/how-many-grow-lights-do-i-need/' },
+  { row: 144, title: 'VIVOSUN 4-pack AeroLight 400 W LED Grow Light Review — VIVOSUN', grade: 'S', url: 'https://vivosun.com/growing_guide/vivosun-aerolight-grow-light-review/' },
+  { row: 145, title: 'Grow Light Cost Calculator — Mars Hydro', grade: 'S', url: 'https://www.mars-hydro.com/grow-light-cost-calculator' },
+  { row: 146, title: 'Best LED Grow Lights 2026: Efficiency and PPE Compared — Trimleaf', grade: 'C', url: 'https://trimleaf.com/blogs/guides/best-grow-lights' },
+  { row: 147, title: 'Most Nutritious Microgreens: All 18 Varieties Ranked — AquaGer Tech', grade: 'C', url: 'https://aquagertech.com/blogs/microgreens/microgreens-nutrition-comparison' },
+  { row: 148, title: 'Effects of LED light treatments on the bioactive composition of microgreens (Frontiers in Plant Science)', grade: 'P', url: 'https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2026.1834435/full' },
+  { row: 149, title: 'LED Light Recipe, PPFD and Spectrum Requirements for Microgreens — CEA Union', grade: 'C', url: 'https://ceaunion.com/blog/vertical-farming/led-light-recipe-ppfd-and-spectrum-requirements-for-microgreens' },
+  { row: 150, title: 'Fish Fertilizer: Is it Worth Buying? — Garden Myths', grade: 'C', url: 'https://www.gardenmyths.com/fish-fertilizer-worth-buying/comment-page-3/' },
+  { row: 151, title: 'Life cycle assessment of the LimoFish process (ChemRxiv preprint, 2022)', grade: 'P', url: 'https://chemrxiv.org/doi/pdf/10.26434/chemrxiv-2022-6c3fd' },
+  { row: 152, title: 'A Life Cycle and Environmental Cost Analysis of fish-based fertilizer in Denmark (ACS Agricultural Science & Technology)', grade: 'P', url: 'https://pubs.acs.org/doi/10.1021/acsagscitech.5c01013' },
+  { row: 153, title: 'Liquid organic fertilizers in soilless cultivation: a systematic review (Frontiers in Sustainability)', grade: 'R', url: 'https://www.frontiersin.org/journals/sustainability/articles/10.3389/frsus.2026.1775182/full' },
+  { row: 154, title: 'Nutrients and Eutrophication — U.S. Geological Survey', grade: 'D', url: 'https://www.usgs.gov/mission-areas/water-resources/science/nutrients-and-eutrophication' },
+  { row: 155, title: 'Sources and Solutions: Agriculture — U.S. EPA nutrient pollution', grade: 'D', url: 'https://www.epa.gov/nutrientpollution/sources-and-solutions-agriculture' },
+  { row: 156, title: 'Eutrophication Potential — Space4Water Portal', grade: 'C', url: 'https://www.space4water.org/water/eutrophication-potential' },
+  { row: 157, title: 'Celebrating Our Roots: Legacy of Our Garden Members — National Garden Bureau', grade: 'C', url: 'https://ngb.org/celebrating-members/' },
+  { row: 158, title: 'A review on global energy use patterns in major crop production systems (RSC)', grade: 'R', url: 'https://pubs.rsc.org/va/article/1/5/662/794408/A-review-on-global-energy-use-patterns-in-major' },
+  { row: 159, title: 'Energy consumption in agriculture increased in 2016, driven mainly by diesel and fertilizer use — USDA ERS', grade: 'D', url: 'https://www.ers.usda.gov/data-products/charts-of-note/87964' },
+  { row: 160, title: 'Energy use efficiency in paddy cultivation in Punjab (Ecology Journal 2021)', grade: 'P', url: 'https://www.ecologyjournal.in/assets/archives/2021/vol3issue1/3-1-90-473.pdf' },
+  { row: 161, title: 'Estimation of energy flow and environmental impacts of quinoa cultivation', grade: 'P', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7245589/' },
+  { row: 162, title: 'A Life Cycle Assessment of Organic and Chemical Fertilizers for Coffee Production (Sustainability 14(7):3912)', grade: 'P', url: 'https://www.mdpi.com/2071-1050/14/7/3912' },
+  { row: 163, title: 'Mastering Organic Seed Production for Better Crops — LoginEKO', grade: 'C', url: 'https://www.logineko.com/knowledge/mastering-organic-seed-production-for-better-crops/' },
+  { row: 164, title: 'A life cycle analysis (LCA) primer for the agricultural community (OSTI)', grade: 'R', url: 'https://www.osti.gov/servlets/purl/1802622' },
+  { row: 165, title: 'Global database of GHG emissions related to feed crops (FAO)', grade: 'D', url: 'https://openknowledge.fao.org/server/api/core/bitstreams/c3b15795-3030-41c4-986e-31a090aa2ab4/content' },
+  { row: 166, title: 'openLCA — free, professional life cycle assessment software (openlca.org)', grade: 'C', url: 'https://www.openlca.org/' },
+  { row: 167, title: 'Inter-process communication with openLCA: introduction (API documentation)', grade: 'C', url: 'https://greendelta.github.io/openLCA-ApiDoc/' },
+  { row: 168, title: 'Features — openLCA.org', grade: 'C', url: 'https://www.openlca.org/features/' },
+  { row: 169, title: 'Concept — openLCA.org', grade: 'C', url: 'https://www.openlca.org/concept/' },
+  { row: 170, title: 'How to Calculate the PCF of My Vertical Farm in openLCA? — ask.openLCA', grade: 'C', url: 'https://ask.openlca.org/8778/how-to-calculate-the-pcf-of-my-vertical-farm-in-openlca' },
+  // ── The program's other sustainability sources: the primary publisher behind a figure document E cites through a secondary page ──
+  { row: 171, title: 'Handbook on Life Cycle Assessment, Part 2b: Operational annex, Table 4.3.11.1 generic eutrophication factors (Guinée et al., CML Leiden, 2001)', grade: 'D', url: 'https://www.universiteitleiden.nl/binaries/content/assets/science/cml/publicaties_pdf/new-dutch-lca-guide/part2b.pdf' },
 ];
 
 export const SCIENCE_SOURCE_BY_ROW: Readonly<Record<number, ScienceSource>> = Object.fromEntries(SCIENCE_SOURCES.map((s) => [s.row, s]));
@@ -141,26 +212,30 @@ export const SCIENCE_SOURCE_BY_ROW: Readonly<Record<number, ScienceSource>> = Ob
  * Each document's own works-cited numbering, mapped to register rows, so an inline
  * superscript in either document resolves. Document A is the identity for 1–56.
  */
-export const DOCUMENT_ROWS: Readonly<Record<'A' | 'B' | 'C' | 'D', readonly number[]>> = {
+export type ScienceDocument = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export const DOCUMENT_ROWS: Readonly<Record<ScienceDocument, readonly number[]>> = {
   A: Array.from({ length: 56 }, (_, i) => i + 1),
   B: [1, 61, 5, 6, 25, 62, 8, 63, 2, 64, 3, 11, 9, 50, 4, 10, 13, 65, 66, 67, 51, 52, 53, 21, 22, 55, 68, 69, 70, 71, 72, 73, 74, 75, 14, 20, 23, 24, 26, 27, 30, 28, 29, 38, 19, 41, 42, 43, 44, 45, 36, 33, 31, 32, 34, 16, 17, 18, 49],
   C: [2, 5, 3, 11, 64, 53, 65, 31, 34, 26, 22, 23, 76, 77, 9, 78, 79, 80, 81, 68, 70, 71, 82, 83, 13, 10, 84, 85, 86, 87, 88, 89, 90, 91, 92, 72, 74, 61],
   D: [5, 61, 9, 65, 64, 53, 93, 2, 3, 11, 13, 10, 94, 95, 96, 97, 98, 99, 100, 101, 102, 68, 72, 70, 103, 23, 22, 26, 31, 34, 84, 86, 80, 83, 89, 85, 87, 88, 76, 77, 82, 78, 90, 79, 92],
+  E: [104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 74, 125, 62, 126, 127, 128, 129, 130, 131, 94, 98, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170],
 };
 
 /** The register row a document's inline number cites. */
-export function rowFor(doc: 'A' | 'B' | 'C' | 'D', n: number): number {
+export function rowFor(doc: ScienceDocument, n: number): number {
   const row = DOCUMENT_ROWS[doc][n - 1];
   if (row === undefined) throw new Error(`Document ${doc} has no citation ${n}`);
   return row;
 }
 
-export type Evidence = 'human' | 'animal' | 'cell' | 'review' | 'meta-analysis' | 'registry' | 'supplier';
+/** `lca` is a life cycle study, declaration or dataset: a figure about a material or a system, not an outcome in a person. */
+export type Evidence = 'human' | 'animal' | 'cell' | 'review' | 'meta-analysis' | 'registry' | 'supplier' | 'lca';
 
 /** A claim as a document states it, the varieties it applies to, and the register rows it cites. */
 export interface ScienceClaim {
   id: string;
-  topic: 'nutrition' | 'mechanism' | 'cardiovascular' | 'metabolic' | 'neurological' | 'other-clinical' | 'safety' | 'media' | 'light';
+  topic: 'nutrition' | 'mechanism' | 'cardiovascular' | 'metabolic' | 'neurological' | 'other-clinical' | 'safety' | 'media' | 'light' | 'sustainability';
   text: string;
   varieties: string[];
   evidence: Evidence;
@@ -170,6 +245,7 @@ export interface ScienceClaim {
 const B = (n: number) => rowFor('B', n);
 const C = (n: number) => rowFor('C', n);
 const D = (n: number) => rowFor('D', n);
+const E = (n: number) => rowFor('E', n);
 
 export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
   // ── Nutrient density and composition (document A) ──
@@ -262,6 +338,14 @@ export const SCIENCE_CLAIMS: readonly ScienceClaim[] = [
   { id: 'broccoli-ppfd', topic: 'light', text: 'Broccoli microgreens grow and accumulate phytochemicals best at 50 to 70 µmol/m²/s; above 100 growth slows and reactive oxygen species damage tissue.', varieties: ['broccoli'], evidence: 'human', rows: [B(32), B(12)] },
   { id: 'pak-choi-ppfd', topic: 'light', text: 'Red pak choi carotenoids peak at 330 to 440 µmol/m²/s, lower at 110 and at 545.', varieties: ['pak-choi'], evidence: 'human', rows: [B(32)] },
   { id: 'continuous-light', topic: 'light', text: 'Continuous 24-hour light (DLI 15.6 and 23.3 mol/m²/day) raised fresh and dry weight and antioxidant enzyme activity in arugula, broccoli, mizuna and radish versus a 16-hour photoperiod, with no visible photodamage inside the harvest window.', varieties: ['broccoli', 'radish', 'arugula', 'mizuna'], evidence: 'human', rows: [B(34)] },
+  // ── Sustainability (document E): life cycle figures, each the cited study's own system, never the facility's ──
+  { id: 'cited-microgreens-footprint', topic: 'sustainability', text: 'In a building-integrated broccoli microgreen system in Lisbon (LED tubes 14 hours a day, coconut-fibre substrate, the 2018 Portuguese grid), the cradle-to-gate footprint was 18.6 kg CO2e per kg delivered on campus and 22.2 off campus: electricity 54% on campus, of which LED lighting 4.39 and climate control 5.60 kg per kg; seed 4.04 kg per kg (22%); the substrate 2.06 kg per kg; the infrastructure 2.07 kg per kg, up to 11.3%.', varieties: ['broccoli'], evidence: 'lca', rows: [E(5)] },
+  { id: 'seed-share-microgreens', topic: 'sustainability', text: 'Sown at about 0.07 kg of seed per kg of fresh weight harvested, the seed\'s field production was the second-largest line of the cited microgreen system, close to the electricity for its lights.', varieties: ['all'], evidence: 'lca', rows: [E(5), E(24)] },
+  { id: 'peat-substitutes-gwp', topic: 'sustainability', text: 'Per cubic metre of substrate component used once, with decomposition in use counted: peat 254 kg CO2e, green-waste compost 177, coir fibre 85, coir pith 41, bark compost 33, rice husks 29, wood fibre 10; 64% of peat\'s figure is its organic matter decomposing to CO2 in use.', varieties: ['all'], evidence: 'lca', rows: [E(25)] },
+  { id: 'coir-not-a-peat-substitute', topic: 'sustainability', text: 'Coir fibre carries less climate impact than peat but higher pollutant emissions to water, and the Swiss comparison does not rate it a suitable peat alternative on ecological criteria; coir pith scores better than coir fibre on every indicator.', varieties: ['all'], evidence: 'lca', rows: [E(25)] },
+  { id: 'steel-product-epds', topic: 'sustainability', text: 'Three EPD Hub declarations for fabricated coated-steel products put the cradle-to-gate (A1 to A3) global warming potential at 2.78 kg CO2e per kg for galvanized spiral duct and 3.15 to 3.62 for powder-coated storage hardware and cabinets; two declare a 50-year reference service life and one declares none. None is stainless steel and none is a steel-stock factor.', varieties: ['all'], evidence: 'lca', rows: [E(19), E(20), E(21)] },
+  { id: 'led-use-phase-dominates', topic: 'sustainability', text: 'Over a 25,000-hour life, 93.5% of an LED lamp\'s global warming potential was the electricity it used; raw materials and manufacturing were 16.2 of 251 kg CO2e per 20 million lumen-hours for a 2012 lamp. For a 47 W linear LED luminaire over 70,000 hours, production was about 1% of the total.', varieties: ['all'], evidence: 'lca', rows: [E(39), E(37)] },
+  { id: 'eutrophication-equivalents', topic: 'sustainability', text: 'On the CML generic eutrophication factors, 1 kg of ammonia counts 0.35 kg phosphate-equivalent, nitrate 0.10, chemical oxygen demand 0.022, phosphate 1.0 and phosphorus 3.06.', varieties: ['all'], evidence: 'lca', rows: [171] },
   { id: 'cea-decouples', topic: 'light', text: 'Controlled environment agriculture decouples yield from nutritional quality: deliberate abiotic stress through blue-rich light, far-red, UV, continuous photoperiods and resistive media raises secondary metabolites before harvest.', varieties: ['all'], evidence: 'review', rows: [B(6), B(10)] },
 ];
 
@@ -272,8 +356,8 @@ export function claimsForVariety(key: string): ScienceClaim[] {
   return SCIENCE_CLAIMS.filter((c) => c.varieties.includes(key) || c.varieties.includes('all'));
 }
 
-const GRADE_KIND: Record<SourceGrade, ReferenceSource['kind']> = { P: 'study', R: 'study', T: 'study', S: 'supplier_report', C: 'other' };
-const GRADE_LABEL: Record<SourceGrade, string> = { P: 'primary study', R: 'review', T: 'trial registry', S: 'seed supplier statement', C: 'commercial page, context only' };
+const GRADE_KIND: Record<SourceGrade, ReferenceSource['kind']> = { P: 'study', R: 'study', T: 'study', S: 'supplier_report', D: 'dataset', C: 'other' };
+const GRADE_LABEL: Record<SourceGrade, string> = { P: 'primary study', R: 'review', T: 'trial registry', S: 'supplier statement', D: 'dataset, declaration or agency publication', C: 'commercial page, context only' };
 
 /** The rows as Sources-page registrations; `sources-registry.ts` merges them into the register. */
 export const SCIENCE_REFERENCE_SOURCES: readonly ReferenceSource[] = SCIENCE_SOURCES.map((s) => ({

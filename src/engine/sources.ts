@@ -77,7 +77,8 @@ export interface FactorSourceGroup {
 function kindForUrl(url: string): SourceKind {
   if (/ecfr\.gov/.test(url)) return 'regulation';
   if (/austintexas\.gov|austinenergy\.com/.test(url)) return 'rate_schedule';
-  if (/doi\.org/.test(url)) return 'study';
+  if (/product_declaration|\/EPD\/|xlbygg\.se\/media/i.test(url)) return 'lca';
+  if (/doi\.org|mdpi\.com|zhaw\.ch\/storage|pnnl\.gov|upcommons\.upc\.edu|universiteitleiden\.nl/.test(url)) return 'study';
   return 'dataset';
 }
 

@@ -42,6 +42,9 @@ const BASE_REFERENCE_SOURCES: readonly ReferenceSource[] = [
   // ── Texas ─────────────────────────────────────────────────────────────
   { key: 'tx:25-tac-228', kind: 'regulation', title: '25 Texas Administrative Code Chapter 228 — Retail Food Establishments', publisher: 'Texas Department of State Health Services', year: 2021, citation: '25 TAC §228.1 (adopts the 2017 FDA Food Code and Supplement, effective 2021-08-08), §228.171, §228.241, §228.243', sourceUrl: 'https://texreg.sos.state.tx.us/public/readtac$ext.ViewTAC?tac_view=4&ti=25&pt=1&ch=228', usedFor: 'The legal basis of the facility conformance register: every food requirement is a Food Code section as adopted by Texas.' },
 
+  // ── Life cycle databases ──────────────────────────────────────────────
+  { key: 'ademe:agribalyse-3.2', kind: 'dataset', title: 'AGRIBALYSE version 3.2 (ADEME), Recherche Data Gouv Dataverse', publisher: 'ADEME', year: 2024, citation: 'Source ADEME, données AGRIBALYSE v3.2, published 5 December 2024; Licence Ouverte / Open Licence (Etalab) 2.0: adaptation and commercial use allowed with the source and the update date named; no registration. Use inside LCA software needs an ecoinvent licence for the background data.', sourceUrl: 'https://entrepot.recherche.data.gouv.fr/dataset.xhtml?persistentId=doi:10.57745/XTENSJ', usedFor: 'The seed and nutrient reference database named by Phase 5; no process is drawn on yet. The cited microgreens LCA modelled seed on its cauliflower-seed process and coir on its coconut-fibre process.' },
+
   // ── Federal — USDA ────────────────────────────────────────────────────
 
   // ── Federal — FDA ─────────────────────────────────────────────────────

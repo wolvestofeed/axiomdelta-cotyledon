@@ -33,7 +33,20 @@ describe('science library', () => {
     for (const r of [...DOCUMENT_ROWS.C, ...DOCUMENT_ROWS.D]) expect(SCIENCE_SOURCE_BY_ROW[r]).toBeDefined();
     expect(rowFor('C', 13)).toBe(76);
     expect(rowFor('D', 25)).toBe(103);
-    expect(SCIENCE_SOURCES.at(-1)!.row).toBe(103);
+  });
+
+  it('document E maps every citation onto a row, shares four works with the others, and its new works are rows 104 to 170', () => {
+    expect(DOCUMENT_ROWS.E).toHaveLength(71);
+    for (const r of DOCUMENT_ROWS.E) expect(SCIENCE_SOURCE_BY_ROW[r]).toBeDefined();
+    expect(rowFor('E', 1)).toBe(104);
+    expect(rowFor('E', 5)).toBe(108);
+    expect(rowFor('E', 22)).toBe(74);
+    expect(rowFor('E', 24)).toBe(62);
+    expect(rowFor('E', 31)).toBe(94);
+    expect(rowFor('E', 32)).toBe(98);
+    expect(rowFor('E', 71)).toBe(170);
+    expect(SCIENCE_SOURCE_BY_ROW[171]!.grade).toBe('D'); // the CML handbook, the primary behind document E's eutrophication equivalents
+    expect(SCIENCE_SOURCES.at(-1)!.row).toBe(171);
   });
 
   it('every animal and in-vitro claim names its model in its text; document C carries the borage alkaloid caution', () => {

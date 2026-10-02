@@ -46,7 +46,7 @@ describe('farm sources — factor library grouping', () => {
     const groups = groupFactorsBySource(factorRegistry);
     const hub = groups.find((g) => /ghg-emission-factors-hub-2025/.test(g.sourceUrl))!;
     expect(hub.title).toBe('EPA GHG Emission Factors Hub');
-    expect(hub.figures.length).toBe(6);
+    expect(hub.figures.length).toBe(10); // Table 1 fuels, the AR5 GWPs and Table 8's four freight modes
   });
   it('classifies regulation, rate schedule and study by URL', () => {
     const groups = groupFactorsBySource(factorRegistry);
@@ -54,7 +54,9 @@ describe('farm sources — factor library grouping', () => {
     expect(by(/ecfr\.gov/).kind).toBe('regulation');
     expect(by(/austintexas\.gov/).kind).toBe('rate_schedule');
     expect(by(/doi\.org/).kind).toBe('study');
-    expect(by(/epa\.gov\/egrid/).kind).toBe('dataset');
+    expect(by(/summary_tables_rev2/).kind).toBe('dataset'); // eGRID2023 summary tables
+    expect(by(/zhaw\.ch/).kind).toBe('study');
+    expect(by(/mdpi\.com\/2073-4433/).kind).toBe('study');
   });
   it('the 43 input factors share the study source with the dataset provenance', () => {
     const groups = groupFactorsBySource(factorRegistry);
