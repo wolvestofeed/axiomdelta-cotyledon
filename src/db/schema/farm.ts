@@ -1265,6 +1265,9 @@ export const farmSubscribers = farmSchema.table(
     /** Named nutrition targets (0007): keys from src/data/nutrition-targets.ts. */
     // @classification: Confidential
     nutritionTargets: jsonb('nutrition_targets').notNull().default([]),
+    /** The subscriber's Stripe customer (0024), created when a card is put on file; null = none. */
+    // @classification: Confidential
+    stripeCustomerId: text('stripe_customer_id'),
     /** 'seed' | 'user_built' */
     // @classification: Internal
     source: text('source').notNull().default('user_built'),

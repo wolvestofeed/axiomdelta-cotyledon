@@ -319,27 +319,27 @@ export const REPORT_CATALOG: readonly ReportDef[] = [
     sourceHref: '/farm/pickup-points',
   },
 
-  // ── Subscriber ────────────────────────────────────────────────────────────
+  // ── Client ────────────────────────────────────────────────────────────────
   {
     id: 'subscriber-accounts',
-    section: 'Subscriber',
+    section: 'Client',
     title: 'Subscriber accounts: orders, invoices and payments',
     blurb: 'Per subscriber: orders on file by status, distributions recorded, invoices issued, what is open on them and what has been received.',
     themes: ['performance', 'compliance'],
     world: 'records',
-    sourceHref: '/farm/subscriber-portal',
+    sourceHref: '/farm/client-portal',
     adminOnly: true,
   },
 
-  // ── Supplier ────────────────────────────────────────────────────────────
+  // Supplier catalogs sit under Supply Chain: the Supplier Portal is on hold and out of the UI.
   {
     id: 'supplier-catalogs',
-    section: 'Supplier',
+    section: 'Supply Chain',
     title: 'Supplier catalogs on file',
     blurb: 'Catalog lines by supplier: approved against candidate, lines with a price in force, lines naming a certification, and lead times on file.',
     themes: ['compliance'],
     world: 'records',
-    sourceHref: '/farm/supplier-portal',
+    sourceHref: '/farm/suppliers',
   },
 ];
 

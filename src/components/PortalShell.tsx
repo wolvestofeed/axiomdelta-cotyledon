@@ -19,7 +19,7 @@ export function PortalShell({
   links: { href: string; label: string }[];
   /** The signed-in line, top right. */
   who: React.ReactNode;
-  /** Suppliers and subscribers: the review policy shows under the header. */
+  /** The Client Portal: the review policy shows under the header. */
   external?: boolean;
   children: React.ReactNode;
 }) {
@@ -50,7 +50,7 @@ export function PortalShell({
 export function ReviewPolicy() {
   return (
     <div role="note" className="border-b border-b-[color:var(--farm-line)] bg-[color:var(--farm-surface-2)] py-[0.55rem] px-5 farm-fs-sm farm-c-soft">
-      New accounts, orders and supplier submissions are reviewed by the farm&rsquo;s staff before they are committed to production. Please call the farm for faster service.
+      New accounts and orders are reviewed by the farm&rsquo;s staff before they are committed to production. Please call the farm for faster service.
     </div>
   );
 }

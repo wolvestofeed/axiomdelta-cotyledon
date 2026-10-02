@@ -56,6 +56,8 @@ export interface SubscriberDef {
   ownUse?: boolean;
   /** The subscriber's subscriptions: standing orders on a cadence at their pickup points. */
   subscriptions?: import('@/data/subscriptions').SubscriptionDef[];
+  /** The subscriber's Stripe customer once a card is on file (migration 0024); absent or null = none. */
+  stripeCustomerId?: string | null;
   pickupPoints: SubscriberPickupPointDef[];
 }
 

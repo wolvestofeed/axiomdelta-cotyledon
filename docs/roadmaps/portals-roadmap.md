@@ -17,8 +17,8 @@ Status lives in [`../roadmap.md`](../roadmap.md) (Phase P); this file owns the p
    | Cotyledon | admins, and operators by the role matrix | internal | `/farm/dashboard` |
    | Floor | farm operators (production and harvest) | internal | `/farm/grow-room` |
    | Sales | sales staff | internal, with the time clock | `/farm/sales-portal` |
-   | Subscriber | corporate, restaurant and special-events clients | external | `/farm/subscriber-portal` |
-   | Supplier | suppliers | external | `/farm/supplier-portal` |
+   | Client | the farm's clients (never "Subscriber Portal") | external | `/farm/client-portal` |
+   | Supplier | on hold: the farm buys directly from its vendors and no supplier signs in; out of the UI | external | — |
    | Parent | parents | external | `/farm/parent-portal` |
 
 2. **The UI surface first.** The portals are shown to people now; wiring follows. Nothing is gated

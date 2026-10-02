@@ -67,9 +67,10 @@ describe('routes', () => {
 });
 
 describe('menu order', () => {
-  it('ends the OS sections with Sales then Distribution, and puts Subscriber, Supplier last', () => {
-    expect(SECTIONS.slice(-4)).toEqual(['Sales', 'Distribution', ...EXTERNAL_SECTIONS]);
-    expect(EXTERNAL_SECTIONS).toEqual(['Subscriber', 'Supplier']);
+  it('ends the OS sections with Sales then Distribution, and puts Client last; the Supplier Portal is on hold and out of the menu', () => {
+    expect(SECTIONS.slice(-3)).toEqual(['Sales', 'Distribution', ...EXTERNAL_SECTIONS]);
+    expect(EXTERNAL_SECTIONS).toEqual(['Client']);
+    expect(SECTIONS).not.toContain('Supplier');
     expect(SECTIONS).toContain('Supply Chain');
     expect(SECTIONS).not.toContain('Supply');
   });

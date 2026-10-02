@@ -88,10 +88,11 @@ export const MODULES: NavItem[] = [
 
   { label: 'Pickup Points & Routes', href: '/farm/pickup-points', section: 'Distribution', status: 'designed' },
 
-  { label: 'Subscriber Portal', href: '/farm/subscriber-portal', section: 'Subscriber', status: 'designed' },
-  { label: 'Flat Builder', href: '/farm/subscriber-portal/flat-builder', section: 'Subscriber', status: 'designed' },
-
-  { label: 'Supplier Portal', href: '/farm/supplier-portal', section: 'Supplier', status: 'designed' },
+  { label: 'Client Portal', href: '/farm/client-portal', section: 'Client', status: 'designed' },
+  { label: 'Flat Builder', href: '/farm/client-portal/flat-builder', section: 'Client', status: 'designed' },
+  { label: 'Subscriptions', href: '/farm/client-portal/subscriptions', section: 'Client', status: 'designed' },
+  { label: 'Profile', href: '/farm/client-portal/profile', section: 'Client', status: 'designed' },
+  { label: 'Settings', href: '/farm/client-portal/settings', section: 'Client', status: 'designed' },
 ];
 
 /**
@@ -115,6 +116,7 @@ export const SECTIONS: string[] = sectionsOf(MODULES);
 
 /**
  * The external users' portal sections: last in the menu, below a rule that closes the OS
- * sections.
+ * sections. The Client Portal is the one external portal; the Supplier Portal is on hold and out of
+ * the UI (the farm buys directly from its vendors, and no supplier signs in).
  */
-export const EXTERNAL_SECTIONS: readonly string[] = ['Subscriber', 'Supplier'];
+export const EXTERNAL_SECTIONS: readonly string[] = ['Client'];

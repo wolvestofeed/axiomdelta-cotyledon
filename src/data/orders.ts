@@ -20,7 +20,7 @@ export const ORDER_SOURCE_LABELS: Record<OrderSource, string> = {
   typed: 'Typed',
   subscription: 'Subscription',
   sales: 'Sales workspace',
-  portal: 'Subscriber portal',
+  portal: 'Client portal',
 };
 
 /** 0 = Sunday … 6 = Saturday, matching `Date.getUTCDay()`. */

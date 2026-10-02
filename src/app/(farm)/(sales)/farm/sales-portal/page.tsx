@@ -86,7 +86,7 @@ async function SalesPortalPageInner() {
             <li><Link className="farm-link" href="/farm/sales">CRM</Link> — the prospect directory, needs, communications, quotes of service and scope of work.</li>
             <li><Link className="farm-link" href="/farm/subscribers">Subscribers</Link> — subscriber records, pickup points, services and flat plans.</li>
             <li><Link className="farm-link" href="/farm/orders">Orders</Link> — the order book: forecast, confirmed and distributed orders.</li>
-            <li><Link className="farm-link" href="/farm/subscriber-portal/flat-builder">Flat Builder</Link> — the client-facing order form on the Subscriber Portal.</li>
+            <li><Link className="farm-link" href="/farm/client-portal/flat-builder">Flat Builder</Link> — the client-facing order form on the Client Portal.</li>
           </ul>
         </Card>
       </div>

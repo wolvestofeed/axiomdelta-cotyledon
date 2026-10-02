@@ -9,14 +9,12 @@ const isPublicPortalAuth = createRouteMatcher([
   '/farm',
   '/farm/sign-in(.*)',
   '/farm/sign-up(.*)',
-  '/farm/subscriber-portal/sign-in(.*)',
-  '/farm/subscriber-portal/sign-up(.*)',
-  '/farm/supplier-portal/sign-in(.*)',
-  '/farm/supplier-portal/welcome(.*)',
+  '/farm/client-portal/sign-in(.*)',
+  '/farm/client-portal/sign-up(.*)',
 ]);
 
 /** A signed-out visit to a portal's own pages goes to that portal's sign-in, not the shared one. */
-const PORTAL_BASES = ['/farm/subscriber-portal', '/farm/supplier-portal'];
+const PORTAL_BASES = ['/farm/client-portal'];
 
 const withClerk = clerkMiddleware(async (auth, req) => {
   const portal = PORTAL_BASES.find((b) => req.nextUrl.pathname === b || req.nextUrl.pathname.startsWith(`${b}/`));

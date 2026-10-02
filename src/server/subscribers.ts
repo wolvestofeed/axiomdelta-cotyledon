@@ -62,6 +62,7 @@ export async function listSubscribers(): Promise<SubscriberDef[]> {
     ownUse: r.ownUse === true,
     nutritionTargets: Array.isArray(r.nutritionTargets) ? (r.nutritionTargets as unknown[]).filter((k): k is string => typeof k === 'string') : [],
     source: r.source === 'seed' ? 'seed' : 'user_built',
+    stripeCustomerId: r.stripeCustomerId ?? null,
     pickupPoints: (bySubscriber.get(r.id) ?? []).map((s) => ({
       id: s.id,
       pickupPointId: s.pickupPointId,

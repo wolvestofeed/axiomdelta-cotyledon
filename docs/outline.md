@@ -73,7 +73,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Cotyl
 | meal pattern, crediting, grade group | nutrient profile, nutrition targets, tray format | See §4 |
 | Floor | Grow Room | Operator surface |
 | Sites & Delivery | Pickup Points & Routes | |
-| Customer Portal, Order Builder | Subscriber Portal, Flat Builder | |
+| Customer Portal, Order Builder | Client Portal, Flat Builder | |
 | Parent Portal, Parent Admin | (removed) | |
 | Sales Portal, CRM, Customers, Orders | Sales Portal, Prospects, Subscribers, Orders | |
 | ERRA rating, mark | (removed) | |
@@ -159,11 +159,11 @@ Status per module is kept in `nav.ts`, not here. Legend: **port** = comes over w
 | | Schedule | port; reads the internal roster |
 | | SOPs & Training | port |
 | Sales | Sales Portal, Prospects, Subscribers, Orders | port |
-| | Subscriptions | new: cadence, Stripe recurring billing, pause/skip, cycle → orders |
+| | Subscriptions | new: cadence, pause/skip, distributions → orders; each distribution billed by card as it is handed over (Stripe) |
 | | Nutrition Targets | new: per-subscriber targets scored against variety profiles |
 | Distribution | Pickup Points & Routes | swap (from Sites & Delivery): pickup points, delivery routes, tray returns |
-| Subscriber portal | Subscriber Portal, Flat Builder | swap (from Customer Portal, Order Builder) |
-| Supplier portal | Supplier Portal | port |
+| Client portal | Client Portal: orders and invoices, Flat Builder, Subscriptions, Profile, Settings, why hemp mats, glossary | swap (from Customer Portal, Order Builder); never "Subscriber Portal"; the clients' own sign-in at `/farm/client-portal` |
+| Supplier portal | — | on hold: the farm buys directly from its vendors and no supplier signs in, so the portal is out of the UI; the vendor database (who they are, what is bought, at what price) is Supply Chain |
 | Parent portal | — | drop |
 | R&D | Blends | new: the blends under development as developing grow plans, each with its varieties' growing fit and the nutrition targets they carry, read against a subscriber's or a chosen target set |
 | | Experiments | new: running a blend as titled experiments on the grow units, yield per variety read across its experiments, and the plan's promotion to in service; experiment cost to Research and Development |
