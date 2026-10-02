@@ -12,8 +12,13 @@
  *      dataset, rate schedule, study and guidance the platform cites outside the
  *      factor library. Matched by URL, else by title.
  *   4. The manufacturer spec sheets the equipment footprints are read from.
+ *   5. Retires the URL-only rows an earlier run registered that the code no longer
+ *      names (a factor, a reference or a spec sheet removed since): their figures go
+ *      with them. A stored document, an upload, or a row some record links to (a
+ *      reading, a bill, a service ticket, a supplier price or figure) is never retired;
+ *      a linked stale row is reported instead.
  *
- * Run:  DATABASE_URL=postgres://... pnpm farm:sources
+ * Run:  FARM_WORKSPACE=org_local_dev pnpm farm:sources
  */
 
 import { createHash } from 'node:crypto';
@@ -203,8 +208,13 @@ async function main(): Promise<void> {
     }
   }
 
+  // Everything the code names: the retirement step keeps these and drops the rest of the seed's URL-only rows.
+  const namedUrls = new Set<string>();
+  const namedTitles = new Set<string>();
+
   // 2. URL-only sources from the factor library, one per publisher URL.
   for (const g of groupFactorsBySource(factorRegistry)) {
+    namedUrls.add(g.sourceUrl);
     // Figures whose provenance id is claimed by a stored document attach there instead.
     const stored = g.figures.filter((f) => claimed.has(f.id) || claimed.has(f.id.split(':').slice(0, 2).join(':')));
     const urlOnly = g.figures.filter((f) => !stored.includes(f));
@@ -272,15 +282,44 @@ async function main(): Promise<void> {
     }
   };
   for (const r of REFERENCE_SOURCES) {
+    if (r.sourceUrl) namedUrls.add(r.sourceUrl);
+    else namedTitles.add(r.title);
     await upsertReference({ kind: r.kind, title: r.title, publisher: r.publisher, year: r.year, citation: r.citation, sourceUrl: r.sourceUrl, notes: `Used for: ${r.usedFor} Registered from the reference register; document not stored, publisher link only.` });
   }
 
   // 4. Manufacturer spec sheets behind the equipment footprints.
   for (const sh of specSheetSources()) {
+    namedUrls.add(sh.sourceUrl);
     await upsertReference({ kind: 'spec_sheet', title: sh.title, publisher: sh.publisher, year: null, citation: `Manufacturer specification sheet: ${sh.items.join('; ')}`, sourceUrl: sh.sourceUrl, notes: 'Used for: the plan footprint and clearances of the equipment line on the Facility page. Registered from the equipment library; document not stored, manufacturer link only.' });
   }
 
-  console.log(`\nDone. ${sources} source(s) added, ${figures} figure(s) added; existing rows refreshed.`);
+  // 5. Retire the seed's URL-only rows the code no longer names.
+  const SEED_NOTE = /Registered from the (factor library|reference register|equipment library)/;
+  const urlOnly = await db
+    .select({ id: farmSources.id, title: farmSources.title, sourceUrl: farmSources.sourceUrl, notes: farmSources.notes })
+    .from(farmSources)
+    .where(sql`${farmSources.sha256} is null and ${farmSources.fileBytes} is null`);
+  const stale = urlOnly.filter((r) => SEED_NOTE.test(r.notes ?? '') && !(r.sourceUrl ? namedUrls.has(r.sourceUrl) : namedTitles.has(r.title)));
+  let retired = 0;
+  for (const r of stale) {
+    const linked = (await db.execute(sql`
+      select
+        (select count(*) from farm.sustainability_readings where source_id = ${r.id}) +
+        (select count(*) from farm.refrigerant_service where source_id = ${r.id}) +
+        (select count(*) from farm.period_bills where source_id = ${r.id}) +
+        (select count(*) from farm.supplier_items where source_id = ${r.id}) +
+        (select count(*) from farm.supplier_item_prices where source_id = ${r.id}) +
+        (select count(*) from farm.supplier_lca_options where source_id = ${r.id}) as n`)).rows[0] as { n: number | string };
+    if (Number(linked.n) > 0) {
+      console.log(`  keep  ${r.title} (stale, but ${linked.n} record(s) link to it)`);
+      continue;
+    }
+    await db.delete(farmSources).where(eq(farmSources.id, r.id));
+    retired++;
+    console.log(`  retire ${r.title}`);
+  }
+
+  console.log(`\nDone. ${sources} source(s) added, ${figures} figure(s) added, ${retired} stale source(s) retired; existing rows refreshed.`);
   await handle.close();
 }
 
