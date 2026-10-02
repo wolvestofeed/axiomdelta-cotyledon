@@ -1,4 +1,4 @@
--- MicroFarm: experiments in R&D.
+-- Cotyledon: experiments in R&D.
 --
 -- An experiment is a titled run of a developing grow plan: the plan, the sow date and the trays.
 -- From its sow date it takes its place on the grow units like any sowing. It closes through the

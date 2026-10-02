@@ -1,4 +1,4 @@
--- MicroFarm: the equipment zone check names the harvest zone as the code spells it.
+-- Cotyledon: the equipment zone check names the harvest zone as the code spells it.
 --
 -- The vocabulary swap that folded the migrations wrote the renamed zone in lower case; the zone
 -- catalog (src/data/facility-design.ts) and every seed row spell it 'Harvest', so the seed insert

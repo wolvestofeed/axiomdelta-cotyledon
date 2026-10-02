@@ -1,4 +1,4 @@
--- MicroFarm: dark racks.
+-- Cotyledon: dark racks.
 --
 -- A grow unit marked dark stages only holds a tray sowing through its sow day, germination and
 -- blackout; the trays then move to a lit unit whose fixture delivers the plan's light for the light

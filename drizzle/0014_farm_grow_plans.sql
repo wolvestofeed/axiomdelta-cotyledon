@@ -1,4 +1,4 @@
--- MicroFarm: grow plans by name.
+-- Cotyledon: grow plans by name.
 --
 -- The library tables and every column that names a plan take the grow plan's name:
 -- `crop_plans`, `crop_plan_lines` and `crop_plan_packages` become `grow_plans`, `grow_plan_lines`

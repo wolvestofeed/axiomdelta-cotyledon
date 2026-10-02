@@ -1,4 +1,4 @@
--- MicroFarm: the Nutrients & Supplements library.
+-- Cotyledon: the Nutrients & Supplements library.
 --
 -- One row per nutrient solution or supplement a grow plan's nutrient line names: its strength in
 -- ml per gallon, its cost per ml, the EC and pH it is managed to, what it is meant to elicit with

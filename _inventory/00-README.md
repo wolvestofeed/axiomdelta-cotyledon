@@ -1,6 +1,6 @@
 # _inventory — temporary
 
-Created 2026-09-25 as a read-only survey of prior material before outlining the Austin MicroFarm / wellness-center build. Delete or move once the real repo structure exists.
+Created 2026-09-25 as a read-only survey of prior material before outlining the Austin Cotyledon / wellness-center build. Delete or move once the real repo structure exists.
 
 - `01-vallecito-micro-farm-inventory.md` — every file in the Vallecito folder, plus the extracted business model: varieties, unit economics per flat, time study, equipment costs, layout scenarios, nutrition research, regs.
 - `02-wolves-to-feed-and-related-inventory.md` — WTF website and app, Rob/Joshin background and credentials, sibling repos, house tech stack.

@@ -1,4 +1,4 @@
--- MicroFarm: a nutrient line's strength in ml per gallon.
+-- Cotyledon: a nutrient line's strength in ml per gallon.
 --
 -- Watering is in fluid ounces and every other volume in gallons, so a stored nutrient line's
 -- `mlPerL` becomes `mlPerGal`: a typed strength is multiplied by 3.78541 and keeps its tag; a null

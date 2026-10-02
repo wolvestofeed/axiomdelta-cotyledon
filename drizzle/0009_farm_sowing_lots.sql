@@ -1,4 +1,4 @@
--- MicroFarm: the sowing record's lots per variety, in grams.
+-- Cotyledon: the sowing record's lots per variety, in grams.
 --
 -- A sowing carries one lot per variety (the seed issued in and the harvest out, in grams, with
 -- the seed lot, the output lot code and the scrap) and the medium and nutrient issued to its

@@ -1,4 +1,4 @@
--- MicroFarm: subscribers carry no rating.
+-- Cotyledon: subscribers carry no rating.
 --
 -- The rating columns came over with the source client's mark, which rated the organizations the
 -- source client served. A subscriber is a person or a business buying flats; nothing rates them.

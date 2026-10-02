@@ -1,8 +1,8 @@
--- MicroFarm: the farm schema. One consolidated migration set; no prior history to preserve.
+-- Cotyledon: the farm schema. One consolidated migration set; no prior history to preserve.
 
 -- ── farm_scenarios.sql ──
 -- 0043_farm_scenarios.sql
--- MicroFarm — scenario spine (M1).
+-- Cotyledon — scenario spine (M1).
 --
 -- First use of an isolated `farm` Postgres schema, per docs/farm/CLAUDE.md
 -- §8 ("farm.* Postgres schema — isolated from Staffing's public schema").
@@ -67,7 +67,7 @@ INSERT INTO farm.workspace_state (id) VALUES ('default')
 
 -- ── farm_sources.sql ──
 -- 0044_farm_sources.sql
--- MicroFarm — sources registry (Sustainability S2b).
+-- Cotyledon — sources registry (Sustainability S2b).
 --
 -- Two tables in the isolated `farm` schema:
 --
@@ -147,7 +147,7 @@ CREATE INDEX IF NOT EXISTS farm_source_figures_source_idx
 
 -- ── farm_supplier_lca_options.sql ──
 -- 0045_farm_supplier_lca_options.sql
--- MicroFarm — supplier-specific LCA options (Sustainability S4).
+-- Cotyledon — supplier-specific LCA options (Sustainability S4).
 --
 -- A figure a specific supplier supplies for a specific grow_plan input, with
 -- the supplier's own document registered in farm.sources. It appears as a
@@ -186,7 +186,7 @@ CREATE INDEX IF NOT EXISTS farm_supplier_lca_supplier_idx
 
 -- ── farm_entity_links.sql ──
 -- 0046_farm_entity_links.sql
--- MicroFarm — links that are facts of record.
+-- Cotyledon — links that are facts of record.
 --
 -- One record referring to another is stored two different ways in farm, and the
 -- distinction is deliberate:
@@ -239,7 +239,7 @@ CREATE INDEX IF NOT EXISTS farm_entity_links_to_idx
 
 -- ── farm_supplier_catalog_and_pos.sql ──
 -- 0047_farm_supplier_catalog_and_pos.sql
--- MicroFarm — supplier seasonal catalogs and generated purchase orders.
+-- Cotyledon — supplier seasonal catalogs and generated purchase orders.
 --
 -- Two things a supplier relationship needs that no public directory carries:
 --
@@ -355,7 +355,7 @@ CREATE INDEX IF NOT EXISTS farm_purchase_order_lines_po_idx
 
 -- ── farm_actuals.sql ──
 -- 0048_farm_actuals.sql
--- MicroFarm — actuals: the recorded facts that replace forecast lines.
+-- Cotyledon — actuals: the recorded facts that replace forecast lines.
 --
 -- The platform is a forecaster that becomes the operating system as data arrives.
 -- Every table here is a FACT OF RECORD captured when the event happens, read by
@@ -481,7 +481,7 @@ CREATE INDEX IF NOT EXISTS farm_period_bills_period_idx ON farm.period_bills (pe
 
 -- ── farm_grow_plans.sql ──
 -- 0049_farm_grow_plans.sql
--- MicroFarm — the grow_plan library (Roadmap Phase H1).
+-- Cotyledon — the grow_plan library (Roadmap Phase H1).
 --
 -- Until now one grow_plan lived as a code constant and stood in for the whole item
 -- master. The library makes grow_plans first-class: every grow_plan that can be
@@ -550,7 +550,7 @@ CREATE INDEX IF NOT EXISTS farm_grow_plan_lines_grow_plan_idx ON farm.grow_plan_
 
 -- ── farm_subscribers.sql ──
 -- 0050_farm_subscribers.sql
--- MicroFarm — subscribers, pickup_points and the pickup_point-by-pickup_point participation
+-- Cotyledon — subscribers, pickup_points and the pickup_point-by-pickup_point participation
 -- forecast (Roadmap Phase H2).
 --
 -- Demand is not a channel constant. It is the sum, over every pickup_point a subscriber
@@ -632,7 +632,7 @@ CREATE INDEX IF NOT EXISTS farm_subscriber_pickup_points_pickup_point_idx ON far
 
 -- ── farm_orders.sql ──
 -- 0051_farm_orders.sql
--- MicroFarm — orders and subscriptionCycles (Roadmap Phase H3).
+-- Cotyledon — orders and subscriptionCycles (Roadmap Phase H3).
 --
 -- An order is a date, a subscriber, a pickup_point, a channel, a grow_plan, a unit count and
 -- a status. It is what production plans against and what a distribution is
@@ -737,7 +737,7 @@ CREATE INDEX IF NOT EXISTS farm_orders_distribution_idx ON farm.orders (distribu
 
 -- ── farm_distribution_handoff.sql ──
 -- 0052_farm_distribution_handoff.sql
--- MicroFarm — the production record is kept (Roadmap Phase I).
+-- Cotyledon — the production record is kept (Roadmap Phase I).
 --
 -- Phase I makes the floor record real. Most of it rides on existing JSONB
 -- documents and needs no DDL:
@@ -759,7 +759,7 @@ ALTER TABLE farm.distributions ADD COLUMN IF NOT EXISTS received_by     text;
 
 -- ── farm_sowing_crew.sql ──
 -- 0053_farm_sowing_crew.sql
--- MicroFarm — crew hours by person on the sowing record (Roadmap I3).
+-- Cotyledon — crew hours by person on the sowing record (Roadmap I3).
 --
 -- Who worked the sowing and for how long, as rows on the record. The two
 -- labor totals the ledger reads (actual_labor_hours, actual_labor_rate) are
@@ -772,7 +772,7 @@ ALTER TABLE farm.sowing_records ADD COLUMN IF NOT EXISTS crew jsonb NOT NULL DEF
 -- 0054_farm_periods.sql
 -- (Applied to Neon 2026-09-14 as written. The 'shutdown' closure kind was an
 --  inherited assumption — the farm runs year-round — and 0055 removes it.)
--- MicroFarm — fiscal periods, the production calendar and the
+-- Cotyledon — fiscal periods, the production calendar and the
 -- posting trail (Roadmap J1, J3, J4).
 --
 --   * fiscal_periods     — one row per YYYY-MM that has ever been locked. The
@@ -844,7 +844,7 @@ CREATE TRIGGER posting_log_immutable
 
 -- ── farm_closure_kinds.sql ──
 -- 0055_farm_closure_kinds.sql
--- MicroFarm — closures are major holidays; the farm runs
+-- Cotyledon — closures are major holidays; the farm runs
 -- year-round. The 'shutdown' kind in 0054 was an
 -- inherited assumption, never a decision. No row carries it.
 
@@ -853,7 +853,7 @@ ALTER TABLE farm.calendar_closures ADD CONSTRAINT calendar_closures_kind_check C
 
 -- ── farm_standard_versions.sql ──
 -- 0056_farm_standard_versions.sql
--- MicroFarm — approved standard-cost versions (Roadmap J5).
+-- Cotyledon — approved standard-cost versions (Roadmap J5).
 --
 -- A standard is the grow_plan (its lines, yields and SEED prices as resolved on the
 -- plan of record) together with the cost assumptions in force, frozen as a
@@ -879,7 +879,7 @@ CREATE INDEX IF NOT EXISTS farm_standard_versions_code_date_idx ON farm.standard
 
 -- ── farm_working_capital.sql ──
 -- 0057_farm_working_capital.sql
--- MicroFarm — working capital and invoicing (Roadmap Phase K).
+-- Cotyledon — working capital and invoicing (Roadmap Phase K).
 --
 -- Decisions: one monthly invoice per subscriber, each
 -- completed distribution route added to it as it finishes; revenue to receivables
@@ -1072,7 +1072,7 @@ CREATE INDEX IF NOT EXISTS farm_time_punches_at_idx ON farm.time_punches (punche
 
 -- ── farm_equipment.sql ──
 -- 0058_farm_equipment.sql
--- MicroFarm — the equipment library (Roadmap Phase N, step N1).
+-- Cotyledon — the equipment library (Roadmap Phase N, step N1).
 --
 -- The master equipment list is a definition with a real-world status, shared by
 -- the Plan and the Actual ledgers (docs/farm/roadmaps/operating-model-roadmap.md):
@@ -1125,7 +1125,7 @@ CREATE INDEX IF NOT EXISTS farm_equipment_status_idx ON farm.equipment (status, 
 
 -- ── farm_packaging.sql ──
 -- 0059_farm_packaging.sql
--- MicroFarm — the packaging library (Roadmap Phase N, step N1).
+-- Cotyledon — the packaging library (Roadmap Phase N, step N1).
 --
 -- Packaging here is what a unit leaves the farm in — containers, lids,
 -- labels, liners — costed per unit onto the unit. It is NOT packaging
@@ -1190,7 +1190,7 @@ CREATE INDEX IF NOT EXISTS farm_grow_plan_packages_package_idx ON farm.grow_plan
 
 -- ── farm_hr_no_pay.sql ──
 -- 0060_farm_hr_no_pay.sql
--- MicroFarm — pay out of farm (Roadmap Phase O, step O1).
+-- Cotyledon — pay out of farm (Roadmap Phase O, step O1).
 --
 -- Decisions: no pay or confidential employee information is
 -- held in farm. Staffing holds wages, burden and benefits, closes each pay period
@@ -1232,7 +1232,7 @@ CREATE INDEX IF NOT EXISTS farm_payroll_periods_pay_date_idx ON farm.payroll_per
 
 -- ── farm_time_studies.sql ──
 -- 0061_farm_time_studies.sql
--- MicroFarm — time studies per grow_plan (Roadmap Phase O, step O2).
+-- Cotyledon — time studies per grow_plan (Roadmap Phase O, step O2).
 --
 -- Decisions: Labor is a log of time studies for each grow_plan
 -- in the library, on a re-study cadence, with trends and a quality result. A
@@ -1298,7 +1298,7 @@ CREATE TABLE IF NOT EXISTS farm.time_study_intervals (
 
 -- ── farm_staff_drop_pay.sql ──
 -- 0062_farm_staff_drop_pay.sql
--- MicroFarm — drop the pay columns from the staff register
+-- Cotyledon — drop the pay columns from the staff register
 -- (Roadmap Phase O, step O1). Approved by Robert, 2026-09-15.
 --
 -- No pay is held in farm: Staffing holds wages, burden and benefits. Since
@@ -1311,7 +1311,7 @@ ALTER TABLE farm.staff DROP COLUMN IF EXISTS annual_salary_cents;
 
 -- ── farm_staff_email.sql ──
 -- 0063_farm_staff_email.sql
--- MicroFarm — the staff register carries each person's sign-in email (Roadmap O5).
+-- Cotyledon — the staff register carries each person's sign-in email (Roadmap O5).
 --
 -- A person on the register whose email matches their sign-in, and who is active,
 -- holds the operator role and sees their own record on HR.
@@ -1323,7 +1323,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS farm_staff_email_uniq ON farm.staff (email) WH
 
 -- ── farm_time_study_basis.sql ──
 -- 0064_farm_time_study_basis.sql
--- MicroFarm — a time study's basis: estimated or observed (Roadmap O2 follow-on).
+-- Cotyledon — a time study's basis: estimated or observed (Roadmap O2 follow-on).
 --
 -- Decision: every grow_plan in the library is seeded with an
 -- ESTIMATED time study — a mock estimate per grow_plan step, built from the plan's
@@ -1342,7 +1342,7 @@ UPDATE farm.time_studies SET basis = 'estimated' WHERE source = 'seed' AND studi
 
 -- ── farm_sowing_basis.sql ──
 -- 0065_farm_sowing_basis.sql
--- MicroFarm — the sowing is the costing basis.
+-- Cotyledon — the sowing is the costing basis.
 --
 -- sowing costing: the planned cost of one full-line sowing from bulk as-purchased
 -- inputs. Yield: the sowing's usable product against the raw weight. Costing
@@ -1389,7 +1389,7 @@ UPDATE farm.equipment SET sowing_capacity_lb = 120 WHERE sowing_capacity_lb IS N
 
 -- ── farm_scheduler_streams.sql ──
 -- 0066_farm_scheduler_streams.sql
--- MicroFarm — the scaffold split and the resource attributes (scheduler build plan §0, W0 step 1).
+-- Cotyledon — the scaffold split and the resource attributes (scheduler build plan §0, W0 step 1).
 --
 -- Decisions:
 --   * The day is two streams. The SOWING stream ends at component blackout and
@@ -1445,7 +1445,7 @@ UPDATE farm.equipment SET attended_run = false, may_run_unattended = true
 
 -- ── farm_catalog_prices.sql ──
 -- 0067_farm_catalog_prices.sql
--- MicroFarm — supplier catalog items carry candidate / approved, and their price
+-- Cotyledon — supplier catalog items carry candidate / approved, and their price
 -- is effective-dated (Roadmap Phase N, step N1).
 --
 -- Two facts were conflated on the catalog row: whether we would buy from this
@@ -1531,7 +1531,7 @@ ALTER TABLE farm.supplier_items DROP COLUMN IF EXISTS price_basis;
 
 -- ── farm_loans_fixed_costs.sql ──
 -- 0068_farm_loans_fixed_costs.sql
--- MicroFarm — loans and fixed-cost lines become definitions (Roadmap Phase N, step N1).
+-- Cotyledon — loans and fixed-cost lines become definitions (Roadmap Phase N, step N1).
 --
 -- Two constant blocks leave `_data/capex.ts`:
 --
@@ -1634,7 +1634,7 @@ CREATE INDEX IF NOT EXISTS farm_fixed_cost_lines_position_idx ON farm.fixed_cost
 
 -- ── farm_leasehold.sql ──
 -- 0069_farm_leasehold.sql
--- MicroFarm — the leasehold schedule becomes a definition (Roadmap Phase N, step N1).
+-- Cotyledon — the leasehold schedule becomes a definition (Roadmap Phase N, step N1).
 --
 -- The last capital input still typed in code. Twelve lines summing to $787,000
 -- at $157.40/sq ft over the 5,000 sq ft shell — every rate an unsourced working
@@ -1676,7 +1676,7 @@ CREATE INDEX IF NOT EXISTS farm_leasehold_lines_position_idx ON farm.leasehold_l
 
 -- ── farm_training.sql ──
 -- 0070_farm_training.sql
--- MicroFarm — training documents, their versions, and who has completed which.
+-- Cotyledon — training documents, their versions, and who has completed which.
 --
 -- Decisions:
 --   * A training document is a FAMILY with numbered versions. The file is
@@ -1760,7 +1760,7 @@ CREATE INDEX IF NOT EXISTS farm_training_assignments_staff_idx ON farm.training_
 
 -- ── farm_flat_plans_services.sql ──
 -- 0071_farm_flat_plans_services.sql
--- MicroFarm — flatPlans, services, dated volume and pickup_point calendars (Roadmap Phase N, step N4a).
+-- Cotyledon — flatPlans, services, dated volume and pickup_point calendars (Roadmap Phase N, step N4a).
 --
 -- Decisions 17–20 of the operating-model build plan:
 --
@@ -1968,7 +1968,7 @@ UPDATE farm.subscription_cycles SET channel = NULL WHERE subscriber_id IS NULL;
 
 -- ── farm_sustainability_records.sql ──
 -- 0072_farm_sustainability_records.sql
--- MicroFarm — utility and lab readings, and refrigerant service tickets, as records
+-- Cotyledon — utility and lab readings, and refrigerant service tickets, as records
 -- (Roadmap N6 slice 4).
 --
 -- Decisions:
@@ -2027,9 +2027,9 @@ CREATE INDEX IF NOT EXISTS farm_refrigerant_service_key_idx ON farm.refrigerant_
 
 -- ── farm_subscriber_rating_rating.sql ──
 -- 0073_farm_subscriber_rating_rating.sql
--- MicroFarm — the RATING rating MicroFarm assigns a subscriber (Roadmap N7).
+-- Cotyledon — the RATING rating Cotyledon assigns a subscriber (Roadmap N7).
 --
--- Decision: MicroFarm assigns RATING ratings — the subscriber
+-- Decision: Cotyledon assigns RATING ratings — the subscriber
 -- does not rate itself. A rating is one, two or three stars, in review, or not
 -- rated (the default), with the date it was assigned. Plan v Actual tallies the
 -- subscribers in the plan and the subscribers served on record by their rating.
@@ -2042,7 +2042,7 @@ ALTER TABLE farm.subscribers ADD COLUMN IF NOT EXISTS rating_rated_on date;
 
 -- ── farm_staff_roles.sql ──
 -- 0074_farm_staff_roles.sql
--- MicroFarm — work roles on the staff register, and the role each punch was worked in
+-- Cotyledon — work roles on the staff register, and the role each punch was worked in
 -- (Roadmap P2).
 --
 -- Decisions:
@@ -2063,7 +2063,7 @@ ALTER TABLE farm.time_punches ADD COLUMN IF NOT EXISTS role text;
 
 -- ── farm_blast_blackout_racks_phase_1.sql ──
 -- 0075_farm_blast_blackout_racks_phase_1.sql
--- MicroFarm — both blackout racks on Phase 1 (facility-design roadmap §2 decision 6, Q4b).
+-- Cotyledon — both blackout racks on Phase 1 (facility-design roadmap §2 decision 6, Q4b).
 --
 -- Decision: both 200 lb blackout racks are Phase 1. This is a
 -- concurrency decision, not a capacity one — a sowing binds to ONE rack, and two
@@ -2110,7 +2110,7 @@ WHERE key = 'Blackout rack, 200 lb capacity'
 
 -- ── farm_facility_footprints.sql ──
 -- 0076_farm_facility_footprints.sql
--- MicroFarm — footprint and clearance as open fields on the equipment library
+-- Cotyledon — footprint and clearance as open fields on the equipment library
 -- (facility-design roadmap, step Q1).
 --
 -- The equipment list is the input; the square footage is the output. Each row
@@ -2253,7 +2253,7 @@ UPDATE farm.equipment SET footprint_width_in = NULL, footprint_depth_in = NULL, 
 
 -- ── farm_facility_layouts.sql ──
 -- 0077_farm_facility_layouts.sql
--- MicroFarm — the floor layout (facility-design roadmap, step Q6).
+-- Cotyledon — the floor layout (facility-design roadmap, step Q6).
 --
 -- A layout is a drawing, not a ledger entry: the shell, the rooms drawn in it
 -- and where each unit of the equipment library stands, in feet from the
@@ -2284,7 +2284,7 @@ CREATE INDEX IF NOT EXISTS farm_facility_layouts_key_idx ON farm.facility_layout
 
 -- ── farm_pot_sink_no_disposer.sql ──
 -- 0078_farm_pot_sink_no_disposer.sql
--- MicroFarm — the pot sink carries no disposer.
+-- Cotyledon — the pot sink carries no disposer.
 --
 -- Austin City Code §25-12-153 (UPC §616.0) prohibits food waste disposal units
 -- in commercial farms unless approved under §301.3. The seeded Phase 1 row
@@ -2304,7 +2304,7 @@ WHERE key = 'Pot sink, 3-comp with disposer'
 
 -- ── farm_equipment_spec_sheets.sql ──
 -- 0079_farm_equipment_spec_sheets.sql
--- MicroFarm — footprints re-sourced to spec sheets; manufacturer, model and spec sheet on the row.
+-- Cotyledon — footprints re-sourced to spec sheets; manufacturer, model and spec sheet on the row.
 --
 -- Every row with floor now reads its width, depth and published clearances off
 -- a named representative model's spec sheet (facility-design roadmap §5,

@@ -1,4 +1,4 @@
--- MicroFarm: the Media library.
+-- Cotyledon: the Media library.
 --
 -- One row per growing medium a grow plan's medium line names: its form (loose fill, a cut mat
 -- per tray, or none), its unit, how much one 1020 tray takes, its price per unit, its traits and

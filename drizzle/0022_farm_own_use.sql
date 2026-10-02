@@ -1,4 +1,4 @@
--- MicroFarm: own use.
+-- Cotyledon: own use.
 --
 -- A subscriber marked own use is the owner taking trays for his own consumption. Its orders flow
 -- through production like any other; a distribution to it leaves finished goods at cost to Owner

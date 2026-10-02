@@ -1,4 +1,4 @@
--- MicroFarm: the service model dropped. Demand is the subscriptions alone (outline §4).
+-- Cotyledon: the service model dropped. Demand is the subscriptions alone (outline §4).
 --
 -- Services, their dated volume picks, the pickup point service calendar, the saved cycles and the
 -- flat plans by rotation are gone, and with them the subscriber kind and the pickup point's

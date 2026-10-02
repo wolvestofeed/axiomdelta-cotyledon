@@ -15,7 +15,7 @@ Status: TEMPORARY inventory. What exists, what it says about Rob/Joshin's backgr
   - Packages (currently commented out): Single 75 min $75; 4-pack $270; 12-pack $720. Stripe price IDs wired via env.
   - Dubsado CRM env var present.
 - The Workshop grid lists Rob's other products: AxiomDelta.ai, GetCompTable.com, AxiomDelta.coach, Muse Kitchen · Impact OS, RVMasterPlan.app, WellBodyMind.com.
-- Reusable for MicroFarm: Stripe checkout + webhook pattern, digital delivery pattern, Google Form embed, brand system if the wellness center sits under the WTF umbrella, Austin men's-group audience as first subscriber pool.
+- Reusable for Cotyledon: Stripe checkout + webhook pattern, digital delivery pattern, Google Form embed, brand system if the wellness center sits under the WTF umbrella, Austin men's-group audience as first subscriber pool.
 
 ## B. Feed The Wolf App — `/WTF Publishing/Feed The Wolf App`
 
@@ -45,4 +45,4 @@ Status: TEMPORARY inventory. What exists, what it says about Rob/Joshin's backgr
 
 ## E. Existing infrastructure choices worth inheriting (if we build software)
 
-Next.js App Router + Tailwind 4 + Clerk + Stripe + Resend + Vercel is the house stack across four live projects; Neon/Drizzle where a DB exists. Any MicroFarm app or site should match unless there's a reason not to.
+Next.js App Router + Tailwind 4 + Clerk + Stripe + Resend + Vercel is the house stack across four live projects; Neon/Drizzle where a DB exists. Any Cotyledon app or site should match unless there's a reason not to.

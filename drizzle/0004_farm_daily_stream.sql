@@ -1,4 +1,4 @@
--- MicroFarm: the daily labor stream (outline §5 rule 3).
+-- Cotyledon: the daily labor stream (outline §5 rule 3).
 --
 -- A time study's lines run on three streams: per sowing on the sow day, per tray per day while
 -- the tray is on its grow unit, per unit on the distribution day. A study records the cycle days

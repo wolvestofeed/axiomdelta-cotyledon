@@ -1,4 +1,4 @@
--- MicroFarm: the grow plan (outline §4) and the grow unit.
+-- Cotyledon: the grow plan (outline §4) and the grow unit.
 --
 -- A grow plan row is a grow plan: it names its tray format, may override its varieties' stage days,
 -- and carries a note. Its lines are typed documents of four kinds (seed, medium, nutrient, light)

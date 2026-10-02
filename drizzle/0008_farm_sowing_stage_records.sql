@@ -1,4 +1,4 @@
--- MicroFarm: the sowing record on the grow model (outline §4 Sowing).
+-- Cotyledon: the sowing record on the grow model (outline §4 Sowing).
 --
 -- A sowing names its tray format, the trays sown and packed, the grow unit the trays sat on, the
 -- day they were packed, and the stage records the control points ask for: seed treatment, the

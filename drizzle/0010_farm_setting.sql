@@ -1,4 +1,4 @@
--- MicroFarm: home and commercial.
+-- Cotyledon: home and commercial.
 --
 -- Equipment and fixed-cost lines name where they belong: the home grow room, or a rented
 -- commercial facility. Existing rows are commercial unless they are the grow room's; the seed

@@ -1,4 +1,4 @@
--- MicroFarm: every time study is approved, and records what the studied sowing consumed.
+-- Cotyledon: every time study is approved, and records what the studied sowing consumed.
 --
 -- Adoption becomes approval: a plan's labor standard is the average of its approved studies, not
 -- the one adopted last, so `adopted_at` and `adopted_by` become `approved_at` and `approved_by`.

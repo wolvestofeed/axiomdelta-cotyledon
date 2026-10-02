@@ -1,4 +1,4 @@
--- MicroFarm: workspaces. One workspace per farm, one Clerk organization per workspace.
+-- Cotyledon: workspaces. One workspace per farm, one Clerk organization per workspace.
 --
 -- Every farm table carries workspace_id and is protected by row-level security keyed on
 -- the session setting app.workspace_id, which the app sets inside a transaction at every

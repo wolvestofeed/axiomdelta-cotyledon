@@ -1,4 +1,4 @@
--- MicroFarm: subscriptions.
+-- Cotyledon: subscriptions.
 --
 -- A subscription is a subscriber's standing order at one of their pickup points: a cadence
 -- (weekly, every two weeks, or monthly on the same weekday of the same week of the month), the

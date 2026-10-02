@@ -26,7 +26,7 @@ Bodywork, coaching, the library and sequencing live in the other products. Cotyl
 
 ## 2. Locked decisions
 
-- **Repo:** this folder, `WTF Publishing/Ember OS/Micro Farm`. Its own repo, its own Clerk app, its own Neon database. Developed on localhost until a domain is registered.
+- **Repo:** this folder, `WTF Publishing/Ember OS/Cotyledon`. Its own repo, its own Clerk app, its own Neon database. Developed on localhost until a domain is registered.
 - **Source:** everything in Muse comes over: the `(muse)` route groups, `_engine`, `_lib`, `_data`, `_components`, `_state`, the `muse` schema and its 37 migrations, the 59 tests, the `muse:*` scripts, `docs/`, and the ledger package, now `src/ledger`. Nothing else from Comptable.
 - **Vocabulary:** a full swap, §3. Code, schema, copy, tests, docs, seeds.
 - **No CompTable connection.** The HR contract, signed notices and transport are dropped. Staffing is an internal module (§6, People).
@@ -182,7 +182,7 @@ The phases, their status and their steps live in [`roadmap.md`](roadmap.md), the
 ## 9. Repo structure
 
 ```
-Micro Farm/
+Cotyledon/
 ├── CLAUDE.md                 rules
 ├── docs/
 │   ├── outline.md            this document

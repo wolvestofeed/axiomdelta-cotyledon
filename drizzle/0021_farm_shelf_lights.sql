@@ -1,4 +1,4 @@
--- MicroFarm: lights shelf by shelf.
+-- Cotyledon: lights shelf by shelf.
 --
 -- A rack's lights are set per shelf: each shelf a fixture and how many of it, so one rack can carry
 -- different lights on different shelves. Null keeps every shelf on the row's fixture at the count a

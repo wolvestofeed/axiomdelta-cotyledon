@@ -1,4 +1,4 @@
-# Inventory 04 — Muse Kitchen · Impact OS (candidate operating system for MicroFarm)
+# Inventory 04 — Muse Kitchen · Impact OS (candidate operating system for Cotyledon)
 
 Source: `/Users/robertbogatin/Documents/WTF Publishing/Comptable/apps/web/src/app/(muse)/` and `docs/muse/`.
 Status: TEMPORARY inventory. Read-only survey. Nothing copied or changed.
@@ -51,7 +51,7 @@ Roughly 62k lines of TypeScript. Nearly all phases A–Q are DONE per `docs/muse
 
 The abstractions transfer almost one-to-one. The nouns change.
 
-| Impact OS concept | MicroFarm equivalent | Fit |
+| Impact OS concept | Cotyledon equivalent | Fit |
 |---|---|---|
 | Recipe (components, ingredient lines, batchPortions) | Crop plan per variety: seed line(s), medium, nutrients, tray size; "portions" = flats or trays or cut ounces | Strong. A blend flat (3 varieties) is a multi-component recipe. |
 | Vessel capacity → derived batch | Rack shelf capacity → derived batch (a batch is what one shelf or one rack takes; a second rack is a parallel stream) | Strong. Same rule, different vessel. |
@@ -74,7 +74,7 @@ The abstractions transfer almost one-to-one. The nouns change.
 | Parent Portal (school meals) | No equivalent; drop. Customer Portal = subscriber portal; Supplier Portal keeps. | Drop one, keep two. |
 | Meal pattern crediting (7 CFR 210.10) | No equivalent; replace with the nutrient matrix (Nutrients Master) so a flat can be composed for iron, protein, sulforaphane, etc. | Swap. This is the one module that maps to the "grow for deficiencies" pitch. |
 
-Not present in Muse and needed for MicroFarm: recurring subscription billing (Stripe subscriptions), delivery/pickup routing and tray return tracking, live-flat shelf-life after handoff, per-customer nutrition targets, and a wellness-center layer (treatment rooms, bodywork bookings, classes, retail POS).
+Not present in Muse and needed for Cotyledon: recurring subscription billing (Stripe subscriptions), delivery/pickup routing and tray return tracking, live-flat shelf-life after handoff, per-customer nutrition targets, and a wellness-center layer (treatment rooms, bodywork bookings, classes, retail POS).
 
 ## E. Coupling and extraction
 
@@ -85,8 +85,8 @@ Not present in Muse and needed for MicroFarm: recurring subscription billing (St
 ## F. Three ways to reuse it (for discussion, not decided)
 
 1. **Fork into this repo as a new app.** Copy the route groups, schema, ledger package, tests; rename the domain nouns (recipe → crop plan, portion → flat, vessel → shelf, cook → sow, chill → blackout); drop Parent and meal-pattern crediting; add subscriptions. Highest fidelity, largest one-time port, and a second codebase to maintain.
-2. **Generalize Muse into a multi-tenant "production OS" and run MicroFarm as a second tenant inside CompTable.** Cheapest to start, but the kitchen vocabulary is hard-coded in copy, types, and tests, and CompTable's scope rules make this a CompTable change.
-3. **Extract Muse into its own package or repo as the generic OS (Impact OS), with Muse Kitchen and MicroFarm as two domain configurations on top.** Cleanest long-term and it matches Rob's stated intent to publish Impact OS as a product, but it is the biggest refactor.
+2. **Generalize Muse into a multi-tenant "production OS" and run Cotyledon as a second tenant inside CompTable.** Cheapest to start, but the kitchen vocabulary is hard-coded in copy, types, and tests, and CompTable's scope rules make this a CompTable change.
+3. **Extract Muse into its own package or repo as the generic OS (Impact OS), with Muse Kitchen and Cotyledon as two domain configurations on top.** Cleanest long-term and it matches Rob's stated intent to publish Impact OS as a product, but it is the biggest refactor.
 
 ## G. Reference docs worth reading before deciding
 
