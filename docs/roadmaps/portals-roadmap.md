@@ -54,7 +54,7 @@ Status lives in [`../roadmap.md`](../roadmap.md) (Phase P); this file owns the p
 
 | Phase | Content | Status |
 |---|---|---|
-| **P1** | Menu restructure; basic portal pages (Sales Portal, Subscriber Portal, Flat Builder, Supplier Portal) | Built |
+| **P1** | Menu restructure; basic portal pages (Sales Portal; the Client Portal and its Flat Builder; the Supplier Portal, since on hold and out of the UI) | Built |
 | **P1b** | Every portal in its own shell (`_components/PortalShell.tsx`): Subscriber, Supplier and Parent shells; subscriber and parent sign-up pages and the supplier invitation welcome page, each with the review policy; the Sales shell's time clock for the signed-in person; Parent Admin in the OS under Parent | Built |
 | **P2** | Work roles held together on the staff register (`staff.roles`); each punch carries the role of its shift (`time_punches.role`, migration 0074 — the Grow Room clocks operator, the Sales portal sales); hours by role on HR and on `farm.punches` to payroll | Built |
 | **P3** | External sign-in: sign-in and sign-up inside each portal shell (Clerk forms, `_components/PortalAuth.tsx`; suppliers sign in only), public in `proxy.ts`; a signed-out visit to a portal goes to its own sign-in; a signed-in account that is not staff sees "under review" and no data, checked on the layout and the page (`_components/PortalPending.tsx`); the Sales shell is staff only | Built |
@@ -93,9 +93,8 @@ what the marketing pickup point's modals will call.
 - The direct links stay: `/farm/subscriber-portal`, `/farm/parent-portal`, `/farm/supplier-portal`,
   `/farm/sales-portal`, `/farm/grow-room`.
 
-**Open.**
-- [ ] An external account linked to a subscriber, supplier or parent record routes to that portal. Waits on
-      linking (P5); until then it lands on its portal's "under review".
+- [x] A sign-in linked to a subscriber record, holding no role, routes to the Client Portal (P5, Phase 3); a sign-in
+      on no list lands under review.
 
 ## 3. Rules
 

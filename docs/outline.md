@@ -194,7 +194,7 @@ Cotyledon/
 │   ├── todo.md               open one-off items that belong to no phase step
 │   └── roadmaps/             one file per phase (phase-N-*.md), plus the topic build plans ported from Muse
 ├── src/
-│   ├── app/                  routes only: the (farm) OS under /farm; (grow-room), (subscriber), (supplier), (sales), (front)
+│   ├── app/                  routes only: the (farm) OS under /farm; (grow-room), (client), (sales), (front); api/stripe
 │   ├── engine/               the pure engine: costing, capacity, calendar, ledgers, scheduling
 │   ├── data/                 reference data and seeds: varieties, formats, stages, inputs, science library, glossary
 │   ├── server/               read layers and server actions (server-only)
