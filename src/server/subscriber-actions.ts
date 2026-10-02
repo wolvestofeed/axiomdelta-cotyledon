@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import { farmSubscribers, farmSubscriberPickupPoints } from '@/db';
+import { and, ne } from 'drizzle-orm';
+import { farmPortalEmails, farmSubscribers, farmSubscriberPickupPoints } from '@/db';
 import { db } from '@/lib/db';
 import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
@@ -45,7 +46,16 @@ const SubscriberInput = z.object({
   nutritionTargets: z.array(z.string().max(60)).max(50).default([]),
   /** The owner's own trays: distributions to Owner Draws at cost, no revenue or invoice. */
   ownUse: z.boolean().default(false),
+  /** The client's sign-in email (0025): the Client Portal links the account that signs in with it. One email, one record, across every farm. */
+  email: z.string().trim().toLowerCase().max(200).refine((e) => e === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e), 'An email address').transform((e) => (e === '' ? null : e)).nullable().default(null),
 });
+
+/** One email, one record: the index names the record an email already signs into, in any farm. */
+async function emailTaken(email: string | null, ownId: string | null): Promise<string | null> {
+  if (!email) return null;
+  const rows = await db.select({ subscriberId: farmPortalEmails.subscriberId }).from(farmPortalEmails).where(ownId ? and(eq(farmPortalEmails.email, email), ne(farmPortalEmails.subscriberId, ownId)) : eq(farmPortalEmails.email, email)).limit(1);
+  return rows[0] ? `${email} is already the sign-in of another subscriber record.` : null;
+}
 
 export async function createSubscriber(...args: Parameters<typeof createSubscriberInner>): ReturnType<typeof createSubscriberInner> {
   return withWorkspace(() => createSubscriberInner(...args));
@@ -60,6 +70,8 @@ async function createSubscriberInner(input: unknown): Promise<Result<{ id: strin
   } catch (e) {
     return refuse(e);
   }
+  const taken = await emailTaken(parsed.data.email, null);
+  if (taken) return { ok: false, error: taken };
   const inserted = await db.insert(farmSubscribers).values({ ...parsed.data, nutritionTargets: knownTargets(parsed.data.nutritionTargets), createdBy: access.userId }).returning({ id: farmSubscribers.id });
   if (!inserted[0]) return { ok: false, error: 'Failed to save the subscriber.' };
   revalidatePath('/farm', 'layout');
@@ -79,6 +91,8 @@ async function updateSubscriberInner(input: unknown): Promise<Result> {
     return refuse(e);
   }
   const { id, ...rest } = parsed.data;
+  const taken = await emailTaken(rest.email, id);
+  if (taken) return { ok: false, error: taken };
   await db.update(farmSubscribers).set({ ...rest, nutritionTargets: knownTargets(rest.nutritionTargets), source: 'user_built', updatedAt: new Date() }).where(eq(farmSubscribers.id, id));
   revalidatePath('/farm', 'layout');
   return { ok: true };

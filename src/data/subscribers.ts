@@ -58,6 +58,8 @@ export interface SubscriberDef {
   subscriptions?: import('@/data/subscriptions').SubscriptionDef[];
   /** The subscriber's Stripe customer once a card is on file (migration 0024); absent or null = none. */
   stripeCustomerId?: string | null;
+  /** The client's sign-in email (migration 0025), lowercased; the Client Portal links the account that signs in with it. */
+  email?: string | null;
   pickupPoints: SubscriberPickupPointDef[];
 }
 
@@ -74,17 +76,19 @@ export const PLAN_SUBSCRIBERS = 19;
 export const PLAN_ROTATION: readonly string[] = ['BROC-01', 'RAD-01', 'SUN-01', 'PEA-01', 'FEN-01', 'BOR-01', 'AMA-01', 'CAB-01', 'CHIA-01'];
 
 /**
- * Rob's own trays: a real subscriber, on Actual and in the Plan, taking one 1020 flat weekly at the
- * Saturday pickup. Own use: its trays flow through production like any other and leave finished
- * goods at cost to Owner Draws, never sold. The variety is the rotation's next; Rob changes it,
- * skips or pauses on Subscribers.
+ * The house account: the one own-use record for Rob and the farm's own people, a real subscriber on
+ * Actual and in the Plan, taking one 1020 flat weekly at the Saturday pickup. Own use: its trays flow
+ * through production like any other and leave finished goods at cost to Owner Draws, never sold.
+ * The variety is the rotation's next; Rob changes it, skips or pauses on Subscribers or in the Client
+ * Portal, where his sign-in email links to it.
  */
 export function ownUseSubscriber(): SubscriberDef {
   const id = 'CUST-OWN-USE';
   const pickupPoint = 'CS-OWN-USE';
   return {
     id,
-    name: 'Own use (Rob)',
+    name: 'House account',
+    email: 'lonewolf@wolvestofeed.com',
     channel: 1,
     status: 'contracted',
     ownUse: true,
@@ -93,7 +97,7 @@ export function ownUseSubscriber(): SubscriberDef {
     contractStart: null,
     contractEnd: null,
     prospectId: null,
-    notes: "Rob's own trays for his own consumption: to Owner Draws at cost, with no revenue and no invoice.",
+    notes: 'The house account: trays Rob and the farm\'s own people take for themselves, in one record: to Owner Draws at cost, with no revenue and no invoice.',
     source: 'seed',
     pickupPoints: [{ id: pickupPoint, pickupPointId: null, name: 'Saturday pickup at the house', status: 'active', notes: null }],
     subscriptions: [
@@ -116,7 +120,7 @@ export function ownUseSubscriber(): SubscriberDef {
 /**
  * The Plan's subscribers: nineteen Forecast Subscribers, in the Plan only and never on Actual, each
  * taking one 1020 flat weekly at the Saturday pickup at the house, the plans taken in turn (invented
- * test data, labelled so), and Rob's own tray (`ownUseSubscriber`): twenty trays a week. The farm has
+ * test data, labelled so), and the house account's tray (`ownUseSubscriber`): twenty trays a week. The farm has
  * no customer and no revenue on record; on Actual only Rob's own tray is ordered.
  */
 export function planSeedSubscribers(): SubscriberDef[] {

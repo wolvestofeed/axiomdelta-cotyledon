@@ -1,6 +1,7 @@
 import { PortalPending } from '@/components/PortalPending';
 import { ClientPicker } from '@/components/ClientPicker';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import { PageHeader, Card, money } from '@/components/ui';
 import { portalClients } from '@/server/client-portal';
 import { getResolvedActiveInputs } from '@/server/scenarios';
@@ -26,12 +27,10 @@ export default async function ProfilePage(props: Parameters<typeof ProfilePageIn
 
 async function ProfilePageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
-  {
-    const a = await getFarmAccess();
-    if (!a.isOperator) return <PortalPending portal="Client Portal" email={a.email} />;
-  }
+  const a = await getFarmAccess();
+  if (!canUsePortal(a)) return <PortalPending portal="Client Portal" email={a.email} />;
   const params = await searchParams;
-  const [{ clients, subscriber }, { inputs }] = await Promise.all([portalClients(params.subscriber), getResolvedActiveInputs()]);
+  const [{ clients, subscriber }, { inputs }] = await Promise.all([portalClients(params.subscriber, a), getResolvedActiveInputs()]);
   const channel = subscriber ? inputs.phases.find((p) => p.phase === subscriber.channel) : null;
   const varietyName = (key: string) => VARIETIES.find((v) => v.key === key)?.name ?? key;
   const targets = (subscriber?.nutritionTargets ?? []).map((key) => NUTRITION_TARGETS.find((t) => t.key === key) ?? { key, name: key, kind: 'nutrient' as const, varieties: [] });
@@ -52,6 +51,7 @@ async function ProfilePageInner({ searchParams }: { searchParams: Promise<{ subs
             <Card title="Your record">
               <dl className="grid gap-2">
                 <div><dt className="font-semibold farm-c-ink">Name</dt><dd className="farm-c-soft">{subscriber.name}</dd></div>
+                <div><dt className="font-semibold farm-c-ink">Sign-in email</dt><dd className="farm-c-soft">{subscriber.email ?? 'none on the record'}</dd></div>
                 <div><dt className="font-semibold farm-c-ink">Status</dt><dd className="farm-c-soft">{SUBSCRIBER_STATUS_LABELS[subscriber.status]}{subscriber.ownUse ? ' · own use' : ''}</dd></div>
                 <div><dt className="font-semibold farm-c-ink">Channel</dt><dd className="farm-c-soft">{channel?.market ?? `Channel ${subscriber.channel}`}</dd></div>
                 <div>

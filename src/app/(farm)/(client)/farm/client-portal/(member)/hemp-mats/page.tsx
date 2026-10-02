@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PortalPending } from '@/components/PortalPending';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import { PageHeader, Card } from '@/components/ui';
 import { SCIENCE_CLAIM_BY_ID, SCIENCE_SOURCE_BY_ROW, type ScienceClaim } from '@/data/science-library';
 import { withWorkspace } from '@/server/workspace';
@@ -32,7 +33,7 @@ export default async function HempMatsPage() {
 
 async function HempMatsPageInner() {
   const a = await getFarmAccess();
-  if (!a.isOperator) return <PortalPending portal="Client Portal" email={a.email} />;
+  if (!canUsePortal(a)) return <PortalPending portal="Client Portal" email={a.email} />;
   const cite = (rows: number[]) => (
     <span className="farm-kpi-sub">
       {rows.map((r, i) => {

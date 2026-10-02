@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { FarmAccessError, requireFarmOperator } from '@/server/access';
+import { FarmAccessError, requireSubscriberAccess } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
 import { stripeConfigured } from '@/lib/stripe';
 import { billingPortalSession } from '@/server/billing';
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!subscriberId) return NextResponse.json({ error: 'Name the subscriber.' }, { status: 400 });
   try {
     const result = await withWorkspace(async () => {
-      await requireFarmOperator();
+      await requireSubscriberAccess(subscriberId);
       return billingPortalSession(subscriberId);
     });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });

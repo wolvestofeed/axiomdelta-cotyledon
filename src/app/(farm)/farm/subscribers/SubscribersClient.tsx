@@ -37,11 +37,11 @@ type Mode = 'record' | 'forecast';
 
 interface SubscriberForm {
   name: string; channel: number; status: SubscriberStatus;
-  pricePerUnit: number | ''; paymentTerms: SubscriberPaymentTerms | ''; contractStart: string; contractEnd: string; notes: string; nutritionTargets: string[]; ownUse: boolean;
+  pricePerUnit: number | ''; paymentTerms: SubscriberPaymentTerms | ''; contractStart: string; contractEnd: string; notes: string; nutritionTargets: string[]; ownUse: boolean; email: string;
 }
 interface PickupPointForm { name: string; pickupPointId: string; status: SubscriberPickupPointStatus; notes: string }
 
-const emptySubscriber = (channel: number): SubscriberForm => ({ name: '', channel, status: 'prospect', pricePerUnit: '', paymentTerms: '', contractStart: '', contractEnd: '', notes: '', nutritionTargets: [], ownUse: false });
+const emptySubscriber = (channel: number): SubscriberForm => ({ name: '', channel, status: 'prospect', pricePerUnit: '', paymentTerms: '', contractStart: '', contractEnd: '', notes: '', nutritionTargets: [], ownUse: false, email: '' });
 const emptyPickupPoint = (): PickupPointForm => ({ name: '', pickupPointId: '', status: 'active', notes: '' });
 
 export function SubscribersClient({
@@ -90,11 +90,11 @@ export function SubscribersClient({
 
   // ── Record forms ──────────────────────────────────────────────────────────
   const openEditSubscriber = (c: SubscriberDef) =>
-    setSubscriberForm({ mode: 'edit', id: c.id, form: { name: c.name, channel: c.channel, status: c.status, pricePerUnit: c.pricePerUnitCents === null ? '' : c.pricePerUnitCents / 100, paymentTerms: c.paymentTerms ?? '', contractStart: c.contractStart ?? '', contractEnd: c.contractEnd ?? '', notes: c.notes ?? '', nutritionTargets: [...(c.nutritionTargets ?? [])], ownUse: c.ownUse === true } });
+    setSubscriberForm({ mode: 'edit', id: c.id, form: { name: c.name, channel: c.channel, status: c.status, pricePerUnit: c.pricePerUnitCents === null ? '' : c.pricePerUnitCents / 100, paymentTerms: c.paymentTerms ?? '', contractStart: c.contractStart ?? '', contractEnd: c.contractEnd ?? '', notes: c.notes ?? '', nutritionTargets: [...(c.nutritionTargets ?? [])], ownUse: c.ownUse === true, email: c.email ?? '' } });
   function submitSubscriber() {
     if (!subscriberForm) return;
     const f = subscriberForm.form;
-    const payload = { name: f.name, channel: f.channel, status: f.status, pricePerUnitCents: f.pricePerUnit === '' ? null : Math.round(f.pricePerUnit * 100), paymentTerms: f.paymentTerms || null, contractStart: f.contractStart || null, contractEnd: f.contractEnd || null, prospectId: null, notes: f.notes || null, nutritionTargets: f.nutritionTargets, ownUse: f.ownUse };
+    const payload = { name: f.name, channel: f.channel, status: f.status, pricePerUnitCents: f.pricePerUnit === '' ? null : Math.round(f.pricePerUnit * 100), paymentTerms: f.paymentTerms || null, contractStart: f.contractStart || null, contractEnd: f.contractEnd || null, prospectId: null, notes: f.notes || null, nutritionTargets: f.nutritionTargets, ownUse: f.ownUse, email: f.email || null };
     run(() => (subscriberForm.mode === 'edit' ? updateSubscriber({ ...payload, id: subscriberForm.id }) : createSubscriber(payload)), `Saved ${f.name}.`);
   }
   function submitPickupPoint() {
@@ -261,6 +261,7 @@ export function SubscribersClient({
               </select>
             </label>
             <label className="farm-kpi-sub">Contract start<br /><input className="farm-input" type="date" value={subscriberForm.form.contractStart} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, contractStart: e.target.value } })} /></label>
+            <label className="farm-kpi-sub">Sign-in email<br /><input className="farm-input" type="email" placeholder="the client's sign-in" value={subscriberForm.form.email} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, email: e.target.value } })} /></label>
             <label className="farm-kpi-sub">Contract end<br /><input className="farm-input" type="date" value={subscriberForm.form.contractEnd} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, contractEnd: e.target.value } })} /></label>
             <label className="farm-kpi-sub flex-1! min-w-56!">Notes<br /><input className="farm-input w-full!" value={subscriberForm.form.notes} onChange={(e) => setSubscriberForm({ ...subscriberForm, form: { ...subscriberForm.form, notes: e.target.value } })} /></label>
             <div className="farm-kpi-sub w-full!">Nutrition targets — the nutrients and compounds the varieties carry; the Flat Builder scores the flat against them<br />

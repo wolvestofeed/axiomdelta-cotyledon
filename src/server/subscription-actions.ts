@@ -5,18 +5,18 @@ import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { farmOrders, farmSubscribers, farmSubscriberPickupPoints, farmSubscriptions } from '@/db';
 import { db } from '@/lib/db';
-import { accessRefusal, requireFarmSuperAdmin } from '@/server/access';
+import { accessRefusal, getFarmAccess, requireFarmSuperAdmin, requireSubscriberAccess, FarmAccessError } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
-import { listGrowPlans } from '@/server/grow-plans';
-import { loadCalendar } from '@/server/periods';
-import { toSubscription } from '@/server/subscribers';
+import { applyFlatPlan, linesProblem, loadSubscription as load, saveSubscription as save, sowingRules as rules } from '@/server/subscription-rules';
 import { CADENCES, type FlatPlanLine, type SubscriptionDef } from '@/data/subscriptions';
 import { cadenceDates, flatPlanOn, startProblem } from '@/engine/subscriptions';
-import { firstUnsown, skipRefusal, sowDateOf, startRefusal, withFlatPlan, type SowingRules } from '@/engine/subscription-cutoffs';
+import { firstUnsown, skipRefusal, sowDateOf, startRefusal } from '@/engine/subscription-cutoffs';
 
 /**
- * Cotyledon — subscriptions, writes. SUPER ADMIN until the Client Portal links a subscriber's
- * own account. Every rule that touches a distribution reads its sow date: a subscription starts on
+ * Cotyledon — subscriptions, writes. Starting, the flat plan, the last date and removal are SUPER
+ * ADMIN; a skip, an unskip, a pause and a resume are the record's own client's as well (Roadmap P5,
+ * `requireSubscriberAccess`), and a client's flat plan change is a request staff approve
+ * (`flat-plan-request-actions.ts`). Every rule that touches a distribution reads its sow date: a subscription starts on
  * a first distribution that can still be sown for, a distribution is skipped before its sow date,
  * a pause starts at the first distribution not yet sown, and a flat plan change takes effect from
  * the first distribution its new lines can be sown for.
@@ -37,42 +37,25 @@ const Lines = z
   .array(z.object({ growPlanCode: z.string().trim().min(1).max(40), units: z.number().int('Whole units').min(1, 'At least one unit').max(1_000) }))
   .min(1, 'A flat plan carries at least one grow plan');
 
-async function rules(): Promise<SowingRules & { plans: Awaited<ReturnType<typeof listGrowPlans>> }> {
-  const [plans, calendar] = await Promise.all([listGrowPlans(), loadCalendar()]);
-  return { plans, closures: calendar.closures };
-}
-
-/** A line's plan must be in service and offered on the subscriber's channel; the same plan twice is one line. */
-function linesProblem(lines: readonly FlatPlanLine[], plans: SowingRules['plans'], channel: number): string | null {
-  const codes = lines.map((l) => l.growPlanCode);
-  if (new Set(codes).size !== codes.length) return 'Each grow plan appears once in a flat plan; set its units instead.';
-  for (const l of lines) {
-    const p = plans.find((x) => x.code === l.growPlanCode);
-    if (!p) return `${l.growPlanCode} is not in the grow plan library.`;
-    if (p.status !== 'in_service') return `${p.code} is not in service.`;
-    if (!p.channels.includes(channel)) return `${p.code} is not offered on this subscriber's channel.`;
-  }
-  return null;
-}
-
-async function load(id: string): Promise<{ sub: SubscriptionDef; channel: number } | null> {
-  const r = await db
-    .select({ s: farmSubscriptions, channel: farmSubscribers.channel })
-    .from(farmSubscriptions)
-    .innerJoin(farmSubscribers, eq(farmSubscribers.id, farmSubscriptions.subscriberId))
-    .where(eq(farmSubscriptions.id, id))
-    .limit(1);
-  return r[0] ? { sub: toSubscription(r[0].s), channel: r[0].channel } : null;
-}
-
-async function save(id: string, set: Partial<typeof farmSubscriptions.$inferInsert>): Promise<void> {
-  await db.update(farmSubscriptions).set({ ...set, updatedAt: new Date() }).where(eq(farmSubscriptions.id, id));
-  revalidatePath('/farm', 'layout');
-}
-
 async function guard(): Promise<{ ok: false; error: string } | null> {
   try {
     await requireFarmSuperAdmin();
+    return null;
+  } catch (e) {
+    return refuse(e);
+  }
+}
+
+/** Signed in at all: checked before a record is read, so a stranger learns nothing. */
+async function signedIn(): Promise<{ ok: false; error: string } | null> {
+  const a = await getFarmAccess();
+  return a.userId ? null : refuse(new FarmAccessError('not_signed_in'));
+}
+
+/** A super admin, or the client linked to this very record. */
+async function ownerGuard(subscriberId: string): Promise<{ ok: false; error: string } | null> {
+  try {
+    await requireSubscriberAccess(subscriberId);
     return null;
   } catch (e) {
     return refuse(e);
@@ -143,13 +126,7 @@ async function changeFlatPlanInner(input: unknown): Promise<Result<{ from: strin
   if (denied) return denied;
   const hit = await load(parsed.data.id);
   if (!hit) return { ok: false, error: 'Subscription not found.' };
-  const r = await rules();
-  const linesBad = linesProblem(parsed.data.lines, r.plans, hit.channel);
-  if (linesBad) return { ok: false, error: linesBad };
-  const next = withFlatPlan(hit.sub, parsed.data.lines, today(), r);
-  if ('error' in next) return { ok: false, error: next.error };
-  await save(hit.sub.id, { flatPlan: next.flatPlan });
-  return { ok: true, from: next.from };
+  return applyFlatPlan(hit, parsed.data.lines);
 }
 
 // ── Skip ────────────────────────────────────────────────────────────────────
@@ -163,10 +140,12 @@ export async function skipDistribution(...args: Parameters<typeof skipDistributi
 async function skipDistributionInner(input: unknown): Promise<Result> {
   const parsed = DateInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
-  const denied = await guard();
-  if (denied) return denied;
+  const signedOut = await signedIn();
+  if (signedOut) return signedOut;
   const hit = await load(parsed.data.id);
   if (!hit) return { ok: false, error: 'Subscription not found.' };
+  const denied = await ownerGuard(hit.sub.subscriberId);
+  if (denied) return denied;
   const refusal = skipRefusal(hit.sub, parsed.data.date, today(), await rules());
   if (refusal) return { ok: false, error: refusal };
   await save(hit.sub.id, { skips: [...hit.sub.skips, parsed.data.date].sort() });
@@ -181,10 +160,12 @@ export async function unskipDistribution(...args: Parameters<typeof unskipDistri
 async function unskipDistributionInner(input: unknown): Promise<Result> {
   const parsed = DateInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
-  const denied = await guard();
-  if (denied) return denied;
+  const signedOut = await signedIn();
+  if (signedOut) return signedOut;
   const hit = await load(parsed.data.id);
   if (!hit) return { ok: false, error: 'Subscription not found.' };
+  const denied = await ownerGuard(hit.sub.subscriberId);
+  if (denied) return denied;
   if (!hit.sub.skips.includes(parsed.data.date)) return { ok: false, error: `${parsed.data.date} is not skipped.` };
   const sow = sowDateOf(flatPlanOn(hit.sub, parsed.data.date), parsed.data.date, await rules());
   if (sow !== null && sow <= today()) return { ok: false, error: `The trays for ${parsed.data.date} would have been sown on ${sow}; it stays skipped.` };
@@ -203,10 +184,12 @@ export async function pauseSubscription(...args: Parameters<typeof pauseSubscrip
 async function pauseSubscriptionInner(input: unknown): Promise<Result<{ from: string }>> {
   const parsed = IdInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
-  const denied = await guard();
-  if (denied) return denied;
+  const signedOut = await signedIn();
+  if (signedOut) return signedOut;
   const hit = await load(parsed.data.id);
   if (!hit) return { ok: false, error: 'Subscription not found.' };
+  const denied = await ownerGuard(hit.sub.subscriberId);
+  if (denied) return denied;
   if (hit.sub.pausedFrom !== null) return { ok: false, error: `Already paused from ${hit.sub.pausedFrom}.` };
   const from = firstUnsown(hit.sub, today(), await rules());
   if (from === null) return { ok: false, error: 'No distribution ahead can still be paused.' };
@@ -225,10 +208,12 @@ export async function resumeSubscription(...args: Parameters<typeof resumeSubscr
 async function resumeSubscriptionInner(input: unknown): Promise<Result<{ from: string | null }>> {
   const parsed = IdInput.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues);
-  const denied = await guard();
-  if (denied) return denied;
+  const signedOut = await signedIn();
+  if (signedOut) return signedOut;
   const hit = await load(parsed.data.id);
   if (!hit) return { ok: false, error: 'Subscription not found.' };
+  const denied = await ownerGuard(hit.sub.subscriberId);
+  if (denied) return denied;
   const pausedFrom = hit.sub.pausedFrom;
   if (pausedFrom === null) return { ok: false, error: 'The subscription is not paused.' };
   const running = { ...hit.sub, pausedFrom: null };

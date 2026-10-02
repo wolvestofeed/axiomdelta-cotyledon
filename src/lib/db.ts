@@ -20,6 +20,8 @@ export type Db = DbHandle['db'];
 export interface WorkspaceScope {
   workspaceId: string;
   db: Db;
+  /** The subscriber record a client sign-in is linked to (Roadmap P5); null or absent for staff. */
+  subscriberId?: string | null;
 }
 
 declare global {
@@ -66,4 +68,9 @@ export const db: Db = new Proxy({} as Db, {
 /** The workspace in scope, or null outside one. */
 export function currentWorkspaceId(): string | null {
   return workspaceScope.getStore()?.workspaceId ?? null;
+}
+
+/** The subscriber record the scope was opened for a linked client, or null for staff and outside a scope. */
+export function currentPortalSubscriberId(): string | null {
+  return workspaceScope.getStore()?.subscriberId ?? null;
 }

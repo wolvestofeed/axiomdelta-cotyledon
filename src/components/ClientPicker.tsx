@@ -11,6 +11,8 @@ export function ClientPicker({ clients, subscriber, path }: { clients: Subscribe
     <Card title="Client">
       {clients.length === 0 ? (
         <p className="farm-kpi-sub">No subscriber is on file yet. <Link className="farm-link" href="/farm/client-portal/sign-up">Create an account</Link>.</p>
+      ) : clients.length === 1 && subscriber ? (
+        <p className="farm-c-ink">{subscriber.name}</p>
       ) : (
         <div className="farm-kpi-sub flex! flex-wrap! gap-y-[0.4rem]! gap-x-[0.9rem]!">
           {clients.map((c) => (

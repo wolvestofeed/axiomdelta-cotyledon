@@ -19,6 +19,8 @@ export default async function EnterPage() {
 async function EnterPageInner() {
   const access = await getFarmAccess();
   if (!access.userId) redirect('/farm/sign-in');
+  const landing = landingFor(access);
+  if (landing === 'client') redirect(LANDING_HREF.client);
 
   if (!access.orgId) {
     return (
@@ -30,7 +32,6 @@ async function EnterPageInner() {
     );
   }
 
-  const landing = landingFor(access);
   if (landing === 'admin' || landing === 'growRoom' || landing === 'sales') redirect(LANDING_HREF[landing]);
 
   if (landing === 'choose') {

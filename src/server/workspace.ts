@@ -1,5 +1,6 @@
 import 'server-only';
-import { getSession } from '@/server/session';
+import { getSession, getSessionUser } from '@/server/session';
+import { portalLinkFor } from '@/server/portal-link';
 import { eq, sql } from 'drizzle-orm';
 import { farmWorkspaces, type FarmWorkspaceRow } from '@/db';
 import { rootDb, workspaceScope, type Db } from '@/lib/db';
@@ -31,25 +32,36 @@ export async function workspaceForOrg(orgId: string, orgSlug: string | null | un
   return again[0]!;
 }
 
-/** Run `fn` scoped to one workspace by id. Scripts and tests use this; entry points use `withWorkspace`. */
-export async function withWorkspaceId<T>(workspaceId: string, fn: () => Promise<T>): Promise<T> {
+/**
+ * Run `fn` scoped to one workspace by id. Scripts, tests and the webhook use this; entry points use
+ * `withWorkspace`. `subscriberId` names the record a linked client's scope is opened for (P5).
+ */
+export async function withWorkspaceId<T>(workspaceId: string, fn: () => Promise<T>, subscriberId: string | null = null): Promise<T> {
   const existing = workspaceScope.getStore();
   if (existing?.workspaceId === workspaceId) return fn();
   return rootDb.transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.workspace_id', ${workspaceId}, true)`);
-    return workspaceScope.run({ workspaceId, db: tx as unknown as Db }, fn);
+    return workspaceScope.run({ workspaceId, db: tx as unknown as Db, subscriberId }, fn);
   });
 }
 
 /**
- * Run an entry point in the signed-in person's workspace. Signed out, or signed in with no
- * organization active, `fn` runs with no scope: pages that need data throw, pages that only
- * redirect or explain still render.
+ * Run an entry point in the signed-in person's workspace. Staff: the active organization names it.
+ * No organization active: a sign-in linked to a subscriber record, or whose email is on exactly one
+ * record (`portal-link.ts`, Roadmap P5), opens that record's workspace as a client. Signed out, or on
+ * no list, `fn` runs with no scope: pages that need data throw, pages that only redirect or explain
+ * still render.
  */
 export async function withWorkspace<T>(fn: () => Promise<T>): Promise<T> {
   if (workspaceScope.getStore()) return fn();
   const { userId, orgId, orgSlug } = await getSession();
-  if (!userId || !orgId) return fn();
+  if (!userId) return fn();
+  if (!orgId) {
+    const user = await getSessionUser();
+    const link = await portalLinkFor(userId, user.email);
+    if (!link) return fn();
+    return withWorkspaceId(link.workspaceId, fn, link.subscriberId);
+  }
   const ws = await workspaceForOrg(orgId, orgSlug);
   return withWorkspaceId(ws.id, fn);
 }

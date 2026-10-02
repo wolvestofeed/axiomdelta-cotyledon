@@ -56,6 +56,41 @@ describe('client portal — the menu, the middleware and the supplier portal on 
     expect(REPORT_CATALOG.find((r) => r.id === 'supplier-catalogs')?.sourceHref).toBe('/farm/suppliers');
   });
 
+  it('every portal page opens for a linked client as well as staff, and the helper narrows a client to their own record', () => {
+    for (const page of ['', 'flat-builder', 'subscriptions', 'profile', 'settings', 'hemp-mats', 'glossary']) {
+      expect(read(CLIENT, '(member)', page, 'page.tsx')).toContain('canUsePortal(');
+    }
+    expect(read(CLIENT, '(member)', 'layout.tsx')).toContain('canUsePortal(access)');
+    const helper = read(__dirname, '..', 'src', 'server', 'client-portal.ts');
+    expect(helper).toContain('if (access.subscriberId !== null)');
+    expect(helper).toContain('a.isOperator || a.subscriberId !== null');
+  });
+
+  it('a client skips, unskips, pauses and resumes their own subscriptions and nothing else; the rest stays super admin', () => {
+    const src = read(__dirname, '..', 'src', 'server', 'subscription-actions.ts');
+    for (const inner of ['skipDistributionInner', 'unskipDistributionInner', 'pauseSubscriptionInner', 'resumeSubscriptionInner']) {
+      const body = src.slice(src.indexOf(`async function ${inner}(`), src.indexOf('\n}\n', src.indexOf(`async function ${inner}(`)));
+      expect(body).toContain('await ownerGuard(hit.sub.subscriberId)');
+      expect(body).not.toContain('await guard()');
+    }
+    for (const inner of ['createSubscriptionInner', 'changeFlatPlanInner', 'endSubscriptionInner', 'deleteSubscriptionInner']) {
+      const body = src.slice(src.indexOf(`async function ${inner}(`), src.indexOf('\n}\n', src.indexOf(`async function ${inner}(`)));
+      expect(/await guard\(\)|requireFarmSuperAdmin\(\)/.test(body)).toBe(true);
+      expect(body).not.toContain('ownerGuard(');
+    }
+  });
+
+  it('a flat plan change from the portal is a request: the client asks and withdraws on their own record, staff approve or decline, approval applies the change', () => {
+    const src = read(__dirname, '..', 'src', 'server', 'flat-plan-request-actions.ts');
+    expect(src).toContain('requireSubscriberAccess(hit.sub.subscriberId)');
+    expect(src).toContain('requireSubscriberAccess(row.subscriberId)');
+    expect((src.match(/await requireFarmOperator\(\)/g) ?? []).length).toBe(2);
+    expect(src).toContain('applyFlatPlan(hit, lines.data)');
+    const dashboard = read(APP, '(farm)', 'farm', 'dashboard', 'page.tsx');
+    expect((dashboard.match(/\{await ClientRequests\(\)\}/g) ?? []).length).toBe(2);
+    expect(existsSync(join(__dirname, '..', 'drizzle', '0025_farm_portal_accounts.sql'))).toBe(true);
+  });
+
   it('the Stripe routes exist and refuse with 503 before anything else when no key is on file', () => {
     for (const r of ['checkout', 'portal', 'webhook']) {
       const src = read(APP, 'api', 'stripe', r, 'route.ts');

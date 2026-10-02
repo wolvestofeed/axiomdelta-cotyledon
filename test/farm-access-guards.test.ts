@@ -8,11 +8,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authMock, currentUserMock, staffMock, scopeMock } = vi.hoisted(() => ({
+const { authMock, currentUserMock, staffMock, scopeMock, portalMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
   currentUserMock: vi.fn(),
   staffMock: vi.fn(),
   scopeMock: vi.fn(),
+  portalMock: vi.fn(),
 }));
 
 vi.mock('@clerk/nextjs/server', () => ({
@@ -25,13 +26,14 @@ vi.mock('@/server/staff-login', () => ({
   activeStaffByEmail: (email: string) => staffMock(email),
 }));
 
-// The workspace scope without a database: in scope by default.
+// The workspace scope without a database: in scope by default; no client link unless a test sets one.
 vi.mock('@/lib/db', () => ({
   currentWorkspaceId: () => scopeMock(),
+  currentPortalSubscriberId: () => portalMock(),
 }));
 
 const access = await import('@/server/access');
-const { requireFarmSuperAdmin, requireFarmOperator, FarmAccessError, accessRefusal, getFarmAccess } = access;
+const { requireFarmSuperAdmin, requireFarmOperator, requireLinkedClient, requireSubscriberAccess, FarmAccessError, accessRefusal, getFarmAccess } = access;
 
 type Org = { orgId: string; orgRole: 'org:admin' | 'org:member' } | null;
 
@@ -60,6 +62,44 @@ beforeEach(() => {
   staffMock.mockResolvedValue(null);
   scopeMock.mockReset();
   scopeMock.mockReturnValue('ws-1');
+  portalMock.mockReset();
+  portalMock.mockReturnValue(null);
+});
+
+describe('farm access guards — a client is a sign-in linked to one subscriber record (Roadmap P5)', () => {
+  it('with no organization active and a link in scope, the sign-in is a client of that record and nothing else', async () => {
+    portalMock.mockReturnValue('sub-1');
+    signedIn('client@example.com', null);
+    await expect(requireLinkedClient()).resolves.toMatchObject({ subscriberId: 'sub-1', isClient: true, isOperator: false, isSuperAdmin: false, staffId: null });
+    signedIn('client@example.com', null);
+    await expect(requireFarmOperator()).rejects.toMatchObject({ code: 'not_operator' });
+    signedIn('client@example.com', null);
+    await expect(requireSubscriberAccess('sub-1')).resolves.toMatchObject({ subscriberId: 'sub-1' });
+    signedIn('client@example.com', null);
+    await expect(requireSubscriberAccess('sub-2')).rejects.toMatchObject({ code: 'not_own_record' });
+  });
+
+  it('a link is never read for a sign-in with an organization active: staff hold no subscriber record', async () => {
+    portalMock.mockReturnValue('sub-1');
+    signedIn('member@example.com', MEMBER);
+    await expect(requireFarmOperator()).resolves.toMatchObject({ subscriberId: null, isClient: false });
+    signedIn('member@example.com', MEMBER);
+    await expect(requireLinkedClient()).rejects.toMatchObject({ code: 'not_linked' });
+  });
+
+  it('an unlinked sign-in with no organization is refused by every guard', async () => {
+    signedIn('stranger@example.com', null);
+    await expect(requireLinkedClient()).rejects.toMatchObject({ code: 'not_linked' });
+    signedIn('stranger@example.com', null);
+    await expect(requireSubscriberAccess('sub-1')).rejects.toMatchObject({ code: 'not_linked' });
+    signedOut();
+    await expect(requireLinkedClient()).rejects.toMatchObject({ code: 'not_signed_in' });
+  });
+
+  it('a super admin acts on any record; the record the client is linked to is also theirs', async () => {
+    signedIn('owner@example.com', ADMIN);
+    await expect(requireSubscriberAccess('sub-9')).resolves.toMatchObject({ isSuperAdmin: true });
+  });
 });
 
 describe('farm access guards — fail closed on every no-access path', () => {

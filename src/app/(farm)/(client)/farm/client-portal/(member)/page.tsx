@@ -1,5 +1,6 @@
 import { PortalPending } from '@/components/PortalPending';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import Link from 'next/link';
 import { PageHeader, Card, Kpi, money, num } from '@/components/ui';
 import { portalClients } from '@/server/client-portal';
@@ -24,12 +25,10 @@ export default async function SubscriberPortalPage(props: Parameters<typeof Subs
 
 async function SubscriberPortalPageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
-  {
-    const a = await getFarmAccess();
-    if (!a.isOperator) return <PortalPending portal="Client Portal" email={a.email} />;
-  }
+  const a = await getFarmAccess();
+  if (!canUsePortal(a)) return <PortalPending portal="Client Portal" email={a.email} />;
   const params = await searchParams;
-  const [{ clients, subscriber }, orders, actuals, { inputs }] = await Promise.all([portalClients(params.subscriber), listOrders(), loadActuals(), getResolvedActiveInputs()]);
+  const [{ clients, subscriber }, orders, actuals, { inputs }] = await Promise.all([portalClients(params.subscriber, a), listOrders(), loadActuals(), getResolvedActiveInputs()]);
   const channelName = (c: number) => inputs.phases.find((p) => p.phase === c)?.market ?? `Channel ${c}`;
   const mine = subscriber ? orders.filter((o) => o.subscriberId === subscriber.id).sort((a, b) => b.orderDate.localeCompare(a.orderDate)) : [];
   const invoices = subscriber ? invoiceBalances((actuals.invoices ?? []).filter((i) => i.subscriberId === subscriber.id), actuals.distributions, actuals.subscriberPayments ?? []) : [];

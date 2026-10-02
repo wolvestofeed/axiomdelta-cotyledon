@@ -57,9 +57,13 @@ describe('workspace scope — entry points', () => {
     expect(missing).toEqual([]);
   });
 
-  it('nothing but the scope module and the workspaces table reaches the unscoped handle', () => {
+  it('nothing but the scope module and the tables read before a scope exists reaches the unscoped handle', () => {
+    // `workspace.ts` reads the workspaces table to open a scope; `portal-link.ts` reads the two link
+    // tables (Roadmap P5), which carry no policy for the same reason: a client's sign-in names its
+    // workspace. Both are read at sign-in, before any scope exists, and hold ids and the email only.
+    const UNSCOPED_READERS = [join('server', 'workspace.ts'), join('server', 'portal-link.ts')];
     const offenders = files
-      .filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith(join('server', 'workspace.ts')))
+      .filter((f) => /\.(ts|tsx)$/.test(f) && !UNSCOPED_READERS.some((r) => f.endsWith(r)))
       .filter((f) => /\brootDb\b/.test(read(f)))
       .map(rel);
     expect(offenders).toEqual([]);

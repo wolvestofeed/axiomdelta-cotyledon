@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PortalPending } from '@/components/PortalPending';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import { PageHeader, Card } from '@/components/ui';
 import { GLOSSARY } from '@/data/glossary';
 import { SCIENCE_SOURCE_BY_ROW } from '@/data/science-library';
@@ -15,7 +16,7 @@ export default async function GlossaryPage() {
 
 async function GlossaryPageInner() {
   const a = await getFarmAccess();
-  if (!a.isOperator) return <PortalPending portal="Client Portal" email={a.email} />;
+  if (!canUsePortal(a)) return <PortalPending portal="Client Portal" email={a.email} />;
   const tier1 = GLOSSARY.filter((g) => g.tier === 1);
   const tier2 = GLOSSARY.filter((g) => g.tier === 2);
   const cite = (rows: number[]) =>

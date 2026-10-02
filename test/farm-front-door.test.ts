@@ -32,8 +32,16 @@ describe('landingFor', () => {
     expect(LANDING_HREF.sales).toBe('/farm/sales-portal');
   });
 
+  it('sends a sign-in linked to a subscriber record, holding no role, to the Client Portal (Roadmap P5)', () => {
+    expect(landingFor({ isSuperAdmin: false, isOperator: false, staffRoles: [], subscriberId: 'sub-1' })).toBe('client');
+    expect(LANDING_HREF.client).toBe('/farm/client-portal');
+    // A role wins over a link: staff never land in the portal.
+    expect(landingFor({ isSuperAdmin: false, isOperator: true, staffRoles: [], subscriberId: 'sub-1' })).toBe('growRoom');
+  });
+
   it('puts anyone on no list under review', () => {
     expect(landingFor({ isSuperAdmin: false, isOperator: false, staffRoles: [] })).toBe('review');
+    expect(landingFor({ isSuperAdmin: false, isOperator: false, staffRoles: [], subscriberId: null })).toBe('review');
   });
 });
 
@@ -56,6 +64,8 @@ describe('routes', () => {
     const src = read('(front)', 'farm', 'enter', 'page.tsx');
     expect(src).toContain('const landing = landingFor(access);');
     expect(src).toContain("if (!access.userId) redirect('/farm/sign-in');");
+    // The client's redirect comes before the organization picker: a client never chooses a farm.
+    expect(src.indexOf("if (landing === 'client') redirect(LANDING_HREF.client);")).toBeLessThan(src.indexOf('if (!access.orgId)'));
   });
 
   it('the menu links the Dashboard at /farm/dashboard, first, and names it the Admin Dashboard for admins', () => {

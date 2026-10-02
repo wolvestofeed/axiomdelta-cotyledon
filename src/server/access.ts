@@ -1,7 +1,7 @@
 import 'server-only';
 import { getSession, getSessionUser } from '@/server/session';
 import { activeStaffByEmail } from '@/server/staff-login';
-import { currentWorkspaceId } from '@/lib/db';
+import { currentPortalSubscriberId, currentWorkspaceId } from '@/lib/db';
 
 /**
  * Access control for the OS route group.
@@ -9,7 +9,8 @@ import { currentWorkspaceId } from '@/lib/db';
  * Two roles: admin and operator. An admin is always an operator. There is no third role.
  * The roles come from the Clerk organization that is the workspace (outline §7): `org:admin`
  * is an admin, any member is an operator, and the platform admins named below are admins in
- * every organization they belong to. External portal accounts hold neither role.
+ * every organization they belong to. External portal accounts hold neither role: a client is a
+ * sign-in with no organization, linked to one subscriber record (`subscriberId`, Roadmap P5).
  * Sign-in itself is enforced by `proxy.ts`. Under the local development bypass (`dev-bypass.ts`)
  * every request is an admin of the local workspace.
  */
@@ -41,6 +42,10 @@ export interface FarmAccess {
   isSuperAdmin: boolean;
   /** Operators, and every admin: anyone who is a member of the active organization. Holding this is what opens the OS at all. */
   isOperator: boolean;
+  /** A client: the subscriber record this sign-in is linked to, when no organization is active; null for staff. */
+  subscriberId: string | null;
+  /** Convenience: `subscriberId` is set. A client is never an operator. */
+  isClient: boolean;
   /** The signed-in person's row on the staff register, matched by email; null when none. */
   staffId: string | null;
   /** Work roles on the staff register ('operator', 'sales'); empty with no matched record. */
@@ -49,7 +54,7 @@ export interface FarmAccess {
   tier: FarmTier;
 }
 
-const NO_ACCESS: FarmAccess = { userId: null, email: null, name: null, orgId: null, workspaceId: null, isSuperAdmin: false, isOperator: false, staffId: null, staffRoles: [], tier: 'user' };
+const NO_ACCESS: FarmAccess = { userId: null, email: null, name: null, orgId: null, workspaceId: null, isSuperAdmin: false, isOperator: false, subscriberId: null, isClient: false, staffId: null, staffRoles: [], tier: 'user' };
 
 /**
  * Who the caller is, in the workspace in scope.
@@ -73,7 +78,8 @@ export async function getFarmAccess(): Promise<FarmAccess> {
   const isOperator = orgId != null;
 
   const workspaceId = currentWorkspaceId();
-  const staff = email !== null && workspaceId !== null ? await activeStaffByEmail(email) : null;
+  const subscriberId = orgId == null ? currentPortalSubscriberId() : null;
+  const staff = email !== null && workspaceId !== null && subscriberId === null ? await activeStaffByEmail(email) : null;
 
   return {
     userId,
@@ -83,6 +89,8 @@ export async function getFarmAccess(): Promise<FarmAccess> {
     workspaceId,
     isSuperAdmin,
     isOperator,
+    subscriberId,
+    isClient: subscriberId !== null,
     staffId: staff?.id ?? null,
     staffRoles: staff?.roles ?? [],
     tier: isSuperAdmin ? 'super_admin' : 'user',
@@ -104,12 +112,14 @@ export async function getFarmAccess(): Promise<FarmAccess> {
  * security (`_lib/workspace.ts`); these guards are the role check on top of it.
  */
 
-export type FarmAccessDenial = 'not_signed_in' | 'not_super_admin' | 'not_operator';
+export type FarmAccessDenial = 'not_signed_in' | 'not_super_admin' | 'not_operator' | 'not_linked' | 'not_own_record';
 
 const DENIAL_MESSAGE: Record<FarmAccessDenial, string> = {
   not_signed_in: 'Sign in to continue.',
   not_super_admin: 'Super admin only.',
   not_operator: 'Not authorized for this workspace.',
+  not_linked: 'This sign-in is not linked to a subscriber record.',
+  not_own_record: 'Not your record.',
 };
 
 /** Thrown by the guards below. Never returned — a denial must not be ignorable. */
@@ -143,6 +153,30 @@ export async function requireFarmOperator(): Promise<FarmIdentity> {
   const access = await getFarmAccess();
   if (!access.userId) throw new FarmAccessError('not_signed_in');
   if (!access.isOperator) throw new FarmAccessError('not_operator');
+  return access as FarmIdentity;
+}
+
+/** An identity known to be a linked client. */
+export type FarmClientIdentity = FarmIdentity & { subscriberId: string };
+
+/** Throws unless the caller is a client sign-in linked to a subscriber record (Roadmap P5). */
+export async function requireLinkedClient(): Promise<FarmClientIdentity> {
+  const access = await getFarmAccess();
+  if (!access.userId) throw new FarmAccessError('not_signed_in');
+  if (access.subscriberId === null) throw new FarmAccessError('not_linked');
+  return access as FarmClientIdentity;
+}
+
+/**
+ * Throws unless the caller may act on this subscriber record: a super admin, or the client linked to
+ * exactly this record. The gate for what a client does to their own subscriptions from the portal.
+ */
+export async function requireSubscriberAccess(subscriberId: string): Promise<FarmIdentity> {
+  const access = await getFarmAccess();
+  if (!access.userId) throw new FarmAccessError('not_signed_in');
+  if (access.isSuperAdmin) return access as FarmIdentity;
+  if (access.subscriberId === null) throw new FarmAccessError('not_linked');
+  if (access.subscriberId !== subscriberId) throw new FarmAccessError('not_own_record');
   return access as FarmIdentity;
 }
 

@@ -1,5 +1,6 @@
 import { PortalPending } from '@/components/PortalPending';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import { PageHeader } from '@/components/ui';
 import { FlatBuilderClient, type FlatBuilderData } from '@/app/(farm)/(client)/farm/client-portal/(member)/flat-builder/FlatBuilderClient';
 import { getResolvedActiveInputs } from '@/server/scenarios';
@@ -22,14 +23,13 @@ export default async function FlatBuilderPage(props: Parameters<typeof FlatBuild
 
 async function FlatBuilderPageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
-  {
-    const a = await getFarmAccess();
-    if (!a.isOperator) return <PortalPending portal="Client Portal" email={a.email} />;
-  }
-  const [{ subscriber }, { inputs }] = await Promise.all([searchParams, getResolvedActiveInputs()]);
+  const a = await getFarmAccess();
+  if (!canUsePortal(a)) return <PortalPending portal="Client Portal" email={a.email} />;
+  const [params, { inputs }] = await Promise.all([searchParams, getResolvedActiveInputs()]);
+  const subscriber = a.subscriberId ?? params.subscriber;
   const data: FlatBuilderData = {
     subscribers: inputs.subscribers
-      .filter((c) => c.status !== 'inactive')
+      .filter((c) => c.status !== 'inactive' && (a.subscriberId === null || c.id === a.subscriberId))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((c) => ({ id: c.id, name: c.name, channel: c.channel, pricePerUnitCents: c.pricePerUnitCents, nutritionTargets: c.nutritionTargets ?? [], pickupPoints: c.pickupPoints.map((s) => ({ id: s.id, name: s.name })) })),
     growPlans: inputs.growPlans.filter((r) => r.status === 'in_service').map((r) => ({ code: r.code, name: r.name, channels: r.channels ?? [], varieties: planVarieties(r).map((v) => v.key) })),

@@ -6,6 +6,8 @@ import { capexRollup } from '@/engine/financials';
 import { postSelectedLedger } from '@/server/ledgers';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { getFarmAccess } from '@/server/access';
+import { listPendingFlatPlanRequests } from '@/server/flat-plan-requests';
+import { ClientRequestsCard } from '@/components/ClientRequestsCard';
 import { getScenarioView } from '@/server/scenarios';
 import { listGrowPlans } from '@/server/grow-plans';
 import { listTimeStudies } from '@/server/time-studies';
@@ -268,6 +270,8 @@ async function AdminDashboard() {
         status="live"
       />
 
+      {await ClientRequests()}
+
       {/* Headline hero band. On a dark ground the hero is the brightest object
           on the page, not a coloured block — see _components/farm.css. */}
       <div className="farm-hero farm-hero-green">
@@ -432,6 +436,8 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
         status="live"
       />
 
+      {await ClientRequests()}
+
       <div className="farm-hero">
         <HeroStat value={num(plant.sowingSize)} label="Most one unit takes — active-grow-plan average" sub={`Trays one grow unit holds; ${num(plant.cyclesPerDay, 1)} grow units per plan on average`} />
         <HeroStat value={num(day.sowings)} label={day.productionDate ? `Sowings ${day.productionDate === new Date().toISOString().slice(0, 10) ? 'today' : `on ${day.productionDate}`}` : 'Sowings — next production day'} sub={day.productionDate ? `${num(day.units)} units${picture.isPlan ? ', the open forecast' : ', the orders on file'}` : 'No order in the next two weeks'} />
@@ -442,6 +448,13 @@ async function OperatorDashboard({ staffId }: { staffId: string | null }) {
       <SectionGrid sections={sections} isAdmin={false} />
     </>
   );
+}
+
+/** Flat plan changes clients have asked for (Roadmap P6): the alert on both dashboards, nothing when none waits. Called as a function, not rendered as an element, so it keeps the workspace scope (`todo.md`). */
+async function ClientRequests() {
+  const [requests, plans] = await Promise.all([listPendingFlatPlanRequests(), listGrowPlans()]);
+  if (requests.length === 0) return null;
+  return <ClientRequestsCard requests={requests} planNames={Object.fromEntries(plans.map((r) => [r.code, r.name]))} />;
 }
 
 // ── Pieces ──────────────────────────────────────────────────────────────────

@@ -8,16 +8,17 @@
  *   2. staff holding both the Operator and Sales work roles → a chooser, the Grow Room or the Sales Portal;
  *   3. Operator access → the Grow Room;
  *   4. the Sales work role → the Sales Portal;
- *   5. on no list → account under review. An external account linked to a subscriber or supplier
- *      record goes to its portal once linking exists (Roadmap P5).
+ *   5. a sign-in linked to a subscriber record, holding no role → the Client Portal (Roadmap P5);
+ *   6. on no list → account under review.
  */
 
-export type FrontDoorLanding = 'admin' | 'choose' | 'growRoom' | 'sales' | 'review';
+export type FrontDoorLanding = 'admin' | 'choose' | 'growRoom' | 'sales' | 'client' | 'review';
 
 export const LANDING_HREF: Record<Exclude<FrontDoorLanding, 'choose' | 'review'>, string> = {
   admin: '/farm/dashboard',
   growRoom: '/farm/grow-room',
   sales: '/farm/sales-portal',
+  client: '/farm/client-portal',
 };
 
 export interface FrontDoorPerson {
@@ -25,6 +26,8 @@ export interface FrontDoorPerson {
   isOperator: boolean;
   /** Work roles on the staff register; empty when the sign-in matches no active person. */
   staffRoles: readonly string[];
+  /** The subscriber record a client sign-in is linked to; null or absent for staff. */
+  subscriberId?: string | null;
 }
 
 export function landingFor(p: FrontDoorPerson): FrontDoorLanding {
@@ -34,5 +37,6 @@ export function landingFor(p: FrontDoorPerson): FrontDoorLanding {
   if (operatorRole && salesRole) return 'choose';
   if (salesRole) return 'sales';
   if (p.isOperator) return 'growRoom';
+  if (p.subscriberId) return 'client';
   return 'review';
 }

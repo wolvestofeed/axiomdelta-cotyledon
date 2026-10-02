@@ -2,6 +2,7 @@ import { PortalPending } from '@/components/PortalPending';
 import { ClientPicker } from '@/components/ClientPicker';
 import { BillingActions } from '@/components/BillingActions';
 import { getFarmAccess } from '@/server/access';
+import { canUsePortal } from '@/server/client-portal';
 import { PageHeader, Card } from '@/components/ui';
 import { portalClients } from '@/server/client-portal';
 import { stripeConfigured } from '@/lib/stripe';
@@ -24,9 +25,9 @@ export default async function SettingsPage(props: Parameters<typeof SettingsPage
 async function SettingsPageInner({ searchParams }: { searchParams: Promise<{ subscriber?: string; card?: string }> }) {
   // Checked on the page as well as `(member)/layout`: a layout gate alone is not enough (CLAUDE.md §10).
   const access = await getFarmAccess();
-  if (!access.isOperator) return <PortalPending portal="Client Portal" email={access.email} />;
+  if (!canUsePortal(access)) return <PortalPending portal="Client Portal" email={access.email} />;
   const params = await searchParams;
-  const { clients, subscriber } = await portalClients(params.subscriber);
+  const { clients, subscriber } = await portalClients(params.subscriber, access);
   const configured = stripeConfigured();
 
   return (
@@ -43,10 +44,10 @@ async function SettingsPageInner({ searchParams }: { searchParams: Promise<{ sub
         <Card title="Account">
           <dl className="grid gap-2">
             <div><dt className="font-semibold farm-c-ink">Signed in as</dt><dd className="farm-c-soft">{access.email ?? '—'}{access.name ? ` · ${access.name}` : ''}</dd></div>
-            <div><dt className="font-semibold farm-c-ink">Linked record</dt><dd className="farm-c-soft">{subscriber ? subscriber.name : 'none'}</dd></div>
+            <div><dt className="font-semibold farm-c-ink">Linked record</dt><dd className="farm-c-soft">{access.subscriberId ? subscriber?.name ?? '—' : access.isOperator ? `staff preview${subscriber ? ` of ${subscriber.name}` : ''}` : 'none'}</dd></div>
           </dl>
           <p className="farm-kpi-sub mt-3">
-            An account is linked to its subscriber record by the farm&rsquo;s staff when it is reviewed. Your name, email and password are changed where you signed in.
+            A sign-in is linked to the one subscriber record that carries its email, the first time it signs in. One sign-in per account, one account per record. Your name, email and password are changed where you signed in.
           </p>
         </Card>
 

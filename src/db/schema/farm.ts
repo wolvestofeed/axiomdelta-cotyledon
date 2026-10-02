@@ -1268,6 +1268,9 @@ export const farmSubscribers = farmSchema.table(
     /** The subscriber's Stripe customer (0024), created when a card is put on file; null = none. */
     // @classification: Confidential
     stripeCustomerId: text('stripe_customer_id'),
+    /** The client's sign-in email (0025), lowercased: the Client Portal links the account that signs in with it. */
+    // @classification: Confidential
+    email: text('email'),
     /** 'seed' | 'user_built' */
     // @classification: Internal
     source: text('source').notNull().default('user_built'),
@@ -2244,3 +2247,69 @@ export const farmSubscriptions = farmSchema.table(
 );
 
 export type FarmSubscriptionRow = typeof farmSubscriptions.$inferSelect;
+
+/**
+ * The Client Portal's sign-in index (0025): one email, one subscriber record, across every farm. Kept by
+ * a trigger on subscribers; read at sign-in before any workspace is in scope, so it carries no policy
+ * and holds ids and the email only.
+ */
+export const farmPortalEmails = farmSchema.table('portal_emails', {
+  // @classification: Confidential
+  email: text('email').primaryKey(),
+  // @classification: Internal
+  workspaceId: uuid('workspace_id').notNull(),
+  // @classification: Internal
+  subscriberId: uuid('subscriber_id').notNull().unique(),
+});
+
+/** An external sign-in linked to its subscriber record (0025): one sign-in per account, one account per record. No policy: read before a scope exists. */
+export const farmPortalAccounts = farmSchema.table('portal_accounts', {
+  // @classification: Internal
+  clerkUserId: text('clerk_user_id').primaryKey(),
+  // @classification: Internal
+  workspaceId: uuid('workspace_id').notNull(),
+  // @classification: Internal
+  subscriberId: uuid('subscriber_id').notNull().unique(),
+  // @classification: Confidential
+  email: text('email').notNull(),
+  // @classification: Internal
+  linkedAt: timestamp('linked_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export type FarmPortalAccountRow = typeof farmPortalAccounts.$inferSelect;
+
+/** A flat plan change a client asks for (0025), reviewed by staff; approval applies it from the first distribution not yet sown. */
+export const farmFlatPlanRequests = farmSchema.table(
+  'flat_plan_requests',
+  {
+  workspaceId: uuid('workspace_id').notNull().default(CURRENT_WORKSPACE),
+    // @classification: Internal
+    id: uuid('id').primaryKey().defaultRandom(),
+    // @classification: Internal
+    subscriptionId: uuid('subscription_id').notNull(),
+    // @classification: Internal
+    subscriberId: uuid('subscriber_id').notNull(),
+    /** FlatPlanLine[]: what the client asks each distribution to carry. */
+    // @classification: Internal
+    lines: jsonb('lines').notNull().default([]),
+    // @classification: Internal
+    note: text('note'),
+    /** 'pending' | 'approved' | 'declined' | 'withdrawn' */
+    // @classification: Internal
+    status: text('status').notNull().default('pending'),
+    // @classification: Internal
+    requestedBy: text('requested_by'),
+    // @classification: Internal
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    // @classification: Internal
+    decidedBy: text('decided_by'),
+    // @classification: Internal
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    // @classification: Internal
+    decisionNote: text('decision_note'),
+    /** Set on approval: the first distribution the new lines are sown for. */
+    // @classification: Internal
+    effectiveFrom: date('effective_from'),
+  },
+  (t) => [index('farm_flat_plan_requests_status_idx').on(t.status, t.requestedAt)],
+);
+export type FarmFlatPlanRequestRow = typeof farmFlatPlanRequests.$inferSelect;
