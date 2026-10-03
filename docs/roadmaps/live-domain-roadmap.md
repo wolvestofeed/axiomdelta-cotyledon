@@ -30,13 +30,13 @@ Each step ends with a check that passes before the next begins.
 
 ### A. Accounts and the questions (§7)
 - [ ] Rob answers §7: the registrar, the Vercel account or team, the production database, the subdomain names, the password and who receives it.
-- [ ] Vercel: a team or personal account signed in with GitHub access to `wolvestofeed/axiomdeltamicrofarm`.
+- [x] Vercel: a team or personal account signed in with GitHub access to `wolvestofeed/AxiomDelta-Cotyledon` (renamed from `axiomdeltamicrofarm` on 3 October 2026).
 
 ### B. The Cotyledon Vercel project
-- [ ] Import the repo. Framework Next.js, Node 20 (`.nvmrc`), install `pnpm install`, build `pnpm build`, output default. Production branch `main`.
-- [ ] Environment variables per §4, Production scope (Preview too if preview deployments are wanted; they then sit behind the same gate).
+- [x] Import the repo. Framework Next.js, Node 20 (`.nvmrc`), install `pnpm install`, build `pnpm build`, output default. Production branch `main`. The first build failed because `next build` tried to prerender the farm pages and ran workspace queries; the five layouts under the farm route group now declare `dynamic = 'force-dynamic'` (commit `55b7bf7`).
+- [x] Environment variables per §4, Production scope (Preview too if preview deployments are wanted; they then sit behind the same gate).
 - [ ] Vercel's own Deployment Protection off for Production: the app's gate is the lock.
-- [ ] First deploy. Check: the build succeeds; the deployment URL redirects `/farm` to `/enter`; the password opens it; `/farm/sustainability/water` renders; the response carries `x-robots-tag: noindex, nofollow`.
+- [x] First deploy. Checked 3 October 2026 on the live host: `/farm` 307 → `/enter?next=/farm`; `/enter` 200 with `x-robots-tag: noindex, nofollow`; certificate issued (Let's Encrypt, to 1 January 2027). Rob confirms the password opens it.
 
 ### C. The production database
 - [ ] Decide with Rob (§7): a new Neon branch from the development branch, so the local workspace's data (the seeded libraries, the blends, the forecasts, the house account) comes along as the demo; or a fresh database. The plan's recommendation is the branch: the gate runs the deployment as the local workspace's admin, and that workspace is what the people he shows it to should see.
@@ -45,13 +45,13 @@ Each step ends with a check that passes before the next begins.
 - [ ] The first page load after a deploy seeds the libraries against a cold branch and takes 20 to 35 seconds (`todo.md`); warm it once before handing the link out.
 
 ### D. DNS and the domain
-- [ ] At the registrar, or by moving the nameservers to Vercel: `cotyledon` CNAME to `cname.vercel-dns.com` (Vercel prints the exact record when the domain is added to the project); the apex A record or ALIAS to Vercel for the welcome site; `www` CNAME to the apex. Add `cotyledon.foodismymuse.com` to the Cotyledon project; Vercel issues the certificate.
-- [ ] Check: `https://cotyledon.foodismymuse.com/farm` redirects to `/enter`; the certificate is valid; `http://` redirects to `https://`.
+- [x] Squarespace DNS, nameservers unchanged: A `@` → 216.198.79.1; CNAME `www` → the emberos project's vercel-dns target; CNAME `cotyledon` → `cname.vercel-dns.com`. `cotyledon.foodismymuse.com` added to the Cotyledon project; certificate issued.
+- [x] Check: `https://cotyledon.foodismymuse.com/farm` redirects to `/enter`; the certificate is valid; `http://` redirects to `https://`.
 - [ ] `NEXT_PUBLIC_BASE_URL=https://cotyledon.foodismymuse.com` set and redeployed (Stripe's return addresses read it).
 
 ### E. The welcome site
-- [ ] A new repo (Rob names it) and Vercel project on `foodismymuse.com` and `www`. One page: the Ember OS mark, the mission in a sentence or two, the two products with a line each and an entry link; a second page if Rob wants the longer story. No app code, no database, no sign-in. The Cotyledon entry links to `https://cotyledon.foodismymuse.com/farm` (the gate takes over); the Muse Kitchen entry links to `https://getcomptable.com/muse` until the lift. Indexable, with a real title and description.
-- [ ] The brand assets: Cotyledon's logo package is in `images/`; the Ember OS and Muse Kitchen marks are in `Comptable/docs/muse/images/`. Rob approves the copy and the marks before the site goes up.
+- [x] Built in `../../foodismymuse/` (its `PLAN.md` is the authority): three pages, Home, Platform, Mission, with two portal cards on Home that sign straight into each app. Repo `wolvestofeed/emberos`, Vercel project `emberos`, live at https://foodismymuse.com on 3 October 2026; `www` and `http` redirect to the apex (308). The Cotyledon card links to `https://cotyledon.foodismymuse.com` (the gate takes over); the Muse Kitchen card links to `https://getcomptable.com/muse` until the lift. Indexable.
+- [x] Brand assets copied from the three kits into the site's `public/brand/`; copy from the site's `content/` decks, edited by Rob.
 
 ### F. Stripe on the live host (test mode)
 - [ ] In the Stripe test dashboard, a webhook endpoint at `https://cotyledon.foodismymuse.com/api/stripe/webhook` for the events `billing.md` names; its signing secret becomes `STRIPE_WEBHOOK_SECRET`. The webhook path is exempt from the gate, so Stripe reaches it.
@@ -105,4 +105,4 @@ Not for this session unless Rob says so. Recorded so the decision is made before
 3. The production database: a Neon branch from the development branch (the plan's recommendation, so the demo data comes along), or a fresh database.
 4. The subdomain names: `cotyledon.foodismymuse.com` and `muse.foodismymuse.com` as the plan writes them, or others.
 5. The preview password's value (Rob sets it himself in Vercel; it is never written in the repo or in chat) and who receives it.
-6. The welcome site's copy and the name of its repo.
+6. ~~The welcome site's copy and the name of its repo.~~ Answered: `wolvestofeed/emberos`; copy in `foodismymuse/content/`.
