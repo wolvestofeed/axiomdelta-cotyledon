@@ -39,10 +39,10 @@ Each step ends with a check that passes before the next begins.
 - [x] First deploy. Checked 3 October 2026 on the live host: `/farm` 307 → `/enter?next=/farm`; `/enter` 200 with `x-robots-tag: noindex, nofollow`; certificate issued (Let's Encrypt, to 1 January 2027). Rob confirms the password opens it.
 
 ### C. The production database
-- [ ] Decide with Rob (§7): a new Neon branch from the development branch, so the local workspace's data (the seeded libraries, the blends, the forecasts, the house account) comes along as the demo; or a fresh database. The plan's recommendation is the branch: the gate runs the deployment as the local workspace's admin, and that workspace is what the people he shows it to should see.
-- [ ] Set `DATABASE_URL` on Vercel to the production branch's pooled connection string (`?sslmode=require`).
-- [ ] From the repo, against the production string: `DATABASE_URL=... pnpm db:migrate` (no-op on a branch that already carries `0001` to `0025`; applies them on a fresh database), then `FARM_WORKSPACE=org_local_dev DATABASE_URL=... pnpm farm:sources` and `FARM_WORKSPACE=org_local_dev DATABASE_URL=... pnpm farm:sync-setup`. Check: the Sources page lists 233 rows; Equipment, Home shows the four racks.
-- [ ] The first page load after a deploy seeds the libraries against a cold branch and takes 20 to 35 seconds (`todo.md`); warm it once before handing the link out.
+- [x] Decided 3 October 2026, the other way round from the plan but to the same effect: Neon's default branch `production` (the one that always held the data) stays the live site's database; a `development` branch was created from it for the laptop. Local `.env.local` and `.env` now carry the development branch's string; Vercel carries production's. The demo data is on both.
+- [x] `DATABASE_URL` on Vercel is the `production` branch's string.
+- [x] No migration or seed needed: production already carried `0001` to `0025` and every row. Checked on the development branch (a copy of production at the moment of branching): 233 sources, 1 workspace, 23 grow plans. From now on a migration runs locally first, then against production with the production string from the laptop.
+- [x] The first page load after a deploy seeds the libraries against a cold branch and takes 20 to 35 seconds (`todo.md`); Rob warmed it with the password on 3 October 2026.
 
 ### D. DNS and the domain
 - [x] Squarespace DNS, nameservers unchanged: A `@` → 216.198.79.1; CNAME `www` → the emberos project's vercel-dns target; CNAME `cotyledon` → `cname.vercel-dns.com`. `cotyledon.foodismymuse.com` added to the Cotyledon project; certificate issued.
@@ -102,7 +102,7 @@ Not for this session unless Rob says so. Recorded so the decision is made before
 
 1. Where foodismymuse.com is registered, and whether its nameservers move to Vercel (simplest) or stay with the registrar (records added by hand).
 2. The Vercel account or team the two projects live in, and that it has GitHub access to the Cotyledon repo.
-3. The production database: a Neon branch from the development branch (the plan's recommendation, so the demo data comes along), or a fresh database.
+3. ~~The production database.~~ Answered: Neon's default branch `production` is live; `development` branched from it for the laptop.
 4. The subdomain names: `cotyledon.foodismymuse.com` and `muse.foodismymuse.com` as the plan writes them, or others.
 5. The preview password's value (Rob sets it himself in Vercel; it is never written in the repo or in chat) and who receives it.
 6. ~~The welcome site's copy and the name of its repo.~~ Answered: `wolvestofeed/emberos`; copy in `foodismymuse/content/`.
