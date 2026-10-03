@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 import { devBypass } from '@/server/dev-bypass';
+import { PREVIEW_COOKIE, isGateExempt, previewGate, previewPassword, verifyPreviewToken } from '@/server/preview-gate';
 
 /** Everything under /farm requires sign-in except the front door and each portal's own sign-in and sign-up. */
 const isProtected = createRouteMatcher(['/farm(.*)']);
@@ -27,8 +28,24 @@ const withClerk = clerkMiddleware(async (auth, req) => {
   }
 });
 
-/** Under the local development bypass (`_lib/dev-bypass.ts`) nothing is gated and Clerk is never called. */
-export default devBypass() ? () => NextResponse.next() : withClerk;
+/**
+ * The private preview gate (`preview-gate.ts`): with a password set, every request without a valid
+ * cookie goes to `/enter`, and the deployment asks search engines not to index it. Behind the gate,
+ * and under the local development bypass (`dev-bypass.ts`), nothing else is gated and Clerk is never called.
+ */
+export default async function proxy(req: NextRequest, evt: NextFetchEvent) {
+  if (previewGate()) {
+    const path = req.nextUrl.pathname;
+    if (!isGateExempt(path) && !(await verifyPreviewToken(req.cookies.get(PREVIEW_COOKIE)?.value, previewPassword()!))) {
+      const url = new URL('/enter', req.url);
+      url.searchParams.set('next', `${path}${req.nextUrl.search}`);
+      return NextResponse.redirect(url);
+    }
+  }
+  const res = devBypass() ? NextResponse.next() : await withClerk(req, evt);
+  if (previewGate() && res) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  return res;
+}
 
 export const config = {
   matcher: [
