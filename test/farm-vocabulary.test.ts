@@ -56,6 +56,7 @@ const ALLOWED = new Set([
   'docs/roadmaps/portfolio-publication-roadmap.md',
   'docs/roadmaps/tabbed-layout-roadmap.md',
   'docs/roadmaps/lighting-roadmap.md', // names the light recipes of the research as the studies title them
+  'docs/roadmaps/live-domain-roadmap.md', // names the sibling product the welcome site links to
 ]);
 
 /** Words that are also ordinary English in the codebase and are allowed in these exact phrases. */

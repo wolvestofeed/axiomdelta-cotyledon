@@ -14,7 +14,7 @@ Each phase ends with the app running on localhost and its tests green.
 | 3 — Subscriptions and distribution | [`roadmaps/phase-3-subscriptions-and-distribution.md`](roadmaps/phase-3-subscriptions-and-distribution.md) | IN PROGRESS: subscriptions on a cadence are the one demand model; the Client Portal built as pages (orders and invoices, Flat Builder, Subscriptions, Profile, Settings, why hemp mats, glossary), a client's sign-in linked to its record by email, their own skips and pauses, flat plan changes as requests the farm approves on the Dashboard; the Stripe architecture in place with placeholder keys (card on file, billing portal, webhook, the postings on the farm's accounts); the Supplier Portal on hold and out of the UI; open: the profile's goals, Pickup Points and Routes (waiting on facts), tray returns, live billing, Flat Builder submissions as orders pending review | December 2026 |
 | 4 — Staffing | [`roadmaps/phase-4-staffing.md`](roadmaps/phase-4-staffing.md) | NOT STARTED | January 2027 |
 | 5 — Facility and sustainability | [`roadmaps/phase-5-facility-and-sustainability.md`](roadmaps/phase-5-facility-and-sustainability.md) | IN PROGRESS: the plan is written on the LCA research document (document E) and the ported Muse module; step 2 done, document E registered in the science library and the factor rows on file as their primary sources read (eGRID2023, WARM v15 corrected, freight by mode, the ZHAW media table, steel declarations, LED embodied rows, CML eutrophication, the cited microgreens LCA); the kitchen's water surcharge, grease trap, GreenChill check and appliance rebates out of the pages; the facility module kept, its re-base for a grow room specified; the tray footprint engine built and tested (step 3), no page reading it yet; step 1, agreeing the decisions with Rob, open | spring 2027 for the home grow room |
-| 6 — Software as a product | [`roadmaps/phase-6-software-as-a-product.md`](roadmaps/phase-6-software-as-a-product.md) | NOT STARTED: the private preview gate is built (one password behind `/enter`, the deployment as the workspace admin, Clerk off the door, noindex) and the domain plan is decided, one Ember OS domain with a subdomain per product | after the wellness center's facility runs on it |
+| 6 — Software as a product | [`roadmaps/phase-6-software-as-a-product.md`](roadmaps/phase-6-software-as-a-product.md) | IN PROGRESS: the live domain is foodismymuse.com; the deployment plan is [`roadmaps/live-domain-roadmap.md`](roadmaps/live-domain-roadmap.md), the Ember OS welcome site at the apex and Cotyledon on its subdomain behind the preview gate; the gate is built; the rest of the phase waits on the facility | the live site now; the rest after the wellness center's facility runs on it |
 
 ## What each phase is
 
@@ -30,7 +30,11 @@ Each phase ends with the app running on localhost and its tests green.
 
 **Phase 5 — Facility and sustainability.** Grow-room layout by build phase, lighting and HVAC load, water, microgreens emission factors, the "acre-feet and fuels" comparison. First for the home grow room; sized up for a commercial facility when the center decides on one.
 
-**Phase 6 — Software as a product.** Workspace onboarding, software plans and billing, marketing site, domain, deployment.
+**Phase 6 — Software as a product.** Workspace onboarding, software plans and billing, marketing site, domain, deployment. The domain and the deployment are being done now: foodismymuse.com, the Ember OS welcome site at the apex, Cotyledon on its subdomain behind the private preview gate, by [`roadmaps/live-domain-roadmap.md`](roadmaps/live-domain-roadmap.md).
+
+## The live domain
+
+- [`roadmaps/live-domain-roadmap.md`](roadmaps/live-domain-roadmap.md) — foodismymuse.com: the Ember OS welcome site at the apex, Cotyledon on its subdomain behind the preview gate, the environment variables, Stripe on the live host, Clerk when the gate comes down; the session that deploys starts there.
 
 ## Topic build plans ported from Muse
 
