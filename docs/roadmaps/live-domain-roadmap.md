@@ -59,7 +59,7 @@ Each step ends with a check that passes before the next begins.
 
 ### G. Hand-over
 - [ ] Rob sets the password's value himself in Vercel (§4), redeploys, and hands it out. To sign everyone out later: change the value and redeploy.
-- [ ] `CLAUDE.md` §6's line "Development is on localhost only until a domain is registered; there is no deployment target yet" is rewritten with Rob's approval to name the live host and the rule that `main` deploys.
+- [x] `CLAUDE.md` §6 rewritten (3 October 2026, Rob's word): names the repo and the live host, and states that a push to `main` is a deploy.
 - [ ] `docs/roadmap.md` and `phase-6-software-as-a-product.md` updated; this file's checkboxes ticked as each step lands.
 
 ## 4. Environment variables on the Cotyledon Vercel project
