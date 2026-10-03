@@ -83,14 +83,18 @@ describe('farm carbon — factor registry integrity', () => {
     expect(by['onions-and-leeks']).toBeCloseTo(0.4997, 4);
     expect(by['sunflower-oil']).toBeCloseTo(3.5837, 4);
   });
-  it('the map of record is empty until the grow plan lines are mapped', () => {
-    expect(growPlanFoodCategoryMap).toEqual({});
+  it('the map of record names a study crop as a proxy for each seed line that has one, tagged UNCONFIRMED, and excludes the rest with a reason', () => {
+    expect(growPlanFoodCategoryMap['Di Cicco broccoli']).toMatchObject({ category: 'cabbages-and-other-brassicas', basisStatus: 'UNCONFIRMED' });
+    expect(growPlanFoodCategoryMap['Speckled pea']!.category).toBe('peas');
+    expect(growPlanFoodCategoryMap['Black oil sunflower']).toMatchObject({ category: null });
+    expect(growPlanFoodCategoryMap['Black oil sunflower']!.note).toMatch(/No seed proxy/);
+    for (const m of Object.values(growPlanFoodCategoryMap)) if (m.category) expect(inputFactors.some((f) => f.category === m.category), m.category).toBe(true);
   });
 });
 
 describe('farm carbon — food footprint mechanics on a grow plan', () => {
   it('with no mapping every line is excluded with the reason, and the total is zero', () => {
-    const r = growPlanFoodFootprint(broc);
+    const r = growPlanFoodFootprint(broc, inputFactors, {});
     expect(r.totalKgCo2ePerUnit).toBe(0);
     expect(r.largestLine).toBeNull();
     expect(r.lines.every((l) => l.excludedReason === 'No mapping to a study product.')).toBe(true);

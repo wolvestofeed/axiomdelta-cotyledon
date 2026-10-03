@@ -70,8 +70,8 @@ describe('farm Plan v Actual measures (Roadmap N7)', () => {
   it('carries the sustainability quantities', () => {
     expect(m.electricityKwh).toBe(1200);
     expect(m.waterGal).toBe(5000);
-    // No input is mapped to a food product until Phase 5.
-    expect(m.food.referenceKg).toBe(0);
+    // The seed lines carry a study proxy (Phase 5, step 3), so the units carry a reference footprint; no supplier is named on any line.
+    expect(m.food.referenceKg).toBeGreaterThan(0);
     expect(m.food.onNamedSupplierKg).toBe(0);
   });
 

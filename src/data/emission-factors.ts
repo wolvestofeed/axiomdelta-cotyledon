@@ -405,10 +405,39 @@ export interface GrowPlanFoodMapping {
   category: string | null;
   massKgPerEach?: number;
   massStatus?: StatusTag;
+  /** The tag the mapping itself carries: UNCONFIRMED where the study product is a proxy for what the line buys. */
+  basisStatus?: StatusTag;
+  /** What the study product stands in for, named on the page. */
+  proxy?: string;
   note?: string;
 }
 
-export const growPlanFoodCategoryMap: Record<string, GrowPlanFoodMapping> = {};
+/**
+ * The seed lines' reference basis. The study has no seed products, so each variety reads the
+ * study's mean for the crop its seed comes from, named as a proxy and tagged UNCONFIRMED: a seed
+ * crop's own footprint per kg is higher than the vegetable's or the grain's, because the field
+ * yields far fewer kilograms of seed than of produce. The cited microgreens LCA (`lcaOptions`)
+ * shows how much higher for a brassica. Varieties whose crop the study does not carry are
+ * excluded with the reason shown. Media and nutrients are footprinted by `tray-footprint.ts`
+ * from their own factors, not through this map.
+ */
+const seedProxy = (category: string, proxy: string): GrowPlanFoodMapping => ({ category, basisStatus: 'UNCONFIRMED', proxy, note: `Study mean for ${proxy}, standing in for the seed crop.` });
+const noSeedProxy = (why: string): GrowPlanFoodMapping => ({ category: null, note: why });
+
+export const growPlanFoodCategoryMap: Record<string, GrowPlanFoodMapping> = {
+  'Di Cicco broccoli': seedProxy('cabbages-and-other-brassicas', 'cabbages and other brassicas'),
+  'Rambo purple radish': seedProxy('cabbages-and-other-brassicas', 'cabbages and other brassicas (radish is a brassica)'),
+  'Red Acre cabbage': seedProxy('cabbages-and-other-brassicas', 'cabbages and other brassicas'),
+  'Speckled pea': seedProxy('peas', 'dry peas, a seed crop'),
+  'Fenugreek': seedProxy('beans-pulses', 'beans and pulses'),
+  'Mung bean': seedProxy('beans-pulses', 'beans and pulses'),
+  'Red lentil': seedProxy('beans-pulses', 'beans and pulses'),
+  'Hard red winter wheat': seedProxy('wheat-rye-bread', 'wheat and rye, at retail as bread'),
+  'Black oil sunflower': noSeedProxy('No seed proxy in the study: sunflower appears only as oil.'),
+  'Borage': noSeedProxy('No proxy in the study for borage seed.'),
+  'Red garnet amaranth': noSeedProxy('No proxy in the study for amaranth seed.'),
+  'Chia': noSeedProxy('No proxy in the study for chia seed.'),
+};
 
 // ── Growing media: GWP per cubic metre used (ZHAW 2015) ───────────────────
 

@@ -119,6 +119,9 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
   },
 ];
 
+/** The hemp mat grade the farm buys, grams per square metre: the mass of a mat is the format's area at this grade. Rob to state which of 400, 600 or 1,300 (science library rows 94, 97). */
+export const HEMP_MAT_GRADE_G_PER_M2: Tagged = tagged(600, 'PLACEHOLDER', 'g/m²', 'The middle of the three grades the makers publish; the grade bought is not yet stated');
+
 // ── Nutrient solutions and supplements ──────────────────────────────────────
 
 /**

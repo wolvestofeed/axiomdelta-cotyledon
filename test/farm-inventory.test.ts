@@ -67,9 +67,9 @@ describe('farm inventory — full inventory from the resolved model', () => {
     expect(inv.foodGapKg).toBeCloseTo(0, 6);
     expect(inv.lines.find((l) => l.category === 'combustion')!.kg).toBe(0);
     expect(inv.lines.find((l) => l.category === 'fugitive')!.kg).toBe(0);
-    // No input is mapped to a food product until Phase 5, so there is no food mass and no shrink waste from it.
+    // The seed line carries a study proxy, so its mass flows into the shrink waste line.
     const waste = inv.lines.find((l) => l.category === 'waste')!;
-    expect(waste.kg).toBe(0);
+    expect(waste.kg).toBeGreaterThan(0);
     const freight = inv.postings.filter((p) => p.category.startsWith('freight:'));
     expect(freight.map((p) => p.category)).toEqual(['freight:outbound']);
     expect(freight[0].activityStatus).toBe('PLACEHOLDER');

@@ -326,7 +326,7 @@ export function growPlanFoodFootprint(
       massPerTray = ing.qtyPerTray * m.massKgPerEach;
     }
     const massKgPerUnit = massPerTray * unitFactor;
-    const statuses = [f.provenance.status, ...(m.massStatus ? [m.massStatus] : [])];
+    const statuses = [f.provenance.status, ...(m.massStatus ? [m.massStatus] : []), ...(m.basisStatus ? [m.basisStatus] : [])];
     const status = statuses.reduce((w, s) => (STATUS_RANK[s] > STATUS_RANK[w] ? s : w));
     return {
       name: ing.name,
@@ -470,7 +470,7 @@ export function alignToRetail(kgPerKg: number, boundary: LcaBoundary, factor: Fo
   if (boundary === 'retail') return kgPerKg;
   const st = factor.stages;
   const downstream =
-    st.transportStorage + st.packaging + st.retail + (boundary === 'farm_gate' ? st.processing : 0);
+    st.transportStorage + st.packaging + st.retail + (boundary === 'farm_gate' || boundary === 'cradle_to_gate' ? st.processing : 0);
   const base = factor.kgCo2ePerKg - st.loss;
   const lossRatio = base > 0 ? st.loss / base : 0;
   return (kgPerKg + downstream) * (1 + lossRatio);
