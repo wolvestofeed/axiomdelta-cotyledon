@@ -7,6 +7,9 @@ import { getFarmAccess } from '@/server/access';
 import { PortalShell } from '@/components/PortalShell';
 import { withWorkspace } from '@/server/workspace';
 
+/** Every page under this layout reads the workspace at request time; nothing here is prerendered at build. */
+export const dynamic = 'force-dynamic';
+
 /**
  * The sales shell (Roadmap P1, P1b). A sibling route group to `farm/`, like the Grow Room, so
  * `/farm/sales-portal` is served without the OS sidebar and scenario bar — the sales

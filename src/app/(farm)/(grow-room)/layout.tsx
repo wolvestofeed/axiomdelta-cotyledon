@@ -10,6 +10,9 @@ import { getFarmAccess } from '@/server/access';
 import { BRAND_LINE } from '@/components/ui';
 import { withWorkspace } from '@/server/workspace';
 
+/** Every page under this layout reads the workspace at request time; nothing here is prerendered at build. */
+export const dynamic = 'force-dynamic';
+
 /**
  * The floor shell (Roadmap I5). A sibling route group to `farm/`, so
  * `/farm/grow-room` is served without the OS sidebar and scenario bar — a

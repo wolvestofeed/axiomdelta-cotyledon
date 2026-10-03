@@ -27,6 +27,9 @@ import { listTimeStudies } from '@/server/time-studies';
 import { loadCalendar } from '@/server/periods';
 import { withWorkspace } from '@/server/workspace';
 
+/** Every page under this layout reads the workspace at request time; nothing here is prerendered at build. */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Cotyledon',
   robots: { index: false, follow: false },

@@ -4,6 +4,9 @@ import '@/components/farm.css';
 import { farmFontVars } from '@/components/fonts';
 import { FrontDoorLandscape } from '@/components/FrontDoorLandscape';
 
+/** Every page under this layout reads the workspace at request time; nothing here is prerendered at build. */
+export const dynamic = 'force-dynamic';
+
 /**
  * The front door (Roadmap P7): a sibling route group to `farm/`, like the portals, so `/farm`, its sign-in and
  * the router are served without the OS sidebar and scenario bar. The page is the logo mark's landscape: the sky

@@ -6,6 +6,9 @@ import { getFarmAccess } from '@/server/access';
 import { PortalShell } from '@/components/PortalShell';
 import { withWorkspace } from '@/server/workspace';
 
+/** Every page under this layout reads the workspace at request time; nothing here is prerendered at build. */
+export const dynamic = 'force-dynamic';
+
 /**
  * The Client Portal shell (Roadmap P1b, P3): the farm's clients, with open sign-up. Its pages: orders and invoices,
  * the Flat Builder, Subscriptions, Profile, Settings, why hemp mats, and the glossary.
