@@ -1,5 +1,5 @@
 /**
- * Cotyledon — the estimated time study every grow plan is seeded with: Vallecito's tray study.
+ * Cotyledon — the estimated time study every grow plan is seeded with: Vallecito's tray estimate.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -31,7 +31,7 @@ describe('farm time-study estimate — the labor standard', () => {
   });
 });
 
-describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray study, on three streams', () => {
+describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray estimate, on three streams', () => {
   const broc = growPlanSeed.find((p) => p.code === 'BROC-01')!;
   const mung = growPlanSeed.find((p) => p.code === 'MUNG-01')!;
 
@@ -62,7 +62,7 @@ describe('farm time-study estimate — a grow plan comes off Vallecito\'s tray s
     expect(VALLECITO_1020_STUDY.sowing.reduce((t, x) => t + x.minutes, 0) + VALLECITO_1020_STUDY.daily.reduce((t, x) => t + x.minutes, 0)).toBe(18);
     expect(VALLECITO_1020_STUDY.harvest.reduce((t, x) => t + x.minutes, 0)).toBe(9);
     expect(e.basis).toBe('estimated');
-    expect(e.qualityNotes).toContain('DATED');
+    expect(e.qualityNotes).toContain('PLACEHOLDER');
   });
 
   it('the estimate of a library plan is this study, and it is the plan\'s labor standard until one is adopted', () => {

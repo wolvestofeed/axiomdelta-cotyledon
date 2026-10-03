@@ -4,7 +4,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 
 ## Needs Rob
 
-- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0025` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`.
+- The app runs on localhost against Neon: the connection string is in `.env` and `.env.local`, migrations `0001` to `0026` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`.
 - The opening position and the payroll calendar (`src/data/working-capital.ts`): $200,000 opening equity, no loan, biweekly pay periods paid the Friday after, all PLACEHOLDER until you state them. The shrink allowance (3% of seed, medium and nutrient) and the end-of-day closedown (one person, 30 minutes) likewise.
 - The domain for the software. The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
@@ -13,10 +13,11 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 - The suppliers on record carry no nutrient supplier (FloraGrow, the kelp) and no seller for the Mother Earth coco bale of January 2024: the two are yours to name when you remember. On The Grow's shop address is not on record either.
 - The Restaurants and Retail and wholesale prices per 1020 flat are a $30 placeholder; Subscriptions is $30, stated.
 - The grow-room temperature and humidity band for the temperature-and-humidity control point: readings are recorded and none is judged until the produce safety plan states the band.
-- The labor rate is the $29.28/h placeholder loaded wage until Staffing's rates arrive; a live 1020 flat carries 21 minutes on the three streams from your 2023 study.
+- The labor rate is the $29.28/h placeholder loaded wage until Staffing's rates arrive; a live 1020 flat carries 21 minutes on the three streams from your 2023 estimate (PLACEHOLDER).
 - Quantities and prices for the home grow list on Equipment, Home: 25 rows sit at quantity 1 with no price.
 - Whether the 1010 tray and the 12 oz and 16 oz mason jars become tray formats for costing (seed grams, harvest grams, trays a shelf) or stay equipment only. The formats today are the 1020 flat, the 7x11, the 5x5 insert and the pint jar.
 - The incurred side of the tray wear and sanitizer a tray takes. The ledger applies them to work in process at their standard per tray (5195), but the forecast bills no trays and no sanitizer. Where each is billed (trays as equipment, sanitizer as a supply) is yours to state..
+- The packaged container sizes for cut greens: 4, 8 and 16 oz are the working sizes, not decided. Phase 3's packaged goods step builds on them.
 - The first real time study to approve: until one is, every plan runs on its estimated labor and the placeholder watering (mist 1 fl oz, bottom 14 fl oz per 1020).
 - Allergens present and allergen-free claims on each grow plan, typed in the grow plan editor: blank on all 12 until stated.
 - The first seed receipts: until one is recorded, each variety is priced at its record's opening price (True Leaf, January 2024), or a supplier's catalog price once one is linked on Procurement.

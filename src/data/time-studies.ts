@@ -156,20 +156,20 @@ export function dailySpanOf(task: string): DailySpan {
 export interface TrayStudyTask {
   task: string;
   station: string;
-  /** Minutes per 1020 tray as Vallecito recorded them; for a daily task, the total over its span. */
+  /** Minutes per 1020 tray as Vallecito estimated them; for a daily task, the total over its span. */
   minutes: number;
 }
 
 /**
- * Vallecito's 2023 time study of one 1020 tray through its grow cycle (DATED): 18 minutes of
+ * Vallecito's 2023 estimate of one 1020 tray through its grow cycle (PLACEHOLDER; the sheet's guess column, never observed): 18 minutes of
  * growing labor and 9 of harvest, 27 in all, at one person. The sheet allocates every task per
  * tray, receiving included, and states each daily task as its total over the cycle; the estimate
  * spreads a daily total over the plan's cycle days. The knife harvest and the weigh are cut-tray
- * tasks a live tray does not get. `_engine/time-study-estimate.ts` builds each plan's estimated
+ * tasks a live tray does not get. `engine/time-study-estimate.ts` builds each plan's estimated
  * study from this.
  */
 export const VALLECITO_1020_STUDY = {
-  source: 'Vallecito Micro Farm 2023 time study, 1020 tray grow cycle',
+  source: 'Vallecito Micro Farm 2023 estimate, 1020 tray grow cycle, not observed',
   wagePerHour: 20,
   sowing: [
     { task: 'Supplies transfer and receiving in', station: 'Prep station', minutes: 1 },

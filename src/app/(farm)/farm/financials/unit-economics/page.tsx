@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PageHeader, Card, Kpi, StatusBadge, money, num, pct } from '@/components/ui';
 import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
-import { costPerUnit, packedUnitOz, costPlanPerUnit } from '@/engine';
+import { costPerUnit, costPlanPerUnit } from '@/engine';
 import { channelGrowPlanEconomics, phaseEconomics } from '@/engine/phase';
 import { assumptionsFor } from '@/engine/scenario';
 import { useLedgerBook, useStatementPeriod } from '@/state/ledger';
@@ -20,6 +20,8 @@ import { useScenario } from '@/state/scenario-store';
 import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
 import { PageControls } from '@/components/PageControls';
 import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
+import { GRAMS_PER_OZ } from '@/data/tray-formats';
+import { seedLineHarvest } from '@/data/grow-plan';
 
 export default function UnitEconomicsPage() {
   const { resolved: scenario, setPhase, setPhaseProfile, resetSection } = useScenario();
@@ -32,12 +34,6 @@ export default function UnitEconomicsPage() {
   // Each channel on the grow plans it offers, not on the selected one (Roadmap N9).
   const byChannel = useMemo(() => channelGrowPlanEconomics(scenario), [scenario]);
   const ownAssumptions = assumptionsFor(scenario, selected.code);
-  // The base packed unit is DERIVED from the resolved grow plan's harvested yields
-  // (a yield edit on Grow plans moves it); the unit factor is the stored knob.
-  const baseUnitOz = useMemo(
-    () => packedUnitOz(resolved.growPlan).totalOz,
-    [resolved.growPlan],
-  );
   // The cost of a unit: food + labor + packaging (operating-model-roadmap §3.5).
   // Distribution and commission are selling costs after it; fixed cost is a period
   // metric below and never enters it.
@@ -59,25 +55,28 @@ export default function UnitEconomicsPage() {
       market: meta.market,
       price: meta.pricePerUnit,
       defPrice: defPhase?.pricePerUnit,
-      unitOz: p.unitFactor.value * baseUnitOz,
-      defUnitOz: (defProfile?.unitFactor.value ?? 1) * baseUnitOz,
+      unitFactor: p.unitFactor.value,
       premium: p.premiumFactor.value,
       defPremium: defProfile?.premiumFactor.value,
     };
   });
 
-  // The weight basis every per-unit figure is stated against. Without it a
-  // unit-size change moves input cost with nothing on the page to read it
-  // against.
   const chain = useMemo(() => costPlanPerUnit(resolved.growPlan), [resolved.growPlan]);
   const grow = useMemo(() => costPlan(resolved.growPlan), [resolved.growPlan]);
+  // The unit is one whole container of the plan's format; a channel never sells part of one.
+  const unitLabel = (factor: number) => `${Number(factor.toFixed(2))} × ${grow.format.name}`;
+  // Harvest weight is on the variety records and is not in the cost of a live container.
+  const harvestTags = useMemo(
+    () => resolved.growPlan.lines.flatMap((l) => (l.kind === 'seed' ? [seedLineHarvest(l, resolved.growPlan.format)] : [])),
+    [resolved.growPlan],
+  );
 
   const buildUp = [
     {
       label: 'Input cost (incl. shrink)',
       value: econ[0].inputCostPerUnit,
       note: grow
-        ? `One ${grow.format.name}: seed ${money(grow.perTray.seed)}, medium ${money(grow.perTray.medium)}, nutrient ${money(grow.perTray.nutrient)}, light ${money(grow.perTray.light)}, consumables ${money(grow.perTray.consumables)} — ${num(grow.harvestGramsPerTray, 0)} g harvest on the record, ${money(grow.costPerHarvestOz, 4)} an ounce`
+        ? `One ${grow.format.name}: seed ${money(grow.perTray.seed)}, medium ${money(grow.perTray.medium)}, nutrient ${money(grow.perTray.nutrient)}, light ${money(grow.perTray.light)}, consumables ${money(grow.perTray.consumables)}`
         : `${chain.packedOzPerUnit.toFixed(2)} oz packed at ${money(chain.costPerPackedOz, 4)}/oz — from ${chain.seedOzPerUnit.toFixed(2)} oz as purchased`,
     },
     { label: 'Direct labor', value: base.directLabor, note: `${resolved.growPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[resolved.laborStandards[resolved.growPlan.code]?.basis ?? 'none'].toLowerCase()} — at its ${num(econ[0].sowingSize)}-unit derived sowing: ${num(ownAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} fixed minutes over the sowing plus ${ownAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(3)} minutes a unit, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each grow plan carries its own standard; this is ${resolved.growPlan.code}'s` },
@@ -99,7 +98,7 @@ export default function UnitEconomicsPage() {
     <>
       <PageHeader
         title="Unit Economics"
-        purpose="Test price and unit per channel against a grow plan’s cost per tray."
+        purpose="Test each channel’s price against a grow plan’s cost per container."
         functions={['Inputs', 'Per-phase cost profile', 'Cost of a unit', 'Contribution margin', 'Fixed cost and absorption']}
         connects={[
           { href: '/farm/grow-plans', dir: 'from' },
@@ -108,7 +107,7 @@ export default function UnitEconomicsPage() {
         howItWorks={
           <ul>
             <li>The cost card is the selected grow plan&rsquo;s.</li>
-            <li>Editing the price or unit size for a channel recomputes the cost per unit, contribution and units per sowing live.</li>
+            <li>Editing the price or input premium for a channel recomputes the cost of a unit and the contribution live.</li>
             <li>Changes flow to the Profit &amp; Loss and are saved as a forecast from the forecast bar.</li>
           </ul>
         }
@@ -137,7 +136,7 @@ export default function UnitEconomicsPage() {
               <tr>
                 <th>Channel</th>
                 <th className="num">Price / unit ($)</th>
-                <th className="num">Unit size (oz)</th>
+                <th>Unit</th>
                 <th className="num">Input premium (×)</th>
               </tr>
             </thead>
@@ -148,9 +147,7 @@ export default function UnitEconomicsPage() {
                   <td className="num">
                     <EditableNumber value={i.price} defaultValue={i.defPrice} onChange={(v) => setPhase(i.phase, 'pricePerUnit', v)} step={0.25} prefix="$" ariaLabel={`Phase ${i.phase} price per unit`} showBadge={false} />
                   </td>
-                  <td className="num">
-                    <EditableNumber value={Number(i.unitOz.toFixed(2))} defaultValue={i.defUnitOz} onChange={(v) => setPhaseProfile(i.phase, 'unitFactor', baseUnitOz ? v / baseUnitOz : 1)} step={0.5} suffix="oz" ariaLabel={`Phase ${i.phase} unit size in ounces`} showBadge={false} />
-                  </td>
+                  <td>{unitLabel(i.unitFactor)}</td>
                   <td className="num">
                     <EditableNumber value={i.premium} defaultValue={i.defPremium} onChange={(v) => setPhaseProfile(i.phase, 'premiumFactor', v)} step={0.05} suffix="×" ariaLabel={`Phase ${i.phase} input premium factor`} showBadge={false} />
                   </td>
@@ -160,8 +157,11 @@ export default function UnitEconomicsPage() {
           </table>
         </div>
         <p className="farm-kpi-sub mt-2">
-          Unit size scales the input cost and the canopy mass per unit, so it also changes the
-          sowing size. The base packed unit is {baseUnitOz.toFixed(1)} oz, derived from the harvested yields. Premium factor scales input cost.
+          A unit is one whole {grow.format.name}. Its cost is the inputs, labor and packaging of that container; harvest weight is not in it. Premium factor scales input cost.
+        </p>
+        <p className="farm-kpi-sub mt-2">
+          Harvest weight on record: {harvestTags[0] ? <StatusBadge status={harvestTags.some((t) => t.status === 'PLACEHOLDER') ? 'PLACEHOLDER' : harvestTags[0].status} title={harvestTags[0].note} /> : null}{' '}
+          {num(grow.harvestGramsPerTray, 0)} g ({(grow.harvestGramsPerTray / GRAMS_PER_OZ).toFixed(1)} oz) a container.
         </p>
       </Card>
 
@@ -182,9 +182,8 @@ export default function UnitEconomicsPage() {
             <thead>
               <tr>
                 <th>Channel</th>
-                <th className="num">Unit factor</th>
+                <th>Unit</th>
                 <th className="num">Premium factor</th>
-                <th className="num">Packed unit (derived)</th>
                 <th className="num">Food / unit</th>
                 <th className="num">Cost of a unit</th>
                 <th className="num">Sowing size</th>
@@ -195,9 +194,8 @@ export default function UnitEconomicsPage() {
               {econ.map((e) => (
                 <tr key={e.phase}>
                   <td>{e.market}</td>
-                  <td className="num">{e.unitFactor.toFixed(2)}×</td>
+                  <td>{unitLabel(e.unitFactor)}</td>
                   <td className="num">{e.premiumFactor.toFixed(2)}×</td>
-                  <td className="num">{e.packedUnitOz.toFixed(1)} oz</td>
                   <td className="num">{money(e.inputCostPerUnit)}</td>
                   <td className="num">{money(e.costPerUnit)}</td>
                   <td className="num">{num(e.sowingSize)}</td>
@@ -324,7 +322,7 @@ export default function UnitEconomicsPage() {
             <div className="grid gap-3 farm-autofit-11">
               <Kpi value={money(book.absorption?.ratePerUnit ?? 0, 4)} label="Absorption rate / unit" sub={`${money(book.absorption?.annualFixedOverhead ?? 0, 0)} budgeted a year over ${num(Math.round(book.absorption?.normalCapacityUnits ?? 0))} units of normal capacity`} />
               <Kpi value={dollars(period.overhead.appliedCents)} label={`Absorbed into inventory, ${period.label}`} sub={`${dollars(period.overhead.incurredCents)} incurred`} />
-              <Kpi value={signed(period.overhead.volumeVarianceCents)} label={period.overhead.volumeVarianceCents >= 0 ? 'Unabsorbed — period charge' : 'Over-absorbed — period credit'} sub="Volume variance. Never capitalised into the bowl." />
+              <Kpi value={signed(period.overhead.volumeVarianceCents)} label={period.overhead.volumeVarianceCents >= 0 ? 'Unabsorbed — period charge' : 'Over-absorbed — period credit'} sub="Volume variance. Never capitalised into the tray." />
               <Kpi value={signed(period.overhead.spendingVarianceCents)} label="Spending variance" sub="Lease and utilities billed against budget" />
             </div>
           </>

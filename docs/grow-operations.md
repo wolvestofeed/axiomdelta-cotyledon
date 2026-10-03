@@ -2,7 +2,7 @@
 
 How a tray is grown: the stages a sowing runs through, the days each variety spends in them, the watering and the checks at each stage, the labor a tray takes, and how the grow calendar places a sowing on a grow unit. The domain terms are defined in [`outline.md`](outline.md) §4 and [`glossary.md`](glossary.md); the engine rules they obey are `outline.md` §5. The figures here are the ones the app runs on, each with its provenance tag.
 
-The registers are `src/data/stage-schedule.ts` (the stages, watering, water volumes), `src/data/varieties.ts` (the days per stage for each variety), `src/engine/produce-safety.ts` (the control points), `src/data/time-studies.ts` (Vallecito's tray study) and `src/engine/grow-calendar.ts` (placement on the grow units).
+The registers are `src/data/stage-schedule.ts` (the stages, watering, water volumes), `src/data/varieties.ts` (the days per stage for each variety), `src/engine/produce-safety.ts` (the control points), `src/data/time-studies.ts` (Vallecito's tray estimate) and `src/engine/grow-calendar.ts` (placement on the grow units).
 
 ---
 
@@ -64,7 +64,7 @@ The Produce Safety page shows each sowing's record against these points and trac
 
 ## 4. Labor per tray
 
-Labor runs on three streams (`outline.md` §5 rule 3). Until a plan's own study is observed and adopted, it runs on Vallecito's 2023 time study of one 1020 tray through its cycle (DATED), at one person on every task.
+Labor runs on three streams (`outline.md` §5 rule 3). Until a plan's own study is observed and adopted, it runs on Vallecito's 2023 estimate of one 1020 tray through its cycle (PLACEHOLDER), at one person on every task. The estimate is the guess column of the Vallecito sheet; no run was observed.
 
 | Stream | Task | Station | Minutes per tray |
 |---|---|---|---|
