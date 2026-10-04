@@ -39,9 +39,9 @@ Each step ends with a check that passes before the next begins.
 - [x] First deploy. Checked 3 October 2026 on the live host: `/farm` 307 → `/enter?next=/farm`; `/enter` 200 with `x-robots-tag: noindex, nofollow`; certificate issued (Let's Encrypt, to 1 January 2027). Rob confirms the password opens it.
 
 ### C. The production database
-- [x] Decided 3 October 2026, the other way round from the plan but to the same effect: Neon's default branch `production` (the one that always held the data) stays the live site's database; a `development` branch was created from it for the laptop. Local `.env.local` and `.env` now carry the development branch's string; Vercel carries production's. The demo data is on both.
-- [x] `DATABASE_URL` on Vercel is the `production` branch's string.
-- [x] No migration or seed needed: production already carried `0001` to `0025` and every row. Checked on the development branch (a copy of production at the moment of branching): 233 sources, 1 workspace, 23 grow plans. From now on a migration runs locally first, then against production with the production string from the laptop.
+- [x] One database: Neon's default branch `production` is the live site's database and the laptop's. Vercel's `DATABASE_URL`, `.env.local` and `.env` all carry its string, so a save on localhost is a save on the live site's data, and `pnpm db:migrate` from the laptop migrates production.
+- [x] Production carries migrations `0001` to `0026` and every row.
+- [ ] Rob deletes the unused `development` branch in the Neon console.
 - [x] The first page load after a deploy seeds the libraries against a cold branch and takes 20 to 35 seconds (`todo.md`); Rob warmed it with the password on 3 October 2026.
 
 ### D. DNS and the domain
@@ -102,7 +102,7 @@ Not for this session unless Rob says so. Recorded so the decision is made before
 
 1. Where foodismymuse.com is registered, and whether its nameservers move to Vercel (simplest) or stay with the registrar (records added by hand).
 2. The Vercel account or team the two projects live in, and that it has GitHub access to the Cotyledon repo.
-3. ~~The production database.~~ Answered: Neon's default branch `production` is live; `development` branched from it for the laptop.
+3. ~~The production database.~~ Answered: Neon's default branch `production` is the one database, live and on the laptop.
 4. The subdomain names: `cotyledon.foodismymuse.com` and `muse.foodismymuse.com` as the plan writes them, or others.
 5. The preview password's value (Rob sets it himself in Vercel; it is never written in the repo or in chat) and who receives it.
 6. ~~The welcome site's copy and the name of its repo.~~ Answered: `wolvestofeed/emberos`; copy in `foodismymuse/content/`.
