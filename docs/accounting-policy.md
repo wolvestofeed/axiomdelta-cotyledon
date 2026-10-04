@@ -424,7 +424,7 @@ calendar days.
 
 A forecast runs from its start date — 2027-01-01, the year the loans start, unless the forecast
 carries another — for one year, or two or three (§17). It opens with owners' equity in cash (3100)
-at the start ($200,000 on file) and draws each loan on its start date (2027-01-01 on file).
+at the start ($2,500 on file, the owner's contribution Rob stated) and draws each loan on its start date (2027-01-01 on file).
 Invoiced subscribers are invoiced at each month end and collected on the due date; supplier bills
 are dated on receipt and paid on their due dates. Amounts with no terms on file settle as §17
 states and the timeline names them.

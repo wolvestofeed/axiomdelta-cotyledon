@@ -888,7 +888,7 @@ CREATE INDEX IF NOT EXISTS farm_standard_versions_code_date_idx ON farm.standard
 -- purchase order, receipt and bill; a mismatched bill is flagged and is not
 -- paid until rectified. Payment terms: suppliers Due on Receipt / Net 15 /
 -- Net 30 / Net 60 / Net 90, subscribers Due on Receipt / Net 15 / Net 30, no
--- default. $200,000 opening owners' equity. An internal time clock for all
+-- default. Opening owners' equity in cash. An internal time clock for all
 -- staff; pay periods are Monday through the second Sunday, paid the Friday five
 -- days later.
 --

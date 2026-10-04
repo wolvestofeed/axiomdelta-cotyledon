@@ -5,7 +5,7 @@ Open one-off items that belong to no phase step. An item is deleted when done, n
 ## Needs Rob
 
 - The app runs on localhost against the live site's Neon database (the `production` branch): the connection string is in `.env` and `.env.local`, migrations `0001` to `0026` are applied, Clerk is off for local development (`FARM_DEV_BYPASS_AUTH=1`). `pnpm dev` from the repo root, then `http://localhost:3000/farm`.
-- The opening position and the payroll calendar (`src/data/working-capital.ts`): $200,000 opening equity, no loan, biweekly pay periods paid the Friday after, all PLACEHOLDER until you state them. The shrink allowance (3% of seed, medium and nutrient) and the end-of-day closedown (one person, 30 minutes) likewise.
+- The opening position and the payroll calendar (`src/data/working-capital.ts`): no loan, biweekly pay periods paid the Friday after, PLACEHOLDER until you state them; the $2,500 owner's contribution is stated. The shrink allowance (3% of seed, medium and nutrient) and the end-of-day closedown (one person, 30 minutes) likewise.
 - The domain for the software. The facility trades as Axiom Delta Wellness Center.
 - Default Phase 1 unit: 1020 flat or large tray. Vallecito households mostly bought large trays.
 - Sprouts in or out of the first menu, pending the FSMA Subpart M check for Texas.

@@ -53,7 +53,7 @@ export const PAID_AT_ORDER_CHANNELS: readonly number[] = [3];
 // ── Opening position ────────────────────────────────────────────────────────
 
 export const openingPosition = {
-  ownerEquity: tagged(200_000, 'PLACEHOLDER', '$', "Opening owners' equity in cash at the forecast start. Not stated for the farm; the forecast opens on it until Rob states the opening position"),
+  ownerEquity: tagged(2_500, 'STATED', '$', "Owner's contribution in cash at the forecast start: Rob's starting budget for added lighting, an extra rack, seed, nutrients and supplies. The racks, lights, fans, knives and trays already owned are on the equipment list"),
   loanStartDate: tagged('2027-01-01', 'PLACEHOLDER', 'date', 'The date a loan would start; no loan is seeded'),
 };
 

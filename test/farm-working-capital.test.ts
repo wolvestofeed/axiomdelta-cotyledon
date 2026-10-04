@@ -296,7 +296,7 @@ describe('Phase K — actuals', () => {
   const r1: ReceiptDoc = { ...receipt('r1', lines, null), receivedOn: '2027-02-02' };
   const pre = standardSowingRecordPrefill('2027-02-03', 1, sowingSize, growPlan);
   const base: ActualsBundle = {
-    openingBalances: [{ id: 'o1', asOf: '2027-01-01', ownerEquityCents: 200_000_00, fixedAssetsCents: 500_000_00, longTermDebtCents: 500_000_00, notes: null }],
+    openingBalances: [{ id: 'o1', asOf: '2027-01-01', ownerEquityCents: 2_500_00, fixedAssetsCents: 500_000_00, longTermDebtCents: 500_000_00, notes: null }],
     sowings: [{ id: 'b1', closedAt: null, ...pre, closedBy: 'R' }],
     receipts: [r1],
     distributions: [distribution('d1', '2027-02-04', 1, C1, sowingSize, 'i1'), distribution('d2', '2027-02-04', 3, null, 10)],
@@ -322,8 +322,8 @@ describe('Phase K — actuals', () => {
     const posted = postActuals(base, withLoan);
     expect(posted.balanced).toBe(true);
     const { m, wc } = monthOf(base, '2027-01', withLoan);
-    expect(net(posted.entries, '3100')).toBe(-200_000_00);
-    expect(m.cashFlow.closingCashCents).toBe(200_000_00);
+    expect(net(posted.entries, '3100')).toBe(-2_500_00);
+    expect(m.cashFlow.closingCashCents).toBe(2_500_00);
     expect(wc.openingRecorded).toBe(true);
     expect(wc.currentUnitOfDebtCents).toBeGreaterThan(0);
     expect(m.balanceSheet.currentUnitOfLongTermDebtCents).toBe(wc.currentUnitOfDebtCents);

@@ -19,7 +19,7 @@ export function OpeningBalanceForm({
 }: {
   canRecord: boolean;
   opening: OpeningBalanceDoc | null;
-  /** The plan's figures, offered as the starting values: $200,000 owners' equity, the capex schedule, the loan start. */
+  /** The plan's figures, offered as the starting values: the owner's contribution, the capex schedule, the loan start. */
   defaults: { asOf: string; ownerEquityCents: number; fixedAssetsCents: number; longTermDebtCents: number };
 }) {
   const router = useRouter();
