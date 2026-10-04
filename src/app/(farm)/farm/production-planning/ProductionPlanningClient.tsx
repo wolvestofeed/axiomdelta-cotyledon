@@ -329,7 +329,7 @@ export function ProductionPlanningClient({
             {runGrow && (
               <Card title="The run in grams — seed to harvest, and by line kind">
                 <table className="farm-table">
-                  <thead><tr><th>Stage</th><th className="num">Grams</th><th className="num">g / tray</th></tr></thead>
+                  <thead><tr><th>Stage</th><th className="num">Grams</th><th className="num"><span className="farm-unit">g</span> / tray</th></tr></thead>
                   <tbody>
                     <tr><td>Seed sown</td><td className="num">{num(Math.round(grams(run.purchasedLb)))}</td><td className="num">{num(runGrow.costing.seedGramsPerTray, 1)}</td></tr>
                     <tr><td>Harvested ({num(runGrow.costing.yieldToHarvest, 2)}× the seed, from the variety record until a closed sowing observes it)</td><td className="num">{num(Math.round(grams(run.harvestedLb)))}</td><td className="num">{num(runGrow.costing.harvestGramsPerTray, 1)}</td></tr>

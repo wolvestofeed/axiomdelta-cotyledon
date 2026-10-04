@@ -43,7 +43,7 @@ export function FacilityNormalizersTab({ view }: { view: FacilityView }) {
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>
-              <tr><th>Channel</th><th className="num">Units distributed</th><th className="num">Food, t CO2e</th><th className="num">kg CO2e per unit</th></tr>
+              <tr><th>Channel</th><th className="num">Units distributed</th><th className="num">Food, <span className="farm-unit">t CO2e</span></th><th className="num"><span className="farm-unit">kg CO2e</span> per unit</th></tr>
             </thead>
             <tbody>
               {food.byChannel.length === 0 && <tr><td colSpan={4} className="farm-c-soft">{world.isPlan ? 'The forecast distributes no units in its first year.' : `No distribution is on record in ${basis.from.slice(0, 4)}.`}</td></tr>}

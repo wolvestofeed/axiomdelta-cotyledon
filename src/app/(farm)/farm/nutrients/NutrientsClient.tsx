@@ -141,11 +141,11 @@ export function NutrientsClient({ nutrients, namedBy, canEdit }: { nutrients: Li
           <thead>
             <tr>
               <th>Name</th>
-              <th className="num">ml / gal</th>
-              <th className="num">$ / ml</th>
-              <th className="num">$ / gal of water</th>
+              <th className="num"><span className="farm-unit">ml</span> / <span className="farm-unit">gal</span></th>
+              <th className="num">$ / <span className="farm-unit">ml</span></th>
+              <th className="num">$ / <span className="farm-unit">gal</span> of water</th>
               <th className="num">EC</th>
-              <th className="num">pH</th>
+              <th className="num"><span className="farm-unit">pH</span></th>
               <th>Meant to elicit</th>
               <th>Named by</th>
               <th>Note</th>

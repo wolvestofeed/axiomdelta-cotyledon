@@ -179,13 +179,13 @@ export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; settin
                   <th className="num">Extended</th>
                   <th>Critical</th>
                   <th className="num">Shelves</th>
-                  <th className="num">Shelf in</th>
+                  <th className="num">Shelf <span className="farm-unit">in</span></th>
                   <th>Fixture</th>
                   <th className="num">1020 flats</th>
-                  <th className="num">Sowing lb / run</th>
+                  <th className="num">Sowing <span className="farm-unit">lb</span> / run</th>
                   <th>Capacity basis</th>
                   <th className="num">Sowings at once</th>
-                  <th className="num">Changeover min</th>
+                  <th className="num">Changeover <span className="farm-unit">min</span></th>
                   <th>Attended run</th>
                   <th>May run unattended</th>
                   <th>Resource basis</th>

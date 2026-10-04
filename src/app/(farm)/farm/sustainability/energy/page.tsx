@@ -160,7 +160,7 @@ export default function EnergyPage() {
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Category</th><th>Scope</th><th className="num">CO2 kg</th><th className="num">CH4 kg</th><th className="num">N2O kg</th><th className="num">CO2e kg</th><th>Basis</th><th>Factor</th><th>Status</th></tr></thead>
+              <thead><tr><th>Category</th><th>Scope</th><th className="num">CO2 <span className="farm-unit">kg</span></th><th className="num">CH4 <span className="farm-unit">kg</span></th><th className="num">N2O <span className="farm-unit">kg</span></th><th className="num"><span className="farm-unit">CO2e</span> <span className="farm-unit">kg</span></th><th>Basis</th><th>Factor</th><th>Status</th></tr></thead>
               <tbody>
                 {inv.postings.map((p) => (
                   <tr key={`${p.activityId}-${p.scope2Method ?? ''}`}>

@@ -93,7 +93,7 @@ export default function LogisticsPage() {
         </div>
         <div className="farm-scroll-x mt-3">
           <table className="farm-table">
-            <thead><tr><th>Input</th><th>Supplier</th><th className="num">Mass, kg</th><th className="num">Miles one way</th><th className="num">Ton-miles</th><th className="num">kg CO2e</th></tr></thead>
+            <thead><tr><th>Input</th><th>Supplier</th><th className="num">Mass, <span className="farm-unit">kg</span></th><th className="num">Miles one way</th><th className="num">Ton-miles</th><th className="num"><span className="farm-unit">kg CO2e</span></th></tr></thead>
             <tbody>
               {inbound.day.legs.map((l) => (
                 <tr key={l.input}>
@@ -130,7 +130,7 @@ export default function LogisticsPage() {
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>
-              <tr><th>Pickup point</th><th>Prospect record</th><th className="num">Units distributed</th><th className="num">Payload, tons</th><th className="num">Miles one way</th><th className="num">Ton-miles</th><th className="num">kg CO2e</th><th>Placement</th></tr>
+              <tr><th>Pickup point</th><th>Prospect record</th><th className="num">Units distributed</th><th className="num">Payload, tons</th><th className="num">Miles one way</th><th className="num">Ton-miles</th><th className="num"><span className="farm-unit">kg CO2e</span></th><th>Placement</th></tr>
             </thead>
             <tbody>
               {out.legs.map((l) => (

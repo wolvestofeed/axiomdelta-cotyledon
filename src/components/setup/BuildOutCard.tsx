@@ -32,7 +32,7 @@ export function BuildOutCard({ className }: { className?: string }) {
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>
-              <tr><th>Item</th><th className="num">$/sq ft</th><th className="num">Extended</th><th>In the rollup</th>{isSuperAdmin ? <th /> : null}</tr>
+              <tr><th>Item</th><th className="num">$/<span className="farm-unit">sq ft</span></th><th className="num">Extended</th><th>In the rollup</th>{isSuperAdmin ? <th /> : null}</tr>
             </thead>
             <tbody>
               {resolved.leasehold.length === 0 ? <tr><td colSpan={isSuperAdmin ? 5 : 4} className="farm-c-soft">No build-out entered.</td></tr> : null}

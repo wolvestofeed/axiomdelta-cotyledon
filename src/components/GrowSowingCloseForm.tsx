@@ -171,7 +171,7 @@ export function GrowSowingCloseForm({
 
       <div className="farm-scroll-x">
         <table className="farm-table compact">
-          <thead><tr><th>Variety (lot)</th><th>Seed lot received</th><th className="num">Seed issued, g</th><th className="num">Harvest, g</th><th className="num">Packed, g</th></tr></thead>
+          <thead><tr><th>Variety (lot)</th><th>Seed lot received</th><th className="num">Seed issued, <span className="farm-unit">g</span></th><th className="num">Harvest, <span className="farm-unit">g</span></th><th className="num">Packed, <span className="farm-unit">g</span></th></tr></thead>
           <tbody>
             {lines.map((l, i) => (
               <tr key={l.variety}>
@@ -272,7 +272,7 @@ export function GrowSowingCloseForm({
       <div className="mt-3!">
         <div className="farm-card-title">Crew hours</div>
         <table className="farm-table compact">
-          <thead><tr><th>Person</th><th className="num">Hours</th><th className="num">Loaded $/h</th><th /></tr></thead>
+          <thead><tr><th>Person</th><th className="num">Hours</th><th className="num">Loaded $/<span className="farm-unit">h</span></th><th /></tr></thead>
           <tbody>
             {crew.map((c, i) => (
               <tr key={i}>

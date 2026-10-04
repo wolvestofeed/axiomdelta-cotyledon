@@ -343,7 +343,7 @@ export function DayScheduleClient({
         <div className="farm-scroll-x">
           <table className="farm-table compact">
             <thead>
-              <tr><th className="num">Start</th><th className="num">End</th><th>Order</th><th>Task</th><th>Stream</th><th>Unit</th><th className="num">People</th><th className="num">Labor min</th><th>CONTROL POINT</th></tr>
+              <tr><th className="num">Start</th><th className="num">End</th><th>Order</th><th>Task</th><th>Stream</th><th>Unit</th><th className="num">People</th><th className="num">Labor <span className="farm-unit">min</span></th><th>CONTROL POINT</th></tr>
             </thead>
             <tbody>
               {blocksByStart.length === 0 && <tr><td colSpan={9} className="farm-c-soft">Nothing placed.</td></tr>}

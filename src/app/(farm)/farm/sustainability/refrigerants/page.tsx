@@ -105,7 +105,7 @@ export default function RefrigerantsPage() {
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Equipment</th><th>Refrigerant</th><th className="num">Units</th><th className="num">Full charge, lb</th><th className="num">Added this year, lb</th><th className="num">Latest annualized rate</th><th className="num">CO2e kg this year</th><th>Rule findings</th></tr></thead>
+              <thead><tr><th>Equipment</th><th>Refrigerant</th><th className="num">Units</th><th className="num">Full charge, <span className="farm-unit">lb</span></th><th className="num">Added this year, <span className="farm-unit">lb</span></th><th className="num">Latest annualized rate</th><th className="num"><span className="farm-unit">CO2e</span> <span className="farm-unit">kg</span> this year</th><th>Rule findings</th></tr></thead>
               <tbody>
                 {inv.rows.map((r) => (
                   <tr key={r.circuit.id}>

@@ -330,7 +330,7 @@ export function FacilityLayoutTab({ view, layouts }: { view: FacilityView; layou
               {canEdit && <button type="button" className="farm-btn mb-2!" onClick={placeAll}>Place all {num(unplaced.length)} in flow order</button>}
               <div className="farm-scroll-x max-h-88! overflow-y-auto!">
                 <table className="farm-table compact">
-                  <thead><tr><th>Unit</th><th>Zone</th><th className="num">ft</th><th /></tr></thead>
+                  <thead><tr><th>Unit</th><th>Zone</th><th className="num"><span className="farm-unit">ft</span></th><th /></tr></thead>
                   <tbody>
                     {unplaced.map(({ row, unit }) => {
                       const s = unitSizeFt(row, 0)!;
@@ -389,7 +389,7 @@ export function FacilityLayoutTab({ view, layouts }: { view: FacilityView; layou
           )}
           <div className="farm-scroll-x max-h-72! overflow-y-auto!">
             <table className="farm-table compact">
-              <thead><tr><th>Drawn</th><th>Kind</th><th className="num">ft</th><th className="num">sq ft</th></tr></thead>
+              <thead><tr><th>Drawn</th><th>Kind</th><th className="num"><span className="farm-unit">ft</span></th><th className="num"><span className="farm-unit">sq ft</span></th></tr></thead>
               <tbody>
                 {layout.rooms.length === 0 && <tr><td colSpan={4} className="farm-c-soft">Nothing drawn. Rooms take their default size from the support allowance or the zone gross; the spine from the derived spine; a hood from the phase&rsquo;s run length.</td></tr>}
                 {layout.rooms.map((r) => (

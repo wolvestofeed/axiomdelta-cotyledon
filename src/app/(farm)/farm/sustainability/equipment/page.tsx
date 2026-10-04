@@ -73,7 +73,7 @@ export default function EquipmentPage() {
         </div>
         <div className="farm-scroll-x">
           <table className="farm-table">
-            <thead><tr><th>Equipment</th><th>Category</th><th className="num">Qty</th><th>Fuel</th><th className="num">Rated kW / unit</th><th>Refrigerant</th><th className="num">Charge lb / unit</th><th>Installed</th><th>ENERGY STAR</th><th>Spec sheet</th></tr></thead>
+            <thead><tr><th>Equipment</th><th>Category</th><th className="num">Qty</th><th>Fuel</th><th className="num">Rated <span className="farm-unit">kW</span> / unit</th><th>Refrigerant</th><th className="num">Charge <span className="farm-unit">lb</span> / unit</th><th>Installed</th><th>ENERGY STAR</th><th>Spec sheet</th></tr></thead>
             <tbody>
               {lines.map((e) => {
                 const a = attrs[e.key] ?? {};

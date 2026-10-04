@@ -153,7 +153,7 @@ export default function CapacityPage() {
             <div className="farm-scroll-x">
               <table className="farm-table">
                 <thead>
-                  <tr><th>Unit</th><th className="num">Units</th><th className="num">Shelves</th><th className="num">Shelf in</th><th>Fixture</th>{PLAN_FORMATS.map((f) => <th key={f.key} className="num">{f.name}</th>)}<th>Takes {selected.code}</th></tr>
+                  <tr><th>Unit</th><th className="num">Units</th><th className="num">Shelves</th><th className="num">Shelf <span className="farm-unit">in</span></th><th>Fixture</th>{PLAN_FORMATS.map((f) => <th key={f.key} className="num">{f.name}</th>)}<th>Takes {selected.code}</th></tr>
                 </thead>
                 <tbody>
                   {units.length === 0 && <tr><td colSpan={7 + PLAN_FORMATS.length} className="farm-c-soft">No equipment row on the Phase 1 list carries shelves. Enter shelves, shelf width and a fixture on <Link className="farm-link" href="/farm/grow-units">Grow Units</Link>.</td></tr>}

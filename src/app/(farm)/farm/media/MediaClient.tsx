@@ -144,7 +144,7 @@ export function MediaClient({ media, namedBy, canEdit }: { media: LibraryMedium[
               <th className="num">Per 1020</th>
               <th className="num">Price per unit</th>
               <th className="num">Per 1020, $</th>
-              <th>pH</th>
+              <th><span className="farm-unit">pH</span></th>
               <th>Porosity</th>
               <th>Traits</th>
               <th>Named by</th>

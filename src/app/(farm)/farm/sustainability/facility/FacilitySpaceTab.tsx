@@ -42,7 +42,7 @@ export function FacilitySpaceTab({ view }: { view: FacilityView }) {
                 <th className="num">C × {STRUCTURAL_GROSS_UP}</th>
                 <th className="num">D · Support gross</th>
                 <th className="num">E · Building gross</th>
-                <th className="num">Hood ft</th>
+                <th className="num">Hood <span className="farm-unit">ft</span></th>
               </tr>
             </thead>
             <tbody>
@@ -138,7 +138,7 @@ export function FacilitySpaceTab({ view }: { view: FacilityView }) {
       <Card title="The hood" className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table compact">
-            <thead><tr><th>Run</th><th>Units under the canopy</th><th className="num">Length ft</th><th className="num">Cumulative ft</th></tr></thead>
+            <thead><tr><th>Run</th><th>Units under the canopy</th><th className="num">Length <span className="farm-unit">ft</span></th><th className="num">Cumulative <span className="farm-unit">ft</span></th></tr></thead>
             <tbody>
               {full.hoodRuns.map((run) => (
                 <tr key={run.phase}>

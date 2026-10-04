@@ -79,13 +79,13 @@ export function FacilityFootprintsTab({ view }: { view: FacilityView }) {
                 <th>Ph</th>
                 <th className="num">Qty</th>
                 <th>Zone</th>
-                <th className="num">Width in</th>
-                <th className="num">Depth in</th>
-                <th className="num">Unit sq ft</th>
-                <th className="num">Line sq ft</th>
-                <th className="num">Front in</th>
-                <th className="num">Rear in</th>
-                <th className="num">Side in</th>
+                <th className="num">Width <span className="farm-unit">in</span></th>
+                <th className="num">Depth <span className="farm-unit">in</span></th>
+                <th className="num">Unit <span className="farm-unit">sq ft</span></th>
+                <th className="num">Line <span className="farm-unit">sq ft</span></th>
+                <th className="num">Front <span className="farm-unit">in</span></th>
+                <th className="num">Rear <span className="farm-unit">in</span></th>
+                <th className="num">Side <span className="farm-unit">in</span></th>
                 <th>Gross by</th>
                 <th className="num">Unit gross</th>
                 <th>Hood</th>

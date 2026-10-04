@@ -174,7 +174,7 @@ export function StaffingClient({
         </div>
         <div className="farm-scroll-x mt-3">
           <table className="farm-table">
-            <thead><tr><th>Person</th><th className="num">Regular h</th><th className="num">Overtime h</th><th className="num">Open shifts</th></tr></thead>
+            <thead><tr><th>Person</th><th className="num">Regular <span className="farm-unit">h</span></th><th className="num">Overtime <span className="farm-unit">h</span></th><th className="num">Open shifts</th></tr></thead>
             <tbody>
               {hours.lines.length === 0 ? (
                 <tr><td colSpan={4} className="farm-c-soft">No hours in this period.</td></tr>
@@ -221,7 +221,7 @@ export function StaffingClient({
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Person</th><th>Date</th><th>In</th><th>Out</th><th className="num">Break min</th><th className="num">Worked h</th><th>On the record</th></tr></thead>
+              <thead><tr><th>Person</th><th>Date</th><th>In</th><th>Out</th><th className="num">Break <span className="farm-unit">min</span></th><th className="num">Worked <span className="farm-unit">h</span></th><th>On the record</th></tr></thead>
               <tbody>
                 {shifts.map((s) => (
                   <tr key={`${s.staffId}-${s.inAt}`}>
@@ -350,7 +350,7 @@ export function StaffingClient({
           ) : (
             <div className="farm-scroll-x">
               <table className="farm-table">
-                <thead><tr><th>Period</th><th>Paid</th><th className="num">Regular h</th><th className="num">Overtime h</th><th className="num">Wages</th><th className="num">Payroll taxes</th><th className="num">Workers&rsquo; comp</th><th className="num">Benefits</th><th className="num">Loaded</th></tr></thead>
+                <thead><tr><th>Period</th><th>Paid</th><th className="num">Regular <span className="farm-unit">h</span></th><th className="num">Overtime <span className="farm-unit">h</span></th><th className="num">Wages</th><th className="num">Payroll taxes</th><th className="num">Workers&rsquo; comp</th><th className="num">Benefits</th><th className="num">Loaded</th></tr></thead>
                 <tbody>
                   {[...payrollPeriods].reverse().map((p) => {
                     const l = loadedFromClosedPeriod(p);

@@ -64,7 +64,7 @@ async function SupplierLcaPageInner() {
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Input</th><th>Supplier</th><th>Figure</th><th className="num">kg CO2e / kg</th><th>Boundary</th><th>Document</th><th>Status</th>{access.isSuperAdmin ? <th /> : null}</tr></thead>
+              <thead><tr><th>Input</th><th>Supplier</th><th>Figure</th><th className="num"><span className="farm-unit">kg CO2e</span> / <span className="farm-unit">kg</span></th><th>Boundary</th><th>Document</th><th>Status</th>{access.isSuperAdmin ? <th /> : null}</tr></thead>
               <tbody>
                 {rows.map((r) => {
                   const opt = toLcaOption(r as SupplierLcaRowLike);

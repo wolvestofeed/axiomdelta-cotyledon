@@ -1447,3 +1447,6 @@ label:has(> input[type="radio"]) { color: var(--farm-ink-strong); }
   text-align: left;
   cursor: pointer;
 }
+
+/* A unit symbol keeps its own case inside an uppercased header or title: g, ml, oz, lb, kWh, pH. */
+.farm-unit { text-transform: none; }

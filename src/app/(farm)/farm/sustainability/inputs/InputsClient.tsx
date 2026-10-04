@@ -80,8 +80,8 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
             <thead>
               <tr>
                 <th>Input</th><th>Supplier</th><th className="num">Mass</th>
-                <th className="num">Reference basis</th><th className="num">kg CO2e</th>
-                <th>Selected basis</th><th className="num">kg CO2e</th><th className="num">Gap</th>
+                <th className="num">Reference basis</th><th className="num"><span className="farm-unit">kg CO2e</span></th>
+                <th>Selected basis</th><th className="num"><span className="farm-unit">kg CO2e</span></th><th className="num">Gap</th>
               </tr>
             </thead>
             <tbody>

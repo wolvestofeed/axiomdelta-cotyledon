@@ -210,11 +210,11 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
                   <th>Basis</th>
                   <th className="num">Sowing</th>
                   <th>Observer</th>
-                  <th className="num">Labor min</th>
-                  <th className="num">Sowing stream min</th>
-                  <th className="num">Harvest stream min</th>
-                  <th className="num">Fixed min / sowing</th>
-                  <th className="num">Variable min / unit</th>
+                  <th className="num">Labor <span className="farm-unit">min</span></th>
+                  <th className="num">Sowing stream <span className="farm-unit">min</span></th>
+                  <th className="num">Harvest stream <span className="farm-unit">min</span></th>
+                  <th className="num">Fixed <span className="farm-unit">min</span> / sowing</th>
+                  <th className="num">Variable <span className="farm-unit">min</span> / unit</th>
                   <th className="num">Min / unit</th>
                   <th>Quality</th>
                   <th>Standard</th>
@@ -280,7 +280,7 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
           })()}
           <div className="farm-scroll-x">
             <table className="farm-table compact">
-              <thead><tr><th>Task</th><th>Stream</th><th>Station</th><th className="num">Staff</th><th className="num">Elapsed min</th><th className="num">Labor min</th><th>Scales</th></tr></thead>
+              <thead><tr><th>Task</th><th>Stream</th><th>Station</th><th className="num">Staff</th><th className="num">Elapsed <span className="farm-unit">min</span></th><th className="num">Labor <span className="farm-unit">min</span></th><th>Scales</th></tr></thead>
               <tbody>
                 {selected.lines.map((l, i) => (
                   <tr key={`${selected.id}:${i}`}>
@@ -372,7 +372,7 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
               </div>
               <div className="farm-scroll-x mt-3">
                 <table className="farm-table compact">
-                  <thead><tr><th>Task</th><th>Stream</th><th>Station</th><th className="num">Staff</th><th className="num">Elapsed min</th><th className="num">Labor min</th><th>Scales</th><th /></tr></thead>
+                  <thead><tr><th>Task</th><th>Stream</th><th>Station</th><th className="num">Staff</th><th className="num">Elapsed <span className="farm-unit">min</span></th><th className="num">Labor <span className="farm-unit">min</span></th><th>Scales</th><th /></tr></thead>
                   <tbody>
                     {form.lines.map((l, i) => (
                       <tr key={i}>
@@ -406,7 +406,7 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
               <p className="farm-kpi-sub">One row per day and method: fluid ounces per tray per watering, the waterings that day, the trays watered. The rows start from the stage schedule from the study date; the ounces are what was measured.</p>
               <div className="farm-scroll-x mt-2">
                 <table className="farm-table compact">
-                  <thead><tr><th>Day</th><th>Stage</th><th>Method</th><th className="num">Fl oz per tray per watering</th><th className="num">Waterings</th><th className="num">Trays</th><th /></tr></thead>
+                  <thead><tr><th>Day</th><th>Stage</th><th>Method</th><th className="num"><span className="farm-unit">fl oz</span> per tray per watering</th><th className="num">Waterings</th><th className="num">Trays</th><th /></tr></thead>
                   <tbody>
                     {form.water.map((w, i) => (
                       <tr key={i}>
@@ -438,7 +438,7 @@ function GrowPlanLabor({ library, canEdit, today }: { library: TimeStudyLibrary;
               <div className="farm-scroll-x mt-2">
                 {form.supplements.length > 0 && (
                   <table className="farm-table compact">
-                    <thead><tr><th>Day</th><th>Stage</th><th>Supplement</th><th className="num">Ml in all</th><th className="num">Trays</th><th /></tr></thead>
+                    <thead><tr><th>Day</th><th>Stage</th><th>Supplement</th><th className="num"><span className="farm-unit">ml</span> in all</th><th className="num">Trays</th><th /></tr></thead>
                     <tbody>
                       {form.supplements.map((x, i) => (
                         <tr key={i}>

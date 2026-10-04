@@ -106,7 +106,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
         <div className="farm-scroll-x">
           <table className="farm-table">
             <thead>
-              <tr><th>Code</th><th>Plan</th><th>Status</th><th>Channels</th><th className="num">Input cost / tray</th><th className="num">Harvest g</th><th className="num">Sowing</th><th className="num">Cycle</th><th /></tr>
+              <tr><th>Code</th><th>Plan</th><th>Status</th><th>Channels</th><th className="num">Input cost / tray</th><th className="num">Harvest <span className="farm-unit">g</span></th><th className="num">Sowing</th><th className="num">Cycle</th><th /></tr>
             </thead>
             <tbody>
               {pageRows.map((r) => {
@@ -347,7 +347,7 @@ export function GrowPlansClient({ standards, today }: { standards: StandardVersi
         )}
         {history.length > 0 && (
           <table className="farm-table mt-3">
-            <thead><tr><th>Version</th><th>Effective from</th><th>Approved by</th><th>Approved on</th><th className="num">Labor min / sowing</th><th className="num">Labor min / unit</th><th className="num">Loaded $/h</th><th className="num">Light, trays, sanitizer $/tray</th><th className="num">Fixed overhead $/unit</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Version</th><th>Effective from</th><th>Approved by</th><th>Approved on</th><th className="num">Labor <span className="farm-unit">min</span> / sowing</th><th className="num">Labor <span className="farm-unit">min</span> / unit</th><th className="num">Loaded $/<span className="farm-unit">h</span></th><th className="num">Light, trays, sanitizer $/tray</th><th className="num">Fixed overhead $/unit</th><th>Notes</th></tr></thead>
             <tbody>
               {history.map((v) => (
                 <tr key={v.id}>

@@ -79,7 +79,7 @@ export default function WastePage() {
         <div className="farm-scroll-x mt-3">
           <table className="farm-table">
             <thead>
-              <tr><th>Pathway</th><th className="num">Short tons</th><th className="num">Factor, t CO2e / ton</th><th className="num">t CO2e</th><th>Factor status</th></tr>
+              <tr><th>Pathway</th><th className="num">Short tons</th><th className="num">Factor, <span className="farm-unit">t CO2e</span> / ton</th><th className="num"><span className="farm-unit">t CO2e</span></th><th>Factor status</th></tr>
             </thead>
             <tbody>
               <tr>

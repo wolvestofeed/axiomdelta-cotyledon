@@ -52,7 +52,7 @@ async function VarietiesPageInner() {
         <div className="farm-scroll-x">
           <table className="farm-table compact">
             <thead>
-              <tr><th>Code</th><th>Variety</th><th>Kind</th><th>Supplier</th><th className="num">$ / lb</th><th className="num">g / 1020</th><th className="num">Soak h</th><th className="num">To harvest</th><th className="num">Cycle</th><th className="num">Harvest g</th><th>Light</th><th>Medium</th></tr>
+              <tr><th>Code</th><th>Variety</th><th>Kind</th><th>Supplier</th><th className="num">$ / <span className="farm-unit">lb</span></th><th className="num"><span className="farm-unit">g</span> / 1020</th><th className="num">Soak <span className="farm-unit">h</span></th><th className="num">To harvest</th><th className="num">Cycle</th><th className="num">Harvest <span className="farm-unit">g</span></th><th>Light</th><th>Medium</th></tr>
             </thead>
             <tbody>
               {VARIETIES.map((v) => (

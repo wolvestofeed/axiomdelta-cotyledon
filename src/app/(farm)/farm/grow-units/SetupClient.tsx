@@ -100,7 +100,7 @@ function RacksCard({ canEdit }: { canEdit: boolean }) {
         ) : (
           <div className="farm-scroll-x">
             <table className="farm-table">
-              <thead><tr><th>Rack</th><th className="num">Racks</th><th className="num">Lit tiers a rack</th><th className="num">Shelf width, in</th><th>Fixture</th><th className="num">1020 flats a rack</th><th className="num">1020 flats in all</th></tr></thead>
+              <thead><tr><th>Rack</th><th className="num">Racks</th><th className="num">Lit tiers a rack</th><th className="num">Shelf width, <span className="farm-unit">in</span></th><th>Fixture</th><th className="num">1020 flats a rack</th><th className="num">1020 flats in all</th></tr></thead>
               <tbody>
                 {racks.map((u) => (
                   <tr key={u.key}>

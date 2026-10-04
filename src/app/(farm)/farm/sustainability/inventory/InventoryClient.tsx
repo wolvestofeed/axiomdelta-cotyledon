@@ -81,7 +81,7 @@ export default function InventoryClient({ supplierOptions, liveLabel }: { suppli
       <Card title={`Statement — ${world.periodLabel}`} className="mt-4">
         <div className="farm-scroll-x">
           <table className="farm-table">
-            <thead><tr><th>Scope</th><th>Line</th><th className="num">t CO2e</th><th>Basis</th><th>Activity</th><th>Weakest status</th></tr></thead>
+            <thead><tr><th>Scope</th><th>Line</th><th className="num"><span className="farm-unit">t CO2e</span></th><th>Basis</th><th>Activity</th><th>Weakest status</th></tr></thead>
             <tbody>
               {inv.lines.map((l) => (
                 <tr key={l.category}>

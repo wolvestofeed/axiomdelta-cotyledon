@@ -43,6 +43,7 @@ Every figure carries a provenance tag: `SOURCED`, `STATED`, `PLACEHOLDER`, `DERI
 - Surface facts and math. UI copy does not counsel: no "recommend", "should", "best", "optimal", "consider".
 - Text-only layouts by default. No icons, illustrations or decorative SVGs unless Rob asks.
 - Page headers: a purpose line starting with a verb, chips naming the page's own tabs and cards, a collapsed "How this page works". Never a paragraph.
+- Unit symbols keep their standard case everywhere on screen: g, kg, ml, oz, fl oz, lb, gal, ft, in, h, min, kWh, kW, pH, CO2e. Table headers and card titles are uppercased by the stylesheet, so a unit symbol in one is wrapped in `<span className="farm-unit">`. A unit spelled out as a word (Grams, Minutes) is a word and takes the header's case.
 - Do not invent business terms, tier names, segments or supplier names. Seed data is labelled invented unless it is Rob's own Vallecito data, which is labelled `STATED` or `DATED`.
 
 ## 6. Git
