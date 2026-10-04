@@ -138,6 +138,8 @@ export interface CashFlowIndirect {
   netChangeCents: number;
   /** Non-cash: fit-out capitalised and financed by debt in the same entry. */
   nonCashFinancingCents: number;
+  /** Non-cash: fixed assets the owner already had, taken in against owners' equity. */
+  contributedInKindCents: number;
 }
 
 export interface ClassifiedBalanceSheet {
@@ -270,7 +272,9 @@ export function cashFlowIndirect(
   const investingCents = investing.reduce((s, r) => s + r.cents, 0);
 
   const financing: StatementRow[] = [];
-  const contributedCents = -netDebit(entries, ACC_OWNER_CONTRIBUTIONS);
+  // Equity contributed in cash is financing; fixed assets contributed in kind are a non-cash disclosure.
+  const contributedInKindCents = -netDebit(nonCashEntries.filter((e) => e.lines.some((l) => l.accountCode === ACC_FIXED_ASSETS)), ACC_OWNER_CONTRIBUTIONS);
+  const contributedCents = -netDebit(entries, ACC_OWNER_CONTRIBUTIONS) - contributedInKindCents;
   if (contributedCents !== 0) financing.push({ code: ACC_OWNER_CONTRIBUTIONS, label: "Owners' equity contributed", cents: contributedCents });
   const drawsCents = netDebit(entries, ACC_OWNER_DRAWS);
   if (drawsCents !== 0) financing.push({ code: ACC_OWNER_DRAWS, label: 'Owner draws and distributions', cents: -drawsCents });
@@ -295,7 +299,8 @@ export function cashFlowIndirect(
     financing,
     financingCents,
     netChangeCents: operatingCents + investingCents + financingCents,
-    nonCashFinancingCents: capexNonCashCents,
+    nonCashFinancingCents: capexNonCashCents - contributedInKindCents,
+    contributedInKindCents,
   };
 }
 

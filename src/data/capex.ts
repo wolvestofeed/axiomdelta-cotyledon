@@ -153,7 +153,8 @@ export const RESOURCE_SEED: Record<string, ResourceSeed> = {
  * three-piece flat sets, $1,058. Rob's grow room for 20 trays a week: two lit racks, each five
  * growing shelves 24x48 and six feet tall with two Mars VG80 on each shelf, and two dark racks of
  * the same shelving. A week's trays germinate stacked on a dark rack, spread over it in blackout,
- * then fill a lit rack, so all four hold trays at once. A jar stand for sprouts is not on the list;
+ * then fill a lit rack, so all four hold trays at once. The list is already Rob's (STATED): In
+ * service, so a forecast takes it into fixed assets at the start against owners' equity, no cash. A jar stand for sprouts is not on the list;
  * jars sit on a rack shelf at the format's placeholder count.
  */
 const GROW_ROOM_SEED: readonly (ScheduleLine & { shelves?: number; shelfWidthIn?: number; fixtureKey?: string; darkStagesOnly?: boolean })[] = [
@@ -276,7 +277,7 @@ function resourceSeedFor(item: string): Partial<EquipmentLine> {
   return { concurrentSowings: s.concurrentSowings, changeoverMinutes: s.changeoverMinutes, attendedRun: s.attendedRun, mayRunUnattended: s.mayRunUnattended, resourceBasis: 'estimated' };
 }
 
-/** A seed row: a home row Planned, a commercial row Unset until a forecast selects it. */
+/** A seed row: a home row Planned, a commercial row Unset until a forecast selects it; the grow room's rows are In service, owned. */
 const planned = (l: ScheduleLine, over: Partial<EquipmentLine> = {}): EquipmentLine => ({
   ...l,
   key: l.item,
@@ -289,7 +290,7 @@ const planned = (l: ScheduleLine, over: Partial<EquipmentLine> = {}): EquipmentL
 
 /** The equipment library's seed: the home grow room and list, then the commercial list split into build-out phases. */
 export const equipmentSeed: EquipmentLine[] = [
-  ...GROW_ROOM_SEED.map(({ shelves, shelfWidthIn, fixtureKey, darkStagesOnly, ...l }): EquipmentLine => planned(l, { shelves: shelves ?? null, shelfWidthIn: shelfWidthIn ?? null, fixtureKey: fixtureKey ?? null, darkStagesOnly: darkStagesOnly === true })),
+  ...GROW_ROOM_SEED.map(({ shelves, shelfWidthIn, fixtureKey, darkStagesOnly, ...l }): EquipmentLine => planned(l, { status: 'in_service', shelves: shelves ?? null, shelfWidthIn: shelfWidthIn ?? null, fixtureKey: fixtureKey ?? null, darkStagesOnly: darkStagesOnly === true })),
   ...HOME_SEED.map((l) => planned(l)),
   ...schedule.flatMap((l): EquipmentLine[] => {
   if (l.phase !== 1) return [planned(l)];

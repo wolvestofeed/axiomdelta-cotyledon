@@ -233,6 +233,11 @@ export function CashFlowCards({ period }: { period: StatementPeriod }) {
             <tr className="total"><td>Closing cash</td><td className="num">{signed(cf.closingCashCents)}</td></tr>
           </tbody>
         </table>
+        {ind.contributedInKindCents !== 0 && (
+          <p className="farm-kpi-sub mt-2">
+            Non-cash investing and financing: {dollars(ind.contributedInKindCents)} of fixed assets already owned were contributed by the owner, against owners&rsquo; equity, with no cash paid.
+          </p>
+        )}
         {ind.nonCashFinancingCents !== 0 && (
           <p className="farm-kpi-sub mt-2">
             Non-cash investing and financing: {dollars(ind.nonCashFinancingCents)} of fixed assets were capitalised and financed by long-term debt in the same entry.

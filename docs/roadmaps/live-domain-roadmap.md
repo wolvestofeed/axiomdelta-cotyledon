@@ -40,7 +40,7 @@ Each step ends with a check that passes before the next begins.
 
 ### C. The production database
 - [x] One database: Neon's default branch `production` is the live site's database and the laptop's. Vercel's `DATABASE_URL`, `.env.local` and `.env` all carry its string, so a save on localhost is a save on the live site's data, and `pnpm db:migrate` from the laptop migrates production.
-- [x] Production carries migrations `0001` to `0026` and every row.
+- [x] Production carries migrations `0001` to `0027` and every row.
 - [ ] Rob deletes the unused `development` branch in the Neon console.
 - [x] The first page load after a deploy seeds the libraries against a cold branch and takes 20 to 35 seconds (`todo.md`); Rob warmed it with the password on 3 October 2026.
 

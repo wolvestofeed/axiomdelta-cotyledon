@@ -347,10 +347,13 @@ export function postActuals(
       );
     }
     for (const c of p.capitalPurchases ?? []) {
+      const what = c.kind === 'leasehold' ? 'Leasehold improvement' : 'Equipment';
       entries.push(
-        entryCents(`CAPEX-${short(c.id)}`, c.purchasedOn, `${c.kind === 'leasehold' ? 'Leasehold improvement' : 'Equipment'} — ${c.item}`, [
+        entryCents(`CAPEX-${short(c.id)}`, c.purchasedOn, `${what}${c.contributed ? ' contributed by the owner' : ''} — ${c.item}`, [
           { account: ACC_FIXED_ASSETS, cents: c.amountCents, memo: 'Fixed assets at cost' },
-          { account: ACC_CASH, cents: -c.amountCents, memo: 'Cash paid' },
+          c.contributed
+            ? { account: ACC_OWNER_CONTRIBUTIONS, cents: -c.amountCents, memo: "Owners' equity, contributed in kind" }
+            : { account: ACC_CASH, cents: -c.amountCents, memo: 'Cash paid' },
         ]),
       );
     }

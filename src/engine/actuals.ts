@@ -184,7 +184,11 @@ export interface OpeningBalanceDoc {
 export const openingCashCents = (o: Pick<OpeningBalanceDoc, 'ownerEquityCents' | 'fixedAssetsCents' | 'longTermDebtCents'>): number =>
   o.ownerEquityCents + o.longTermDebtCents - o.fixedAssetsCents;
 
-/** Capital bought for cash: an equipment line or leasehold improvement (Roadmap N4b / N5). */
+/**
+ * Capital coming onto the books: an equipment line or leasehold improvement (Roadmap N4b / N5).
+ * Bought for cash, or `contributed`: already the owner's on the date, taken into fixed assets
+ * at cost against owners' equity with no cash paid.
+ */
 export interface CapitalPurchaseDoc {
   id: string;
   kind: 'equipment' | 'leasehold';
@@ -192,6 +196,7 @@ export interface CapitalPurchaseDoc {
   item: string;
   purchasedOn: string;
   amountCents: number;
+  contributed?: boolean;
 }
 
 /** A loan drawn in cash. */

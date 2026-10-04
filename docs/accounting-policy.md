@@ -340,7 +340,7 @@ Plan ledger (§17); nothing is typed as a dollar total.
 | Period bill | Lease and utilities to Overhead Control; admin to G&A; other to the named account; payable until a paid-on date posts the payment. |
 | Month end | One twelfth of annual depreciation to Overhead Control; applied closed against incurred, the difference to the volume variance. |
 | Equity contribution | Cash against owners' equity (3100). |
-| Capital purchase | Fixed assets (1700) at cost against cash. |
+| Capital purchase | Fixed assets (1700) at cost against cash. Equipment the owner already has at the start is contributed: fixed assets at cost against owners' equity (3100), no cash, disclosed under the cash flow statement as non-cash. |
 | Loan draw / payment | Draw: cash against long-term debt (2900). Payment: interest to 8020, principal against 2900, cash. |
 | Marketplace deposit | Cash against processor clearing (1200). |
 
@@ -425,6 +425,9 @@ calendar days.
 A forecast runs from its start date — 2027-01-01, the year the loans start, unless the forecast
 carries another — for one year, or two or three (§17). It opens with owners' equity in cash (3100)
 at the start ($2,500 on file, the owner's contribution Rob stated) and draws each loan on its start date (2027-01-01 on file).
+Equipment In service on the record at the start is the owner's already: it enters fixed assets at
+cost against owners' equity on the start date with no cash paid, and depreciates from then.
+Planned equipment is bought for cash on its date.
 Invoiced subscribers are invoiced at each month end and collected on the due date; supplier bills
 are dated on receipt and paid on their due dates. Amounts with no terms on file settle as §17
 states and the timeline names them.

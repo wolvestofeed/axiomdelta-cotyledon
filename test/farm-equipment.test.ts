@@ -36,8 +36,8 @@ describe('farm equipment — the seed', () => {
     expect(all.equipmentPhase3Add).toBe(0);
   });
 
-  it('seeds home rows Planned and commercial rows Unset, every service date TBD', () => {
-    expect(home.every((e) => e.status === 'planned' && e.inServiceDate === null)).toBe(true);
+  it('seeds the grow room In service, the rest of the home list Planned and commercial rows Unset, every service date TBD', () => {
+    expect(home.every((e) => e.status === (e.category === 'Grow room' ? 'in_service' : 'planned') && e.inServiceDate === null)).toBe(true);
     expect(commercial.every((e) => e.status === 'unset' && e.inServiceDate === null)).toBe(true);
   });
 

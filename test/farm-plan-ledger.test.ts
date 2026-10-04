@@ -47,6 +47,18 @@ describe('the Plan ledger', () => {
     expect(bs.longTermDebtCents + bs.currentUnitOfLongTermDebtCents).toBe(drawn - repaid);
   });
 
+  it('the grow room, in service at the start, is contributed by the owner: fixed assets against equity, no cash paid', () => {
+    const capex = timeline.documents.capitalPurchases;
+    expect(capex.length).toBeGreaterThan(0);
+    expect(capex.every((c) => c.contributed === true && c.purchasedOn === timeline.from)).toBe(true);
+    const inKind = capex.reduce((s, c) => s + c.amountCents, 0);
+    expect(inKind).toBe(3_008_00);
+    const ind = plan.years[0]!.cashFlowIndirect;
+    expect(ind.investingCents).toBe(0);
+    expect(ind.contributedInKindCents).toBe(inKind);
+    expect(ind.financing.find((r) => r.label === "Owners' equity contributed")?.cents).toBe(2_500_00);
+  });
+
   it('absorbs on the forecast’s own production: the only volume variance is the planned downtime', () => {
     expect(plan.absorption.normalCapacityUnits).toBeCloseTo(timeline.normalCapacity.netPerYear, 9);
     expect(plan.absorption.ratePerUnit).toBeCloseTo(plan.annualOverheadBudget / timeline.normalCapacity.netPerYear, 9);

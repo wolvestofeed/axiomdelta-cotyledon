@@ -445,7 +445,9 @@ export function simulateForecast(input: TimelineInput): ForecastTimeline {
     if (!countsTowardCapital(l.status) || l.inServiceFrom === null || l.inServiceFrom > to || l.qty <= 0) continue;
     const amountCents = cents(extendedCost(l, inputs.equipmentPurchase));
     if (amountCents <= 0) continue;
-    capitalPurchases.push({ id: `PLAN-CAPEX-${l.key}`, kind: 'equipment', key: l.key, item: l.item, purchasedOn: l.inServiceFrom < from ? from : l.inServiceFrom, amountCents });
+    // In service on the record at the forecast start: already the owner's, contributed with no cash paid.
+    const contributed = l.inServiceBasis === 'in_service' && l.inServiceFrom <= from;
+    capitalPurchases.push({ id: `PLAN-CAPEX-${l.key}`, kind: 'equipment', key: l.key, item: l.item, purchasedOn: l.inServiceFrom < from ? from : l.inServiceFrom, amountCents, ...(contributed ? { contributed } : {}) });
   }
   for (const l of inputs.leasehold) {
     if (!l.counted || l.extended <= 0) continue;

@@ -60,7 +60,7 @@ export function EquipmentClient({ canEdit, setting }: { canEdit: boolean; settin
       if (Object.keys(all).length === 0) delete d.equipment;
     });
   const basisText: Record<string, string> = {
-    in_service: 'in service',
+    in_service: 'in service; at the forecast start it is owned and contributed, no cash paid',
     dated: 'from its date',
     phase_one_at_start: 'Phase 1: from the forecast start',
     undated: 'not until dated',
