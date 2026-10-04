@@ -31,6 +31,7 @@ import {
 import { shelfLifeDaysFor, stageOn, type CalendarSowing } from '@/engine/grow-calendar';
 
 import { GRAMS_PER_LB, costPlan } from '@/engine/grow-costing';
+import { seedLineHarvest } from '@/data/grow-plan';
 import type { SowingRecordDoc, ReceiptDoc } from '@/engine/actuals';
 import { rawStockOnHand, openOrders, netRequirements, netToRequirementLines, type PoLike, type NetRequirements } from '@/engine/net-requirements';
 import type { DateRange } from '@/engine/periods';
@@ -234,6 +235,16 @@ export function ProductionPlanningClient({
   );
   const dayGross = dayHorizon.productionDays.reduce((s, p) => s + p.purchase.total, 0);
   const dayRunsMade = dayRuns.filter((r) => r.produced > 0).length;
+  // Each plan's harvest weight a tray, from the variety records until closed sowings observe it.
+  const yieldOf = useMemo(() => {
+    const m = new Map<string, { grams: number; tag: ReturnType<typeof seedLineHarvest> | undefined }>();
+    for (const gp of resolved.growPlans) {
+      const tags = gp.lines.flatMap((l) => (l.kind === 'seed' ? [seedLineHarvest(l, gp.format)] : []));
+      m.set(gp.code, { grams: costPlan(gp).harvestGramsPerTray, tag: tags.find((t) => t.status === 'PLACEHOLDER') ?? tags[0] });
+    }
+    return m;
+  }, [resolved.growPlans]);
+  const dayHarvestGrams = dayRuns.reduce((t, r) => t + (yieldOf.get(r.growPlanCode)?.grams ?? 0) * r.produced, 0);
   const dayProduced = dayHorizon.totals.producedBase;
   const recordedForDay = useMemo(() => sowings.filter((b) => sowDates.includes(b.productionDate)), [sowings, sowDates]);
   const dayTitleDates = sowDates.length ? sowDates.map(dateLabel).join(', ') : dateLabel(dayDate);
@@ -410,7 +421,7 @@ export function ProductionPlanningClient({
               <div className="farm-scroll-x">
                 <table className="farm-table">
                   <thead>
-                    <tr><th>Plan</th><th>Sow date</th><th className="num">Units</th><th className="num">Required (trays)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing (trays)</th><th className="num">Sowings</th><th className="num">Sown</th><th className="num">Closing</th><th className="num">Inputs at the plan&rsquo;s price</th></tr>
+                    <tr><th>Plan</th><th>Sow date</th><th className="num">Units</th><th className="num">Required (trays)</th><th className="num">On hand</th><th className="num">Net</th><th className="num">Sowing (trays)</th><th className="num">Sowings</th><th className="num">Sown</th><th className="num">Closing</th><th className="num">Inputs at the plan&rsquo;s price</th><th className="num">Harvest <span className="farm-unit">g</span> / tray</th><th className="num">Harvest <span className="farm-unit">g</span>, trays sown</th></tr>
                   </thead>
                   <tbody>
                     {dayRuns.map((r) => {
@@ -433,16 +444,18 @@ export function ProductionPlanningClient({
                           <td className="num">{num(Math.round(r.produced))}{r.shortfall > 0 ? <div className="farm-c-over farm-fs-2xs">{num(Math.round(r.shortfall))} short</div> : null}</td>
                           <td className="num">{num(Math.round(r.closing))}</td>
                           <td className="num">{money(r.inputCostStandard)}</td>
+                          <td className="num">{yieldOf.get(r.growPlanCode)?.tag ? <StatusBadge status={yieldOf.get(r.growPlanCode)!.tag!.status} title={yieldOf.get(r.growPlanCode)!.tag!.note} /> : null} {num(yieldOf.get(r.growPlanCode)?.grams ?? 0, 0)}</td>
+                          <td className="num">{num(Math.round((yieldOf.get(r.growPlanCode)?.grams ?? 0) * r.produced))}</td>
                         </tr>
                       );
                     })}
-                    <tr className="total"><td>All plans</td><td /><td className="num">{num(Math.round(dayUnits))}</td><td className="num">{num(Math.round(dayHorizon.totals.orderedBase))}</td><td className="num">—</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.net, 0)))}</td><td className="num">—</td><td className="num">{num(dayHorizon.totals.sowings)}</td><td className="num">{num(Math.round(dayHorizon.totals.producedBase))}</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.closing, 0)))}</td><td className="num">{money(dayHorizon.productionDays.reduce((s, p) => s + p.inputCostStandard, 0))}</td></tr>
+                    <tr className="total"><td>All plans</td><td /><td className="num">{num(Math.round(dayUnits))}</td><td className="num">{num(Math.round(dayHorizon.totals.orderedBase))}</td><td className="num">—</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.net, 0)))}</td><td className="num">—</td><td className="num">{num(dayHorizon.totals.sowings)}</td><td className="num">{num(Math.round(dayHorizon.totals.producedBase))}</td><td className="num">{num(Math.round(dayRuns.reduce((s, r) => s + r.closing, 0)))}</td><td className="num">{money(dayHorizon.productionDays.reduce((s, p) => s + p.inputCostStandard, 0))}</td><td className="num">—</td><td className="num">{num(Math.round(dayHarvestGrams))}</td></tr>
                   </tbody>
                 </table>
               </div>
             )}
             <p className="farm-kpi-sub mt-2">
-              On hand is what the closed sowing records say is inside its plan&rsquo;s harvest window on the distribution date, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. A sowing is what one grow unit takes in trays of the plan&rsquo;s format; overshoot on whole sowings is the closing stock, and the horizon carries it to the next distribution date.
+              On hand is what the closed sowing records say is inside its plan&rsquo;s harvest window on the distribution date, less what distributed orders drew, oldest lot first. No record, no stock: the platform does not assume inventory it has not seen. Harvest is the weight a tray yields on the variety records, a placeholder until closed sowings record it, times the trays sown. A sowing is what one grow unit takes in trays of the plan&rsquo;s format; overshoot on whole sowings is the closing stock, and the horizon carries it to the next distribution date.
             </p>
           </Card>
 
