@@ -17,7 +17,7 @@ import { resolveScenarioInputs } from '@/engine/scenario';
 // The plan's defaults on the grow seed library, never the Phase 1-era fallback.
 const DEFAULTS = resolveScenarioInputs();
 import { useScenario } from '@/state/scenario-store';
-import { LABOR_BASIS_LABELS } from '@/engine/unit-cost';
+import { LABOR_BASIS_LABELS, dailyMinutesPerUnit, laborMinutesPerUnit } from '@/engine/unit-cost';
 import { PageControls } from '@/components/PageControls';
 import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 import { GRAMS_PER_OZ } from '@/data/tray-formats';
@@ -79,7 +79,19 @@ export default function UnitEconomicsPage() {
         ? `One ${grow.format.name}: seed ${money(grow.perTray.seed)}, medium ${money(grow.perTray.medium)}, nutrient ${money(grow.perTray.nutrient)}, light ${money(grow.perTray.light)}, consumables ${money(grow.perTray.consumables)}`
         : `${chain.packedOzPerUnit.toFixed(2)} oz packed at ${money(chain.costPerPackedOz, 4)}/oz — from ${chain.seedOzPerUnit.toFixed(2)} oz as purchased`,
     },
-    { label: 'Direct labor', value: base.directLabor, note: `${resolved.growPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[resolved.laborStandards[resolved.growPlan.code]?.basis ?? 'none'].toLowerCase()} — at its ${num(econ[0].sowingSize)}-unit derived sowing: ${num(ownAssumptions.laborSplit.fixedMinutesPerSowing.value, 0)} fixed minutes over the sowing plus ${ownAssumptions.laborSplit.variableMinutesPerUnit.value.toFixed(3)} minutes a unit, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each grow plan carries its own standard; this is ${resolved.growPlan.code}'s` },
+    {
+      label: 'Direct labor',
+      value: base.directLabor,
+      // All three streams, as the cost is priced: sowing and harvest per unit, the fixed share, and the daily stream over the cycle.
+      note: (() => {
+        const std = resolved.laborStandards[resolved.growPlan.code];
+        const sowing = econ[0].sowingSize;
+        const total = std ? laborMinutesPerUnit(std, sowing) : null;
+        if (!std || total === null) return `No labor standard on file for ${resolved.growPlan.code}`;
+        const fixedShare = sowing > 0 ? std.fixedMinutesPerSowing / sowing : 0;
+        return `${resolved.growPlan.code}'s own labor standard — ${LABOR_BASIS_LABELS[std.basis].toLowerCase()} — at its ${num(sowing)}-unit derived sowing: ${num(total, 1)} minutes a unit, being ${num(std.variableMinutesPerUnit, 1)} sowing and harvest, ${num(dailyMinutesPerUnit(std, sowing), 1)} daily over the ${num(std.cycleDays)}-day cycle and ${num(fixedShare, 1)} of the ${num(std.fixedMinutesPerSowing, 0)} fixed minutes a sowing, at the ${money(ownAssumptions.labor.blendedLoadedWage.value)}/h loaded labor rate, a placeholder until Staffing's rates arrive. Each grow plan carries its own standard; this is ${resolved.growPlan.code}'s`;
+      })(),
+    },
     {
       label: 'Packaging',
       value: base.packaging,
