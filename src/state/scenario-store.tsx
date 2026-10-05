@@ -128,6 +128,8 @@ export interface ScenarioStore {
   setResource: (key: string, fn: (draft: ResourceOverlay) => void) => void;
   /** Set one schedule policy field (undefined clears it back to the default). */
   setSchedulePolicy: <K extends keyof SchedulePolicyOverlay>(key: K, value: SchedulePolicyOverlay[K] | undefined) => void;
+  /** The medium this forecast grows a plan on; undefined returns the plan to its own medium. */
+  setPlanMedium: (growPlanCode: string, mediumKey: string | undefined) => void;
   /** Whether the signed-in admin may apply the live model and edit the LCA basis. */
   isSuperAdmin: boolean;
 
@@ -488,6 +490,18 @@ export function ScenarioProvider({
     [mutate],
   );
 
+  const setPlanMedium = useCallback<ScenarioStore['setPlanMedium']>(
+    (growPlanCode, mediumKey) => {
+      mutate((d) => {
+        const m = (d.media ??= {});
+        if (mediumKey === undefined) delete m[growPlanCode];
+        else m[growPlanCode] = mediumKey;
+        if (Object.keys(m).length === 0) delete d.media;
+      });
+    },
+    [mutate],
+  );
+
   const setSchedulePolicy = useCallback<ScenarioStore['setSchedulePolicy']>(
     (key, value) => {
       mutate((d) => {
@@ -551,6 +565,7 @@ export function ScenarioProvider({
       setRouteStep,
       setResource,
       setSchedulePolicy,
+      setPlanMedium,
       library: lib,
       nutrients: nutrientLib,
       media: mediaLib,
@@ -569,7 +584,6 @@ export function ScenarioProvider({
       lib,
       nutrientLib,
       mediaLib,
-      custs,
       setForecast,
       setAssumption,
       setCapacity,
@@ -590,6 +604,7 @@ export function ScenarioProvider({
       setRouteStep,
       setResource,
       setSchedulePolicy,
+      setPlanMedium,
       isSuperAdmin,
       resetSection,
       resetAll,

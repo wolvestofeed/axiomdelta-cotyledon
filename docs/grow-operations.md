@@ -20,6 +20,8 @@ A microgreen tray runs soak → sow and weight → germination → blackout → 
 | Harvest window | Cotyledons full, first true leaves showing; a live tray is distributed in the window, cut greens are harvested from it | bottom | 1 | Harvest check | yes | yes |
 | Packed | The unit leaves the grow unit: a live tray with its care insert, a jar, or cut greens weighed into their pack | — | 0 | — | no | no |
 
+In an indoor residential grow room the grow lights come on at 19:00 (Rob, STATED), so their heat balances the night's humidity and the heat lost at dusk; the regime's photoperiod runs from there, 16 hours to 11:00 the next day. The rule is the home grow room's only: no start is stated for a commercial facility. The figure is `HOME_LIGHTS_ON_MIN` in `src/data/inputs-catalog.ts`, shown on Capacity beside the operating day, which is the labor day and a separate clock.
+
 A sprout in a jar runs a shorter schedule: soak, then rinse and drain, then its harvest window. The jar sits inverted on its stand in the dark and is rinsed and drained three times a day; spent rinse water is tested before any batch is distributed.
 
 | Stage | Watering | Waterings a day | Control point |

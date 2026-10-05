@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { VARIETIES, VARIETY_BY_KEY, VARIETY_BY_CODE } from '@/data/varieties';
 import { TRAY_FORMAT_BY_KEY, PLAN_FORMATS, densityFactorOf, traySetCostPerUnit, unitSku } from '@/data/tray-formats';
-import { MEDIUM_BY_KEY, NUTRIENT_BY_KEY, REGIME_BY_KEY, LIGHT_FIXTURES, FIXTURE_BY_KEY, SANITIZER_PER_TRAY, lightCostPerTrayDay } from '@/data/inputs-catalog';
+import { MEDIUM_BY_KEY, NUTRIENT_BY_KEY, REGIME_BY_KEY, LIGHT_FIXTURES, FIXTURE_BY_KEY, SANITIZER_PER_TRAY, lightCostPerTrayDay, HOME_LIGHTS_ON_MIN, lightWindow } from '@/data/inputs-catalog';
 import { FL_OZ_PER_GAL, WATER_PER_WATERING_OZ, STAGES, SPROUT_STAGES, lightDaysFrom, waterOzFrom, cycleDays, stagesFrom } from '@/data/stage-schedule';
 import {
   GROW_PLAN_CODE_RX,
@@ -202,6 +202,15 @@ describe('costing on the four line kinds', () => {
     expect(fixtureFor(broccoli()).key).toBe('mars-hydro-vg80');
     expect(fixtureFor(byCode('RAD-01')).key).toBe('mars-hydro-vg80');
     expect(fixtureFor(mung())).toBe(LIGHT_FIXTURES[0]);
+  });
+});
+
+describe('the lights\' clock in the home grow room', () => {
+  it('comes on at 19:00, stated, and runs the regime\'s photoperiod past midnight', () => {
+    expect(HOME_LIGHTS_ON_MIN.value).toBe(19 * 60);
+    expect(HOME_LIGHTS_ON_MIN.status).toBe('STATED');
+    expect(lightWindow(HOME_LIGHTS_ON_MIN.value, REGIME_BY_KEY.balanced.photoperiodHours.value)).toEqual({ onMin: 1140, offMin: 11 * 60, continuous: false });
+    expect(lightWindow(HOME_LIGHTS_ON_MIN.value, REGIME_BY_KEY.continuous.photoperiodHours.value).continuous).toBe(true);
   });
 });
 

@@ -12,6 +12,7 @@ import { inputFactors, gridFactorERCT, warmYardTrimmings, freightFactorsHub, KG_
 import { lcaOptions } from '@/data/lca-options';
 import { LIGHT_FIXTURES, REGIME_BY_KEY, HEMP_MAT_GRADE_G_PER_M2 } from '@/data/inputs-catalog';
 import { TRAY_FORMAT_BY_KEY } from '@/data/tray-formats';
+import { resolveScenarioInputs } from '@/engine/scenario';
 
 const plan = (code: string) => growPlanSeed.find((p) => p.code === code)!;
 const broc = plan('BROC-01');
@@ -75,16 +76,17 @@ describe('tray footprint — seed on the dual basis', () => {
   });
 });
 
-describe('tray footprint — the hemp mat: mass, freight and end of life, no fiber factor', () => {
+describe('tray footprint — the hemp mat: mass, a placeholder fiber figure, freight and end of life', () => {
   const fp = trayFootprint(broc);
   const area = TRAY_FORMAT_BY_KEY['flat-1020']!.areaSqIn.value;
   const matKg = (area * SQ_M_PER_SQ_IN * HEMP_MAT_GRADE_G_PER_M2.value) / 1000;
-  it('one mat weighs the format\'s area at the grade on file, about 87 g, and its fiber carries no factor', () => {
+  it('one mat weighs the format\'s area at the grade on file, about 44 g, and its fiber carries a placeholder figure', () => {
     const mat = fp.lines.find((l) => l.name === 'Medium: hemp-mat')!;
     expect(mat.massKgPerTray).toBeCloseTo(matKg, 9);
-    expect(mat.massKgPerTray).toBeCloseTo(0.0874, 3);
-    expect(mat.reference).toBeNull();
-    expect(mat.excludedReason).toMatch(/No hemp mat factor/);
+    expect(mat.massKgPerTray).toBeCloseTo(0.0437, 3);
+    expect(mat.reference!.status).toBe('PLACEHOLDER');
+    expect(mat.reference!.kgCo2ePerTray).toBeCloseTo(matKg * 1.0, 9);
+    expect(mat.excludedReason).toBeUndefined();
   });
   it('freight from Paris, TX by truck on the Hub\'s ton-mile row', () => {
     const legs = defaultFreightLegs();
@@ -134,7 +136,7 @@ describe('tray footprint — totals, per kg, water and the excluded list', () =>
     expect(names).toContain('Water over the cycle');
     expect(fp.excluded.find((e) => e.name === 'Rack share')!.reason).toMatch(/stainless/);
   });
-  it('the weakest tag on the plan is PLACEHOLDER while the mat grade and the peat share are', () => {
+  it('the weakest tag on the plan is PLACEHOLDER while the mat\'s fiber figure is', () => {
     expect(fp.weakestStatus).toBe('PLACEHOLDER');
   });
 });
@@ -164,5 +166,46 @@ describe('tray footprint — the regimes side by side', () => {
   });
   it('a jar plan has no regime table', () => {
     expect(regimeEnergyTable(mung)).toEqual([]);
+  });
+});
+
+describe('the medium a forecast grows a plan on', () => {
+  const MEDIA = ['hemp-mat', 'jute-mat', 'silicone-mesh', 'stainless-mesh', 'seedling-soil'] as const;
+  const on = (key: string) => resolveScenarioInputs({ media: { 'FEN-01': key } }).growPlans.find((p) => p.code === 'FEN-01')!;
+  const base = resolveScenarioInputs().growPlans;
+  it('stands over the plan\'s own medium on that plan only, and the plan\'s record does not move', () => {
+    const jute = resolveScenarioInputs({ media: { 'FEN-01': 'jute-mat' } }).growPlans;
+    expect(base.find((p) => p.code === 'FEN-01')!.lines.find((l) => l.kind === 'medium')).toMatchObject({ mediumKey: 'hemp-mat' });
+    expect(jute.find((p) => p.code === 'FEN-01')!.lines.find((l) => l.kind === 'medium')).toMatchObject({ mediumKey: 'jute-mat', qtyPerTray: null });
+    expect(jute.find((p) => p.code === 'BROC-01')!.lines).toEqual(base.find((p) => p.code === 'BROC-01')!.lines);
+    expect(plan('FEN-01').lines.find((l) => l.kind === 'medium')).toMatchObject({ mediumKey: 'hemp-mat' });
+  });
+  it('a key the library does not hold is ignored', () => {
+    expect(on('no-such-medium').lines.find((l) => l.kind === 'medium')).toMatchObject({ mediumKey: 'hemp-mat' });
+  });
+  it('a reusable sheet costs its price over its grows: silicone $5.50 over 20, two stainless sheets at $3.00 over 20', () => {
+    const cost = (key: string) => costPlan(on(key)).lines.find((l) => l.line.kind === 'medium')!.costPerTray;
+    expect(cost('hemp-mat')).toBeCloseTo(241 / 140, 9);
+    expect(cost('silicone-mesh')).toBeCloseTo(5.5 / 20, 9);
+    expect(cost('stainless-mesh')).toBeCloseTo((2 * 2.997) / 20, 9);
+  });
+  it('light, seed and water are the same on all five; only the medium\'s lines differ, every medium figure a placeholder or the peat row', () => {
+    const fps = MEDIA.map((k) => trayFootprint(on(k)));
+    for (const fp of fps) {
+      expect(fp.kwhPerTray).toBeCloseTo(fps[0]!.kwhPerTray, 9);
+      expect(fp.waterLPerTray).toBeCloseTo(fps[0]!.waterLPerTray, 9);
+      expect(fp.perTray.reference.light).toBeCloseTo(fps[0]!.perTray.reference.light, 9);
+      expect(fp.perTray.reference.seed).toBeCloseTo(fps[0]!.perTray.reference.seed, 9);
+    }
+    const medium = Object.fromEntries(MEDIA.map((k, i) => [k, fps[i]!.lines.find((l) => l.kind === 'medium')!]));
+    expect(medium['silicone-mesh']!.massKgPerTray).toBeCloseTo(0.09 / 20, 9);
+    expect(medium['silicone-mesh']!.reference!.kgCo2ePerTray).toBeCloseTo((0.09 / 20) * 6.0, 9);
+    expect(medium['stainless-mesh']!.reference!.kgCo2ePerTray).toBeCloseTo(((2 * 0.08) / 20) * 6.5, 9);
+    expect(medium['jute-mat']!.reference!.kgCo2ePerTray).toBeCloseTo(0.0437 * 1.0, 9);
+    expect(medium['seedling-soil']!.reference!.label).toMatch(/Peat/);
+    for (const k of MEDIA) expect(medium[k]!.status).toBe('PLACEHOLDER');
+    // A reused sheet has no end of life a grow; a mat and the soil do.
+    expect(fps[2]!.lines.some((l) => l.kind === 'end-of-life')).toBe(false);
+    expect(fps[0]!.lines.some((l) => l.kind === 'end-of-life')).toBe(true);
   });
 });

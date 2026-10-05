@@ -70,10 +70,10 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     form: 'mat',
     qtyPer1020: tagged(1, 'STATED', 'each', 'One pre-cut mat per 1020 tray'),
     unit: 'each',
-    costPerUnit: tagged(241 / 140, 'STATED', '$/each', '$241 for 140 mats, no shipping, from Bootstrap Farmer, Paris TX (Rob)'),
+    costPerUnit: tagged(241 / 140, 'STATED', '$/each', '$241 for 140 mats, no shipping, from Bootstrap Farmer, Paris TX (Rob); the product page, https://www.bootstrapfarmer.com/products/hemp-grow-mats , lists the 140 pack at $1.72 a mat'),
     traits: {
       ph: 'Neutral',
-      note: 'Needle-punched hemp fiber, no binders or chemical treatment; salt-free, so no buffering or rinsing. Holds up to 1,050% of its weight in water; 400, 600 and 1,300 g/m² grades set the retention. Raised potassium in basil and dill. The default medium.',
+      note: 'Bootstrap Farmer 1020 pre-cut mat: 300 g/m² industrial hemp, made in Alberta, Canada, biodegradable and compostable (the supplier\'s spec sheet). Needle-punched hemp fiber, no binders or chemical treatment; salt-free, so no buffering or rinsing. Holds up to 1,050% of its weight in water; other makers publish 400, 600 and 1,300 g/m² grades. Raised potassium in basil and dill. The default medium.',
     },
     rows: [94, 97, 103],
   },
@@ -108,6 +108,36 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
     rows: [65, 21],
   },
   {
+    key: 'silicone-mesh',
+    name: 'Silicone mesh, reusable',
+    form: 'mat',
+    qtyPer1020: tagged(1 / 20, 'STATED', 'each', 'One sheet a tray, replaced after 20 grows (Rob): a tray sown uses up one twentieth of a sheet'),
+    unit: 'each',
+    costPerUnit: tagged(5.5, 'STATED', '$/each', '$55.00 for the 10-pack of 10x20 sheets, On The Grow (Rob); the spec sheet is docs/spec-sheets/silicone-mesh-on-the-grow.md'),
+    traits: { note: 'Food-grade platinum-cured silicone on a fiberglass core, 1.2 mm holes, 19.65 x 9.5 in; inert, so nutrients ride in the water. Scraped, washed and sanitized in boiling water between grows; the wash water and its labor are not measured yet.' },
+    rows: [],
+  },
+  {
+    key: 'stainless-mesh',
+    name: 'Stainless steel mesh, reusable',
+    form: 'mat',
+    qtyPer1020: tagged(2 / 20, 'PLACEHOLDER', 'each', 'Two 10x10 sheets a 1020 flat; the supplier publishes no count of grows, so the silicone sheet\'s 20 stands in until Rob states one'),
+    unit: 'each',
+    costPerUnit: tagged(29.97 / 10, 'SOURCED', '$/each', '$29.97 for the 10-pack of 10x10 sheets, On The Grow, read 5 October 2026; the spec sheet is docs/spec-sheets/stainless-mesh-on-the-grow.md'),
+    traits: { note: '316-grade stainless steel mesh, 1 mm holes, 9.25 x 9.25 in, two to a 1020 flat; inert. Sharp edges. Scraped and sanitized between grows; the wash water and its labor are not measured yet.' },
+    rows: [],
+  },
+  {
+    key: 'seedling-soil',
+    name: 'Organic seedling soil',
+    form: 'loose',
+    qtyPer1020: tagged(0.66, 'PLACEHOLDER', 'gal', 'About one inch in a 1020; no fill volume observed'),
+    unit: 'gal',
+    costPerUnit: tagged(1.89, 'PLACEHOLDER', '$/gal', 'No product named and no receipt: the peat and vermiculite blend\'s placeholder stands in'),
+    traits: { note: 'A bagged organic seedling mix; the product and its components are not stated. Read as a peat-based mix until they are.' },
+    rows: [],
+  },
+  {
     key: 'none',
     name: 'No medium (jar sprouts)',
     form: 'none',
@@ -119,8 +149,8 @@ export const GROWING_MEDIA: readonly GrowingMediumDef[] = [
   },
 ];
 
-/** The hemp mat grade the farm buys, grams per square metre: the mass of a mat is the format's area at this grade. Rob to state which of 400, 600 or 1,300 (science library rows 94, 97). */
-export const HEMP_MAT_GRADE_G_PER_M2: Tagged = tagged(600, 'PLACEHOLDER', 'g/m²', 'The middle of the three grades the makers publish; the grade bought is not yet stated');
+/** The hemp mat grade the farm buys, grams per square metre: the mass of a mat is the format's area at this grade. Bootstrap Farmer's spec sheet (`docs/spec-sheets/hemp-mat-bootstrap-farmer.md`). */
+export const HEMP_MAT_GRADE_G_PER_M2: Tagged = tagged(300, 'SOURCED', 'g/m²', 'Bootstrap Farmer 1020 pre-cut hemp mat, 300 gsm; product page https://www.bootstrapfarmer.com/products/hemp-grow-mats , read 5 October 2026');
 
 // ── Nutrient solutions and supplements ──────────────────────────────────────
 
@@ -314,6 +344,18 @@ export const LIGHT_REGIMES: readonly LightRegimeDef[] = [
 ];
 
 export const DEFAULT_LIGHT_REGIME: LightRegimeKey = 'balanced';
+
+/**
+ * The clock time the grow lights come on in an indoor residential grow room. A home rule only:
+ * no start is stated for a commercial facility. The regime's photoperiod runs from it.
+ */
+export const HOME_LIGHTS_ON_MIN: Tagged = tagged(1140, 'STATED', 'min from midnight', 'Rob: the lights come on at 19:00 in an indoor residential grow room, so their heat balances the night\'s humidity and the heat lost at dusk. Not a rule for a commercial space.');
+
+/** The lit window of one day: on at `onMin`, off a photoperiod later, on the clock (past midnight wraps). */
+export function lightWindow(onMin: number, photoperiodHours: number): { onMin: number; offMin: number; continuous: boolean } {
+  const continuous = photoperiodHours >= 24;
+  return { onMin, offMin: (onMin + Math.round(photoperiodHours * 60)) % 1440, continuous };
+}
 
 /** Sanitizer per tray: Vallecito's 2023 allocation. */
 export const SANITIZER_PER_TRAY: Tagged = tagged(0.05, 'DATED', '$', 'Vallecito 2023 time study: sanitization allocated per flat');

@@ -50,6 +50,7 @@ import { equipmentPurchase as defaultEquipmentPurchase, codeSeedLoans, seedFixed
 import { leaseholdSeed, type LeaseholdLine } from '@/data/capex';
 import type { CatalogLine } from '@/engine/catalog';
 import { channelDemand, forecastHorizonOf, forecastStartOf, type ChannelDemand, type ForecastHorizonYears, type ForecastOverlay } from '@/engine/demand';
+import { MEDIUM_BY_KEY } from '@/data/inputs-catalog';
 import { datedEquipment, type DatedEquipmentLine } from '@/engine/equipment';
 import { openingPosition as defaultOpeningPosition, type PaymentTerms } from '@/data/working-capital';
 import { DEFAULT_PAY_CALENDAR, type PayCalendar } from '@/engine/payroll';
@@ -338,6 +339,8 @@ export interface FarmScenarioConfig {
   /** Resource attribute edits, keyed by equipment library key. */
   resources?: Record<string, ResourceOverlay>;
   schedulePolicy?: SchedulePolicyOverlay;
+  /** The medium this forecast grows a plan on, keyed by grow plan code: a Media library key standing over the plan's own medium line. The plan's record does not move. */
+  media?: Record<string, string>;
 }
 
 /** The top-level sections, for dirty-tracking and per-section reset/save. */
@@ -357,6 +360,7 @@ export const SCENARIO_SECTIONS: ScenarioSection[] = [
   'routing',
   'resources',
   'schedulePolicy',
+  'media',
 ];
 
 // ── Resolved inputs (defaults + overlay), engine-shaped ─────────────────────
@@ -561,6 +565,11 @@ export function resolveScenarioInputs(
     const plan: GrowPlanDef = structuredClone({ ...r, ...(measured ? { measured } : {}) });
     delete plan.prices;
     delete plan.orderPrices;
+    // The forecast's medium for this plan stands over the plan's own, at the library's quantity per tray.
+    const mediumKey = config.media?.[plan.code];
+    if (mediumKey && (plan.media?.[mediumKey] ?? MEDIUM_BY_KEY[mediumKey])) {
+      plan.lines = plan.lines.map((l) => (l.kind === 'medium' && l.mediumKey !== mediumKey ? { ...l, mediumKey, qtyPerTray: null } : l));
+    }
     // Two prices per line (`accounting-policy.md` §10), each keyed by the line's label. The plan's:
     // a what-if typed on the forecast, else the last price paid, else the supplier's catalog price,
     // else the line's own. The order's: a what-if, else the catalog, else the last price paid, else

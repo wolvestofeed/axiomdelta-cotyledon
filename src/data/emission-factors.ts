@@ -470,13 +470,48 @@ const zhawProvenance = (slug: string, note: string): FactorProvenance => ({
  * loose substrate components, and no mat EPD is on file.
  */
 export const mediaFactorsZhaw: readonly MediumVolumeFactor[] = [
-  { key: 'peat', label: 'Peat (Schwarztorf and Weisstorf)', kgCo2ePerM3: 254, bulkDensityKgPerM3: 200, mediumKeys: ['peat-vermiculite'], provenance: zhawProvenance('peat', '12% extraction, 23% transport, 64% decomposition of organic matter to CO2 in use; 98.5% fossil CO2. Applies to the peat share of a peat blend only.') },
+  { key: 'peat', label: 'Peat (Schwarztorf and Weisstorf)', kgCo2ePerM3: 254, bulkDensityKgPerM3: 200, mediumKeys: ['peat-vermiculite', 'seedling-soil'], provenance: zhawProvenance('peat', '12% extraction, 23% transport, 64% decomposition of organic matter to CO2 in use; 98.5% fossil CO2. Applies to the peat share of a peat blend only.') },
   { key: 'green-compost', label: 'Green-waste compost', kgCo2ePerM3: 177, bulkDensityKgPerM3: 684, mediumKeys: [], provenance: zhawProvenance('green-compost', '') },
   { key: 'coir-fibre', label: 'Coir fibre (Kokosfasern)', kgCo2ePerM3: 84.7, bulkDensityKgPerM3: 200, mediumKeys: [], provenance: zhawProvenance('coir-fibre', '39% cultivation, 34% processing, 22% ship transport; the report rates coir fibre lower than peat on climate but higher on pollutant emissions to water.') },
   { key: 'cocopeat', label: 'Coir pith (cocopeat)', kgCo2ePerM3: 40.5, bulkDensityKgPerM3: 250, mediumKeys: ['coco-coir'], provenance: zhawProvenance('cocopeat', '13% cultivation, 34% processing, 32% ship transport; economic allocation of 7% to the husk. The compressed coco bale the Media library prices is coir pith.') },
   { key: 'bark-compost', label: 'Bark compost', kgCo2ePerM3: 33.1, bulkDensityKgPerM3: 600, mediumKeys: [], provenance: zhawProvenance('bark-compost', '') },
   { key: 'rice-husks', label: 'Rice husks', kgCo2ePerM3: 29.4, bulkDensityKgPerM3: 110, mediumKeys: [], provenance: zhawProvenance('rice-husks', '') },
   { key: 'wood-fibre', label: 'Wood fibre', kgCo2ePerM3: 9.95, bulkDensityKgPerM3: 130, mediumKeys: [], provenance: zhawProvenance('wood-fibre', '') },
+];
+
+/**
+ * The media bought by the piece (a mat, a mesh sheet): the mass of one piece and a manufacturing
+ * figure per kg. EVERY figure here is a PLACEHOLDER: no declaration or study for any of these
+ * products is registered, the masses are not weighed, and the per-kg figures are unsourced orders
+ * of magnitude that hold the line's place until a registered source replaces them. None is in
+ * `factorRegistry`, so none appears on the Sources page as a source.
+ */
+export interface MediumPiecePlaceholder {
+  mediumKey: string;
+  /** Mass of one piece as bought, kg; null where the engine derives it (the hemp mat, from its grade). */
+  massKgPerPiece: number | null;
+  massNote: string;
+  kgCo2ePerKg: number;
+  /** Composted or landfilled with the roots as yard trimmings, or kept and reused. */
+  endOfLife: 'yard-trimmings' | 'reused';
+  provenance: FactorProvenance;
+}
+
+const piecePlaceholder = (slug: string, material: string): FactorProvenance => ({
+  id: `placeholder:medium:${slug}`,
+  source: `No source on file: an unsourced order of magnitude for ${material}, cradle to gate`,
+  sourceUrl: '',
+  version: 'placeholder',
+  effectiveFrom: '2026-10-05',
+  status: 'PLACEHOLDER',
+  note: 'Holds the line until a declaration or a study for the product is registered.',
+});
+
+export const mediumPiecePlaceholders: readonly MediumPiecePlaceholder[] = [
+  { mediumKey: 'hemp-mat', massKgPerPiece: null, massNote: 'The format\'s area at the supplier\'s grade.', kgCo2ePerKg: 1.0, endOfLife: 'yard-trimmings', provenance: piecePlaceholder('hemp-mat', 'a needle-punched bast fiber mat') },
+  { mediumKey: 'jute-mat', massKgPerPiece: 0.0437, massNote: 'No product named: the hemp mat\'s 43.7 g stands in.', kgCo2ePerKg: 1.0, endOfLife: 'yard-trimmings', provenance: piecePlaceholder('jute-mat', 'a bast fiber mat') },
+  { mediumKey: 'silicone-mesh', massKgPerPiece: 0.09, massNote: 'Not weighed: 0.1204 m² at about 1 mm of perforated silicone on fiberglass, taken as 90 g.', kgCo2ePerKg: 6.0, endOfLife: 'reused', provenance: piecePlaceholder('silicone-mesh', 'silicone rubber') },
+  { mediumKey: 'stainless-mesh', massKgPerPiece: 0.08, massNote: 'Not weighed: a 9.25 in square of 1 mm mesh at an assumed 0.4 mm wire, about 1.45 kg/m², taken as 80 g a sheet.', kgCo2ePerKg: 6.5, endOfLife: 'reused', provenance: piecePlaceholder('stainless-mesh', '316 stainless steel') },
 ];
 
 // ── Capital goods: steel products (EPD Hub declarations) and LED luminaires ──

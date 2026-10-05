@@ -20,6 +20,7 @@ import {
   growPlanFoodCategoryMap,
   gridFactorERCT,
   mediaFactorsZhaw,
+  mediumPiecePlaceholders,
   GAL_PER_M3,
   ledEmbodiedFactors,
   warmYardTrimmings,
@@ -235,21 +236,25 @@ export function trayFootprint(plan: GrowPlanDef, opts: TrayFootprintOptions = {}
         const qty = c.quantity;
         const quantityStatus: StatusTag = line.qtyPerTray?.status ?? ctx.media[line.mediumKey]?.qtyPer1020.status ?? 'PLACEHOLDER';
         const avail = optionsForInput(name, options);
-        if (line.mediumKey === 'hemp-mat') {
-          const massKg = (format.areaSqIn.value * SQ_M_PER_SQ_IN * matGrade) / 1000 * qty;
-          const massStatus = weakest(format.areaSqIn.status, matGradeStatus, quantityStatus)!;
-          lines.push({ kind: 'medium', name, quantityPerTray: qty, quantityUnit: 'mat', massKgPerTray: massKg, reference: null, selected: null, options: avail, status: null, excludedReason: 'No hemp mat factor on file: the fiber\'s production is not counted. Its mass, its freight and its end of life are.', note: `${(massKg * 1000).toFixed(0)} g a mat at ${matGrade} g/m² (${matGradeStatus}) over ${format.areaSqIn.value.toFixed(0)} sq in.` });
+        const piece = mediumPiecePlaceholders.find((p) => p.mediumKey === line.mediumKey);
+        if (piece) {
+          // A piece bought once and used up over its grows: the quantity is the share of a piece one tray sown takes.
+          const hemp = piece.massKgPerPiece === null;
+          const massKg = (hemp ? (format.areaSqIn.value * SQ_M_PER_SQ_IN * matGrade) / 1000 : piece.massKgPerPiece!) * qty;
+          const massStatus = hemp ? weakest(format.areaSqIn.status, matGradeStatus, quantityStatus)! : 'PLACEHOLDER';
+          const basis: FootprintBasis = { kind: 'factor', optionId: null, label: `Placeholder, ${piece.kgCo2ePerKg} kg CO2e per kg`, kgCo2ePerTray: massKg * piece.kgCo2ePerKg, provenance: piece.provenance, status: 'PLACEHOLDER', note: `${piece.provenance.source}. ${piece.provenance.note}` };
+          const massNote = hemp ? `${(massKg * 1000).toFixed(0)} g a mat at ${matGrade} g/m² (${matGradeStatus}) over ${format.areaSqIn.value.toFixed(0)} sq in.` : `${(massKg * 1000).toFixed(1)} g a tray sown: ${qty.toFixed(3)} of a piece. ${piece.massNote}`;
+          lines.push({ kind: 'medium', name, quantityPerTray: qty, quantityUnit: hemp ? 'mat' : 'piece', massKgPerTray: massKg, reference: basis, selected: basis, options: avail, status: 'PLACEHOLDER', note: `${massNote}${piece.endOfLife === 'reused' ? ' Reused: no end of life is counted a grow, and the wash water is not measured.' : ''}` });
           withFreight(name, massKg, massStatus);
-          const eol = matEndOfLife(name, massKg, massStatus, compostShare);
-          endOfLife.push(eol);
+          if (piece.endOfLife === 'yard-trimmings') endOfLife.push(matEndOfLife(name, massKg, massStatus, compostShare));
           break;
         }
         const z = mediaFactorsZhaw.find((r) => r.mediumKeys.includes(line.mediumKey));
         if (z && c.quantityUnit === 'gal') {
           const m3 = qty / GAL_PER_M3;
           const massKg = m3 * z.bulkDensityKgPerM3;
-          const wholeVolume = line.mediumKey === 'peat-vermiculite';
-          const basis: FootprintBasis = { kind: 'factor', optionId: null, label: `${z.label}, per m³ used (ZHAW 2015)`, kgCo2ePerTray: m3 * z.kgCo2ePerM3, provenance: z.provenance, status: weakest(z.provenance.status, quantityStatus, wholeVolume ? 'PLACEHOLDER' : null)!, note: `${z.kgCo2ePerM3} kg CO2e per m³ including the use-phase decomposition and Europe's transport legs; no US freight leg is added, so the shipping is not double counted.${wholeVolume ? ' The peat share of the blend is not stated: the whole volume is read at peat\'s figure.' : ''}` };
+          const wholeVolume = line.mediumKey === 'peat-vermiculite' || line.mediumKey === 'seedling-soil';
+          const basis: FootprintBasis = { kind: 'factor', optionId: null, label: `${z.label}, per m³ used (ZHAW 2015)`, kgCo2ePerTray: m3 * z.kgCo2ePerM3, provenance: z.provenance, status: weakest(z.provenance.status, quantityStatus, wholeVolume ? 'PLACEHOLDER' : null)!, note: `${z.kgCo2ePerM3} kg CO2e per m³ including the use-phase decomposition and Europe's transport legs; no US freight leg is added, so the shipping is not double counted.${wholeVolume ? ' The peat share of the mix is not stated: the whole volume is read at peat\'s figure.' : ''}` };
           lines.push({ kind: 'medium', name, quantityPerTray: qty, quantityUnit: 'gal', massKgPerTray: massKg, reference: basis, selected: basis, options: avail, status: basis.status, note: `${qty.toFixed(3)} gal, ${m3.toFixed(5)} m³ at ${z.bulkDensityKgPerM3} kg/m³.` });
           endOfLife.push(matEndOfLife(name, massKg, basis.status, compostShare));
           break;

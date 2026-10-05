@@ -139,7 +139,7 @@ All figures below are estimated from the spec-sheet PPF over a 0.743 m² shelf, 
 - [ ] Replace the PLACEHOLDER `ppfdAtTray` and `delivers` values in `LIGHT_FIXTURES` with the readings, tagged STATED with the date.
 
 ### L1 — Control what is on hand
-- [ ] Put a programmable timer on each shelf's circuit: 16 h standard, 24 h finish, and end-of-day steps.
+- [ ] Put a programmable timer on each shelf's circuit: 16 h standard, 24 h finish, and end-of-day steps. At home the timer turns the lights on at 19:00 (Rob, STATED; `HOME_LIGHTS_ON_MIN`), so the 16 h run to 11:00 and the fixtures' heat falls in the night; a commercial facility's start is not stated.
 - [ ] Set intensity by count and height: the number of Barrina tubes switched on, one or two VG80 kits, and hanging height. Write the setup for each regime against its reading.
 - [ ] Decide whether dimmable fixtures replace the fixed-output ones on any shelf (§10.2).
 

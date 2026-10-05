@@ -7,6 +7,8 @@ import { SectionSave } from '@/components/SectionSave';
 import { foodFactorSource } from '@/data/emission-factors';
 import { BOUNDARY_LABEL, lcaOptions as curatedOptions, type LcaOption } from '@/data/lca-options';
 import { growPlanFoodFootprintDual } from '@/engine/carbon';
+import { trayFootprint } from '@/engine/tray-footprint';
+import { NO_MEDIUM_KEY } from '@/data/inputs-catalog';
 import { useSustainabilityWorld } from '@/state/sustainability';
 import { SustainabilityWorldNote } from '@/components/ledger/SustainabilityWorldNote';
 import { useScenario } from '@/state/scenario-store';
@@ -16,7 +18,7 @@ import { PageControls } from '@/components/PageControls';
 import { GrowPlanSelector, useSelectedGrowPlan } from '@/components/GrowPlanSelector';
 
 export default function InputsClient({ supplierOptions }: { supplierOptions: LcaOption[] }) {
-  const { resolved: scenario, setInputBasis, setSustainability, isSuperAdmin: superAdmin } = useScenario();
+  const { resolved: scenario, config, library, media, setInputBasis, setSustainability, setPlanMedium, isSuperAdmin: superAdmin } = useScenario();
   const { growPlan: selectedGrowPlan } = useSelectedGrowPlan();
   const resolved = useMemo(() => ({ ...scenario, growPlan: selectedGrowPlan }), [scenario, selectedGrowPlan]);
   const selection = resolved.sustainability.inputBasis;
@@ -37,6 +39,15 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
       if (Object.keys(m).length === 0) delete d.inputSupplier;
     });
 
+  // The tray's own footprint on its cost card's lines, with the medium this forecast grows the plan on.
+  const tray = useMemo(() => trayFootprint(selectedGrowPlan), [selectedGrowPlan]);
+  const planCode = selectedGrowPlan.code;
+  const ownMedium = library.find((r) => r.code === planCode)?.lines.find((l) => l.kind === 'medium')?.mediumKey ?? null;
+  const forecastMedium = config.media?.[planCode] ?? '';
+  const RUN = 20;
+  const t = tray.perTray.reference;
+  const scope3 = t.total - t.light;
+
   const fmt = (n: number, dp = 3) => (n < 0 ? '−' : '') + Math.abs(n).toFixed(dp);
 
   return (
@@ -44,7 +55,7 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
       <PageHeader
         title="Inputs (Scope 3)"
         purpose="Compare each unit's food footprint on the reference and selected bases."
-        functions={['Reference basis', 'Selected basis', 'Gap', 'Per unit']}
+        functions={['Reference basis', 'Selected basis', 'Gap', 'Per unit', 'Tray footprint']}
         connects={[
           { href: '/farm/grow-plans', dir: 'from' },
           { href: '/farm/sustainability/supplier-lca', dir: 'from' },
@@ -151,6 +162,67 @@ export default function InputsClient({ supplierOptions }: { supplierOptions: Lca
         </div>
         <p className="farm-kpi-sub mt-2">
           Reference factors are per kg at retail, losses included, from <Cite p={foodFactorSource} label={foodFactorSource.source.split(',')[0]} />. A cited figure at a narrower boundary is shown raw and aligned to retail; the aligned figure adds the study’s own post-slaughter stages for that product and applies its loss ratio, and is tagged derived. The basis selection and the supplier link are part of the forecast: saved with it; a super admin can set a forecast as the plan of record. A linked supplier’s own figure appears in the selector once it is recorded under Supplier LCA data.
+        </p>
+      </Card>
+
+      <Card title="Tray footprint" className="mt-4">
+        <div className="mb-3!">
+          {world.isPlan ? <SectionSave sections={['media']} title="the medium in this forecast" /> : <p className="farm-kpi-sub">The forecast&rsquo;s medium, read-only on Actual. It is edited on Plan.</p>}
+        </div>
+        {ownMedium !== null && ownMedium !== NO_MEDIUM_KEY && (
+          <p className="farm-kpi-sub mb-3">
+            <label>
+              Medium in this forecast for {planCode}{' '}
+              <select className="farm-input farm-fs-xs min-w-56!" value={forecastMedium} disabled={!world.isPlan} onChange={(e) => setPlanMedium(planCode, e.target.value || undefined)} aria-label={`Medium in this forecast for ${planCode}`}>
+                <option value="">The plan&rsquo;s own: {media.find((m) => m.key === ownMedium)?.name ?? ownMedium}</option>
+                {media.filter((m) => m.key !== NO_MEDIUM_KEY && m.key !== ownMedium).map((m) => (
+                  <option key={m.key} value={m.key}>{m.name}</option>
+                ))}
+              </select>
+            </label>
+          </p>
+        )}
+        <div className="grid gap-3 farm-autofit-11">
+          <Kpi value={`${fmt(t.total, 2)} kg`} label="CO2e a tray" sub={`${fmt(t.total * RUN, 1)} kg for a rack of ${RUN}`} />
+          <Kpi value="0 kg" label="Scope 1 a tray" sub="No fuel and no refrigerant in the home grow room" />
+          <Kpi value={`${fmt(t.light, 2)} kg`} label="Scope 2 a tray" sub={`${tray.kwhPerTray.toFixed(2)} kWh of light over ${tray.lightDays} lit days, location-based`} />
+          <Kpi value={`${fmt(scope3, 2)} kg`} label="Scope 3 a tray" sub="Seed, medium, freight, fixture manufacture, end of life" />
+          <Kpi value={`${tray.waterLPerTray.toFixed(2)} L`} label="Water consumed a tray" sub={`${(tray.waterLPerTray * RUN).toFixed(1)} L for a rack of ${RUN}; a volume, never CO2e`} />
+        </div>
+        <div className="farm-scroll-x mt-3">
+          <table className="farm-table">
+            <thead>
+              <tr>
+                <th>Line</th><th className="num">Quantity a tray</th><th className="num">Mass</th>
+                <th>Basis</th><th className="num"><span className="farm-unit">kg CO2e</span> a tray</th><th className="num"><span className="farm-unit">kg CO2e</span>, rack of {RUN}</th><th>Tag</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tray.lines.map((l) => (
+                <tr key={l.name}>
+                  <td className="font-medium!">
+                    {l.name}
+                    <div className="farm-fs-xs farm-c-faint">{l.excludedReason ?? l.note}</div>
+                  </td>
+                  <td className="num">{l.quantityPerTray.toFixed(l.quantityPerTray < 1 ? 3 : 1)} <span className="farm-unit">{l.quantityUnit}</span></td>
+                  <td className="num">{l.massKgPerTray === null ? '—' : `${(l.massKgPerTray * 1000).toFixed(1)} g`}</td>
+                  <td className="farm-fs-xs">{l.reference ? l.reference.label : '—'}</td>
+                  <td className="num">{l.reference ? fmt(l.reference.kgCo2ePerTray, 4) : '—'}</td>
+                  <td className="num">{l.reference ? fmt(l.reference.kgCo2ePerTray * RUN, 3) : '—'}</td>
+                  <td>{l.status ? <StatusBadge status={l.status} title={l.reference?.note} /> : '—'}</td>
+                </tr>
+              ))}
+              <tr className="total">
+                <td colSpan={4}>Total a tray, reference basis</td>
+                <td className="num">{fmt(t.total, 4)}</td>
+                <td className="num">{fmt(t.total * RUN, 3)}</td>
+                <td>{tray.weakestStatus ? <StatusBadge status={tray.weakestStatus} /> : '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="farm-kpi-sub mt-2">
+          Yield and watering are the plan&rsquo;s own on every medium: no medium has its own harvest weight or water volume on file, and a reusable mesh&rsquo;s wash water is not measured. An experiment on each medium replaces them.
         </p>
       </Card>
 

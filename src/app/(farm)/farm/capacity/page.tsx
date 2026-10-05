@@ -8,10 +8,11 @@ import { EditableNumber } from '@/components/EditableNumber';
 import { SectionSave } from '@/components/SectionSave';
 import { deriveGrowCapacity, lightsOn, traysPerShelf, traysPerUnit, unitTakesPlan, type GrowUnit } from '@/engine/grow-capacity';
 import { defaultGrowUnits } from '@/engine';
-import { FIXTURE_BY_KEY, REGIME_BY_KEY } from '@/data/inputs-catalog';
+import { FIXTURE_BY_KEY, REGIME_BY_KEY, HOME_LIGHTS_ON_MIN, lightWindow } from '@/data/inputs-catalog';
+import { countsTowardCapital } from '@/engine/equipment';
 import { PLAN_FORMATS, TRAY_FORMAT_BY_KEY, unitSku } from '@/data/tray-formats';
 import { lightLine, planStageDays, type GrowPlanDef } from '@/data/grow-plan';
-import { GERMINATION_STACK, cycleDays, daysToHarvest } from '@/data/stage-schedule';
+import { GERMINATION_STACK } from '@/data/stage-schedule';
 import { GROW_PLAN_STATUS_LABELS } from '@/data/plan-data';
 import { resolveScenarioInputs } from '@/engine/scenario';
 import { clock } from '@/data/crews';
@@ -59,6 +60,9 @@ export default function CapacityPage() {
   const regime = light ? REGIME_BY_KEY[light.regimeKey] : null;
   const format = plan ? TRAY_FORMAT_BY_KEY[plan.format] : null;
   const daysTyped = config.capacity?.productionDaysPerYear !== undefined;
+  // The lights' start is a home rule: a forecast that selects a commercial row has none stated.
+  const commercial = resolved.datedEquipment.some((l) => l.setting === 'commercial' && countsTowardCapital(l.status));
+  const lit = regime ? lightWindow(HOME_LIGHTS_ON_MIN.value, regime.photoperiodHours.value) : null;
 
   const byPlan = useMemo(
     () =>
@@ -205,7 +209,7 @@ export default function CapacityPage() {
       )}
 
       <Card title="Operating day" className="mt-4">
-        <p className="farm-kpi-sub mb-2">The day the sow and harvest labor runs inside. A shelf is occupied seven days a week whatever the operating day.</p>
+        <p className="farm-kpi-sub mb-2">The day the sow and harvest labor runs inside. A shelf is occupied seven days a week whatever the operating day. The grow lights keep their own clock.</p>
         <div className="mb-3!">
           {forecastEditing ? <SectionSave sections={['capacity']} title="capacity" /> : <p className="farm-kpi-sub">The open forecast&rsquo;s inputs, read-only on Actual. They are edited on Plan.</p>}
         </div>
@@ -222,6 +226,18 @@ export default function CapacityPage() {
                 <td className="num"><EditableNumber disabled={locked} value={hoursOf(C.operatingCloseMin.value)} defaultValue={hoursOf(D.operatingCloseMin.value)} onChange={(v) => setCapacity('operatingCloseMin', Math.round(v * 60))} step={0.25} max={24} suffix={`h = ${clock(C.operatingCloseMin.value)}`} ariaLabel="Operating day closes, hours from midnight" showBadge={false} /></td>
                 <td><StatusBadge status={D.operatingCloseMin.status} title={D.operatingCloseMin.note} /></td>
               </tr>
+              <tr>
+                <td>Grow lights on, home grow room</td>
+                <td className="num">{commercial ? 'not stated for a commercial facility' : clock(HOME_LIGHTS_ON_MIN.value)}</td>
+                <td><StatusBadge status={HOME_LIGHTS_ON_MIN.status} title={HOME_LIGHTS_ON_MIN.note} /></td>
+              </tr>
+              {!commercial && regime && lit && (
+                <tr>
+                  <td>Grow lights off, {regime.name} at {num(regime.photoperiodHours.value)} <span className="farm-unit">h</span> a day</td>
+                  <td className="num">{lit.continuous ? 'never: continuous light' : `${clock(lit.offMin)}${lit.offMin <= lit.onMin ? ' the next day' : ''}`}</td>
+                  <td><StatusBadge status="DERIVED" title={`Lights on plus the regime's photoperiod (${regime.photoperiodHours.status}).`} /></td>
+                </tr>
+              )}
               <tr>
                 <td>Production days per year</td>
                 <td className="num">

@@ -94,7 +94,7 @@ Words that must not survive the swap anywhere but this table: recipe, portion, m
 
 **Grow plan.** How a variety, or a blend, is grown. Lines are the inputs to one tray, per format, and every line feeds the costing formula:
 - **Seed line**: a variety, its grams per tray, and its share of a blend. Costed at the variety's last price paid per pound. The only line that carries provenance and nutrition.
-- **Medium line**: a row of the workspace's Media library, with quantity per tray: the hemp fiber mat by default (stated by Rob), or coconut coir, jute fiber, vermiculite or a hydroponic pad. Costed at the medium's price per unit. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
+- **Medium line**: a row of the workspace's Media library, with quantity per tray: the hemp fiber mat by default (stated by Rob), or coconut coir, jute fiber, vermiculite, a hydroponic pad, an organic seedling soil, or a reusable silicone or stainless steel mesh. Costed at the medium's price per unit; a reusable sheet's quantity per tray is one over the grows it lasts, so its replacement is in every tray's cost. A forecast may grow a plan on another medium of the library without changing the plan. Varieties differ in the medium they grow best on, so the medium belongs to the plan.
 - **Nutrient line**: a nutrient solution or supplement from the workspace's Nutrients & Supplements library, its concentration in ml per gallon, and the stage it starts. Costed at concentration times water volume times price.
 - **Light line**: the light spec for the light stage: spectrum (fixture or wavelength mix), photoperiod in hours per day, intensity as PPFD at canopy or fixture height, and the stage it starts. Costed as fixture watts times hours times the energy rate, per tray per day, plus the fixture's amortized cost. Varieties are grown under different spectra and configurations, and light changes nutrient content (science library rows 2, 8), so light belongs to the plan.
 
@@ -192,6 +192,7 @@ Cotyledon/
 │   ├── grow-operations.md    stages, control points, produce safety (replaces culinary-operations.md)
 │   ├── roadmap.md            the master roadmap: every phase, its status, links to its file
 │   ├── todo.md               open one-off items that belong to no phase step
+│   ├── spec-sheets/          one sheet per bought input, from its supplier's published specification
 │   └── roadmaps/             one file per phase (phase-N-*.md), plus the topic build plans ported from Muse
 ├── src/
 │   ├── app/                  routes only: the (farm) OS under /farm; (grow-room), (client), (sales), (front); api/stripe
