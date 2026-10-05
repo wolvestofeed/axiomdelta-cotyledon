@@ -19,17 +19,16 @@ import {
  */
 export function OmniSearch() {
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<LeanEntity[]>([]);
+  const [found, setResults] = useState<LeanEntity[]>([]);
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  // Under two characters nothing is searched, so nothing is shown, whatever the last search found.
+  const results = q.trim().length < 2 ? [] : found;
 
   useEffect(() => {
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
+    if (q.trim().length < 2) return;
     let cancelled = false;
     const t = setTimeout(() => {
       setSearching(true);

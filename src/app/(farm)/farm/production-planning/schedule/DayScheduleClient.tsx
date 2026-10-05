@@ -74,7 +74,7 @@ export function DayScheduleClient({
     [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, today, to, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -91,7 +91,7 @@ export function DayScheduleClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, today, to, book, resolved.growPlans, resolved.phases, C, A, pfByChannel, openingLots],
+    [closures, today, to, book, resolved.growPlans, resolved.growPlanAssumptions, resolved.phases, C, A, pfByChannel, openingLots],
   );
 
   // Every day of the window: trays on the shelves are watered on days nothing is sown or harvested.

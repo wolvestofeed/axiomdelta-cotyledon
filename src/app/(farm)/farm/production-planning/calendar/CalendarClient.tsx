@@ -82,7 +82,7 @@ export function CalendarClient({
     [world.pickupPoints, resolved.subscribers, resolved.phases, resolved.growPlans, orders, today, horizonTo, closures],
   );
   const consumption = useMemo(() => distributedConsumption(orders, distributions, resolved.growPlans, pfByChannel), [orders, distributions, resolved.growPlans, pfByChannel]);
-  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, A, today, resolved.growPlans]);
+  const openingLots = useMemo(() => finishedGoodsOnHand({ sowings, consumed: consumption, asOf: today, growPlans: resolved.growPlans }).lots.filter((l) => l.remaining > 0), [sowings, consumption, today, resolved.growPlans]);
   const horizon = useMemo(
     () =>
       planHorizon({
@@ -99,7 +99,7 @@ export function CalendarClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, today, horizonTo, book, resolved.growPlans, resolved.phases, C, A, pfByChannel, openingLots],
+    [closures, today, horizonTo, book, resolved.growPlans, resolved.growPlanAssumptions, resolved.phases, C, A, pfByChannel, openingLots],
   );
 
   /** Findings per day: the same scheduler the Day Schedule runs, over each day with work. */

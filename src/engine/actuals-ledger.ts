@@ -54,7 +54,7 @@ import {
   ACC_UNASSIGNED_PRODUCTION_LABOR, ACC_OWNER_DRAWS, ACC_FINISHED_GOODS
 } from '@/data/coa-farm';
 import { PAID_AT_ORDER_CHANNELS } from '@/data/working-capital';
-import { absorbOverhead, type OverheadAbsorption } from '@/engine';
+import { type OverheadAbsorption } from '@/engine';
 import { assumptionsFor } from '@/engine/scenario';
 import {
   manufacturingOverheadBudget,

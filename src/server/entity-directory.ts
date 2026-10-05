@@ -11,7 +11,7 @@ import { pickupPoints, trainingCourses } from '@/data/seed-invented';
 import { loadActuals } from '@/server/actuals';
 import type { SowingRecordDoc } from '@/engine/actuals';
 import { queryProspects } from '@/engine/prospects';
-import { toLean, leanSuppliersById, searchLeanSuppliers } from '@/server/supplier-links';
+import { leanSuppliersById, searchLeanSuppliers } from '@/server/supplier-links';
 import { listSources } from '@/server/sources';
 import {
   entityRef,

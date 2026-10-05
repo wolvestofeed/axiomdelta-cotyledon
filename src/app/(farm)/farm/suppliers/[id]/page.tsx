@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PageHeader, Card, Kpi, money, num } from '@/components/ui';
+import { PageHeader, Kpi, money, num } from '@/components/ui';
 import { SupplierDetail } from '@/components/SupplierDetail';
 import { getSupplierOperation } from '@/server/supplier-links';
 import { SUPPLY_KIND_LABEL, supplierLocation } from '@/data/suppliers';

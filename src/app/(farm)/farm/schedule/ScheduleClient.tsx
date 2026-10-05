@@ -82,7 +82,7 @@ export function ScheduleClient({
         productionWeekdays: SERVICE_WEEKDAYS,
         channels: resolved.phases.map((p) => p.phase),
       }),
-    [closures, from, bookTo, book, resolved.growPlans, C, A, pfByChannel, openingLots, resolved.phases],
+    [closures, from, bookTo, book, resolved.growPlans, resolved.growPlanAssumptions, C, A, pfByChannel, openingLots, resolved.phases],
   );
   const harvest = useMemo(
     () => horizon.distributionDays.map((d) => ({ date: d.date, shipments: d.byGrowPlan.map((r) => ({ growPlanCode: r.growPlanCode, growPlanName: r.growPlanName, units: r.filledBase })) })),

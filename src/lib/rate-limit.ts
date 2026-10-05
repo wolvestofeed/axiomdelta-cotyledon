@@ -79,7 +79,6 @@ export async function rateLimit(
     try {
       return await rateLimitUpstash(key, kind, cfg);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.warn('[rate-limit] upstash failed; fail-open:', err);
     }
   }

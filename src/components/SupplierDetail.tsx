@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { money, num } from '@/components/ui';
 import { CatalogImport } from '@/components/CatalogImport';
-import { setPurchaseOrderStatus, deletePurchaseOrder, deleteCatalogItem, setCatalogItemApproval, setCatalogPrice, deleteCatalogPrice } from '@/server/catalog-actions';
+import { setPurchaseOrderStatus, deletePurchaseOrder, deleteCatalogItem, setCatalogItemApproval, setCatalogPrice } from '@/server/catalog-actions';
 import {
   availabilityLabel,
   isAvailableInMonth,

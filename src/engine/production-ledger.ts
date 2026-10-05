@@ -287,7 +287,6 @@ export function productionSowingLedger(
   growPlan: GrowPlanDef,
 ): ProductionSowingLedger {
   const assumptions = opts.assumptions ?? defaultAssumptions;
-  const shrink = opts.shrinkAllowance ?? assumptions.yield.shrinkAllowance.value;
   const notes: string[] = [];
   const costing = costPlan(growPlan);
   if (!costing) notes.push(`${growPlan.code} is not a grow plan: it has no cost card per tray, so its material, light and consumables post at zero.`);

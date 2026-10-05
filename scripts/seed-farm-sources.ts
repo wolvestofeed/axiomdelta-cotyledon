@@ -27,7 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { eq, sql } from 'drizzle-orm';
-import { createDb, dbUrlFromEnv, farmSources, farmSourceFigures } from '@/db';
+import { farmSources, farmSourceFigures } from '@/db';
 import { scopedHandle } from './_workspace';
 import { factorRegistry } from '@/data/emission-factors';
 import { groupFactorsBySource, inferMime, specSheetSources } from '@/engine/sources';

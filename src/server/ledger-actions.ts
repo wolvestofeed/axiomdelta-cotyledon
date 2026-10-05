@@ -9,7 +9,7 @@ import type { FarmScenarioConfig } from '@/engine/scenario';
 import { linksFrom, onePerFrom } from '@/server/entity-links';
 import { hydrateEntityRefs } from '@/server/entity-directory';
 import { entityRef } from '@/engine/entity-links';
-import { LEDGER_COOKIE, isLedgerKind, type LedgerBookView, type LedgerJournalView, type LedgerKind } from '@/engine/ledger-view';
+import { LEDGER_COOKIE, isLedgerKind, type LedgerBookView, type LedgerJournalView } from '@/engine/ledger-view';
 import { withWorkspace } from '@/server/workspace';
 
 /**

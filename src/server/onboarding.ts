@@ -1,6 +1,6 @@
 import 'server-only';
 import { and, eq, inArray, isNull, isNotNull } from 'drizzle-orm';
-import { farmStaff, farmTrainingDocs, farmTrainingAssignments } from '@/db';
+import { farmTrainingDocs, farmTrainingAssignments } from '@/db';
 import { db } from '@/lib/db';
 
 /**

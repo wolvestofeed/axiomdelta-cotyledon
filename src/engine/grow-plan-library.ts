@@ -13,7 +13,7 @@ import { mediaForPlan } from '@/engine/media';
 import type { LastPricePaid } from '@/engine/seed-cost';
 import type { GrowPlanStatus } from '@/data/plan-data';
 import type { Tagged } from '@/data/tagged';
-import { GROW_PLAN_CODE_RX, lineLabel, nextGrowPlanCode, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
+import { GROW_PLAN_CODE_RX, lineLabel, type GrowPlanDef, type GrowPlanLine } from '@/data/grow-plan';
 import { TRAY_FORMAT_BY_KEY, type TrayFormatKey } from '@/data/tray-formats';
 import type { StageDays } from '@/data/stage-schedule';
 import { growPlanSeed } from '@/data/grow-plans-seed';

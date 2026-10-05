@@ -18,7 +18,7 @@ import { money, num } from '@/components/ui';
 import PinMap from '@/components/PinMap';
 import { SectionSave } from '@/components/SectionSave';
 import { EntityPicker } from '@/components/EntityPicker';
-import { useLinkedEntities, useLinkedEntity } from '@/components/useLinkedEntities';
+import { useLinkedEntities } from '@/components/useLinkedEntities';
 import { computeQuote, statusColors, type ClientProspect } from '@/engine/prospects-crm';
 import { haversineMiles } from '@/engine/geo';
 import { entityRef } from '@/engine/entity-links';
@@ -51,12 +51,13 @@ function useProspectLinks(prospectId: string) {
   const { resolved, setSales, isSuperAdmin } = useScenario();
   const row = resolved.sales[prospectId] ?? {};
   const growPlanCodes = row.growPlanCodes ?? [];
+  const codesKey = growPlanCodes.join(',');
   const refs = useMemo(
     () => [
       ...(row.pickupPointId ? [entityRef('pickupPoint', row.pickupPointId)] : []),
-      ...growPlanCodes.map((c) => entityRef('growPlan', c)),
+      ...(codesKey ? codesKey.split(',') : []).map((c) => entityRef('growPlan', c)),
     ],
-    [row.pickupPointId, growPlanCodes.join(',')],
+    [row.pickupPointId, codesKey],
   );
   const byRef = useLinkedEntities(refs);
 

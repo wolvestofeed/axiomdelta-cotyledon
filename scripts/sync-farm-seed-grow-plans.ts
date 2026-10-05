@@ -14,7 +14,6 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
-import { createDb } from '@/db';
 import { scopedHandle } from './_workspace';
 import { seedMissingGrowPlans, syncSeedGrowPlans, withSeedLock } from '@/server/seed-writes';
 

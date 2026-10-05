@@ -21,7 +21,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { desc, eq, sql } from 'drizzle-orm';
-import { createDb, farmScenarios, farmWorkspaceState, farmPostingLog } from '@/db';
+import { farmScenarios, farmWorkspaceState, farmPostingLog } from '@/db';
 import { scopedHandle } from './_workspace';
 import { GENESIS_HASH, postingHash } from '@/engine/periods';
 

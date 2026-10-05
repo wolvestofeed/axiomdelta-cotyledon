@@ -14,12 +14,10 @@ import type { LeanEntity } from '@/engine/entity-links';
 export function useLinkedEntities(refs: string[]): Record<string, LeanEntity> {
   const [cache, setCache] = useState<Record<string, LeanEntity>>({});
   const asked = useRef<Set<string>>(new Set());
-  const wanted = useMemo(
-    () => [...new Set(refs)].filter((r) => r && !asked.current.has(r)).sort().join(','),
-    [refs],
-  );
+  const inPlay = useMemo(() => [...new Set(refs)].filter(Boolean).sort().join(','), [refs]);
 
   useEffect(() => {
+    const wanted = inPlay.split(',').filter((r) => r && !asked.current.has(r)).join(',');
     if (!wanted) return;
     for (const r of wanted.split(',')) asked.current.add(r);
     let cancelled = false;
@@ -35,7 +33,7 @@ export function useLinkedEntities(refs: string[]): Record<string, LeanEntity> {
     return () => {
       cancelled = true;
     };
-  }, [wanted]);
+  }, [inPlay]);
 
   return cache;
 }

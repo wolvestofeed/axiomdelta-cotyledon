@@ -8,7 +8,7 @@ import { db } from '@/lib/db';
 import { accessRefusal, getFarmAccess, requireFarmSuperAdmin, requireSubscriberAccess, FarmAccessError } from '@/server/access';
 import { withWorkspace } from '@/server/workspace';
 import { applyFlatPlan, linesProblem, loadSubscription as load, saveSubscription as save, sowingRules as rules } from '@/server/subscription-rules';
-import { CADENCES, type FlatPlanLine, type SubscriptionDef } from '@/data/subscriptions';
+import { CADENCES, type SubscriptionDef } from '@/data/subscriptions';
 import { cadenceDates, flatPlanOn, startProblem } from '@/engine/subscriptions';
 import { firstUnsown, skipRefusal, sowDateOf, startRefusal } from '@/engine/subscription-cutoffs';
 
