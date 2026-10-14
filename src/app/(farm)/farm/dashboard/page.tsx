@@ -275,7 +275,7 @@ async function AdminDashboard() {
       {/* Headline hero band. On a dark ground the hero is the brightest object
           on the page, not a coloured block — see _components/farm.css. */}
       <div className="farm-hero farm-hero-green">
-        <div className="farm-card-title col-span-full! farm-c-accent m-0!">Mean averages for active grow plans, per tray</div>
+        <div className="farm-card-title col-span-full! m-0!">Mean averages for active grow plans, per tray</div>
         <HeroStat value={<>{money(avg.inputCostPerUnit)} <span className="farm-hero-arrow">→</span> {money(avg.costToServePerUnit)}</>} label="Inputs → cost to serve" sub="Seed, medium, nutrient, light and consumables → plus labor, packaging, distribution" />
         <HeroStat value={money(avg.inputCostPerUnit)} label="Input cost per tray" sub="The four line kinds and consumables, with the shrink allowance" />
         <HeroStat value={`${num(meanCycle, 1)} days`} label="Cycle on the shelf" sub="Sow through the harvest window" />
@@ -463,7 +463,7 @@ async function ClientRequests() {
 function HeroStat({ value, label, sub }: { value: React.ReactNode; label: string; sub?: string }) {
   return (
     <div>
-      <div className="farm-hero-label farm-c-accent mt-0! mb-2!">{label}</div>
+      <div className="farm-hero-label mt-0! mb-2!">{label}</div>
       <div className="farm-hero-value">{value}</div>
       {sub && <div className="farm-hero-sub">{sub}</div>}
     </div>

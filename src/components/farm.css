@@ -59,6 +59,9 @@
  *                copper focus ring; visible row hover; page titles in copper
  *                (was 3.9:1, now 6.3:1); stated re-hued blue; soil sidebar;
  *                utility classes that replace every static inline style.
+ *   2026-10-13 — Card titles (.farm-card-title) to the small-heading size, bold copper,
+ *                site-wide; KPI and hero labels in copper; the dashboards' one-off
+ *                copper overrides removed.
  * ════════════════════════════════════════════════════════════════════════════
  */
 
@@ -514,12 +517,15 @@
   padding: 1rem 1.1rem;
 }
 .farm-card-title {
-  font-size: var(--farm-fs-2xs);
+  /* The heading of every card (Robert, 2026-10-13): bold copper at the small-heading size, so it
+     reads above the 11px column heads and field labels inside the card; KPI labels are copper too. */
+  font-size: var(--farm-fs-md);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--farm-accent);   /* copper: the heading of every card; field labels stay the soft mint */
-  margin-bottom: 0.7rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: var(--farm-accent);
+  margin-bottom: 0.8rem;
 }
 /* Hover elevation — brighter bevel, deeper ambient, border warms to copper. */
 .farm-lift {
@@ -541,7 +547,7 @@
   color: var(--farm-ink-strong);
   font-variant-numeric: lining-nums tabular-nums;
 }
-.farm-kpi-label { font-size: var(--farm-fs-xs); color: var(--farm-ink-soft); margin-top: 0.45rem; }
+.farm-kpi-label { font-size: var(--farm-fs-xs); color: var(--farm-accent); margin-top: 0.45rem; }
 .farm-kpi-sub   { font-size: var(--farm-fs-2xs);  color: var(--farm-ink-faint); margin-top: 0.2rem; }
 
 /* ══ TABLES ═════════════════════════════════════════════════════════════ */
@@ -1266,7 +1272,7 @@ label:has(> input[type="radio"]) { color: var(--farm-ink-strong); }
 }
 /* The arrow between two figures in a hero value, set small so the figures lead. */
 .farm-hero-arrow { font-size: 0.45em; vertical-align: middle; opacity: 0.8; }
-.farm-hero-label { font-size: var(--farm-fs-xs); color: var(--farm-ink-soft); margin-top: 0.5rem; }
+.farm-hero-label { font-size: var(--farm-fs-xs); color: var(--farm-accent); margin-top: 0.5rem; }
 .farm-hero-sub   { font-size: var(--farm-fs-2xs); color: var(--farm-ink-faint); margin-top: 0.15rem; font-family: var(--farm-mono); }
 
 /* ══ ACCESSIBILITY ══════════════════════════════════════════════════════ */
