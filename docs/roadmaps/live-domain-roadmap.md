@@ -1,6 +1,6 @@
 # BUILD PLAN — The live domain: foodismymuse.com, the Ember OS welcome site, and Cotyledon on its subdomain
 
-The deployment plan. Rob holds the domain **foodismymuse.com** (2 October 2026). The apex is the Ember OS welcome site: a marketing page or two whose one job is to present Ember OS as the operating system and give an entry into either product. Cotyledon runs on a subdomain behind the private preview gate; Muse Kitchen runs on a second subdomain once it lifts out of Comptable, and until then the welcome site links to getcomptable.com/muse. Phase 6 (`phase-6-software-as-a-product.md`) owns this plan; `../billing.md` is the Stripe wiring; `src/server/preview-gate.ts` is the gate.
+The deployment plan. Rob holds the domain **foodismymuse.com** (2 October 2026). The apex is the Ember OS welcome site: a marketing page or two whose one job is to present Ember OS as the operating system and give an entry into either product. Cotyledon runs on a subdomain behind the private preview gate; Muse Kitchen runs on its own subdomain, `musekitchen.foodismymuse.com`, since 17 October 2026. Phase 6 (`phase-6-software-as-a-product.md`) owns this plan; `../billing.md` is the Stripe wiring; `src/server/preview-gate.ts` is the gate.
 
 **How the session that does this starts.** Read `CLAUDE.md`, `docs/outline.md` §1 and §7, `docs/roadmap.md`, this file, then `docs/roadmaps/phase-6-software-as-a-product.md` and `.env.example`. Run `pnpm typecheck` and `pnpm test` (81 files, 991 tests green at commit `ff4636b`). Then ask Rob the five questions in §7 before touching DNS or Vercel; every step below is reversible except the DNS cut-over and the Stripe webhook registration, and both are easy to redo. Work the way Rob works: agree before building, one step per commit, nothing committed or pushed without his word for that commit. `CLAUDE.md` §6 still says there is no deployment target; it is Rob's file, and the line is updated only when he says so (§6 of this plan).
 
@@ -20,7 +20,7 @@ The deployment plan. Rob holds the domain **foodismymuse.com** (2 October 2026).
 |---|---|---|---|
 | `foodismymuse.com` (and `www`) | The Ember OS welcome site: the mission, the two products, two entries | A new small repo, one Vercel project | yes |
 | `cotyledon.foodismymuse.com` | Cotyledon, behind the preview gate | `wolvestofeed/axiomdeltamicrofarm`, one Vercel project | no (the gate sets noindex) |
-| `muse.foodismymuse.com` | Muse Kitchen, once lifted out of Comptable; until then the welcome site links to getcomptable.com/muse | later | no, behind the same gate |
+| `musekitchen.foodismymuse.com` | Muse Kitchen, at `/kitchen`, on its own Neon and the shared Clerk application | `wolvestofeed/emberos-musekitchen`, Vercel project `emberos-musekitchen` | no (Clerk on every path) |
 
 The subdomain names are the plan's; Rob confirms them in §7.
 
@@ -50,7 +50,7 @@ Each step ends with a check that passes before the next begins.
 - [ ] `NEXT_PUBLIC_BASE_URL=https://cotyledon.foodismymuse.com` set and redeployed (Stripe's return addresses read it).
 
 ### E. The welcome site
-- [x] Built in `../../foodismymuse/` (its `PLAN.md` is the authority): three pages, Home, Platform, Mission, with two portal cards on Home that sign straight into each app. Repo `wolvestofeed/emberos`, Vercel project `emberos`, live at https://foodismymuse.com on 3 October 2026; `www` and `http` redirect to the apex (308). The Cotyledon card links to `https://cotyledon.foodismymuse.com` (the gate takes over); the Muse Kitchen card links to `https://getcomptable.com/muse` until the lift. Indexable.
+- [x] Built in `../../foodismymuse/` (its `PLAN.md` is the authority): three pages, Home, Platform, Mission, with two portal cards on Home that sign straight into each app. Repo `wolvestofeed/emberos`, Vercel project `emberos`, live at https://foodismymuse.com on 3 October 2026; `www` and `http` redirect to the apex (308). The Cotyledon card links to `https://cotyledon.foodismymuse.com` (the gate takes over); the Muse Kitchen card links to `https://musekitchen.foodismymuse.com/kitchen`. Indexable.
 - [x] Brand assets copied from the three kits into the site's `public/brand/`; copy from the site's `content/` decks, edited by Rob.
 
 ### F. Stripe on the live host (test mode)
@@ -85,8 +85,8 @@ Every variable the code reads is here. Values never go in the repo; `.env.exampl
 
 Not for this session unless Rob says so. Recorded so the decision is made before Cotyledon's production instance exists, because moving a Clerk production domain afterwards is the painful step.
 
-- Clerk cautions against two separate production instances on sibling subdomains of one root domain, because some of its cookies are set at the root. With Cotyledon on `cotyledon.` and Muse Kitchen on `muse.`, the plan is **one Ember OS Clerk application** that both products use, each product's farms as its organizations, which also answers the open item on one client identity across bodywork, microgreens and Feed The Wolf (`todo.md`). Confirm against Clerk's current documentation on the day.
-- Creating the production instance: the application's production domain is the subdomain (or the root, for one shared application); Clerk's dashboard lists the DNS records to add at the registrar (the Frontend API CNAME, the accounts CNAME, and the email DKIM records); the production publishable and secret keys replace the test keys on Vercel; `FARM_PREVIEW_PASSWORD` is removed; the content security policy in `next.config.ts` already allows `*.clerk.com` and `*.clerk.accounts.dev`.
+- Clerk cautions against two separate production instances on sibling subdomains of one root domain, because some of its cookies are set at the root. With Cotyledon on `cotyledon.` and Muse Kitchen on `musekitchen.`, **one Ember OS Clerk application serves both products: `emberos-main`**, whose production instance on the root `foodismymuse.com` exists since 17 October 2026 with its DNS records (`clerk`, `accounts`, the email records) already at Squarespace. Muse Kitchen runs on it today. Cotyledon joins it by taking that instance's production keys, with each product's farms as its organizations, which also answers the open item on one client identity across bodywork, microgreens and Feed The Wolf (`todo.md`). Authorization does not carry between the apps: each decides its own admins.
+- Joining the production instance: no new instance and no new DNS records; the `emberos-main` production publishable and secret keys replace the test keys on Vercel; `FARM_PREVIEW_PASSWORD` is removed; the content security policy in `next.config.ts` must also allow `https://clerk.foodismymuse.com`, `https://accounts.foodismymuse.com` and `https://*.clerk.com:*`, which the production instance serves from (Muse Kitchen found this the hard way: with only `*.clerk.com` and `*.clerk.accounts.dev` allowed, no sign-in form rendered).
 - The sign-in pages exist: `/farm/sign-in` for staff, `/farm/client-portal/sign-in` for clients; a client's sign-in links to its subscriber record by email (Phase 3, P5).
 - Clerk's logs warn that `createRouteMatcher`, which `src/proxy.ts` uses, is deprecated for their next major release. Nothing is broken; before that upgrade the proxy's checks move into the pages and actions as Clerk's guide says. Not part of going live.
 
@@ -103,6 +103,6 @@ Not for this session unless Rob says so. Recorded so the decision is made before
 1. Where foodismymuse.com is registered, and whether its nameservers move to Vercel (simplest) or stay with the registrar (records added by hand).
 2. The Vercel account or team the two projects live in, and that it has GitHub access to the Cotyledon repo.
 3. ~~The production database.~~ Answered: Neon's default branch `production` is the one database, live and on the laptop.
-4. The subdomain names: `cotyledon.foodismymuse.com` and `muse.foodismymuse.com` as the plan writes them, or others.
+4. The subdomain names: `cotyledon.foodismymuse.com` and `musekitchen.foodismymuse.com` (nothing public reads as bare "Muse").
 5. The preview password's value (Rob sets it himself in Vercel; it is never written in the repo or in chat) and who receives it.
 6. ~~The welcome site's copy and the name of its repo.~~ Answered: `wolvestofeed/emberos`; copy in `foodismymuse/content/`.
